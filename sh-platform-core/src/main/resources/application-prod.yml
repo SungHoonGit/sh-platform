@@ -7,8 +7,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
-    database-platform: org.hibernate.dialect.MariaDBDialect
+      ddl-auto: update
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
