@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/login",
                         "/api/v1/auth/refresh", "/api/v1/auth/verify-email",
                         "/api/v1/auth/verify-code", "/api/v1/auth/oauth2/**",
-                        "/actuator/health", "/h2-console/**").permitAll()
+                        "/api/health", "/actuator/health", "/h2-console/**").permitAll()
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers.frameOptions(fo -> fo.sameOrigin()))
