@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://${DB_HOST:10.0.0.x}:3306/${DB_NAME:sh_pass}
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: ${DB_USERNAME:shpass}
+    password: ${DB_PASSWORD:Whatever4q!}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.MariaDBDialect
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+jwt:
+  private-key: ${JWT_PRIVATE_KEY}
+  public-key: ${JWT_PUBLIC_KEY}
+
+logging:
+  level:
+    com.shplatform: INFO
