@@ -2,7 +2,7 @@ name: Deploy to OCI
 
 on:
   push:
-    branches: [master]
+    branches: [master, main]
   workflow_dispatch:
 
 jobs:
@@ -32,14 +32,14 @@ jobs:
           script: |
             set -e
 
-            # 기존 앱 중지
             sudo systemctl stop sh-platform 2>/dev/null || true
 
-            # jar 배포
-            mkdir -p /home/ubuntu/sh-platform
             cd /home/ubuntu/sh-platform
-            git pull
+            git pull origin master
 
-            # Spring Boot 실행
-            nohup java -jar sh-platform-core/build/libs/*.jar --spring.profiles.active=prod > /tmp/sh-platform.log 2>&1 &
+            cd sh-platform-core
+            chmod +x gradlew
+            ./gradlew clean build -x test -q
+
+            sudo systemctl start sh-platform
             echo "Deploy complete!"

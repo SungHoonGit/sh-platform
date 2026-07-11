@@ -1,9 +1,9 @@
 spring:
   datasource:
-    url: jdbc:mariadb://${DB_HOST:10.0.0.x}:3306/${DB_NAME:sh_pass}
+    url: jdbc:mariadb://${DB_HOST:10.0.0.39}:3306/${DB_NAME:sh_pass}
     driver-class-name: org.mariadb.jdbc.Driver
-    username: ${DB_USERNAME:shpass}
-    password: ${DB_PASSWORD:Whatever4q!}
+    username: ${DB_USERNAME:sh_user}
+    password: ${DB_PASSWORD:SHpass1234!}
 
   jpa:
     hibernate:
