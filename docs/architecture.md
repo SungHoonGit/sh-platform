@@ -23,19 +23,17 @@ Client (Web / App)
 └──────────────┘   └──────────────┘
 ```
 
-## 물리 배포 (현재, VM3 없음)
+## 물리 배포 (PAYG 3-Tier)
 
 ```
-VM1 (E2.1.Micro, 1GB)         VM2 (E2.1.Micro, 1GB)
-┌──────────────────┐          ┌──────────────────┐
-│ nginx (80/443)   │          │ MariaDB          │
-│ ├── / → React    │          │ └── ai_housing   │
-│ └── /api/* → VM1 │          │                  │
-│                  │          │ (ai-housing-api  │
-│ sh-platform-core │          │  jar만 있음)     │
-│ (Spring Boot)    │          │                  │
-│ Python 앱들      │          │                  │
-└──────────────────┘          └──────────────────┘
+WEB (E2.1.Micro, 1GB)       WAS (A1.Flex, 2/14GB)     DB (A1.Flex, 1/8GB)
+┌──────────────────┐       ┌──────────────────┐       ┌──────────────────┐
+│ nginx (80/443)   │       │ sh-platform-core │       │ MariaDB          │
+│ ├── / → React    │──────→│ (Gateway + Auth) │──────→│ ├── sh_pass      │
+│ └── /api/* → WAS │       │ ai-housing-api   │       │ └── ai_housing   │
+│                  │       │ (Tomcat :8080)   │       │                  │
+│ Python 앱들      │       │                  │       │                  │
+└──────────────────┘       └──────────────────┘       └──────────────────┘
 ```
 
-> VM3(A1.Flex) 생성 시 gateway/auth, ai-housing-api 각각 분리 배포
+> WEB → WAS → DB, 모두 내부망(10.0.0.0/24) 통신. 외부는 WEB:80/443만 오픈.
