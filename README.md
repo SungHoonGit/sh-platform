@@ -14,13 +14,15 @@ SH(SungHoon) SaaS 기반 통합 플랫폼. MSA 구조로 점진적 확장.
 sh-platform/
 ├── README.md
 ├── docs/
-│   ├── architecture.md     # 전체 아키텍처
+│   ├── architecture.md     # 3-Tier + MSA 아키텍처
 │   ├── login-plan.md       # 로그인/인증 기획
+│   ├── standards.md        # ⭐ 개발 표준 정의서 (패키지/Naming/응답)
+│   ├── erd.md              # ⭐ ERD (users/tokens/codes)
+│   ├── i18n.md             # ⭐ 다국어 처리 방안
+│   ├── api-auth.md         # ⭐ 인증 API 명세
 │   └── roadmap.md          # 로드맵
-├── sh-platform-core/       # 향후 Spring Boot 프로젝트
-│   ├── auth-service        # 인증 서비스
-│   └── gateway             # API Gateway
-└── (추후 서비스 모듈)
+└── sh-platform-core/       # 향후 Spring Boot 프로젝트
+    └── (Phase 2 생성 예정)
 ```
 
 ## OCI 인프라
