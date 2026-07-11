@@ -3,11 +3,13 @@
 ## Phase 1: 분석 및 설계 (✅ 완료)
 
 ### 인프라
-- [x] OCI Tokyo PAYG 전환 (WEB/WAS/DB 3-Tier)
-- [x] iptables 방화벽 (WEB/WAS/DB 별도 설정, 내부망만 허용)
+- [x] OCI Always Free 전환 (WEB+Spring Boot + DB 2-Tier)
+- [x] iptables 방화벽 (WEB/DB 별도 설정, 내부망만 허용)
+- [x] A1.Flex 2개 (WEB 1/6GB + DB 1/8GB)
+- [x] MariaDB 설치 + sh_pass/ai_housing DB 생성
 
 ### 산출물 (docs/)
-- [x] `architecture.md` — 3-Tier + MSA 아키텍처
+- [x] `architecture.md` — 2-Tier + MSA 아키텍처
 - [x] `login-plan.md` — 로그인/인증 기획
 - [x] **`standards.md`** — 개발 표준 정의서 (패키지 구조, 네이밍, API 응답 포맷)
 - [x] **`erd.md`** — ERD (users, refresh_tokens, verification_codes)
@@ -24,9 +26,9 @@
 - [ ] GlobalExceptionHandler + ApiResponse 통일
 
 ## Phase 3: 배포 및 연동
-- [ ] sh-platform-core WAS (A1 2/14GB) 배포
-- [ ] nginx 프록시 (WEB → WAS)
-- [ ] MariaDB DB (A1 1/8GB) 연결
+- [ ] sh-platform-core WAS (WEB 서버 :8080) 배포
+- [ ] nginx 프록시 (WEB → Spring Boot :8080)
+- [ ] MariaDB DB (DB 서버 10.0.0.39) 연결
 - [ ] ai-housing-web 로그인 연결
 - [ ] 서브도메인 + SSL (Let's Encrypt)
 

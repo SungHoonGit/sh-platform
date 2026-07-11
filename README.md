@@ -27,9 +27,11 @@ sh-platform/
 
 ## OCI 인프라
 
-| VM | IP | 역할 | 비고 |
-|----|-----|------|------|
-| VM1 | 140.245.80.117 | Python 앱 + React Web + SH Platform (Spring) | E2.1.Micro |
-| VM2 | 161.33.165.118 | MariaDB (housing) + Spring API (ai-housing) | E2.1.Micro |
+| VM | Public IP | 내부 IP | 역할 | 사양 |
+|----|-----------|---------|------|------|
+| WEB | 140.245.95.162 | 10.0.0.47 | nginx + React + Spring Boot + Python | A1.Flex 1/6GB |
+| DB | 161.33.138.23 | 10.0.0.39 | MariaDB | A1.Flex 1/8GB |
 
+> Always Free 한도: A1.Flex 2OCPU/12GB (2026.06 변경)
+> 
 > 인프라 설계 상세: https://github.com/SungHoonGit/OCI
