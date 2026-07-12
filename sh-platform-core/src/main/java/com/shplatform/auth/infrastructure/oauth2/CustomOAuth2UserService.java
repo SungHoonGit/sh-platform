@@ -2,6 +2,8 @@ package com.shplatform.auth.infrastructure.oauth2;
 
 import com.shplatform.auth.domain.UserRole;
 import com.shplatform.auth.infrastructure.UserEntity;
+import com.shplatform.auth.infrastructure.UserProviderEntity;
+import com.shplatform.auth.infrastructure.UserProviderRepository;
 import com.shplatform.auth.infrastructure.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,9 +19,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private static final Logger log = LoggerFactory.getLogger(CustomOAuth2UserService.class);
 
     private final UserRepository userRepository;
+    private final UserProviderRepository userProviderRepository;
 
-    public CustomOAuth2UserService(UserRepository userRepository) {
+    public CustomOAuth2UserService(UserRepository userRepository,
+                                    UserProviderRepository userProviderRepository) {
         this.userRepository = userRepository;
+        this.userProviderRepository = userProviderRepository;
     }
 
     @Override
@@ -35,9 +40,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             throw new OAuth2AuthenticationException("이메일 정보를 가져올 수 없습니다.");
         }
 
-        UserEntity user = userRepository.findByEmail(email)
-                .map(existing -> updateProvider(existing, provider, userInfo))
-                .orElseGet(() -> createNewUser(email, userInfo, provider));
+        UserEntity user = findOrCreateUser(email, userInfo, provider);
 
         log.info("[OAUTH2] login success: provider={}, email={}, userId={}", provider, email, user.getId());
 
@@ -45,22 +48,44 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 user.getRole().name(), oauth2User.getAttributes());
     }
 
-    private UserEntity updateProvider(UserEntity existing, String provider, OAuth2UserInfo userInfo) {
-        boolean changed = false;
-        if (existing.getProvider().equals("LOCAL")) {
-            existing.setProvider(provider);
-            existing.setProviderId(userInfo.getProviderId());
-            changed = true;
+    private UserEntity findOrCreateUser(String email, OAuth2UserInfo userInfo, String provider) {
+        String providerId = userInfo.getProviderId();
+
+        // 1. 이미 같은 프로바이더로 연결된 사용자가 있는지 확인
+        var existingProvider = userProviderRepository.findByProviderAndProviderId(provider, providerId);
+        if (existingProvider.isPresent()) {
+            var user = userRepository.findById(existingProvider.get().getUserId()).orElseThrow();
+            log.info("[OAUTH2] existing provider login: provider={}, userId={}", provider, user.getId());
+            return user;
         }
-        if (!existing.isEmailVerified()) {
-            existing.setEmailVerified(true);
-            changed = true;
+
+        // 2. 이메일로 기존 사용자가 있는지 확인 (계정 연결)
+        var existingUser = userRepository.findByEmail(email);
+        if (existingUser.isPresent()) {
+            var user = existingUser.get();
+            linkProvider(user, provider, providerId, email);
+            return user;
         }
-        if (changed) {
-            userRepository.save(existing);
-            log.info("[OAUTH2] updated user: id={}, provider={}", existing.getId(), provider);
+
+        // 3. 새 사용자 생성
+        return createNewUser(email, userInfo, provider);
+    }
+
+    private void linkProvider(UserEntity user, String provider, String providerId, String email) {
+        if (!userProviderRepository.existsByUserIdAndProvider(user.getId(), provider)) {
+            var providerEntity = new UserProviderEntity();
+            providerEntity.setUserId(user.getId());
+            providerEntity.setProvider(provider);
+            providerEntity.setProviderId(providerId);
+            providerEntity.setProviderEmail(email);
+            userProviderRepository.save(providerEntity);
+            log.info("[OAUTH2] provider linked: userId={}, provider={}", user.getId(), provider);
         }
-        return existing;
+
+        if (!user.isEmailVerified()) {
+            user.setEmailVerified(true);
+            userRepository.save(user);
+        }
     }
 
     private UserEntity createNewUser(String email, OAuth2UserInfo userInfo, String provider) {
@@ -75,6 +100,14 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         entity.setLocale("ko");
 
         var saved = userRepository.save(entity);
+
+        var providerEntity = new UserProviderEntity();
+        providerEntity.setUserId(saved.getId());
+        providerEntity.setProvider(provider);
+        providerEntity.setProviderId(userInfo.getProviderId());
+        providerEntity.setProviderEmail(email);
+        userProviderRepository.save(providerEntity);
+
         log.info("[OAUTH2] new user created: id={}, email={}, provider={}", saved.getId(), email, provider);
         return saved;
     }

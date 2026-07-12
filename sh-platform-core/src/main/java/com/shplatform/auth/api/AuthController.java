@@ -1,15 +1,16 @@
 package com.shplatform.auth.api;
 
-import com.shplatform.auth.api.dto.LoginRequest;
-import com.shplatform.auth.api.dto.RefreshRequest;
-import com.shplatform.auth.api.dto.SignupRequest;
-import com.shplatform.auth.api.dto.TokenResponse;
+import com.shplatform.auth.api.dto.*;
+import com.shplatform.auth.domain.AccountLinkService;
 import com.shplatform.auth.domain.AuthService;
 import com.shplatform.shared.dto.ApiResponse;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,9 +18,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final AccountLinkService accountLinkService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, AccountLinkService accountLinkService) {
         this.authService = authService;
+        this.accountLinkService = accountLinkService;
     }
 
     @PostMapping("/signup")
@@ -77,5 +80,48 @@ public class AuthController {
     ) {
         authService.verifyCode(body.get("email"), body.get("code"), body.get("purpose"));
         return ResponseEntity.ok(ApiResponse.success("이메일 인증이 완료되었습니다.", null));
+    }
+
+    @PostMapping("/oauth2/link-check")
+    public ResponseEntity<ApiResponse<LinkCheckResponse>> checkLink(
+            @RequestBody LinkCheckRequest request,
+            @AuthenticationPrincipal OAuth2User principal
+    ) {
+        Long userId = ((com.shplatform.auth.infrastructure.oauth2.CustomOAuth2User) principal).getUserId();
+        List<String> linked = accountLinkService.getLinkedProviders(userId);
+        boolean alreadyLinked = linked.contains(request.provider());
+        return ResponseEntity.ok(ApiResponse.success(new LinkCheckResponse(alreadyLinked, linked)));
+    }
+
+    @PostMapping("/oauth2/link")
+    public ResponseEntity<ApiResponse<Void>> linkProvider(
+            @RequestBody ProviderLinkRequest request,
+            @AuthenticationPrincipal OAuth2User principal
+    ) {
+        Long userId = ((com.shplatform.auth.infrastructure.oauth2.CustomOAuth2User) principal).getUserId();
+        accountLinkService.linkProvider(userId, request.provider(), request.providerId(), request.providerEmail());
+        return ResponseEntity.ok(ApiResponse.success("계정이 연결되었습니다.", null));
+    }
+
+    @GetMapping("/oauth2/providers")
+    public ResponseEntity<ApiResponse<ProviderListResponse>> listProviders(
+            @AuthenticationPrincipal OAuth2User principal
+    ) {
+        Long userId = ((com.shplatform.auth.infrastructure.oauth2.CustomOAuth2User) principal).getUserId();
+        List<String> providers = accountLinkService.getLinkedProviders(userId);
+        var providerInfos = providers.stream()
+                .map(p -> new ProviderListResponse.ProviderInfo(p, null))
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(new ProviderListResponse(providerInfos)));
+    }
+
+    @DeleteMapping("/oauth2/providers/{provider}")
+    public ResponseEntity<ApiResponse<Void>> unlinkProvider(
+            @PathVariable String provider,
+            @AuthenticationPrincipal OAuth2User principal
+    ) {
+        Long userId = ((com.shplatform.auth.infrastructure.oauth2.CustomOAuth2User) principal).getUserId();
+        accountLinkService.unlinkProvider(userId, provider);
+        return ResponseEntity.ok(ApiResponse.success("프로바이더 연결이 해제되었습니다.", null));
     }
 }
