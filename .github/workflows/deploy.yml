@@ -19,7 +19,7 @@ jobs:
 
       - name: Build with Gradle
         run: |
-          cd sh-platform-core
+          cd sh-platform-auth
           chmod +x gradlew
           ./gradlew build -x test
 
@@ -37,7 +37,7 @@ jobs:
             cd /home/ubuntu/sh-platform
             git pull origin master
 
-            cd sh-platform-core
+            cd sh-platform-auth
             chmod +x gradlew
             ./gradlew clean build -x test -q
 
