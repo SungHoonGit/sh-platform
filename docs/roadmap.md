@@ -38,7 +38,7 @@
 - [x] **`api-auth.md`** — 인증 API 명세 (회원가입 → 로그인 → JWT → OAuth2)
 - [x] `roadmap.md` — 로드맵
 
-## Phase 2: 인증 시스템 구축 (🔜 진행중)
+## Phase 2: 인증 시스템 구축 (✅ 완료)
 
 ### 기본 인증
 - [x] sh-platform-core Spring Boot 프로젝트 생성 (Gradle, Java 21)
@@ -82,12 +82,36 @@
 - [ ] GitHub Actions 자동 배포 (OCI_SSH_KEY 등록)
 - [ ] OAuth2 환경변수 등록 (KAKAO_CLIENT_ID 등)
 
-## Phase 3: 배포 및 연동
-- [x] sh-platform-core WEB 서버 (:8080) 배포
-- [x] nginx 프록시 (WEB → Spring Boot :8080)
-- [x] MariaDB DB 연결 (WEB → DB 서버 10.0.0.39)
-- [ ] ai-housing-web 로그인 연결
-- [ ] 서브도메인 + SSL (Let's Encrypt)
+## Phase 3: 배포 및 연동 (🔜 진행중)
+
+### 3.1 OAuth2 프로바이더 앱 등록 (진행중)
+- [ ] 카카오 앱 등록 (기존 REST API 키 활용, Client Secret 설정)
+- [ ] 네이버 앱 등록
+- [ ] 구글 앱 등록
+- [ ] 깃험 앱 등록
+
+### 3.2 서버 환경변수 설정
+- [ ] systemd 서비스에 OAuth2 env 변수 추가
+- [ ] 각 프로바이더별 Client ID/Secret 확인
+
+### 3.3 OAuth2 플로우 테스트
+- [ ] 각 프로바이더별 로그인/회원가입 테스트
+- [ ] 에러 핸들링 테스트 (취소, 실패)
+
+### 3.4 SSL 인증서 발급
+- [ ] Let's Encrypt 설치
+- [ ] SSL 인증서 발급
+
+### 3.5 프론트엔드 구축 (별도 레포)
+- [ ] React 프로젝트 생성
+- [ ] 로그인/회원가입 화면 개발
+- [ ] 소셜 로그인 버튼 구현
+- [ ] API 연동
+
+### 3.6 완료 기준
+- [ ] OAuth2 로그인/회원가입 정상 동작
+- [ ] HTTPS 통신 가능
+- [ ] 프론트엔드 배포 완료
 
 ## Phase 4: MSA 확장
 - [ ] Spring Cloud Gateway 도입
