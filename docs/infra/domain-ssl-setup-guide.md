@@ -8,7 +8,7 @@ SH Platform에 무료 도메인(duckdns.org)과 무료 SSL 인증서(Let's Encry
 
 ### 현재 환경
 - 서버 IP: `140.245.95.162`
-- WEB 서버: OCI Always Free A1.Flex (1/6GB)
+- WEB 서버: OCI Always Free A1.Flex (2 OCPU/12GB)
 - nginx: 설치 완료
 - Spring Boot: `:8080` 포트로 실행 중
 
