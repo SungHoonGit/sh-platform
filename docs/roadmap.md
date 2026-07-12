@@ -70,7 +70,7 @@
 - [x] RateLimiter (인증 API Rate Limiting)
 - [x] 인증 이벤트 로그 (ISMS-P 2.9.4 준수)
 - [x] ErrorCode + messages_ko/en.properties 업데이트
-- [ ] SSL/TLS 설정 (Let's Encrypt) — Phase 3
+- [x] SSL/TLS 설정 (Let's Encrypt) — Phase 3
 
 ### 프론트엔드 연동 (예정)
 - [ ] React 프론트엔드 프로젝트 생성
@@ -98,15 +98,16 @@
 - [ ] 각 프로바이더별 로그인/회원가입 테스트
 - [ ] 에러 핸들링 테스트 (취소, 실패)
 
-### 3.4 도메인 및 SSL 인증서 설정
-- [ ] duckdns.org 계정 생성 및 도메인 설정
-- [ ] DNS 레코드 설정 (A 레코드 → 140.245.95.162)
-- [ ] DNS 전파 확인
-- [ ] certbot 설치
-- [ ] SSL 인증서 발급 (Let's Encrypt)
-- [ ] nginx SSL 설정 적용
-- [ ] HTTPS 접속 테스트
-- [ ] SSL 자동 갱신 설정
+### 3.4 도메인 및 SSL 인증서 설정 (✅ 완료)
+- [x] duckdns.org 계정 생성 및 도메인 설정 (sunghoonyk.duckdns.org)
+- [x] DNS 레코드 설정 (A 레코드 → 140.245.95.162)
+- [x] DNS 전파 확인
+- [x] certbot 설치
+- [x] SSL 인증서 발급 (Let's Encrypt)
+- [x] nginx SSL 설정 적용
+- [x] HTTPS 접속 테스트
+- [x] HSTS 헤더 설정
+- [x] SSL 자동 갱신 설정
 
 ### 3.5 프론트엔드 구축 (별도 레포)
 - [ ] React 프로젝트 생성

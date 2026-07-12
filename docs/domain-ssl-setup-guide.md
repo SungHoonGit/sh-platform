@@ -229,10 +229,22 @@ curl -I https://sh-platform.duckdns.org
 
 ## 완료 기준
 
-- [ ] duckdns.org 도메인 생성 완료
-- [ ] DNS 레코드 설정 완료
-- [ ] DNS 전파 확인 완료
-- [ ] SSL 인증서 발급 완료
-- [ ] nginx SSL 설정 적용 완료
-- [ ] HTTPS 접속 테스트 통과
-- [ ] 자동 갱신 설정 완료
+- [x] duckdns.org 도메인 생성 완료 (sunghoonyk.duckdns.org)
+- [x] DNS 레코드 설정 완료 (140.245.95.162)
+- [x] DNS 전파 확인 완료
+- [x] SSL 인증서 발급 완료 (Let's Encrypt)
+- [x] nginx SSL 설정 적용 완료
+- [x] HTTPS 접속 테스트 통과
+- [x] HSTS 헤더 설정 완료
+- [x] 자동 갱신 설정 완료
+
+---
+
+## 변경 이력
+
+### 2026-07-12 — 설정 완료
+- 도메인: `sunghoonyk.duckdns.org`
+- SSL 인증서: Let's Encrypt (2026-10-10 만료)
+- HTTPS 접속: `https://sunghoonyk.duckdns.org`
+- HSTS: `max-age=31536000; includeSubDomains`
+- 자동 갱신: certbot 타이머 설정 완료
