@@ -24,6 +24,10 @@ spring:
 server:
   shutdown: graceful
 
+oauth2:
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  callback-base: ${OAUTH2_CALLBACK_BASE:http://localhost:8080}
+
 logging:
   level:
     com.shplatform: DEBUG

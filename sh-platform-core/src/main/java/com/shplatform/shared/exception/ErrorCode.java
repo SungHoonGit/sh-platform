@@ -13,6 +13,10 @@ public enum ErrorCode {
     TOKEN_INVALID(HttpStatus.UNAUTHORIZED),
     CODE_EXPIRED(HttpStatus.BAD_REQUEST),
     INVALID_CODE(HttpStatus.BAD_REQUEST),
+    OAUTH2_FAILED(HttpStatus.UNAUTHORIZED),
+    OAUTH2_USER_NOT_FOUND(HttpStatus.NOT_FOUND),
+    OAUTH2_PROVIDER_ERROR(HttpStatus.BAD_GATEWAY),
+    RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final HttpStatus httpStatus;

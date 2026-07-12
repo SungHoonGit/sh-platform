@@ -1,16 +1,16 @@
 spring:
   datasource:
-    url: jdbc:mariadb://${DB_HOST:10.0.0.39}:3306/${DB_NAME:sh_pass}
+    url: jdbc:mariadb://10.0.0.39:3306/sh_pass
     driver-class-name: org.mariadb.jdbc.Driver
-    username: ${DB_USERNAME:sh_user}
-    password: ${DB_PASSWORD:SHpass1234!}
+    username: sh_user
+    password: SHpass1234!
 
   jpa:
     hibernate:
       ddl-auto: update
 
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
+    host: smtp.gmail.com
     port: 587
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
@@ -22,8 +22,47 @@ spring:
             enable: true
 
 jwt:
-  private-key: ${JWT_PRIVATE_KEY}
-  public-key: ${JWT_PUBLIC_KEY}
+  private-key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDGRQRvbaquuDr6
+    hHtE19YY4LN8wsAIm9iJjpBRoSNj0Fag8yW3ZA2IHw+qq3vmtMAg20xzssEWw03e
+    MvtawuzFTRMfVAlo2GBOdIRGKOlNU9of6I6jOxRaozISlqqdULDObrvdc9Y9jJ7E
+    9sMvhsXmAjntn32dBLbgOrvqGTqiTfzi63+PQLNSfsgoN/fcQ2+whtCSnUgLAFzi
+    IopKvxOd8wJxKlJxZ1hajhpT6H6FHXHto2Rf1DHuD+cvhgFp+KrtRvDfkxZN2iEW
+    UQ1fIrtU1L5hYduLrsnIwa9UpwAb8C0nC1YFMUtRinjDOjkIN8ZAERXz+6N6FV1v
+    9OvICVj3AgMBAAECggEAPjcoFiMunRb4guYRnF+yMipIiEzAX7MvtrKCvOq4pTia
+    BnVmD28ZA+7jRqX7AkETzPujuOaNyqvMgn4y+58RFzSBXKJNNZY4WkYbv7xUwUwf
+    tUWPhM8kKvDs5IJc1XKdmJmM4AfaYYP/ykS4qPA8p1lpfhQ/IYd6L1Ce6O2zxXvv
+    kjl7yvwJtg3IeVIPeqvIIUxfy8vGz45lS+WMZ7aCJH4ZkN/x9kOPpKGeTf/YYCYB
+    laN9RP8drqL/bCx/604F2/HfsHd1KRYdfxP42xmcx64sFDdqmF9BZSDl6pAAhSOC
+    ekTXwUYrrJi7y880++U0e0+CPBvxma4CQfyyUISAKQKBgQD0f+fk3IQ3c8nY3Yy0
+    95j5ufE54Vuk04IwYv76kRKLlB0B6q+oJoaVV0SZzUUUTOSkorXdQ0wxd9u8r2LX
+    9xrdmLp6qZcqq2GDBK8jrqycHED2XZCWrvpA8hDsxeyQuwH8SzZZuHNMQ2uvsZF1
+    qPWPd9KDfosaYfyVkQLDI9YEmwKBgQDPmHEP8Xcs4lXlx6TECRyAoWTju6f0j/95
+    +9+HC6jl9gpCaicgX/JNeSg6e+GQleDexko4HudyeqbdPnktwhz83vCs55Um0diZ
+    bFmgTjNs3rz9AKyfmcW6g+FoU4ZmZtFwomEBDbeZN93sugkNuYgYIMPAAw/j6M95
+    KP076KTM1QKBgQCcfQkVKDbPryJv1U1rvlWA8Iv+uciINH/NLG96PEQcZg4y3dzT
+    yOS2zQYxUnp2RcjJvwKbvakUuFxB5hdjltrxHgGs5MLGIq7kxqi6M+BygnrptHUI
+    nLG7w7MleICzGZ5ptlHxFudk1nokF4i8QAn7a3ungeTSXAjoScn00Aj5JQKBgBmc
+    L86MtmwWHAy13XDFwvtnbb/ehbDZFuZgmUnauWJtQQTCfcMzsvu1x623XLNumghB
+    pCRaQ6lO0kkXDPIFMXhMtJpQE4lvd+4tfL0XCKcUr3Hy5FjoKomA/YzWSQ1W/92K
+    Wrc7jvva9YjfxoAn9E8ts5h7iDlQnk/PK7Z5U+NlAoGAKvLw1xoorGS+G5bv8RNX
+    Q6BoSYODyGi052ocnZdL+wQgVRjWFNSRrBEmIpWne74l0RwBE5CMbRWaR6TO99Tv
+    dl+Rx937RPlEd7aNPVf/9BQW1n2JPL+bTTFNyfVRf3vo7KoII+vgw/9r4myZFmCg
+    Ka9F9k7RB1BMuSw41uB6B3E=
+    -----END PRIVATE KEY-----
+  public-key: |
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxkUEb22qrrg6+oR7RNfW
+    GOCzfMLACJvYiY6QUaEjY9BWoPMlt2QNiB8Pqqt75rTAINtMc7LBFsNN3jL7WsLs
+    xU0TH1QJaNhgTnSERijpTVPaH+iOozsUWqMyEpaqnVCwzm673XPWPYyexPbDL4bF
+    5gI57Z99nQS24Dq76hk6ok384ut/j0CzUn7IKDf33ENvsIbQkp1ICwBc4iKKSr8T
+    nfMCcSpScWdYWo4aU+h+hR1x7aNkX9Qx7g/nL4YBafiq7Ubw35MWTdohFlENXyK7
+    VNS+YWHbi67JyMGvVKcAG/AtJwtWBTFLUYp4wzo5CDfGQBEV8/ujehVdb/TryAlY
+    9wIDAQAB
+    -----END PUBLIC KEY-----
+  access-token-expiration: 3600000
+  refresh-token-expiration: 1209600000
 
 logging:
   level:

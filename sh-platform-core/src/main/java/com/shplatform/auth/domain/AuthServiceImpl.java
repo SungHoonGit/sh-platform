@@ -7,13 +7,16 @@ import com.shplatform.auth.infrastructure.*;
 import com.shplatform.shared.exception.BusinessException;
 import com.shplatform.shared.exception.ErrorCode;
 import java.time.LocalDateTime;
-import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthServiceImpl implements AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -48,6 +51,7 @@ public class AuthServiceImpl implements AuthService {
         var domain = User.createLocal(request.email(), request.name());
         var entity = userMapper.toEntity(domain, passwordEncoder.encode(request.password()));
         var saved = userRepository.save(entity);
+        log.info("[AUTH] signup success: email={}, userId={}", request.email(), saved.getId());
         return userMapper.toDomain(saved);
     }
 
@@ -62,6 +66,7 @@ public class AuthServiceImpl implements AuthService {
         entity.setExpiresAt(LocalDateTime.now().plusMinutes(5));
         verificationCodeRepository.save(entity);
         emailService.sendVerificationCode(email, code);
+        log.info("[AUTH] verification email sent: email={}, purpose={}", email, purpose);
     }
 
     @Override
@@ -74,6 +79,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.CODE_EXPIRED);
         }
         if (!record.getCode().equals(code)) {
+            log.warn("[AUTH] verify code failed: email={}, purpose={}", email, purpose);
             throw new BusinessException(ErrorCode.INVALID_CODE);
         }
         record.setVerified(true);
@@ -85,19 +91,26 @@ public class AuthServiceImpl implements AuthService {
                 userRepository.save(entity);
             });
         }
+        log.info("[AUTH] verify code success: email={}, purpose={}", email, purpose);
     }
 
     @Override
     @Transactional
     public TokenResponse login(LoginRequest request) {
         var entity = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+                .orElseThrow(() -> {
+                    log.warn("[AUTH] login failed (user not found): email={}", request.email());
+                    return new BusinessException(ErrorCode.UNAUTHORIZED);
+                });
         if (!passwordEncoder.matches(request.password(), entity.getPassword())) {
+            log.warn("[AUTH] login failed (wrong password): email={}", request.email());
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         if (!entity.isEmailVerified()) {
+            log.warn("[AUTH] login failed (email not verified): email={}", request.email());
             throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
+        log.info("[AUTH] login success: email={}, userId={}, provider=LOCAL", request.email(), entity.getId());
         return createTokens(entity.getId(), entity.getEmail(), entity.getRole().name());
     }
 
@@ -105,14 +118,19 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public TokenResponse refresh(String refreshToken) {
         var stored = refreshTokenRepository.findByToken(refreshToken)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TOKEN_INVALID));
+                .orElseThrow(() -> {
+                    log.warn("[AUTH] token refresh failed (token not found)");
+                    return new BusinessException(ErrorCode.TOKEN_INVALID);
+                });
         if (stored.getExpiresAt().isBefore(LocalDateTime.now())) {
             refreshTokenRepository.delete(stored);
+            log.warn("[AUTH] token refresh failed (token expired): userId={}", stored.getUserId());
             throw new BusinessException(ErrorCode.TOKEN_EXPIRED);
         }
         var user = userRepository.findById(stored.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
         refreshTokenRepository.delete(stored);
+        log.info("[AUTH] token refresh success: userId={}", user.getId());
         return createTokens(user.getId(), user.getEmail(), user.getRole().name());
     }
 
@@ -120,7 +138,10 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void logout(String refreshToken) {
         refreshTokenRepository.findByToken(refreshToken)
-                .ifPresent(refreshTokenRepository::delete);
+                .ifPresent(entity -> {
+                    refreshTokenRepository.delete(entity);
+                    log.info("[AUTH] logout: userId={}", entity.getUserId());
+                });
     }
 
     private TokenResponse createTokens(Long userId, String email, String role) {
