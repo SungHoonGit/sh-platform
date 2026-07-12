@@ -1,0 +1,18 @@
+# SH Platform CODEOWNERS
+# 폴더별 리뷰어/소유자 지정
+
+# 기본 소유자 (모든 파일)
+* @SungHoonGit
+
+# 백엔드 코드 - 백엔드 개발자가 리뷰
+/sh-platform-auth/ @SungHoonGit
+/sh-platform-common/ @SungHoonGit
+
+# 프론트엔드 코드 - 프론트엔드 개발자가 리뷰
+/frontend/ @frontend-dev
+
+# 문서 - 모든 사람이 리뷰 가능
+/docs/ @SungHoonGit @frontend-dev
+
+# CI/CD 설정 - 백엔드 개발자가 관리
+/.github/ @SungHoonGit
