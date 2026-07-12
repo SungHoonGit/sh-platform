@@ -15,7 +15,7 @@ SH(SungHoon) SaaS 기반 통합 플랫폼. Monorepo + Multi-Module 구조.
 sh-platform/
 ├── settings.gradle.kts          # 멀티모듈 설정
 ├── build.gradle.kts             # 루트 빌드
-├── sh-platform-core/            # 메인 Spring Boot 앱 (인증 + API)
+├── sh-platform-auth/            # 인증 서비스 (Spring Boot 앱)
 │   ├── build.gradle.kts
 │   └── src/
 ├── sh-platform-common/          # 공통 라이브러리 (DTO, 예외, util)
@@ -33,7 +33,7 @@ sh-platform/
 
 | 모듈 | 설명 | 상태 |
 |------|------|------|
-| sh-platform-core | 메인 앱 (인증, OAuth2, API) | ✅ 개발 중 |
+| sh-platform-auth | 인증 서비스 (로그인, OAuth2, JWT, SSO) | ✅ 개발 중 |
 | sh-platform-common | 공통 라이브러리 (DTO, 예외 처리) | ✅ 생성됨 |
 | sh-platform-board | 게시판 (추후) | ⏳ 예정 |
 | sh-platform-shop | 쇼핑몰 (추후) | ⏳ 예정 |
@@ -55,11 +55,11 @@ sh-platform/
 # 전체 빌드
 ./gradlew build
 
-# core 모듈만 빌드
-./gradlew :sh-platform-core:build
+# auth 모듈만 빌드
+./gradlew :sh-platform-auth:build
 
 # 실행
-./gradlew :sh-platform-core:bootRun
+./gradlew :sh-platform-auth:bootRun
 ```
 
 ## 관련 문서
