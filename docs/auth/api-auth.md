@@ -371,3 +371,156 @@ Payload:
    │  with JWT   │               │               │
    │<────────────│               │               │
 ```
+
+---
+
+## 12. 계정 연결 (Account Linking)
+
+### 개요
+
+같은 이메일로 여러 소셜 프로바이더에서 로그인하면 자동으로 하나의 계정에 연결됩니다.
+
+### 동작 흐름
+
+1. 사용자가 카카오로 로그인 → 새 계정 생성
+2. 같은 사람이 네이버로 로그인
+3. 백엔드에서 이메일 확인 → 기존 계정 발견
+4. 자동으로 네이버 프로바이더 연결
+5. 같은 계정으로 로그인 (JWT 발급)
+
+### API 엔드포인트
+
+| Method | URL | 설명 | 인증 |
+|--------|-----|------|:----:|
+| GET | /auth/oauth2/link-check | 이메일로 연결된 프로바이더 확인 | ❌ |
+| POST | /auth/oauth2/link | 기존 계정에 프로바이더 연결 | ❌ |
+| GET | /auth/oauth2/providers | 내 연결된 프로바이더 목록 | ✅ |
+| DELETE | /auth/oauth2/providers/{provider} | 프로바이더 연결 해제 | ✅ |
+
+---
+
+### 12.1 이메일 연결 확인
+
+### GET /auth/oauth2/link-check
+
+이메일로 이미 연결된 프로바이더가 있는지 확인합니다.
+
+```
+Request:
+GET /api/v1/auth/oauth2/link-check?email=user@example.com
+
+Response 200:
+{
+    "code": "SUCCESS",
+    "data": {
+        "email": "user@example.com",
+        "linked": true,
+        "providers": ["KAKAO", "NAVER"],
+        "providerCount": 2
+    }
+}
+```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| email | String | 확인할 이메일 |
+| linked | Boolean | 연결된 프로바이더 존재 여부 |
+| providers | List | 연결된 프로바이더 목록 |
+| providerCount | Integer | 연결된 프로바이더 수 |
+
+---
+
+### 12.2 프로바이더 연결
+
+### POST /auth/oauth2/link
+
+기존 계정에 새로운 소셜 프로바이더를 연결합니다.
+
+```
+Request:
+POST /api/v1/auth/oauth2/link
+
+{
+    "email": "user@example.com",
+    "password": "Password1!",
+    "provider": "NAVER"
+}
+
+Response 200:
+{
+    "code": "SUCCESS",
+    "message": "프로바이더가 연결되었습니다.",
+    "data": {
+        "provider": "NAVER",
+        "email": "user@example.com"
+    }
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|:----:|------|
+| email | String | Y | 기존 계정 이메일 |
+| password | String | Y | 기존 계정 비밀번호 |
+| provider | String | Y | 연결할 프로바이더 |
+
+에러:
+
+| Code | Status | 상황 |
+|------|:------:|------|
+| PROVIDER_ALREADY_LINKED | 409 | 이미 연결된 프로바이더 |
+| USER_NOT_FOUND | 404 | 해당 이메일의 사용자 없음 |
+
+---
+
+### 12.3 연결된 프로바이더 목록
+
+### GET /auth/oauth2/providers
+
+현재 로그인한 사용자에게 연결된 모든 프로바이더를 조회합니다.
+
+```
+Request:
+GET /api/v1/auth/oauth2/providers
+Header: Authorization: Bearer eyJhbGciOi...
+
+Response 200:
+{
+    "code": "SUCCESS",
+    "data": {
+        "providers": [
+            {"provider": "KAKAO", "connectedAt": "2026-07-12T19:54:08"},
+            {"provider": "NAVER", "connectedAt": "2026-07-13T09:30:15"}
+        ],
+        "count": 2,
+        "canUnlink": true
+    }
+}
+```
+
+---
+
+### 12.4 프로바이더 연결 해제
+
+### DELETE /auth/oauth2/providers/{provider}
+
+현재 로그인한 사용자의 특정 프로바이더 연결을 해제합니다.
+
+```
+Request:
+DELETE /api/v1/auth/oauth2/providers/KAKAO
+Header: Authorization: Bearer eyJhbGciOi...
+
+Response 200:
+{
+    "code": "SUCCESS",
+    "message": "프로바이더 연결이 해제되었습니다.",
+    "data": {"provider": "KAKAO"}
+}
+```
+
+에러:
+
+| Code | Status | 상황 |
+|------|:------:|------|
+| LAST_PROVIDER_CANNOT_UNLINK | 400 | 마지막 프로바이더는 해제 불가 |
+| PROVIDER_NOT_FOUND | 404 | 해당 프로바이더가 연결되어 있지 않음 |
