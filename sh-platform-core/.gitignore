@@ -8,3 +8,9 @@ out/
 .project
 .classpath
 bin/
+
+# Server-specific (do not commit)
+.env
+keys/
+logs/
+start.sh
