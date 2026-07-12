@@ -9,10 +9,10 @@
 /sh-platform-common/ @SungHoonGit
 
 # 프론트엔드 코드 - 프론트엔드 개발자가 리뷰
-/frontend/ @frontend-dev
+/frontend/ @noeyoeslee
 
 # 문서 - 모든 사람이 리뷰 가능
-/docs/ @SungHoonGit @frontend-dev
+/docs/ @SungHoonGit @noeyoeslee
 
 # CI/CD 설정 - 백엔드 개발자가 관리
 /.github/ @SungHoonGit
