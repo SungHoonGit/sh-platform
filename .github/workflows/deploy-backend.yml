@@ -27,13 +27,12 @@ jobs:
           chmod +x gradlew
           ./gradlew :sh-platform-auth:build
 
-      - name: Publish Test Report
-        uses: dorny/test-reporter@v1
+      - name: Upload Test Report
+        uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
-          name: JUnit Test Results
-          path: '**/build/test-results/test/*.xml'
-          reporter: java-junit
+          name: test-report
+          path: '**/build/reports/tests/test/'
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
