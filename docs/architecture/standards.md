@@ -202,26 +202,152 @@ public class GlobalExceptionHandler {
 
 ---
 
-## 6. 테스트
+## 6. Javadoc
+
+### 6.1 필수 작성 대상
+
+| 대상 | 적용 | 이유 |
+|------|:----:|------|
+| public 인터페이스 메서드 | 필수 | API 문서 자동 생성 기준 |
+| BusinessException ErrorCode | 필수 | 에러 의미 전달 |
+| DTO record | 권장 | 필드 설명 |
+| private 메서드 | 생략 가능 | 내부 구현 |
+
+### 6.2 작성 규칙
+
+```java
+/**
+ * (명령형으로) 회원가입을 처리한다.
+ *
+ * @param request  이메일, 비밀번호, 이름
+ * @return 생성된 사용자 정보 (id, email, name, role)
+ * @throws BusinessException EMAIL_NOT_VERIFIED - 이메일 인증되지 않음
+ *                           DUPLICATE_EMAIL    - 중복 이메일
+ */
+User signup(SignupRequest request);
+```
+
+- 첫 문장은 동사로 끝맺음 (`-한다`, `-조회한다`)
+- `@param`은 파라미터 설명 + 타입
+- `@return`은 반환값 설명
+- `@throws`는 예외명 + 조건 (여러 개 가능)
+- `/**`와 `*/`는 단독 줄, 내용은 ` * `로 정렬
+- `@Override` 메서드는 Javadoc 생략 (부모 Javadoc 상속)
+
+### 6.3 문서 생성
+
+```bash
+./gradlew javadoc
+# → build/docs/javadoc/index.html
+```
+
+- CI (GitHub Actions)에서 자동 생성 → GitHub Pages 배포 가능
+
+---
+
+## 7. 테스트
+
+### 7.1 테스트 구조
 
 ```
 src/test/java/com/shplatform/
 ├── auth/
 │   ├── domain/
-│   │   └── AuthServiceTest.java         ← JUnit 5, Mockito (Spring 미기동)
+│   │   └── AuthServiceImplTest.java      ← JUnit 5 + Mockito (Spring 미기동)
 │   └── infrastructure/
-│       └── UserRepositoryTest.java      ← @DataJpaTest
+│       └── UserRepositoryTest.java       ← @DataJpaTest
 └── shared/
     └── config/
-        └── SecurityConfigTest.java      ← @WebMvcTest
+        └── SecurityConfigTest.java       ← @WebMvcTest
 ```
 
-- 도메인 테스트: Spring context 없이 순수 JUnit
-- `@SpringBootTest`는 통합 테스트에만 사용, 최소화
+### 7.2 레이어별 테스트 전략
+
+| 계층 | 방식 | Spring Context |
+|------|------|:-------------:|
+| Domain (Service) | `@ExtendWith(MockitoExtension.class)` | ❌ |
+| Repository | `@DataJpaTest` | ✅ (JPA만) |
+| Controller | `@WebMvcTest` | ✅ (Web만) |
+| 통합 테스트 | `@SpringBootTest` | ✅ (최소화) |
+
+### 7.3 도메인 테스트 패턴 (서비스 레이어)
+
+```java
+@ExtendWith(MockitoExtension.class)
+class AuthServiceImplTest {
+
+    @Mock private UserRepository userRepository;
+    // ... 모든 의존성 @Mock
+
+    private AuthServiceImpl authService;   // 실제 객체
+
+    @BeforeEach
+    void setUp() {
+        userMapper = new UserMapper();          // 순수 객체는 직접 생성
+        passwordEncoder = new BCryptPasswordEncoder();
+        authService = new AuthServiceImpl(      // Mock 주입
+            userRepository, ..., passwordEncoder, ...
+        );
+    }
+}
+```
+
+### 7.4 테스트 메서드 네이밍
+
+```
+{대상}_{동작}_{조건}
+```
+
+```java
+@Test
+void signup_shouldCreateUser_whenEmailNotDuplicate() {
+    // given (Mock 설정)
+    // when (실행)
+    // then (검증)
+}
+
+@Test
+void signup_shouldThrow_whenEmailDuplicate() {
+    // ...
+}
+```
+
+### 7.5 검증 패턴
+
+```java
+// 정상 케이스 — 반환값 검증
+assertEquals("test@example.com", result.email());
+assertNotNull(result.id());
+
+// 예외 케이스
+var ex = assertThrows(BusinessException.class, () -> authService.login(request));
+assertEquals(ErrorCode.UNAUTHORIZED, ex.getErrorCode());
+
+// Mock 호출 검증
+verify(userRepository).save(any());
+verify(emailService, never()).sendVerificationCode(any(), any());
+```
+
+### 7.6 커버리지 기준
+
+| 대상 | 기준 |
+|------|:----:|
+| Service 정상 흐름 | 100% (모든 public 메서드) |
+| Service 예외 흐름 | 최소 1개 이상 |
+| Repository | 커스텀 쿼리만 |
+| Controller | DTO 검증 + HTTP 응답 |
+
+### 7.7 실행
+
+```bash
+./gradlew test                                    # 전체
+./gradlew :sh-platform-auth:test                  # auth 모듈만
+./gradlew test --tests "*AuthServiceImplTest*"    # 특정 클래스
+```
 
 ---
 
-## 7. 커밋 컨벤션
+## 8. 커밋 컨벤션
 
 ```
 feat:      새 기능 추가
@@ -242,7 +368,7 @@ refactor: AuthService 분리 (AuthService → AuthService + TokenService)
 
 ---
 
-## 8. 다국어 (i18n)
+## 9. 다국어 (i18n)
 
 - Spring `MessageSource` 사용
 - 메시지 파일: `messages_ko.properties`, `messages_en.properties`
@@ -251,7 +377,7 @@ refactor: AuthService 분리 (AuthService → AuthService + TokenService)
 
 ---
 
-## 9. 환경 설정
+## 10. 환경 설정
 
 ```yaml
 # application.yml
@@ -270,7 +396,7 @@ spring:
 
 ---
 
-## 10. 참고 자료
+## 11. 참고 자료
 
 - [Spring Boot 공식 문서](https://docs.spring.io/spring-boot/reference/using/structuring-your-code.html)
 - [Spring Boot Package Structure Best Practices (2026)](https://thelinuxcode.com/best-practices-for-structuring-a-spring-boot-application-in-2026/)
