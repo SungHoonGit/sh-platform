@@ -63,9 +63,178 @@ sh-platform-{module}/
 └── build.gradle.kts
 ```
 
-### 5. 필수 문서 체크리스트
+---
 
-새 기능 추가 시 다음 문서가 관련되면 함께 업데이트한다:
+## Javadoc
+
+### 개념
+
+Java 소스 코드에 `/** ... */` 주석을 달면 Gradle이 HTML 문서를 자동 생성한다.
+
+```java
+/**
+ * 회원 정보를 조회한다.
+ *
+ * @param userId 사용자 ID (PK)
+ * @return User 객체 (email, name, role 포함)
+ * @throws BusinessException NOT_FOUND - 사용자가 존재하지 않는 경우
+ */
+public User getUser(Long userId);
+```
+
+### 생성 명령어
+
+```bash
+./gradlew javadoc
+# → build/docs/javadoc/index.html
+```
+
+### 웹에서 보기
+
+```
+https://sunghoonyk.duckdns.org/javadoc/
+```
+
+### CI 연동
+
+GitHub Actions deploy 시 `./gradlew :sh-platform-auth:javadoc` 이 자동 실행되어 서버에 문서가 갱신된다.
+
+---
+
+## JUnit 테스트 리포트
+
+### 개념
+
+JUnit 테스트 코드를 실행하면 Gradle이 결과를 HTML 리포트로 생성한다.
+
+```bash
+./gradlew test
+  ↓
+build/reports/tests/test/index.html   ← 브라우저용
+build/test-results/test/*.xml          ← CI가 읽는 데이터
+```
+
+### 화면 구성
+
+```
+Test Summary
+  tests: 29  failures: 0
+  ─────────────────────
+  Packages →
+    com.shplatform.auth.domain (29 tests, 0 failures)
+         ↓ 클릭
+  각 테스트 메서드별 성공(초록) / 실패(빨강) / 실행시간
+```
+
+### 웹에서 보기
+
+```
+https://sunghoonyk.duckdns.org/test-reports/
+```
+
+### CI 연동
+
+`.github/workflows/deploy-backend.yml` 에서:
+
+```yaml
+- name: Upload Test Report
+  uses: actions/upload-artifact@v4
+  if: success() || failure()
+  with:
+    name: test-report
+    path: '**/build/reports/tests/test/'
+```
+
+실패해도 artifact는 업로드되므로 원인 분석 가능. GitHub Actions 화면 하단 **Artifacts** 섹션에서 `test-report.zip` 다운로드 가능.
+
+---
+
+## Swagger (SpringDoc) API 문서
+
+### 개념
+
+- Javadoc이 "코드 설명서"라면, Swagger는 "API 테스트 도구"
+- `@RestController`를 자동 스캔해서 UI 생성
+- **"Try it out"** 버튼으로 브라우저에서 직접 API 호출 가능
+
+### 적용
+
+`sh-platform-auth/build.gradle.kts`:
+
+```kotlin
+implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
+```
+
+이 한 줄로 Spring Boot가 자동으로 모든 `@RestController`를 스캔한다.
+
+### Security 예외 경로
+
+`SecurityConfig.java` 에 Swagger UI 경로를 인증 예외 처리:
+
+```java
+.requestMatchers(
+    "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**"
+).permitAll()
+```
+
+### Config 클래스
+
+```java
+@Bean
+public OpenAPI openAPI() {
+    return new OpenAPI()
+            .info(new Info()
+                    .title("sh-platform API")
+                    .description("인증 · AI Housing 통합 플랫폼 API 문서")
+                    .version("1.0.0"))
+            .servers(List.of(
+                    new Server().url(serverUrl).description("현재 서버")
+            ));
+}
+```
+
+### 웹에서 보기
+
+```
+https://sunghoonyk.duckdns.org/swagger-ui/
+```
+
+### 어노테이션 기본
+
+```java
+@Tag(name = "Auth", description = "인증 API")             // 컨트롤러 그룹
+@Operation(summary = "회원가입", description = "...")       // API 설명
+@ApiResponse(responseCode = "201", description = "성공")    // 응답 정의
+```
+
+필수는 아님. 어노테이션 없어도 DTO 필드 + HTTP 메서드 기준으로 자동 생성됨.
+
+---
+
+## 산출물 한눈에 보기
+
+```
+git push
+  → GitHub Actions 실행
+      1. ./gradlew :sh-platform-auth:build  (테스트 포함)
+      2. JUnit 테스트 29개 자동 실행
+         └── 실패 시 → deploy 중단, artifact에서 원인 확인
+         └── 성공 시 → 계속 진행
+      3. 테스트 리포트 HTML artifact 업로드
+      4. SSH로 서버 배포
+         ├── git pull
+         ├── ./gradlew build + test (서버에서도 실행)
+         ├── ./gradlew javadoc (문서 생성)
+         └── 서비스 재시작
+  → 웹에서 즉시 확인 가능:
+       ├── https://sunghoonyk.duckdns.org/swagger-ui/     ← API 테스트
+       ├── https://sunghoonyk.duckdns.org/test-reports/   ← 테스트 결과
+       └── https://sunghoonyk.duckdns.org/javadoc/        ← 코드 문서
+```
+
+---
+
+## 필수 문서 체크리스트
 
 | 문서 | 갱신 대상 |
 |------|-----------|
@@ -74,9 +243,11 @@ sh-platform-{module}/
 | `docs/architecture/sql-ddl.md` | 새 테이블 추가 시 |
 | `docs/auth/api-auth.md` | 새 API 엔드포인트 추가 시 |
 | `docs/auth/frontend-auth-guide.md` | 프론트 영향 있는 경우 |
-| `docs/development-guide.md` | (본 문서 - 필요 시) |
+| `docs/infra/domain-ssl-setup-guide.md` | 인프라 변경 시 |
+| `docs/roadmap.md` | 일정 변경 시 |
+| `docs/development-guide.md` | (본 문서 - 프로세스 변경 시) |
 
-### 6. 참조 문서 인덱스
+## 참조 문서 인덱스
 
 | 목적 | 문서 |
 |------|------|
@@ -88,5 +259,3 @@ sh-platform-{module}/
 | 프론트 연동 | `docs/front/integration-guide.md` |
 | 배포 인프라 | `docs/infra/domain-ssl-setup-guide.md` |
 | 프로젝트 로드맵 | `docs/roadmap.md` |
-| 테스트 리포트 & Javadoc 활용 | `docs/guides/test-report-guide.md` |
-| Swagger API 문서 | `docs/guides/swagger-guide.md` |
