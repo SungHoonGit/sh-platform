@@ -19,27 +19,25 @@ jobs:
 
       - name: Build with Gradle
         run: |
-          cd sh-platform-auth
           chmod +x gradlew
-          ./gradlew build -x test
+          ./gradlew :sh-platform-auth:build -x test
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: 140.245.95.162
+          host: 10.0.0.39
           username: ubuntu
-          key: ${{ secrets.OCI_SSH_KEY }}
+          password: ${{ secrets.OCI_SSH_PW }}
           script: |
             set -e
 
             sudo systemctl stop sh-platform 2>/dev/null || true
 
             cd /home/ubuntu/sh-platform
-            git pull origin master
+            git pull origin main
 
-            cd sh-platform-auth
-            chmod +x gradlew
-            ./gradlew clean build -x test -q
+            ln -sf ~/gradlew gradlew 2>/dev/null || true
+            ./gradlew :sh-platform-auth:clean :sh-platform-auth:build -x test -q
 
             sudo systemctl start sh-platform
             echo "Deploy complete!"
