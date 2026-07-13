@@ -326,3 +326,37 @@ https://sunghoonyk.duckdns.org/schemaSpy/sh_pass/index.html
 - 새 DB 생성 시 별도 설정 불필요
 - 매주 일요일 03:00 자동 실행
 
+
+---
+
+## 모니터링 (Prometheus + Grafana)
+
+### 구성 요소
+
+| 도구 | 용도 | 포트 |
+|------|------|------|
+| Prometheus | 메트릭 수집 및 저장 | :9090 |
+| Grafana | 대시보드 시각화 | :3000 |
+| Node Exporter | 서버 메트릭 (CPU/RAM/Disk) | :9100 |
+| Micrometer | Spring Boot 메트릭 | :8080/actuator |
+
+### 접속 경로
+
+```
+Grafana:    https://sunghoonyk.duckdns.org/grafana/
+Prometheus: https://sunghoonyk.duckdns.org/prometheus/
+```
+
+### 기본 로그인
+
+- ID: admin
+- PW: admin (초기 비밀번호)
+
+### systemd 서비스
+
+```bash
+sudo systemctl status prometheus
+sudo systemctl status grafana-server
+sudo systemctl status prometheus-node-exporter
+```
+
