@@ -288,3 +288,33 @@ git push
 | **JUnit** | `docs/guides/test-report-guide.md` | 리포트 구조, 로컬/CI 확인법, Artifact 관리 |
 | **Swagger** | `docs/guides/swagger-guide.md` | 적용 방법, 어노테이션, Security 예외 처리 |
 | **nginx** | `docs/guides/nginx-guide.md` | 설정 파일 위치, location 블록 설명, 자주 쓰는 명령어 |
+
+---
+
+## SchemaSpy (DB 문서 자동화)
+
+### 개념
+
+데이터베이스 메타데이터를 분석하여 **HTML 형태의 ERD, 테이블 관계, 컬럼 상세** 문서를 자동 생성한다.
+
+### 생성 명령어
+
+```bash
+# 전체 DB 문서화
+sudo /opt/schemaSpy/run-all.sh
+
+# 특정 DB만 (sh_pass)
+sudo /opt/schemaSpy/run-schemaSpy.sh
+```
+
+### 웹에서 보기
+
+```
+https://sunghoonyk.duckdns.org/schemaSpy/sh_pass/index.html
+```
+
+### 자동화
+
+- **systemd timer**: 매주 일요일 03:00 자동 실행
+- **수동 실행**: DB 변경 시 `sudo /opt/schemaSpy/run-all.sh`
+

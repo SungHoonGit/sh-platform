@@ -1,0 +1,37 @@
+name: Generate DB Documentation
+
+on:
+  workflow_dispatch:
+    inputs:
+      database:
+        description: "Database name (empty for all)"
+        required: false
+        default: ""
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate SchemaSpy Documentation
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.OCI_WEB_IP }}
+          username: ${{ secrets.OCI_SSH_USER }}
+          key: ${{ secrets.OCI_SSH_KEY }}
+          script: |
+            if [ -n "${{ github.event.inputs.database }}" ]; then
+              # 특정 DB만 실행
+              java -jar /opt/schemaSpy/schemaspy-6.2.4.jar \
+                -t mariadb \
+                -host 10.0.0.39 \
+                -port 3306 \
+                -db "${{ github.event.inputs.database }}" \
+                -u sh_user \
+                -p "SHpass1234!" \
+                -dp /opt/schemaSpy/mariadb-java-client-3.5.3.jar \
+                -o /var/www/schemaSpy/${{ github.event.inputs.database }} \
+                -s "${{ github.event.inputs.database }}"
+            else
+              # 전체 실행
+              sudo /opt/schemaSpy/run-all.sh
+            fi
