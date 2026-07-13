@@ -31,3 +31,17 @@ oauth2:
 logging:
   level:
     com.shplatform: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: sh-platform-auth
