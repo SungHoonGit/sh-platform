@@ -49,6 +49,7 @@ jobs:
             git pull origin master
 
             ./gradlew :sh-platform-auth:clean :sh-platform-auth:build -q
+            ./gradlew :sh-platform-auth:javadoc -q
 
             sudo systemctl start sh-platform
             echo "Deploy complete!"
