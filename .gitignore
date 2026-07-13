@@ -44,3 +44,18 @@ frontend/mobile/dist/
 .env
 .env.local
 .env.production
+
+### Keys & Secrets ###
+keys/
+
+### Logs ###
+logs/
+
+### Backup files ###
+*.bak
+
+### Start script ###
+start.sh
+
+### Gradle wrapper (tracked separately) ###
+sh-platform-auth/gradle/
