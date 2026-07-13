@@ -174,7 +174,8 @@ public class SecurityConfig {
                     "/api/v1/auth/refresh", "/api/v1/auth/verify-email",
                     "/api/v1/auth/verify-code", "/api/v1/auth/oauth2/**",
                     "/login/oauth2/code/**",
-                    "/api/health", "/actuator/health", "/h2-console/**"
+                    "/api/health", "/actuator/health", "/h2-console/**",
+                    "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
