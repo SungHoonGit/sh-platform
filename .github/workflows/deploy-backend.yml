@@ -22,10 +22,18 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Build with Gradle
+      - name: Build and Test with Gradle
         run: |
           chmod +x gradlew
-          ./gradlew :sh-platform-auth:build -x test
+          ./gradlew :sh-platform-auth:build
+
+      - name: Publish Test Report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: JUnit Test Results
+          path: '**/build/test-results/test/*.xml'
+          reporter: java-junit
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
