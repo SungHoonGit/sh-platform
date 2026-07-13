@@ -88,3 +88,4 @@ sh-platform-{module}/
 | 프론트 연동 | `docs/front/integration-guide.md` |
 | 배포 인프라 | `docs/infra/domain-ssl-setup-guide.md` |
 | 프로젝트 로드맵 | `docs/roadmap.md` |
+| 테스트 리포트 & Javadoc 활용 | `docs/guides/test-report-guide.md` |
