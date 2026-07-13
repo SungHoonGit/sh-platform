@@ -280,3 +280,11 @@ git push
 | 프론트 연동 | `docs/front/integration-guide.md` |
 | 배포 인프라 | `docs/infra/domain-ssl-setup-guide.md` |
 | 프로젝트 로드맵 | `docs/roadmap.md` |
+
+## 도구별 상세 가이드
+
+| 도구 | 문서 | 주요 내용 |
+|------|------|----------|
+| **JUnit** | `docs/guides/test-report-guide.md` | 리포트 구조, 로컬/CI 확인법, Artifact 관리 |
+| **Swagger** | `docs/guides/swagger-guide.md` | 적용 방법, 어노테이션, Security 예외 처리 |
+| **nginx** | `docs/guides/nginx-guide.md` | 설정 파일 위치, location 블록 설명, 자주 쓰는 명령어 |
