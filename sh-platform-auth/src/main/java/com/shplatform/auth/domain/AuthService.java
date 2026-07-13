@@ -1,8 +1,6 @@
 package com.shplatform.auth.domain;
 
-import com.shplatform.auth.api.dto.LoginRequest;
-import com.shplatform.auth.api.dto.SignupRequest;
-import com.shplatform.auth.api.dto.TokenResponse;
+import com.shplatform.auth.api.dto.*;
 
 public interface AuthService {
     User signup(SignupRequest request);
@@ -11,4 +9,8 @@ public interface AuthService {
     TokenResponse login(LoginRequest request);
     TokenResponse refresh(String refreshToken);
     void logout(String refreshToken);
+    User getUser(Long userId);
+    User updateProfile(Long userId, UpdateProfileRequest request);
+    void changePassword(Long userId, ChangePasswordRequest request);
+    void deleteAccount(Long userId, String password);
 }

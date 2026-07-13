@@ -1,8 +1,6 @@
 package com.shplatform.auth.domain;
 
-import com.shplatform.auth.api.dto.LoginRequest;
-import com.shplatform.auth.api.dto.SignupRequest;
-import com.shplatform.auth.api.dto.TokenResponse;
+import com.shplatform.auth.api.dto.*;
 import com.shplatform.auth.infrastructure.*;
 import com.shplatform.shared.exception.BusinessException;
 import com.shplatform.shared.exception.ErrorCode;
@@ -142,6 +140,63 @@ public class AuthServiceImpl implements AuthService {
                     refreshTokenRepository.delete(entity);
                     log.info("[AUTH] logout: userId={}", entity.getUserId());
                 });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public User getUser(Long userId) {
+        var entity = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        return userMapper.toDomain(entity);
+    }
+
+    @Override
+    @Transactional
+    public User updateProfile(Long userId, UpdateProfileRequest request) {
+        var entity = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (request.name() != null) {
+            entity.setName(request.name());
+        }
+        if (request.locale() != null) {
+            entity.setLocale(request.locale());
+        }
+        var saved = userRepository.save(entity);
+        log.info("[AUTH] profile updated: userId={}", userId);
+        return userMapper.toDomain(saved);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        var entity = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (entity.getPassword() == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        if (!passwordEncoder.matches(request.currentPassword(), entity.getPassword())) {
+            log.warn("[AUTH] change password failed (wrong password): userId={}", userId);
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        entity.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(entity);
+        log.info("[AUTH] password changed: userId={}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAccount(Long userId, String password) {
+        var entity = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (entity.getProvider().equals("LOCAL")) {
+            if (password == null || !passwordEncoder.matches(password, entity.getPassword())) {
+                log.warn("[AUTH] delete account failed (wrong password): userId={}", userId);
+                throw new BusinessException(ErrorCode.UNAUTHORIZED);
+            }
+        }
+        refreshTokenRepository.deleteByUserId(userId);
+        userRepository.delete(entity);
+        log.info("[AUTH] account deleted: userId={}", userId);
     }
 
     private TokenResponse createTokens(Long userId, String email, String role) {
