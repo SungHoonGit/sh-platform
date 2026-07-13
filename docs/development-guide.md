@@ -318,3 +318,11 @@ https://sunghoonyk.duckdns.org/schemaSpy/sh_pass/index.html
 - **systemd timer**: 매주 일요일 03:00 자동 실행
 - **수동 실행**: DB 변경 시 `sudo /opt/schemaSpy/run-all.sh`
 
+
+
+### 자동 발견 방식
+
+- sh_ 접두사가 있는 모든 DB를 자동으로 문서화
+- 새 DB 생성 시 별도 설정 불필요
+- 매주 일요일 03:00 자동 실행
+
