@@ -211,7 +211,28 @@ https://sunghoonyk.duckdns.org/swagger-ui/
 
 ---
 
-## 산출물 한눈에 보기
+## 웹 접근 경로 총정리
+
+| 경로 | 내용 | 인증 |
+|------|------|:----:|
+| `https://sunghoonyk.duckdns.org/swagger-ui/` | API 문서 + Try it out | ❌ |
+| `https://sunghoonyk.duckdns.org/test-reports/` | JUnit 테스트 결과 (HTML) | ❌ |
+| `https://sunghoonyk.duckdns.org/javadoc/` | Javadoc 코드 문서 | ❌ |
+| `https://sunghoonyk.duckdns.org/api/` | REST API 프록시 | ✅ |
+| `https://sunghoonyk.duckdns.org/webhook` | Webhook 수신 | ❌ |
+
+> `test-reports/`와 `javadoc/`은 deploy 시 서버에서 `./gradlew test + javadoc` 실행 후 갱신된다.
+
+## Actions Artifact 관리
+
+| 항목 | 내용 |
+|------|------|
+| 업로드 대상 | `build/reports/tests/test/` (HTML 리포트) |
+| 보관 기간 | **90일** (GitHub 기본 정책, 자동 삭제) |
+| 다운로드 위치 | Actions 워크플로우 하단 **Artifacts** 섹션 |
+| 용도 | 배포 실패 시 원인 분석, 로컬에서 열어보기 |
+
+## 전체 플로우
 
 ```
 git push
@@ -220,15 +241,15 @@ git push
       2. JUnit 테스트 29개 자동 실행
          └── 실패 시 → deploy 중단, artifact에서 원인 확인
          └── 성공 시 → 계속 진행
-      3. 테스트 리포트 HTML artifact 업로드
+      3. 테스트 리포트 HTML artifact 업로드 (90일 보관)
       4. SSH로 서버 배포
          ├── git pull
-         ├── ./gradlew build + test (서버에서도 실행)
+         ├── ./gradlew build + test (서버에서 테스트 재실행)
          ├── ./gradlew javadoc (문서 생성)
-         └── 서비스 재시작
+         └── sudo systemctl restart sh-platform
   → 웹에서 즉시 확인 가능:
-       ├── https://sunghoonyk.duckdns.org/swagger-ui/     ← API 테스트
-       ├── https://sunghoonyk.duckdns.org/test-reports/   ← 테스트 결과
+       ├── https://sunghoonyk.duckdns.org/swagger-ui/     ← API 명세 + 테스트
+       ├── https://sunghoonyk.duckdns.org/test-reports/   ← JUnit 결과
        └── https://sunghoonyk.duckdns.org/javadoc/        ← 코드 문서
 ```
 
