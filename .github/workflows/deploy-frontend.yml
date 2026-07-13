@@ -1,0 +1,42 @@
+name: Deploy Frontend (React)
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'frontend/web/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build React
+        run: |
+          cd frontend/web
+          npm ci
+          npm run build
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 140.245.95.162
+          username: ubuntu
+          password: ${{ secrets.OCI_SSH_PW }}
+          script: |
+            set -e
+
+            cd /home/ubuntu/sh-platform/frontend/web
+            git pull origin main
+            npm ci --omit=dev
+            npm run build
+
+            sudo systemctl reload nginx
+            echo "Deploy complete!"

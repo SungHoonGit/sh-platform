@@ -1,8 +1,13 @@
-name: Deploy to OCI
+name: Deploy Backend (Spring Boot)
 
 on:
   push:
     branches: [master, main]
+    paths:
+      - 'sh-platform-auth/**'
+      - 'sh-platform-common/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
   workflow_dispatch:
 
 jobs:
@@ -36,7 +41,6 @@ jobs:
             cd /home/ubuntu/sh-platform
             git pull origin main
 
-            ln -sf ~/gradlew gradlew 2>/dev/null || true
             ./gradlew :sh-platform-auth:clean :sh-platform-auth:build -x test -q
 
             sudo systemctl start sh-platform
