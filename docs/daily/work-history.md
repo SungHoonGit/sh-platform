@@ -93,3 +93,22 @@ sh-platform/ (Monorepo)
     ├── CODEOWNERS               # 폴더별 리뷰어 지정
     └── workflows/               # GitHub Actions
 ```
+
+---
+
+## 2026-07-13 작업 내역
+
+### 추가된 기능
+1. **DB 문서 자동화 (SchemaSpy)**
+   - SchemaSpy 6.2.4 설치 및 설정
+   - MariaDB JDBC 드라이버 연동
+   - Graphviz 설치 (ERD 다이어그램 생성)
+   - nginx 설정으로 HTTPS 접속 가능
+   - 접속 경로: https://sunghoonyk.duckdns.org/schemaSpy/
+
+2. **문서 추가**
+   -  - SchemaSpy 사용 가이드
+
+### 배포
+- SchemaSpy 자동 실행 스크립트 생성: 
+- 출력 디렉토리: 
