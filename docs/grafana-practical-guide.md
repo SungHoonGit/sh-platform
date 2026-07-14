@@ -131,25 +131,61 @@ Explore 화면이 열리면 다음과 같이 보입니다:
 - 값 입력란에 `idle` 입력
 - **+** 버튼으로 필터 추가
 
-#### Step 3: 연산자 추가
+#### Step 3: 연산자 추가 (Operations)
 
 - **Operations**에서 **+ Add operation** 클릭
-- **Rate** 선택 → `[5m]` 입력
-- **Avg** 선택
-- **Math** 선택 → `100 - x * 100` 입력 (x는 이전 결과)
+- 드롭다운 메뉴가 나타남:
+
+```
++ Add operation
+├── Range functions
+│   ├── rate
+│   ├── increase
+│   └── irate
+├── Aggregations
+│   ├── sum
+│   ├── avg
+│   ├── min
+│   ├── max
+│   ├── count
+│   └── ...
+├── Group by
+│   ├── by
+│   └── without
+├── Binary operations
+│   ├── Math          ← 여기! (수학 연산)
+│   └── Offset
+└── ...
+```
+
+**CPU 사용률 계산 순서:**
+
+1. **Range functions** → **rate** 선택 → `[5m]` 입력
+2. **Aggregations** → **avg** 선택
+3. **Binary operations** → **Math** 선택
+4. Math 필드에 `100 - x * 100` 입력 (x는 이전 결과를 의미)
+
+```
+연산자 체인:
+rate([5m]) → avg → Math(100 - x * 100)
+```
+
+> **참고:** Math 연산자는 **Binary operations** 카테고리에 있습니다.
+> 드롭다운 메뉴를 아래로 스크롤하면 보입니다.
 
 #### Step 4: 실행
 
 - 쿼리 빌더 하단에 결과가 자동으로 표시됨
 - 수동 실행이 필요하면 **Run query** 버튼 클릭
 
-### 3.2 방법 2: 코드 모드 (PromQL 직접 입력)
+### 3.2 방법 2: 코드 모드 (PromQL 직접 입력) - 추천!
+
+시각적 빌더가 복잡하면 **코드 모드**를 사용하는 것이 더 쉽습니다.
 
 #### Step 1: 코드 모드로 전환
 
 - 쿼리 패널 상단의 **Go to queryless** 클릭
   - 시각적 빌더 → 코드 모드로 전환됨
-  - 또는 **Explain** 옆에 코드 아이콘이 있으면 클릭
 
 #### Step 2: 쿼리 입력
 
@@ -163,6 +199,9 @@ Explore 화면이 열리면 다음과 같이 보입니다:
 
 - **Run query** 버튼 클릭 (입력칸 오른쪽)
 - 또는 **Shift + Enter** 키 누름
+
+> **팁:** 복잡한 수학 연산은 코드 모드가 훨씬 쉽습니다.
+> 시각적 빌더는 단순한 쿼리에 적합합니다.
 
 ### 3.3 방법 3: Kick start your query 활용
 
@@ -192,9 +231,9 @@ Explore 화면이 열리면 다음과 같이 보입니다:
 1. **Metric**에서 `up` 선택
 2. 결과에 값이 `1`로 표시되면 정상
 
-**방법 B (코드 모드):**
+**방법 B (코드 모드 - 추천):**
 
-1. 코드 모드로 전환
+1. **Go to queryless** 클릭 → 코드 모드로 전환
 2. 입력칸에 `up` 입력
 3. **Run query** 클릭
 
@@ -218,13 +257,13 @@ up{job="mysql"}           1
 1. **Metric**: `node_cpu_seconds_total`
 2. **Label filters**: `mode` = `idle`
 3. **Operations**: 
-   - Rate: `[5m]`
-   - Avg
-   - Math: `100 - x * 100`
+   - Range functions → **rate**: `[5m]`
+   - Aggregations → **avg**
+   - Binary operations → **Math**: `100 - x * 100`
 
-**방법 B (코드 모드):**
+**방법 B (코드 모드 - 추천):**
 
-1. 코드 모드로 전환
+1. **Go to queryless** 클릭 → 코드 모드로 전환
 2. 입력:
 
 ```
@@ -248,9 +287,9 @@ up{job="mysql"}           1
 2. **Label filters**: `job` = `nginx`
 3. 결과에 nginx 로그가 나타남
 
-**방법 B (코드 모드):**
+**방법 B (코드 모드 - 추천):**
 
-1. 코드 모드로 전환
+1. **Go to queryless** 클릭 → 코드 모드로 전환
 2. 입력:
 
 ```
