@@ -158,3 +158,41 @@ sh-platform/ (Monorepo)
 ### 비고
 - 사용자가 연차 사용하여 회사에서 작업 예정
 - 로깅 계획서 리뷰 후 Loki 설치 진행 예정
+
+## 2026-07-14 (중심 집중 로깅)
+
+### 작업 내용
+1. **Loki v3.7.3 설치 및 구성**
+   - ARM64 바이너리 다운로드 및 설치
+   - 설정 파일 생성 (/etc/loki/loki-config.yaml)
+   - systemd 서비스 등록 및 시작
+   - HTTP 3100 포트로 정상 동작
+
+2. **Promtail v3.4.2 설치 및 구성**
+   - ARM64 바이너리 다운로드 및 설치
+   - Spring Boot 로그, nginx 로그, syslog 수집 설정
+   - systemd 서비스 등록 및 시작
+   - Loki로 로그 정상 전송 확인
+
+3. **Grafana Loki Datasource 등록**
+   - Provisioning 파일 생성
+   - Grafana 재시작하여 적용
+
+4. **문서 3건 작성**
+   - logging-concept.md: 중앙 집중 로깅 개념 소개
+   - logging-install.md: 설치 과정 상세 가이드
+   - logging-guide.md: 사용 가이드 (LogQL, Grafana 연동)
+
+### 커밋 내역
+- dadeebc: docs: add centralized logging documentation
+
+### 설치된 서비스
+- loki.service: /usr/local/bin/loki (포트 3100)
+- promtail.service: /usr/local/bin/promtail (포트 9080)
+
+### 수집 대상 로그
+- Spring Boot: /home/ubuntu/sh-platform/logs/*.log
+- nginx access: /var/log/nginx/access.log
+- nginx error: /var/log/nginx/error.log
+- syslog: /var/log/syslog
+- auth.log: /var/log/auth.log
