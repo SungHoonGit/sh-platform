@@ -8,7 +8,6 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; height: 100vh; display: flex; flex-direction: column; }
-        
         .header { background: #2c3e50; color: white; padding: 10px 20px; display: flex; align-items: center; gap: 16px; }
         .header h1 { font-size: 16px; font-weight: 600; }
         .search-box { flex: 1; max-width: 360px; }
@@ -16,23 +15,18 @@
         .search-box input::placeholder { color: #95a5a6; }
         .search-box input:focus { outline: none; border-color: #3498db; }
         .header-right { display: flex; gap: 8px; }
-        
         .container { display: flex; flex: 1; overflow: hidden; }
-        
         .sidebar { width: 300px; background: #f5f5f5; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
         .sidebar-header { padding: 10px 12px; border-bottom: 1px solid #ddd; font-weight: 600; color: #555; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; background: #eee; }
         .file-tree { flex: 1; overflow-y: auto; padding: 4px 0; font-size: 13px; }
-        
         .tree-item { padding: 5px 8px; cursor: pointer; display: flex; align-items: center; white-space: nowrap; user-select: none; }
         .tree-item:hover { background: #e8e8e8; }
         .tree-item.active { background: #0078d4; color: white; }
-        .tree-indent { display: inline-block; color: #aaa; user-select: none; font-family: monospace; }
         .tree-icon { display: inline-block; width: 18px; text-align: center; margin-right: 4px; font-size: 12px; }
         .tree-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
         .tree-meta { font-size: 11px; color: #999; margin-left: 8px; }
         .tree-item.active .tree-meta { color: rgba(255,255,255,0.7); }
         .tree-dir > .tree-name { font-weight: 500; }
-        
         .crawler-list { padding: 4px 0; }
         .crawler-item { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #eee; }
         .crawler-item:hover { background: #e8e8e8; }
@@ -41,7 +35,6 @@
         .crawler-name { font-weight: 500; font-size: 13px; }
         .crawler-path { font-size: 11px; color: #888; }
         .crawler-item.active .crawler-path { color: rgba(255,255,255,0.7); }
-        
         .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .content-header { padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; background: white; }
         .content-header h2 { flex: 1; font-size: 14px; font-weight: 500; color: #333; }
@@ -49,7 +42,6 @@
         .btn:hover { background: #f0f0f0; }
         .btn-primary { background: #0078d4; color: white; border-color: #0078d4; }
         .btn-primary:hover { background: #106ebe; }
-        
         .content-body { flex: 1; overflow-y: auto; padding: 20px 24px; background: white; line-height: 1.6; }
         .content-body table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
         .content-body th, .content-body td { padding: 8px 10px; border: 1px solid #ddd; text-align: left; }
@@ -61,7 +53,6 @@
         .content-body h2 { font-size: 18px; margin: 18px 0 10px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 6px; }
         .content-body h3 { font-size: 15px; margin: 14px 0 8px; color: #555; }
         .content-body p { margin: 8px 0; }
-        
         .search-results { padding: 20px; }
         .search-results h3 { margin-bottom: 16px; color: #333; font-size: 14px; }
         .search-result { margin-bottom: 12px; padding: 12px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #0078d4; }
@@ -70,7 +61,6 @@
         .search-result .line { font-size: 11px; color: #888; margin-bottom: 4px; }
         .search-result .content { font-size: 13px; }
         .search-result mark { background: #fff3cd; padding: 1px 2px; border-radius: 2px; }
-        
         .loading { display: flex; align-items: center; justify-content: center; height: 60px; color: #888; font-size: 13px; }
         .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #999; gap: 8px; }
         .empty-icon { font-size: 40px; }
@@ -81,28 +71,20 @@
     <div class="header">
         <h1>문서 뷰어</h1>
         <div class="search-box">
-            <input type="text" 
-                   x-model="searchQuery" 
-                   @keyup.enter="searchAll()" 
-                   placeholder="전체 검색 (예: 백엔드, Spring, React)">
+            <input type="text" x-model="searchQuery" @keyup.enter="searchAll()" placeholder="전체 검색">
         </div>
         <div class="header-right">
             <button class="btn btn-primary" @click="searchAll()">검색</button>
             <button class="btn" @click="resetView()">초기화</button>
         </div>
     </div>
-    
     <div class="container">
         <div class="sidebar">
             <div class="sidebar-header">크롤러 목록</div>
             <div class="crawler-list">
-                <template x-if="loadingCrawlers">
-                    <div class="loading">로딩 중...</div>
-                </template>
+                <template x-if="loadingCrawlers"><div class="loading">로딩 중...</div></template>
                 <template x-for="crawler in crawlers" :key="crawler.id">
-                    <div class="crawler-item" 
-                         :class="{ 'active': selectedCrawler?.id === crawler.id }"
-                         @click="selectCrawler(crawler)">
+                    <div class="crawler-item" :class="{ 'active': selectedCrawler?.id === crawler.id }" @click="selectCrawler(crawler)">
                         <span class="crawler-icon">🤖</span>
                         <div>
                             <div class="crawler-name" x-text="crawler.name"></div>
@@ -111,19 +93,13 @@
                     </div>
                 </template>
             </div>
-            
             <div class="sidebar-header" x-show="selectedCrawler">파일 탐색기</div>
             <div class="file-tree" x-show="selectedCrawler">
-                <template x-if="loadingTree">
-                    <div class="loading">로딩 중...</div>
-                </template>
-                <template x-for="item in visibleItems" :key="item.path">
+                <template x-if="loadingTree"><div class="loading">로딩 중...</div></template>
+                <template x-for="item in visibleItems" :key="item._key">
                     <div class="tree-item"
-                         :class="{
-                            'active': currentFile === item.path,
-                            'tree-dir': item.type === 'directory'
-                         }"
-                         :style="'padding-left: ' + (item.depth * 16 + 8) + 'px'"
+                         :class="{ 'active': currentFile === item.path, 'tree-dir': item.type === 'directory' }"
+                         :style="'padding-left:' + (item.depth * 16 + 8) + 'px'"
                          @click="item.type === 'file' ? loadFile(item.path) : toggleDir(item)">
                         <span class="tree-icon" x-text="getIcon(item)"></span>
                         <span class="tree-name" x-text="item.name"></span>
@@ -133,16 +109,13 @@
                 </template>
             </div>
         </div>
-        
         <div class="content">
             <div class="content-header" x-show="currentFile">
                 <h2 x-text="currentTitle"></h2>
                 <button class="btn" @click="exportPdf()">PDF</button>
                 <button class="btn" @click="exportExcel()">Excel</button>
             </div>
-            
             <div class="content-body" x-show="currentFile && !searchMode" x-html="currentContent"></div>
-            
             <div class="search-results" x-show="searchMode">
                 <h3 x-text="'검색 결과: ' + searchResults.length + '건'"></h3>
                 <template x-for="result in searchResults" :key="result.file + result.line">
@@ -153,7 +126,6 @@
                     </div>
                 </template>
             </div>
-            
             <div class="empty" x-show="!currentFile && !searchMode">
                 <div class="empty-icon">📂</div>
                 <div class="empty-text" x-text="selectedCrawler ? '왼쪽에서 파일을 선택하세요' : '크롤러를 선택하세요'"></div>
@@ -167,7 +139,6 @@
                 crawlers: [],
                 selectedCrawler: null,
                 loadingCrawlers: false,
-                
                 allItems: [],
                 expandedDirs: {},
                 currentFile: null,
@@ -198,40 +169,34 @@
 
                 async selectCrawler(crawler) {
                     this.selectedCrawler = crawler;
-                    this.expandedDirs = { '.': true };
+                    this.expandedDirs = {};
                     this.currentFile = null;
                     this.searchMode = false;
+                    this.searchResults = [];
                     await this.loadTree(crawler.localPath);
+                },
+
+                isAncestorVisible(itemPath) {
+                    let current = this.getParentPath(itemPath);
+                    while (current !== '.') {
+                        if (!this.expandedDirs[current]) return false;
+                        current = this.getParentPath(current);
+                    }
+                    return true;
                 },
 
                 get visibleItems() {
                     const items = [];
-                    const skipUntilDepth = {};
-                    
                     for (const item of this.allItems) {
-                        const parentPath = this.getParentPath(item.path);
-                        const parentKey = parentPath === '.' ? '.' : parentPath;
-                        
-                        if (skipUntilDepth[item.depth] && item.depth >= skipUntilDepth[item.depth]) {
-                            continue;
-                        }
-                        
-                        if (item.depth > 0 && !this.expandedDirs[parentKey]) {
-                            skipUntilDepth[item.depth] = item.depth;
-                            continue;
-                        }
-                        
-                        items.push(item);
-                        
-                        if (item.type === 'directory' && !this.expandedDirs[item.path]) {
-                            skipUntilDepth[item.depth + 1] = item.depth + 1;
-                        }
+                        if (item.depth === 0) continue;
+                        if (!this.isAncestorVisible(item.path)) continue;
+                        items.push({ ...item, _key: item.path + '_' + item.depth });
                     }
                     return items;
                 },
 
                 getParentPath(path) {
-                    if (path === '.' || !path) return '.';
+                    if (!path || path === '.') return '.';
                     const parts = path.split('/');
                     if (parts.length <= 1) return '.';
                     return parts.slice(0, -1).join('/') || '.';
@@ -250,9 +215,7 @@
                 },
 
                 getIcon(item) {
-                    if (item.type === 'directory') {
-                        return this.expandedDirs[item.path] ? '📂' : '📁';
-                    }
+                    if (item.type === 'directory') return this.expandedDirs[item.path] ? '📂' : '📁';
                     if (item.name.endsWith('.md')) return '📄';
                     return '📋';
                 },
@@ -262,9 +225,7 @@
                         delete this.expandedDirs[item.path];
                         const prefix = item.path + '/';
                         Object.keys(this.expandedDirs).forEach(key => {
-                            if (key.startsWith(prefix)) {
-                                delete this.expandedDirs[key];
-                            }
+                            if (key.startsWith(prefix)) delete this.expandedDirs[key];
                         });
                     } else {
                         this.expandedDirs[item.path] = true;
@@ -290,15 +251,12 @@
                     if (!this.searchQuery.trim()) return;
                     this.searchMode = true;
                     this.currentFile = null;
-                    
                     const allResults = [];
                     for (const crawler of this.crawlers) {
                         try {
                             const response = await fetch(`/scraper/docs/search?rootPath=${encodeURIComponent(crawler.localPath)}&q=${encodeURIComponent(this.searchQuery)}`);
                             const data = await response.json();
-                            data.results.forEach(r => {
-                                r.file = crawler.name + '/' + r.file;
-                            });
+                            data.results.forEach(r => { r.file = crawler.name + '/' + r.file; });
                             allResults.push(...data.results);
                         } catch (error) {
                             console.error('Error searching:', error);
@@ -316,19 +274,16 @@
                 },
 
                 exportPdf() {
-                    const rootPath = this.selectedCrawler.localPath;
-                    window.open(`/scraper/docs/export/pdf?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(this.currentFile)}`, '_blank');
+                    window.open(`/scraper/docs/export/pdf?rootPath=${encodeURIComponent(this.selectedCrawler.localPath)}&path=${encodeURIComponent(this.currentFile)}`, '_blank');
                 },
 
                 exportExcel() {
-                    const rootPath = this.selectedCrawler.localPath;
-                    window.open(`/scraper/docs/export/excel?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(this.currentFile)}`, '_blank');
+                    window.open(`/scraper/docs/export/excel?rootPath=${encodeURIComponent(this.selectedCrawler.localPath)}&path=${encodeURIComponent(this.currentFile)}`, '_blank');
                 },
 
                 shortPath(path) {
                     if (!path) return '';
-                    const parts = path.split('/');
-                    return parts.slice(-2).join('/');
+                    return path.split('/').slice(-2).join('/');
                 },
 
                 formatSize(bytes) {
