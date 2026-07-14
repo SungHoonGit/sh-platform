@@ -196,3 +196,39 @@ sh-platform/ (Monorepo)
 - nginx error: /var/log/nginx/error.log
 - syslog: /var/log/syslog
 - auth.log: /var/log/auth.log
+
+## 2026-07-14 (kakao-bot 모니터링 추가)
+
+### 작업 내용
+1. **MariaDB慢查询 로그 활성화**
+   - slow_query_log = ON
+   - long_query_time = 2초
+   - 설정 영구 적용 (/etc/mysql/mariadb.conf.d/50-server.cnf)
+
+2. **Promtail 설정 업데이트**
+   - MariaDB慢查询 로그 수집 추가
+   - kakao-bot journald 로그 수집 추가
+
+3. **kakao-bot-oci 모니터링 추가**
+   - prometheus_client 설치
+   - bot_server.py 업데이트 (메트릭 추가)
+   - Flask /metrics 엔드포인트 추가
+   - 메트릭: 요청수, 응답시간, 검색수, 캐시 히트
+
+4. **Prometheus 설정 업데이트**
+   - kakao-bot 스크래이프 설정 추가
+   - 모든 타겟 정상 동작 확인
+
+5. **모듈 표준 문서 작성**
+   - docs/development/module-standard.md
+   - 신규 모듈 필수 포함 사항 정의
+
+### 현재 등록된 모니터링 타겟
+- prometheus: localhost:9090 ✅
+- node-exporter: localhost:9100 ✅
+- spring-boot: localhost:8080 ✅
+- mysql: localhost:9104 ✅
+- kakao-bot: localhost:5002 ✅
+
+### 커밋 내역
+- 1203073: docs: add module standard for monitoring and logging
