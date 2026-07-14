@@ -24,7 +24,7 @@ URL:  https://sunghoonyk.duckdns.org/grafana/login
 로그인 후 보이는 화면:
 
 ```
-좌측 사이드바:
+좌측 사이드바 (세로 메뉴):
   ⚙️ Home          → 홈 대시보드
   ➕ Create         → 새 대시보드/패널 만들기
   🔍 Explore        → 쿼리 테스트 (메트릭/로그 직접 확인)
@@ -40,44 +40,91 @@ URL:  https://sunghoonyk.duckdns.org/grafana/login
 
 ---
 
-## 2.Datasource 확인 (데이터 연결)
+## 2. Datasource 확인 (데이터 연결)
 
 대시보드를 만들기 전, 데이터가 제대로 들어오는지 확인합니다.
 
 ### 2.1 Prometheus 확인
 
-1. 좌측 사이드바 → **Explore** 클릭
-2. 상단 드롭다운에서 **Prometheus** 선택
-3. 다음 쿼리를 입력하고 **Run query** 클릭:
+#### Step 1: Explore 열기
+
+- **좌측 사이드바**에서 🔍 **Explore** 클릭
+- 또는 키보드 단축키 `e` 누름
+
+#### Step 2: 데이터소스 선택
+
+Explore 화면이 열리면:
+
+- **화면 맨 위**에 드롭다운 메뉴가 있음
+- 왼쪽에서 **Prometheus** 라고 적힌 드롭다운 클릭
+- 목록에서 **Prometheus** 선택
+
+#### Step 3: 쿼리 입력
+
+Explore 화면 구조:
 
 ```
-up
+┌─────────────────────────────────────────────────────┐
+│ [Prometheus ▼]  [Time range ▼]  [Run query]        │  ← 맨 위
+├─────────────────────────────────────────────────────┤
+│ A  ┌─────────────────────────────────────────────┐  │
+│    │ up                                           │  │  ← 여기에 쿼리 입력
+│    └─────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────┤
+│  [Table]  [Time series]  [DataFrame]              │  ← 결과 탭
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  (결과 그래프 또는 테이블이 여기에 표시됨)          │
+│                                                     │
+└─────────────────────────────────────────────────────┘
 ```
 
-4. 결과가 `1`로 표시되면 정상:
-   - `up{job="prometheus"} 1` → Prometheus 자체
-   - `up{job="node-exporter"} 1` → 서버 메트릭
-   - `up{job="spring-boot"} 1` → Spring Boot 앱
-   - `up{job="mysql"} 1` → MariaDB
+- **A** 옆에 입력칸이 있음
+- `up` 을 입력
+- 입력 후 **실행 방법 (둘 중 하나):**
+  - **Run query** 버튼 클릭 (입력칸 오른쪽에 있음)
+  - 또는 키보드에서 **Shift + Enter**
 
-5. 다음 쿼리로 CPU 사용률 확인:
+#### Step 4: 결과 확인
+
+결과에 다음이 표시되면 정상:
+
+```
+up{job="prometheus"}       1
+up{job="node-exporter"}   1
+up{job="spring-boot"}     1
+up{job="mysql"}           1
+```
+
+→ 값이 `1`이면 정상 수집 중
+
+#### Step 5: CPU 쿼리 테스트
+
+- 입력칸의 `up`을 지우고 다음 입력:
 
 ```
 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
 ```
 
-→ 숫자가 나오면 메트릭이 수집되고 있다는 뜻
+- **Run query** 클릭 또는 **Shift + Enter**
+- 그래프가 나타나면 CPU 메트릭이 수집되고 있다는 뜻
 
 ### 2.2 Loki 확인
 
-1. Explore → 상단 드롭다운에서 **Loki** 선택
-2. 다음 쿼리 입력:
+#### Step 1: 데이터소스 변경
+
+- Explore 화면 맨 위의 드롭다운에서 **Loki** 선택
+
+#### Step 2: 쿼리 입력
+
+- 입력칸에 다음 입력:
 
 ```
 {job="nginx"}
 ```
 
-3. 결과에 nginx 로그가 나타나면 정상
+- **Run query** 클릭
+- nginx 로그가 결과에 나타나면 정상
 
 ---
 
@@ -85,80 +132,122 @@ up
 
 ### 3.1 새 대시보드 생성
 
-1. 좌측 사이드바 → **➕ Create** → **Dashboard** 클릭
-2. 빈 대시보드 화면이 나타남
-3. **Add visualization** 클릭
+#### Step 1: Create 메뉴
+
+- **좌측 사이드바**에서 ➕ **Create** 클릭
+- 드롭다운 메뉴가 나타남
+- **Dashboard** 클릭
+
+#### Step 2: 빈 대시보드
+
+빈 대시보드 화면이 나타남:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Untitled Dashboard                    [Save] [⚙️]  │  ← 상단
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│              ┌─────────────────────┐                │
+│              │   Add visualization │                │  ← 클릭!
+│              │   (아이콘 + 텍스트)  │                │
+│              └─────────────────────┘                │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+- **Add visualization** 클릭 (화면 중앙 또는 상단의 + 버튼)
 
 ### 3.2 CPU 사용률 패널 만들기
 
+패널 편집 화면이 열리면:
+
+```
+┌──────────────────────────────────────────────────────┐
+│  Panel Title: [ Untitled panel          ]            │  ← 제목 입력
+│  Description: [ (선택사항)              ]            │
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│  [Query]  [Transformations]  [Alert]  [...]         │  ← 탭 메뉴
+│                                                      │
+│  A  ┌────────────────────────────────────────────┐  │
+│     │ (여기에 PromQL 쿼리 입력)                  │  │  ← 쿼리 입력
+│     └────────────────────────────────────────────┘  │
+│                                                      │
+│  [Visualize] 탭에서 패널 종류 선택                     │
+│                                                      │
+├──────────────────────────────────────────────────────┤
+│  [Standard options]  [Thresholds]  [...]            │  ← 우측 설정
+└──────────────────────────────────────────────────────┘
+```
+
 #### Step 1: Data source 선택
 
-- 패널 편집 화면에서 우측 **Data source** 드롭다운
+- 패널 편집 화면 **상단**에 Data source 드롭다운이 있음
 - **Prometheus** 선택
 
 #### Step 2: 쿼리 입력
 
-하단 **Query** 탭에서:
-
-- **A** 필드에 다음 입력:
+- **Query** 탭이 선택되어 있는지 확인
+- **A** 옆 입력칸에 다음 입력:
 
 ```
 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
 ```
 
-→ 그래프에 선이 나타남
+- 입력 후 **Run query** 클릭 (입력칸 오른쪽)
+- 또는 **Shift + Enter**
 
-#### Step 3: 패널 설정
+#### Step 3: 패널 종류 선택
 
-**우측 Settings 패널:**
+- **Visualize** 탭 클릭 (Query 탭 옆)
+- **Time series** 선택 (기본값일 수 있음)
 
-| 항목 | 값 | 설명 |
-|------|-----|------|
-| Title | `CPU 사용률 (%)` | 패널 이름 |
-| Description | `서버 CPU 사용률 (0-100%)` | 설명 (호버 시 표시) |
+#### Step 4: 패널 설정 (좌측)
 
-**Visualization 설정 (좌측):**
+**Panel options:**
 
-| 항목 | 값 |
-|------|-----|
-| Visualization | `Time series` |
-| Legend | `{{job}}` |
+| 항목 | 위치 | 값 |
+|------|------|-----|
+| Title | 패널 상단 입력칸 | `CPU 사용률 (%)` |
+| Description | Title 아래 입력칸 | `서버 CPU 사용률 (0-100%)` |
 
-**Panel options → Standard options:**
+#### Step 5: 옵션 설정 (우측)
 
-| 항목 | 값 |
-|------|-----|
-| Unit | `Percent (0-100)` |
-| Min | `0` |
-| Max | `100` |
-| Decimals | `1` |
+**우측 사이드바**에서:
 
-#### Step 4: Apply
+- **Standard options** 섹션 펼침
+- **Unit** 드롭다운 클릭 → **Percent (0-100)** 선택
+- **Min** 입력칸에 `0` 입력
+- **Max** 입력칸에 `100` 입력
+- **Decimals** 입력칸에 `1` 입력
 
-- 상단 우측 **Apply** 클릭
-- 대시보드에 패널 추가됨
-- **대시보드 저장** (우측 상단 💾 아이콘 → 이름 입력 → Save)
+#### Step 6: Apply
+
+- 패널 편집 화면 **상단 우측**에 **Apply** 버튼 클릭
+- 대시보드에 패널이 추가됨
+
+#### Step 7: 대시보드 저장
+
+- 대시보드 **상단 우측**에 💾 **Save dashboard** 아이콘 클릭
+- **Title** 입력칸에 `서버 모니터링` 입력
+- **Save** 클릭
 
 ### 3.3 메모리 사용률 패널 추가
 
-1. 대시보드 상단 → **Add** → **Visualization**
-2. Data source: **Prometheus**
-3. 쿼리 입력:
+1. 대시보드 **상단**에서 **Add** → **Visualization** 클릭
+2. Data source: **Prometheus** 선택
+3. **Query** 탭에서 쿼리 입력:
 
 ```
 (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100
 ```
 
-4. 설정:
-
-| 항목 | 값 |
-|------|-----|
-| Title | `메모리 사용률 (%)` |
-| Unit | `Percent (0-100)` |
-| Min | `0` |
-| Max | `100` |
-
-5. **Apply** 클릭
+4. **Run query** 클릭
+5. 우측 **Standard options**:
+   - Unit: `Percent (0-100)`
+   - Min: `0`, Max: `100`
+6. **Panel options**에서 Title: `메모리 사용률 (%)`
+7. **Apply** 클릭
 
 ### 3.4 디스크 사용률 패널 추가
 
@@ -169,48 +258,39 @@ up
 (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_avail_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100
 ```
 
-3. 설정:
-
-| 항목 | 값 |
-|------|-----|
-| Title | `디스크 사용률 (%)` |
-| Unit | `Percent (0-100)` |
-| Min | `0` |
-| Max | `100` |
-
-4. **Apply** 클릭
+3. **Run query** 클릭
+4. 우측 설정:
+   - Unit: `Percent (0-100)`
+   - Min: `0`, Max: `100`
+5. Title: `디스크 사용률 (%)`
+6. **Apply** 클릭
 
 ### 3.5 네트워크 트래픽 패널 추가
 
 1. **Add** → **Visualization**
-2. 쿼리 2개 입력:
+2. **Query** 탭에서 쿼리 2개 입력:
 
-**Query A:**
+**Query A** (수신):
 ```
 rate(node_network_receive_bytes_total{device!="lo"}[5m])
 ```
 
-**Query B:**
+**Query B** (송신):
 ```
 rate(node_network_transmit_bytes_total{device!="lo"}[5m])
 ```
 
-3. 설정:
-
-| 항목 | 값 |
-|------|-----|
-| Title | `네트워크 트래픽` |
-| Unit | `bytes/sec (Bps)` |
-
-4. Legend: `{{device}} - {{direction}}` (Legend 필드에 입력)
-5. **Apply** 클릭
+3. **Run query** 클릭
+4. 우측 **Standard options**: Unit: `bytes/sec (Bps)`
+5. **Legend** 입력칸에 `{{device}} - {{direction}}` 입력
+6. Title: `네트워크 트래픽`
+7. **Apply** 클릭
 
 ### 3.6 대시보드 저장
 
 1. 상단 우측 💾 **Save dashboard** 클릭
 2. **Title**: `서버 모니터링`
-3. **Folder**: (선택 안 함 또는 새 폴더)
-4. **Save** 클릭
+3. **Save** 클릭
 
 ---
 
@@ -224,19 +304,19 @@ rate(node_network_transmit_bytes_total{device!="lo"}[5m])
 ### 4.2 JVM 헙 사용률
 
 1. Add visualization
-2. 쿼리:
+2. Data source: **Prometheus**
+3. 쿼리 입력:
 
 ```
 jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} * 100
 ```
 
-3. 설정:
-
-| 항목 | 값 |
-|------|-----|
-| Title | `JVM 헙 사용률 (%)` |
-| Unit | `Percent (0-100)` |
-| Legend | `{{instance}}` |
+4. **Run query** 클릭
+5. 설정:
+   - Title: `JVM 헙 사용률 (%)`
+   - Unit: `Percent (0-100)`
+   - Legend: `{{instance}}`
+6. **Apply** 클릭
 
 ### 4.3 HTTP 요청수 (요청/sec)
 
@@ -247,13 +327,12 @@ jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} * 100
 rate(http_server_requests_seconds_count[5m])
 ```
 
-3. 설정:
-
-| 항목 | 값 |
-|------|-----|
-| Title | `HTTP 요청수 (req/sec)` |
-| Unit | `reqps` |
-| Legend | `{{method}} {{uri}}` |
+3. **Run query** 클릭
+4. 설정:
+   - Title: `HTTP 요청수 (req/sec)`
+   - Unit: `reqps`
+   - Legend: `{{method}} {{uri}}`
+5. **Apply** 클릭
 
 ### 4.4 HTTP 응답 시간
 
@@ -264,13 +343,11 @@ rate(http_server_requests_seconds_count[5m])
 rate(http_server_requests_seconds_sum[5m]) / rate(http_server_requests_seconds_count[5m])
 ```
 
-3. 설정:
-
-| 항목 | 값 |
-|------|-----|
-| Title | `HTTP 응답 시간 (평균)` |
-| Unit | `seconds` |
-| Legend | `{{method}} {{uri}}` |
+3. **Run query** 클릭
+4. 설정:
+   - Title: `HTTP 응답 시간 (평균)`
+   - Unit: `seconds`
+5. **Apply** 클릭
 
 ### 4.5 HikariCP 커넥션 풀
 
@@ -281,12 +358,11 @@ rate(http_server_requests_seconds_sum[5m]) / rate(http_server_requests_seconds_c
 hikaricp_connections_active
 ```
 
-3. 설정:
-
-| 항목 | 값 |
-|------|-----|
-| Title | `HikariCP 활성 커넥션` |
-| Unit | `short` |
+3. **Run query** 클릭
+4. 설정:
+   - Title: `HikariCP 활성 커넥션`
+   - Unit: `short`
+5. **Apply** 클릭
 
 ### 4.6 에러율
 
@@ -297,12 +373,11 @@ hikaricp_connections_active
 sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) by (uri)
 ```
 
-3. 설정:
-
-| 항목 | 값 |
-|------|-----|
-| Title | `HTTP 5xx 에러율 (req/sec)` |
-| Unit | `reqps` |
+3. **Run query** 클릭
+4. 설정:
+   - Title: `HTTP 5xx 에러율 (req/sec)`
+   - Unit: `reqps`
+5. **Apply** 클릭
 
 ---
 
@@ -310,37 +385,38 @@ sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) by (uri)
 
 ### 5.1 새 대시보드
 
-1. 이름: `Prometheus 모니터링`
+1. ➕ Create → Dashboard
+2. 이름: `Prometheus 모니터링`
 
 ### 5.2 Prometheus 수집 메트릭 수
 
-1. 쿼리:
+1. Add visualization
+2. 쿼리:
 
 ```
 prometheus_tsdb_head_series
 ```
 
-2. 설정:
-
-| 항목 | 값 |
-|------|-----|
-| Title | `수집된 시리즈 수` |
-| Unit | `short` |
+3. **Run query** 클릭
+4. 설정:
+   - Title: `수집된 시리즈 수`
+   - Unit: `short`
+5. **Apply** 클릭
 
 ### 5.3 쿼리 처리 시간
 
-1. 쿼리:
+1. Add visualization
+2. 쿼리:
 
 ```
 histogram_quantile(0.99, rate(prometheus_engine_query_duration_seconds_bucket[5m]))
 ```
 
-2. 설정:
-
-| 항목 | 값 |
-|------|-----|
-| Title | `쿼리 처리 시간 (99th percentile)` |
-| Unit | `seconds` |
+3. **Run query** 클릭
+4. 설정:
+   - Title: `쿼리 처리 시간 (99th percentile)`
+   - Unit: `seconds`
+5. **Apply** 클릭
 
 ---
 
@@ -350,24 +426,28 @@ histogram_quantile(0.99, rate(prometheus_engine_query_duration_seconds_bucket[5m
 
 ### 6.1 Node Exporter Full (서버 모니터링)
 
-1. ➕ Create → **Import**
-2. **Import via grafana.com** 입력란에: `1860`
-3. **Load** 클릭
-4. Data source에서 **Prometheus** 선택
-5. **Import** 클릭
+1. **좌측 사이드바** → ➕ **Create** → **Import** 클릭
+2. **Import via grafana.com** 입력란에: `1860` 입력
+3. **Load** 클릭 (입력란 오른쪽)
+4. **Data source** 드롭다운에서 **Prometheus** 선택
+5. **Import** 클릭 (하단)
 6. 완성! 수백 개의 서버 메트릭 패널이 자동 생성됨
 
 ### 6.2 Spring Boot Statistics
 
 1. ➕ Create → **Import**
-2. 입력란에: `12900`
-3. **Load** → Data source: **Prometheus** → **Import**
+2. 입력란에: `12900` 입력
+3. **Load** 클릭
+4. Data source: **Prometheus** 선택
+5. **Import** 클릭
 
 ### 6.3 MariaDB Dashboard
 
 1. ➕ Create → **Import**
-2. 입력란에: `14057`
-3. **Load** → Data source: **Prometheus** → **Import**
+2. 입력란에: `14057` 입력
+3. **Load** 클릭
+4. Data source: **Prometheus** 선택
+5. **Import** 클릭
 
 ---
 
@@ -386,10 +466,10 @@ histogram_quantile(0.99, rate(prometheus_engine_query_duration_seconds_bucket[5m
 
 **설정 방법:**
 
-1. 패널 → Visualization → **Gauge** 선택
-2. Standard options:
+1. 패널 → **Visualize** 탭 → **Gauge** 선택
+2. 우측 **Standard options**:
    - Min: `0`, Max: `100`
-   - Thresholds:
+   - **Thresholds** 섹션:
      - Green: 0-60
      - Yellow: 60-80
      - Red: 80-100
@@ -417,19 +497,29 @@ histogram_quantile(0.99, rate(prometheus_engine_query_duration_seconds_bucket[5m
 
 ### 8.1 job 변수 만들기
 
-1. 대시보드 → ⚙️ **Dashboard settings** (우측 상단 톱니바퀴)
-2. 좌측 **Variables** → **New variable**
-3. 설정:
+#### Step 1: 설정 열기
 
-| 항목 | 값 |
-|------|-----|
-| Name | `job` |
-| Label | `Job` |
-| Type | `Query` |
-| Query | `label_values(node_cpu_seconds_total, job)` |
-| Refresh | `On time range change` |
+- 대시보드 **상단 우측**에 ⚙️ **Dashboard settings** (톱니바퀴 아이콘) 클릭
 
-4. **Add** 클릭 → **Save** 클릭
+#### Step 2: Variables 메뉴
+
+- **좌측 사이드바**에서 **Variables** 클릭
+- **New variable** 버튼 클릭
+
+#### Step 3: 변수 설정
+
+| 항목 | 위치 | 값 |
+|------|------|-----|
+| Name | 상단 입력칸 | `job` |
+| Label | Name 아래 | `Job` |
+| Type | 드롭다운 | `Query` |
+| Query | 입력칸 | `label_values(node_cpu_seconds_total, job)` |
+| Refresh | 드롭다운 | `On time range change` |
+
+#### Step 4: 저장
+
+- 하단 **Add** 클릭
+- **Save** 클릭
 
 ### 8.2 패널에서 변수 사용
 
@@ -447,46 +537,52 @@ histogram_quantile(0.99, rate(prometheus_engine_query_duration_seconds_bucket[5m
 
 ### 9.1 알림 채널 설정
 
-1. 좌측 사이드바 → ⚙️ **Administration** → **Alerting**
-2. **Contact points** 탭
-3. **Add contact point** 클릭
+#### Step 1: 알림 메뉴
 
-#### 이메일 알림 설정
+- **좌측 사이드바** → ⚙️ **Administration** → **Alerting** 클릭
+
+#### Step 2: Contact points
+
+- **Contact points** 탭 클릭
+- **Add contact point** 버튼 클릭
+
+#### Step 3: 이메일 알림 설정
 
 | 항목 | 값 |
 |------|-----|
 | Name | `Email` |
-| Type | `Email` |
-| Addresses | `your-email@example.com` |
+| Type | `Email` 드롭다운 선택 |
+| Addresses | `your-email@example.com` 입력 |
 
-#### Slack 알림 설정 (webhook)
+#### Step 4: 저장
 
-| 항목 | 값 |
-|------|-----|
-| Name | `Slack` |
-| Type | `Slack` |
-| URL | Slack Incoming Webhook URL |
-| Channel | `#alerts` |
+- **Save contact point** 클릭
 
 ### 9.2 알림 규칙 만들기
 
-1. **Alert rules** 탭 → **New alert rule** 클릭
+#### Step 1: Alert rules
 
-#### CPU 80% 알림 예시
+- **Alert rules** 탭 클릭
+- **New alert rule** 버튼 클릭
 
-**Rule name:** `CPU 사용률 80% 초과`
+#### Step 2: 규칙 설정
 
-**Query:**
+**Rule name** 입력칸에: `CPU 사용률 80% 초과`
+
+**Query and alert condition:**
+
+- 데이터소스: **Prometheus** 선택
+- 쿼리 입력:
+
 ```
 A: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
 ```
 
-**Condition:**
-```
-IS ABOVE 80
-```
+- **Condition** 드롭다운: `IS ABOVE` 선택
+- 값 입력칸에: `80` 입력
 
 **Evaluate:**
+
 | 항목 | 값 |
 |------|-----|
 | Evaluate every | `1m` |
@@ -494,11 +590,9 @@ IS ABOVE 80
 
 → 5분 동안 CPU가 80% 이상이면 알림 발생
 
-### 9.3 알림 규칙 테스트
+#### Step 3: 저장
 
-1. Grafana에서 알림 규칙이 **Pending** 상태로 변환
-2. 조건 충족 시 **Firing**으로 변경
-3. 설정한 채널로 알림 발송
+- 하단 **Save rule and exit** 클릭
 
 ---
 
@@ -506,28 +600,28 @@ IS ABOVE 80
 
 ### 10.1 우측 상단 타임피커
 
+대시보드 **우측 상단**에:
+
 ```
 [Last 6 hours ▼] [Refresh ▼]
 ```
 
-### 10.2 자주 쓰는 시간 범위
+### 10.2 시간 범위 변경
 
-| 선택 | 의미 |
-|------|------|
-| Last 5 minutes | 최근 5분 |
-| Last 15 minutes | 최근 15분 |
-| Last 1 hour | 최근 1시간 |
-| Last 6 hours | 최근 6시간 |
-| Last 24 hours | 최근 24시간 |
-| Last 7 days | 최근 7일 |
-| Last 30 days | 최근 30일 |
-| Custom absolute range | 직접 시간 입력 |
+- **Last 6 hours** 클릭 → 드롭다운 메뉴
+- 원하는 시간 범위 선택:
+  - Last 5 minutes
+  - Last 15 minutes
+  - Last 1 hour
+  - Last 6 hours
+  - Last 24 hours
+  - Last 7 days
+  - Custom absolute range (직접 입력)
 
 ### 10.3 새로고침
 
-- **Auto refresh**: 자동 새로고침 간격 설정
-  - 5s, 10s, 30s, 1m, 5m 등
-- 수동 새로고침: **Refresh** 버튼 클릭
+- **Refresh** 버튼 클릭: 수동 새로고침
+- **Auto refresh** 드롭다운: 자동 새로고침 간격 설정 (5s, 10s, 30s, 1m 등)
 
 ---
 
@@ -537,23 +631,27 @@ IS ABOVE 80
 
 ### 11.1 Prometheus 쿼리 테스트
 
-1. **Explore** → **Prometheus** 선택
-2. 쿼리 입력 후 **Run query**
-3. 결과 확인:
+1. **Explore** 클릭
+2. 상단 드롭다운에서 **Prometheus** 선택
+3. 입력칸에 쿼리 입력
+4. **Run query** 클릭 또는 **Shift + Enter**
+5. 결과 확인:
    - **Table** 탭: 숫자 값 확인
    - **Time series** 탭: 그래프 확인
    - **DataFrame** 탭: 원시 데이터
 
 ### 11.2 Loki 쿼리 테스트
 
-1. **Explore** → **Loki** 선택
-2. 쿼리 입력:
+1. **Explore** 클릭
+2. 상단 드롭다운에서 **Loki** 선택
+3. 입력칸에 쿼리 입력:
 
 ```
 {job="spring-boot"} |= "ERROR"
 ```
 
-3. **Run query** → 로그 결과 확인
+4. **Run query** 클릭
+5. 로그 결과 확인
 
 ### 11.3 Useful PromQL Queries (복붙용)
 
@@ -618,11 +716,13 @@ tomcat_threads_current_threads
 ### Q: 그래프가 안 나옴
 
 1. PromQL 문법 오류 확인
-2. 라벨 이름 확인: Explore에서 `label_values()` 실행
+2. 라벨 이름 확인: Explore에서 다음 쿼리 실행:
 
 ```
 label_values(node_cpu_seconds_total, job)
 ```
+
+→ `Run query` 클릭 → job 목록이 나타나면 정상
 
 ### Q: 대시보드 저장 실패
 
