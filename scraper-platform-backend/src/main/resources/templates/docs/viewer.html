@@ -33,6 +33,15 @@
         .tree-item.active .tree-meta { color: rgba(255,255,255,0.7); }
         .tree-dir > .tree-name { font-weight: 500; }
         
+        .crawler-list { padding: 4px 0; }
+        .crawler-item { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #eee; }
+        .crawler-item:hover { background: #e8e8e8; }
+        .crawler-item.active { background: #0078d4; color: white; }
+        .crawler-icon { font-size: 16px; }
+        .crawler-name { font-weight: 500; font-size: 13px; }
+        .crawler-path { font-size: 11px; color: #888; }
+        .crawler-item.active .crawler-path { color: rgba(255,255,255,0.7); }
+        
         .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .content-header { padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; background: white; }
         .content-header h2 { flex: 1; font-size: 14px; font-weight: 500; color: #333; }
@@ -74,20 +83,38 @@
         <div class="search-box">
             <input type="text" 
                    x-model="searchQuery" 
-                   @keyup.enter="search()" 
-                   placeholder="검색어 입력 (예: 백엔드, Spring, React)">
+                   @keyup.enter="searchAll()" 
+                   placeholder="전체 검색 (예: 백엔드, Spring, React)">
         </div>
         <div class="header-right">
-            <button class="btn btn-primary" @click="search()">검색</button>
+            <button class="btn btn-primary" @click="searchAll()">검색</button>
             <button class="btn" @click="resetView()">초기화</button>
         </div>
     </div>
     
     <div class="container">
         <div class="sidebar">
-            <div class="sidebar-header">파일 탐색기</div>
-            <div class="file-tree">
-                <template x-if="loading">
+            <div class="sidebar-header">크롤러 목록</div>
+            <div class="crawler-list">
+                <template x-if="loadingCrawlers">
+                    <div class="loading">로딩 중...</div>
+                </template>
+                <template x-for="crawler in crawlers" :key="crawler.id">
+                    <div class="crawler-item" 
+                         :class="{ 'active': selectedCrawler?.id === crawler.id }"
+                         @click="selectCrawler(crawler)">
+                        <span class="crawler-icon">🤖</span>
+                        <div>
+                            <div class="crawler-name" x-text="crawler.name"></div>
+                            <div class="crawler-path" x-text="shortPath(crawler.localPath)"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            
+            <div class="sidebar-header" x-show="selectedCrawler">파일 탐색기</div>
+            <div class="file-tree" x-show="selectedCrawler">
+                <template x-if="loadingTree">
                     <div class="loading">로딩 중...</div>
                 </template>
                 <template x-for="item in visibleItems" :key="item.path">
@@ -129,7 +156,7 @@
             
             <div class="empty" x-show="!currentFile && !searchMode">
                 <div class="empty-icon">📂</div>
-                <div class="empty-text">왼쪽에서 파일을 선택하세요</div>
+                <div class="empty-text" x-text="selectedCrawler ? '왼쪽에서 파일을 선택하세요' : '크롤러를 선택하세요'"></div>
             </div>
         </div>
     </div>
@@ -137,27 +164,51 @@
     <script>
         function docViewer() {
             return {
-                rootPath: '/home/ubuntu/job-scraper/daily',
+                crawlers: [],
+                selectedCrawler: null,
+                loadingCrawlers: false,
+                
                 allItems: [],
-                expandedDirs: { '.': true, 'java': true, 'react': true },
+                expandedDirs: {},
                 currentFile: null,
                 currentTitle: '',
                 currentContent: '',
                 searchQuery: '',
                 searchResults: [],
                 searchMode: false,
-                loading: false,
+                loadingTree: false,
 
                 async init() {
-                    await this.loadTree();
+                    await this.loadCrawlers();
+                },
+
+                async loadCrawlers() {
+                    this.loadingCrawlers = true;
+                    try {
+                        const response = await fetch('/scraper/docs/crawlers');
+                        this.crawlers = await response.json();
+                        if (this.crawlers.length > 0) {
+                            await this.selectCrawler(this.crawlers[0]);
+                        }
+                    } catch (error) {
+                        console.error('Error loading crawlers:', error);
+                    }
+                    this.loadingCrawlers = false;
+                },
+
+                async selectCrawler(crawler) {
+                    this.selectedCrawler = crawler;
+                    this.expandedDirs = { '.': true };
+                    this.currentFile = null;
+                    this.searchMode = false;
+                    await this.loadTree(crawler.localPath);
                 },
 
                 get visibleItems() {
                     const items = [];
-                    const skipUntilDepth = {};  // depth -> skip if parent not expanded
+                    const skipUntilDepth = {};
                     
                     for (const item of this.allItems) {
-                        // Check if this item's parent was collapsed
                         const parentPath = this.getParentPath(item.path);
                         const parentKey = parentPath === '.' ? '.' : parentPath;
                         
@@ -165,7 +216,6 @@
                             continue;
                         }
                         
-                        // If parent is a directory that's collapsed, skip
                         if (item.depth > 0 && !this.expandedDirs[parentKey]) {
                             skipUntilDepth[item.depth] = item.depth;
                             continue;
@@ -173,7 +223,6 @@
                         
                         items.push(item);
                         
-                        // If this is a collapsed directory, mark to skip its children
                         if (item.type === 'directory' && !this.expandedDirs[item.path]) {
                             skipUntilDepth[item.depth + 1] = item.depth + 1;
                         }
@@ -188,15 +237,16 @@
                     return parts.slice(0, -1).join('/') || '.';
                 },
 
-                async loadTree() {
-                    this.loading = true;
+                async loadTree(rootPath) {
+                    this.loadingTree = true;
+                    this.allItems = [];
                     try {
-                        const response = await fetch(`/scraper/docs/tree/view?rootPath=${encodeURIComponent(this.rootPath)}`);
+                        const response = await fetch(`/scraper/docs/tree/view?rootPath=${encodeURIComponent(rootPath)}`);
                         this.allItems = await response.json();
                     } catch (error) {
                         console.error('Error loading tree:', error);
                     }
-                    this.loading = false;
+                    this.loadingTree = false;
                 },
 
                 getIcon(item) {
@@ -208,10 +258,7 @@
                 },
 
                 toggleDir(item) {
-                    const wasExpanded = !!this.expandedDirs[item.path];
-                    
-                    if (wasExpanded) {
-                        // Collapse: remove this dir and all descendant dirs
+                    if (this.expandedDirs[item.path]) {
                         delete this.expandedDirs[item.path];
                         const prefix = item.path + '/';
                         Object.keys(this.expandedDirs).forEach(key => {
@@ -220,11 +267,8 @@
                             }
                         });
                     } else {
-                        // Expand
                         this.expandedDirs[item.path] = true;
                     }
-                    
-                    // Force Alpine reactivity
                     this.expandedDirs = { ...this.expandedDirs };
                 },
 
@@ -232,7 +276,8 @@
                     this.searchMode = false;
                     this.currentFile = path;
                     try {
-                        const response = await fetch(`/scraper/docs/file?rootPath=${encodeURIComponent(this.rootPath)}&path=${encodeURIComponent(path)}&format=html`);
+                        const rootPath = this.selectedCrawler.localPath;
+                        const response = await fetch(`/scraper/docs/file?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&format=html`);
                         const data = await response.json();
                         this.currentTitle = data.title;
                         this.currentContent = data.content.replace(/<a href/g, '<a target="_blank" rel="noopener noreferrer" href');
@@ -241,17 +286,25 @@
                     }
                 },
 
-                async search() {
+                async searchAll() {
                     if (!this.searchQuery.trim()) return;
                     this.searchMode = true;
                     this.currentFile = null;
-                    try {
-                        const response = await fetch(`/scraper/docs/search?rootPath=${encodeURIComponent(this.rootPath)}&q=${encodeURIComponent(this.searchQuery)}`);
-                        const data = await response.json();
-                        this.searchResults = data.results;
-                    } catch (error) {
-                        console.error('Error searching:', error);
+                    
+                    const allResults = [];
+                    for (const crawler of this.crawlers) {
+                        try {
+                            const response = await fetch(`/scraper/docs/search?rootPath=${encodeURIComponent(crawler.localPath)}&q=${encodeURIComponent(this.searchQuery)}`);
+                            const data = await response.json();
+                            data.results.forEach(r => {
+                                r.file = crawler.name + '/' + r.file;
+                            });
+                            allResults.push(...data.results);
+                        } catch (error) {
+                            console.error('Error searching:', error);
+                        }
                     }
+                    this.searchResults = allResults;
                 },
 
                 resetView() {
@@ -263,11 +316,19 @@
                 },
 
                 exportPdf() {
-                    window.open(`/scraper/docs/export/pdf?rootPath=${encodeURIComponent(this.rootPath)}&path=${encodeURIComponent(this.currentFile)}`, '_blank');
+                    const rootPath = this.selectedCrawler.localPath;
+                    window.open(`/scraper/docs/export/pdf?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(this.currentFile)}`, '_blank');
                 },
 
                 exportExcel() {
-                    window.open(`/scraper/docs/export/excel?rootPath=${encodeURIComponent(this.rootPath)}&path=${encodeURIComponent(this.currentFile)}`, '_blank');
+                    const rootPath = this.selectedCrawler.localPath;
+                    window.open(`/scraper/docs/export/excel?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(this.currentFile)}`, '_blank');
+                },
+
+                shortPath(path) {
+                    if (!path) return '';
+                    const parts = path.split('/');
+                    return parts.slice(-2).join('/');
                 },
 
                 formatSize(bytes) {
