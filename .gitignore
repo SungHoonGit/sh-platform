@@ -59,3 +59,7 @@ start.sh
 
 ### Gradle wrapper (tracked separately) ###
 sh-platform-auth/gradle/
+
+### Gradle wrapper (auto-generated) ###
+gradlew
+gradlew.bat
