@@ -17,15 +17,20 @@
         
         .container { display: flex; flex: 1; overflow: hidden; }
         
-        .sidebar { width: 280px; background: #f8f9fa; border-right: 1px solid #dee2e6; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 12px; border-bottom: 1px solid #dee2e6; font-weight: 500; color: #495057; }
-        .file-tree { flex: 1; overflow-y: auto; padding: 8px 0; }
-        .tree-item { padding: 6px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333; }
-        .tree-item:hover { background: #e9ecef; }
-        .tree-item.active { background: #0d6efd; color: white; }
-        .tree-item .icon { width: 16px; text-align: center; }
-        .tree-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .tree-item .meta { font-size: 11px; color: #888; }
+        .sidebar { width: 320px; background: #1e1e1e; color: #d4d4d4; display: flex; flex-direction: column; border-right: 1px solid #333; }
+        .sidebar-header { padding: 12px; border-bottom: 1px solid #333; font-weight: 500; color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .file-tree { flex: 1; overflow-y: auto; padding: 8px 0; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; }
+        
+        .tree-item { padding: 4px 8px; cursor: pointer; display: flex; align-items: center; white-space: nowrap; }
+        .tree-item:hover { background: #2a2d2e; }
+        .tree-item.active { background: #264f78; color: white; }
+        .tree-indent { display: inline-block; color: #555; user-select: none; }
+        .tree-icon { display: inline-block; width: 16px; text-align: center; margin-right: 4px; }
+        .tree-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+        .tree-meta { font-size: 11px; color: #666; margin-left: 8px; }
+        .tree-dir > .tree-name { color: #dcdcaa; }
+        .tree-file > .tree-name { color: #ce9178; }
+        .tree-file.md > .tree-name { color: #4ec9b0; }
         
         .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .content-header { padding: 12px 20px; border-bottom: 1px solid #dee2e6; display: flex; align-items: center; gap: 12px; background: white; }
@@ -36,24 +41,29 @@
         .btn-primary:hover { background: #0b5ed7; }
         
         .content-body { flex: 1; overflow-y: auto; padding: 20px; background: white; }
-        .content-body table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        .content-body table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
         .content-body th, .content-body td { padding: 8px 12px; border: 1px solid #dee2e6; text-align: left; }
-        .content-body th { background: #f8f9fa; font-weight: 500; }
+        .content-body th { background: #f8f9fa; font-weight: 600; position: sticky; top: 0; }
         .content-body tr:hover { background: #f8f9fa; }
         .content-body a { color: #0d6efd; text-decoration: none; }
         .content-body a:hover { text-decoration: underline; }
-        .content-body h1 { font-size: 24px; margin-bottom: 16px; }
+        .content-body h1 { font-size: 24px; margin-bottom: 16px; color: #1a1a2e; }
+        .content-body h2 { font-size: 20px; margin: 20px 0 12px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px; }
         .content-body h3 { font-size: 16px; margin: 16px 0 8px; color: #666; }
+        .content-body p { margin: 8px 0; line-height: 1.6; }
         
         .search-results { padding: 20px; }
-        .search-result { margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 4px; }
-        .search-result .file { font-weight: 500; color: #0d6efd; margin-bottom: 4px; }
+        .search-results h3 { margin-bottom: 16px; color: #333; }
+        .search-result { margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #0d6efd; }
+        .search-result .file { font-weight: 500; color: #0d6efd; margin-bottom: 4px; cursor: pointer; }
+        .search-result .file:hover { text-decoration: underline; }
         .search-result .line { font-size: 12px; color: #888; margin-bottom: 4px; }
         .search-result .content { font-size: 14px; }
-        .search-result mark { background: #fff3cd; padding: 1px 2px; }
+        .search-result mark { background: #fff3cd; padding: 1px 2px; border-radius: 2px; }
         
         .loading { display: flex; align-items: center; justify-content: center; height: 100%; color: #888; }
-        .empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #888; }
+        .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; gap: 8px; }
+        .empty-icon { font-size: 48px; }
     </style>
 </head>
 <body>
@@ -66,22 +76,31 @@
                    placeholder="검색어를 입력하세요 (예: 백엔드, Spring)">
         </div>
         <button class="btn btn-primary" @click="search()">검색</button>
+        <button class="btn" @click="searchMode = false; currentFile = null; loadTree()">초기화</button>
     </div>
     
     <div class="container">
         <div class="sidebar">
-            <div class="sidebar-header">파일 트리</div>
+            <div class="sidebar-header">파일 탐색기</div>
             <div class="file-tree">
                 <template x-if="loading">
                     <div class="loading">로딩 중...</div>
                 </template>
-                <template x-for="item in files" :key="item.path">
-                    <div class="tree-item" 
-                         :class="{ 'active': currentFile === item.path }"
-                         @click="item.type === 'file' ? loadFile(item.path) : null">
-                        <span class="icon" x-text="item.type === 'directory' ? '📁' : '📄'"></span>
-                        <span class="name" x-text="item.name"></span>
-                        <span class="meta" x-text="item.type === 'file' ? formatSize(item.size) : item.childCount + '개'"></span>
+                <template x-for="item in treeItems" :key="item.path">
+                    <div class="tree-item"
+                         :class="{
+                            'active': currentFile === item.path,
+                            'tree-dir': item.type === 'directory',
+                            'tree-file': item.type === 'file',
+                            'md': item.name.endsWith('.md')
+                         }"
+                         :style="'padding-left: ' + (item.depth * 16 + 8) + 'px'"
+                         @click="item.type === 'file' ? loadFile(item.path) : toggleDir(item.path)">
+                        <span class="tree-indent" x-text="getTreePrefix(item)"></span>
+                        <span class="tree-icon" x-text="item.type === 'directory' ? (expandedDirs.includes(item.path) ? '▼' : '▶') : (item.name.endsWith('.md') ? '◉' : '○')"></span>
+                        <span class="tree-name" x-text="item.name"></span>
+                        <span class="tree-meta" x-show="item.type === 'file'" x-text="formatSize(item.size)"></span>
+                        <span class="tree-meta" x-show="item.type === 'directory'" x-text="item.childCount + '개'"></span>
                     </div>
                 </template>
             </div>
@@ -90,8 +109,8 @@
         <div class="content">
             <div class="content-header" x-show="currentFile">
                 <h2 x-text="currentTitle"></h2>
-                <button class="btn" @click="exportPdf()">PDF</button>
-                <button class="btn" @click="exportExcel()">Excel</button>
+                <button class="btn" @click="exportPdf()">PDF 다운로드</button>
+                <button class="btn" @click="exportExcel()">Excel 다운로드</button>
             </div>
             
             <div class="content-body" x-show="currentFile && !searchMode" x-html="currentContent"></div>
@@ -100,7 +119,7 @@
                 <h3 x-text="'검색 결과: ' + searchResults.length + '건'"></h3>
                 <template x-for="result in searchResults" :key="result.file + result.line">
                     <div class="search-result">
-                        <div class="file" x-text="result.file" @click="loadFile(result.file)" style="cursor:pointer"></div>
+                        <div class="file" x-text="result.file" @click="loadFile(result.file)"></div>
                         <div class="line" x-text="'라인 ' + result.line"></div>
                         <div class="content" x-html="result.highlight"></div>
                     </div>
@@ -108,6 +127,7 @@
             </div>
             
             <div class="empty" x-show="!currentFile && !searchMode">
+                <div class="empty-icon">📂</div>
                 <p>왼쪽에서 파일을 선택하세요</p>
             </div>
         </div>
@@ -117,7 +137,7 @@
         function docViewer() {
             return {
                 rootPath: '/home/ubuntu/job-scraper/daily/java',
-                files: [],
+                treeItems: [],
                 currentFile: null,
                 currentTitle: '',
                 currentContent: '',
@@ -125,6 +145,7 @@
                 searchResults: [],
                 searchMode: false,
                 loading: false,
+                expandedDirs: [],
 
                 async init() {
                     await this.loadTree();
@@ -133,12 +154,34 @@
                 async loadTree() {
                     this.loading = true;
                     try {
-                        const response = await fetch(`/scraper/docs/tree?rootPath=${encodeURIComponent(this.rootPath)}`);
-                        this.files = await response.json();
+                        const response = await fetch(`/scraper/docs/tree/view?rootPath=${encodeURIComponent(this.rootPath)}`);
+                        this.treeItems = await response.json();
+                        // Auto-expand root
+                        if (this.treeItems.length > 0 && this.treeItems[0].type === 'directory') {
+                            this.expandedDirs.push(this.treeItems[0].path);
+                        }
                     } catch (error) {
                         console.error('Error loading tree:', error);
                     }
                     this.loading = false;
+                },
+
+                getTreePrefix(item) {
+                    if (item.depth === 0) return '';
+                    let prefix = '';
+                    for (let i = 0; i < item.depth - 1; i++) {
+                        prefix += '│  ';
+                    }
+                    prefix += item.isLast ? '└─ ' : '├─ ';
+                    return prefix;
+                },
+
+                toggleDir(path) {
+                    if (this.expandedDirs.includes(path)) {
+                        this.expandedDirs = this.expandedDirs.filter(d => d !== path);
+                    } else {
+                        this.expandedDirs.push(path);
+                    }
                 },
 
                 async loadFile(path) {

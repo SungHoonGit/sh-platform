@@ -32,15 +32,80 @@ public class FileTreeService {
         }
 
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(targetPath)) {
-            return StreamSupport.stream(stream.spliterator(), false)
-                    .map(path -> buildNode(path, basePath))
+            List<FileNode> nodes = StreamSupport.stream(stream.spliterator(), false)
+                    .map(path -> buildNode(path, basePath, 0))
                     .sorted(Comparator
                             .comparing(FileNode::getType).reversed()
                             .thenComparing(FileNode::getName))
                     .collect(Collectors.toList());
+
+            // Set isLast flag
+            for (int i = 0; i < nodes.size(); i++) {
+                nodes.get(i).setLast(i == nodes.size() - 1);
+            }
+
+            return nodes;
         } catch (IOException e) {
             log.error("Error scanning directory: {}", targetPath, e);
             return Collections.emptyList();
+        }
+    }
+
+    public List<FileNode> scanTree(String rootPath) {
+        Path basePath = Paths.get(rootPath).toAbsolutePath().normalize();
+        if (!Files.exists(basePath) || !Files.isDirectory(basePath)) {
+            return Collections.emptyList();
+        }
+
+        List<FileNode> result = new ArrayList<>();
+        buildTreeRecursive(basePath, basePath, result, 0, true);
+        return result;
+    }
+
+    private void buildTreeRecursive(Path currentPath, Path basePath, List<FileNode> result, int depth, boolean isLast) {
+        String name = currentPath.getFileName().toString();
+        String relativePath = basePath.relativize(currentPath).toString();
+        boolean isDirectory = Files.isDirectory(currentPath);
+
+        LocalDateTime modifiedAt = null;
+        try {
+            modifiedAt = LocalDateTime.ofInstant(
+                    Files.getLastModifiedTime(currentPath).toInstant(),
+                    ZoneId.systemDefault());
+        } catch (IOException e) {
+            log.warn("Cannot read modified time: {}", currentPath);
+        }
+
+        FileNode node = FileNode.builder()
+                .name(name)
+                .path(relativePath.isEmpty() ? "." : relativePath)
+                .type(isDirectory ? "directory" : "file")
+                .size(isDirectory ? 0 : getFileSize(currentPath))
+                .modifiedAt(modifiedAt)
+                .depth(depth)
+                .isLast(isLast)
+                .build();
+
+        if (isDirectory) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(currentPath)) {
+                List<Path> children = StreamSupport.stream(stream.spliterator(), false)
+                        .sorted(Comparator
+                                .comparing((Path p) -> Files.isDirectory(p) ? 0 : 1)
+                                .thenComparing(p -> p.getFileName().toString()))
+                        .collect(Collectors.toList());
+
+                node.setChildCount(children.size());
+                result.add(node);
+
+                for (int i = 0; i < children.size(); i++) {
+                    buildTreeRecursive(children.get(i), basePath, result, depth + 1, i == children.size() - 1);
+                }
+            } catch (IOException e) {
+                log.error("Error reading directory: {}", currentPath, e);
+                result.add(node);
+            }
+        } else {
+            result.add(node);
         }
     }
 
@@ -59,14 +124,14 @@ public class FileTreeService {
             walk.filter(Files::isRegularFile)
                     .filter(p -> extension == null || p.toString().endsWith(extension))
                     .sorted()
-                    .forEach(path -> result.add(buildNode(path, basePath)));
+                    .forEach(path -> result.add(buildNode(path, basePath, 0)));
         } catch (IOException e) {
             log.error("Error walking directory: {}", targetPath, e);
         }
         return result;
     }
 
-    private FileNode buildNode(Path path, Path basePath) {
+    private FileNode buildNode(Path path, Path basePath, int depth) {
         String relativePath = basePath.relativize(path).toString();
         String name = path.getFileName().toString();
         boolean isDirectory = Files.isDirectory(path);
@@ -96,6 +161,7 @@ public class FileTreeService {
                 .size(isDirectory ? 0 : getFileSize(path))
                 .modifiedAt(modifiedAt)
                 .childCount(childCount)
+                .depth(depth)
                 .build();
     }
 

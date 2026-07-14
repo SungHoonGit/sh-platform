@@ -26,6 +26,13 @@ public class FileController {
         return ResponseEntity.ok(nodes);
     }
 
+    @GetMapping("/tree/view")
+    public ResponseEntity<List<FileNode>> getTreeView(
+            @RequestParam String rootPath) {
+        List<FileNode> nodes = fileTreeService.scanTree(rootPath);
+        return ResponseEntity.ok(nodes);
+    }
+
     @GetMapping("/file")
     public ResponseEntity<Map<String, Object>> getFile(
             @RequestParam String rootPath,
