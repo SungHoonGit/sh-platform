@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko" x-data="docViewer()" x-init="init()">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>문서 뷰어 - Scraper Platform</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+        
+        .header { background: #1a1a2e; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 20px; }
+        .header h1 { font-size: 18px; font-weight: 500; }
+        .search-box { flex: 1; max-width: 400px; }
+        .search-box input { width: 100%; padding: 8px 12px; border: none; border-radius: 4px; background: #16213e; color: white; }
+        .search-box input::placeholder { color: #888; }
+        
+        .container { display: flex; flex: 1; overflow: hidden; }
+        
+        .sidebar { width: 280px; background: #f8f9fa; border-right: 1px solid #dee2e6; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 12px; border-bottom: 1px solid #dee2e6; font-weight: 500; color: #495057; }
+        .file-tree { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .tree-item { padding: 6px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333; }
+        .tree-item:hover { background: #e9ecef; }
+        .tree-item.active { background: #0d6efd; color: white; }
+        .tree-item .icon { width: 16px; text-align: center; }
+        .tree-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tree-item .meta { font-size: 11px; color: #888; }
+        
+        .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content-header { padding: 12px 20px; border-bottom: 1px solid #dee2e6; display: flex; align-items: center; gap: 12px; background: white; }
+        .content-header h2 { flex: 1; font-size: 16px; font-weight: 500; }
+        .btn { padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 4px; background: white; cursor: pointer; font-size: 13px; }
+        .btn:hover { background: #f8f9fa; }
+        .btn-primary { background: #0d6efd; color: white; border-color: #0d6efd; }
+        .btn-primary:hover { background: #0b5ed7; }
+        
+        .content-body { flex: 1; overflow-y: auto; padding: 20px; background: white; }
+        .content-body table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        .content-body th, .content-body td { padding: 8px 12px; border: 1px solid #dee2e6; text-align: left; }
+        .content-body th { background: #f8f9fa; font-weight: 500; }
+        .content-body tr:hover { background: #f8f9fa; }
+        .content-body a { color: #0d6efd; text-decoration: none; }
+        .content-body a:hover { text-decoration: underline; }
+        .content-body h1 { font-size: 24px; margin-bottom: 16px; }
+        .content-body h3 { font-size: 16px; margin: 16px 0 8px; color: #666; }
+        
+        .search-results { padding: 20px; }
+        .search-result { margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 4px; }
+        .search-result .file { font-weight: 500; color: #0d6efd; margin-bottom: 4px; }
+        .search-result .line { font-size: 12px; color: #888; margin-bottom: 4px; }
+        .search-result .content { font-size: 14px; }
+        .search-result mark { background: #fff3cd; padding: 1px 2px; }
+        
+        .loading { display: flex; align-items: center; justify-content: center; height: 100%; color: #888; }
+        .empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>문서 뷰어</h1>
+        <div class="search-box">
+            <input type="text" 
+                   x-model="searchQuery" 
+                   @keyup.enter="search()" 
+                   placeholder="검색어를 입력하세요 (예: 백엔드, Spring)">
+        </div>
+        <button class="btn btn-primary" @click="search()">검색</button>
+    </div>
+    
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header">파일 트리</div>
+            <div class="file-tree">
+                <template x-if="loading">
+                    <div class="loading">로딩 중...</div>
+                </template>
+                <template x-for="item in files" :key="item.path">
+                    <div class="tree-item" 
+                         :class="{ 'active': currentFile === item.path }"
+                         @click="item.type === 'file' ? loadFile(item.path) : null">
+                        <span class="icon" x-text="item.type === 'directory' ? '📁' : '📄'"></span>
+                        <span class="name" x-text="item.name"></span>
+                        <span class="meta" x-text="item.type === 'file' ? formatSize(item.size) : item.childCount + '개'"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="content-header" x-show="currentFile">
+                <h2 x-text="currentTitle"></h2>
+                <button class="btn" @click="exportPdf()">PDF</button>
+                <button class="btn" @click="exportExcel()">Excel</button>
+            </div>
+            
+            <div class="content-body" x-show="currentFile && !searchMode" x-html="currentContent"></div>
+            
+            <div class="search-results" x-show="searchMode">
+                <h3 x-text="'검색 결과: ' + searchResults.length + '건'"></h3>
+                <template x-for="result in searchResults" :key="result.file + result.line">
+                    <div class="search-result">
+                        <div class="file" x-text="result.file" @click="loadFile(result.file)" style="cursor:pointer"></div>
+                        <div class="line" x-text="'라인 ' + result.line"></div>
+                        <div class="content" x-html="result.highlight"></div>
+                    </div>
+                </template>
+            </div>
+            
+            <div class="empty" x-show="!currentFile && !searchMode">
+                <p>왼쪽에서 파일을 선택하세요</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function docViewer() {
+            return {
+                rootPath: '/home/ubuntu/job-scraper/daily/java',
+                files: [],
+                currentFile: null,
+                currentTitle: '',
+                currentContent: '',
+                searchQuery: '',
+                searchResults: [],
+                searchMode: false,
+                loading: false,
+
+                async init() {
+                    await this.loadTree();
+                },
+
+                async loadTree() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(`/scraper/docs/tree?rootPath=${encodeURIComponent(this.rootPath)}`);
+                        this.files = await response.json();
+                    } catch (error) {
+                        console.error('Error loading tree:', error);
+                    }
+                    this.loading = false;
+                },
+
+                async loadFile(path) {
+                    this.searchMode = false;
+                    this.currentFile = path;
+                    try {
+                        const response = await fetch(`/scraper/docs/file?rootPath=${encodeURIComponent(this.rootPath)}&path=${encodeURIComponent(path)}&format=html`);
+                        const data = await response.json();
+                        this.currentTitle = data.title;
+                        this.currentContent = data.content;
+                    } catch (error) {
+                        console.error('Error loading file:', error);
+                    }
+                },
+
+                async search() {
+                    if (!this.searchQuery.trim()) return;
+                    this.searchMode = true;
+                    this.currentFile = null;
+                    try {
+                        const response = await fetch(`/scraper/docs/search?rootPath=${encodeURIComponent(this.rootPath)}&q=${encodeURIComponent(this.searchQuery)}`);
+                        const data = await response.json();
+                        this.searchResults = data.results;
+                    } catch (error) {
+                        console.error('Error searching:', error);
+                    }
+                },
+
+                exportPdf() {
+                    window.open(`/scraper/docs/export/pdf?rootPath=${encodeURIComponent(this.rootPath)}&path=${encodeURIComponent(this.currentFile)}`, '_blank');
+                },
+
+                exportExcel() {
+                    window.open(`/scraper/docs/export/excel?rootPath=${encodeURIComponent(this.rootPath)}&path=${encodeURIComponent(this.currentFile)}`, '_blank');
+                },
+
+                formatSize(bytes) {
+                    if (bytes < 1024) return bytes + 'B';
+                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+                    return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
+                }
+            };
+        }
+    </script>
+</body>
+</html>

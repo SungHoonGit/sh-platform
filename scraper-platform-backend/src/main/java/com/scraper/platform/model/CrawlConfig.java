@@ -39,6 +39,9 @@ public class CrawlConfig {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "local_path", length = 500)
+    private String localPath;
+
     @OneToMany(mappedBy = "config", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<CrawlSiteConfig> siteConfigs = new ArrayList<>();
