@@ -9,6 +9,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -24,6 +27,26 @@ public class CrawlDataService {
 
     public Page<CrawlData> searchCrawlData(String keyword, Pageable pageable) {
         return crawlDataRepository.searchByKeyword(keyword, pageable);
+    }
+
+    public Page<CrawlData> advancedSearch(
+            String keyword,
+            String site,
+            String categorySlug,
+            LocalDate startDate,
+            LocalDate endDate,
+            Pageable pageable) {
+        
+        Long categoryId = null;
+        if (categorySlug != null && !categorySlug.isEmpty()) {
+            Category category = categoryService.getCategoryBySlug(categorySlug);
+            categoryId = category.getId();
+        }
+        
+        LocalDateTime start = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime end = endDate != null ? endDate.atTime(23, 59, 59) : null;
+        
+        return crawlDataRepository.advancedSearch(keyword, site, categoryId, start, end, pageable);
     }
 
     public Page<CrawlData> getCrawlDataByCategoryAndFileName(String categorySlug, String fileName, Pageable pageable) {
