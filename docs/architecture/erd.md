@@ -196,3 +196,178 @@ CREATE TABLE job_postings (
 | refresh_tokens | `idx_refresh_token` | 토큰값으로 사용자 조회 |
 | refresh_tokens | `idx_refresh_user` | 사용자별 토큰 목록 조회 (정리) |
 | verification_codes | `idx_verification_email` | 이메일별 인증코드 확인 |
+
+---
+
+## 9. SaaS 테넌트 관리 테이블 (Phase 5)
+
+### 9.1 sh_tenant — 테넌트
+
+```sql
+CREATE TABLE sh_tenant (
+    id              BIGINT          AUTO_INCREMENT PRIMARY KEY,
+    name            VARCHAR(100)    NOT NULL,
+    slug            VARCHAR(50)     NOT NULL UNIQUE,
+    domain          VARCHAR(100),
+    logo_url        VARCHAR(500),
+    status          ENUM(ACTIVE,SUSPENDED,DELETED) DEFAULT ACTIVE,
+    plan_type       ENUM(FREE,BASIC,PRO,ENTERPRISE) DEFAULT FREE,
+    max_users       INT             DEFAULT 5,
+    settings        JSON,
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sh_tenant_slug (slug),
+    INDEX idx_sh_tenant_status (status)
+);
+```
+
+| 컬럼 | 설명 |
+|------|------|
+| `slug` | URL용 식별자 (예: my-company) |
+| `status` | 테넌트 상태 (ACTIVE/SUSPENDED/DELETED) |
+| `plan_type` | 구독 플랜 (FREE/BASIC/PRO/ENTERPRISE) |
+| `max_users` | 최대 사용자 수 |
+| `settings` | 테넌트별 커스텀 설정 (JSON) |
+
+### 9.2 sh_tenant_member — 테넌트 멤버
+
+```sql
+CREATE TABLE sh_tenant_member (
+    id              BIGINT          AUTO_INCREMENT PRIMARY KEY,
+    tenant_id       BIGINT          NOT NULL,
+    user_id         BIGINT          NOT NULL,
+    role            ENUM(OWNER,ADMIN,MEMBER,GUEST) DEFAULT MEMBER,
+    status          ENUM(ACTIVE,INVITED,SUSPENDED) DEFAULT INVITED,
+    invited_at      DATETIME,
+    joined_at       DATETIME,
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES sh_tenant(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_tenant_user (tenant_id, user_id),
+    INDEX idx_sh_tenant_member_user (user_id),
+    INDEX idx_sh_tenant_member_tenant (tenant_id)
+);
+```
+
+| 컬럼 | 설명 |
+|------|------|
+| `role` | 멤버 역할 (OWNER/ADMIN/MEMBER/GUEST) |
+| `status` | 멤버 상태 (ACTIVE/INVITED/SUSPENDED) |
+| `invited_at` | 초대 일시 |
+| `joined_at` | 가입 일시 |
+
+### 9.3 sh_tenant_invitation — 테넌트 초대장
+
+```sql
+CREATE TABLE sh_tenant_invitation (
+    id              BIGINT          AUTO_INCREMENT PRIMARY KEY,
+    tenant_id       BIGINT          NOT NULL,
+    email           VARCHAR(200)    NOT NULL,
+    role            ENUM(ADMIN,MEMBER,GUEST) DEFAULT MEMBER,
+    token           VARCHAR(100)    NOT NULL UNIQUE,
+    expires_at      DATETIME        NOT NULL,
+    accepted_at     DATETIME,
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES sh_tenant(id) ON DELETE CASCADE,
+    INDEX idx_sh_tenant_invitation_token (token),
+    INDEX idx_sh_tenant_invitation_email (email)
+);
+```
+
+| 컬럼 | 설명 |
+|------|------|
+| `token` | 초대 토큰 (고유값) |
+| `expires_at` | 초대 만료 일시 |
+| `accepted_at` | 초대 수락 일시 |
+
+### 9.4 sh_tenant_audit_log — 테넌트 감사 로그
+
+```sql
+CREATE TABLE sh_tenant_audit_log (
+    id              BIGINT          AUTO_INCREMENT PRIMARY KEY,
+    tenant_id       BIGINT          NOT NULL,
+    user_id         BIGINT,
+    action          VARCHAR(50)     NOT NULL,
+    target_type     VARCHAR(50),
+    target_id       BIGINT,
+    details         JSON,
+    ip_address      VARCHAR(45),
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES sh_tenant(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_sh_tenant_audit_tenant (tenant_id),
+    INDEX idx_sh_tenant_audit_user (user_id),
+    INDEX idx_sh_tenant_audit_created (created_at)
+);
+```
+
+| 컬럼 | 설명 |
+|------|------|
+| `action` | 수행한 작업 (예: CREATE_TENANT, INVITE_MEMBER) |
+| `target_type` | 작업 대상 유형 (예: TENANT, MEMBER) |
+| `target_id` | 작업 대상 ID |
+| `details` | 작업 상세 정보 (JSON) |
+| `ip_address` | 작업 수행 IP |
+
+### 9.5 ERD 다이어그램 (테넌트 관리)
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                          sh_tenant                                 │
+├────────────────────────────────────────────────────────────────────┤
+│ PK │ id                BIGINT                                      │
+│    │ name              VARCHAR(100)  NN                            │
+│ UQ │ slug              VARCHAR(50)   NN                            │
+│    │ domain            VARCHAR(100)                                │
+│    │ logo_url          VARCHAR(500)                                │
+│    │ status            ENUM          DEFAULT ACTIVE                 │
+│    │ plan_type         ENUM          DEFAULT FREE                  │
+│    │ max_users         INT           DEFAULT 5                     │
+│    │ settings          JSON                                       │
+│    │ created_at        DATETIME      NN                            │
+│    │ updated_at        DATETIME      NN (ON UPDATE)                │
+└────────────────────┬───────────────────────────────────────────────┘
+                     │ 1
+                     │
+                     │ N
+┌────────────────────┴───────────────────────────────────────────────┐
+│                      sh_tenant_member                               │
+├────────────────────────────────────────────────────────────────────┤
+│ PK │ id                BIGINT                                      │
+│ FK │ tenant_id         BIGINT        NN                            │
+│ FK │ user_id           BIGINT        NN                            │
+│    │ role              ENUM          DEFAULT MEMBER                 │
+│    │ status            ENUM          DEFAULT INVITED                │
+│    │ invited_at        DATETIME      NULL                          │
+│    │ joined_at         DATETIME      NULL                          │
+│    │ created_at        DATETIME      NN                            │
+│ UQ │ uk_tenant_user    (tenant_id, user_id)                        │
+└────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────┐
+│                    sh_tenant_invitation                             │
+├────────────────────────────────────────────────────────────────────┤
+│ PK │ id                BIGINT                                      │
+│ FK │ tenant_id         BIGINT        NN                            │
+│    │ email             VARCHAR(200)  NN                            │
+│    │ role              ENUM          DEFAULT MEMBER                 │
+│ UQ │ token             VARCHAR(100)  NN                            │
+│    │ expires_at        DATETIME      NN                            │
+│    │ accepted_at       DATETIME      NULL                          │
+│    │ created_at        DATETIME      NN                            │
+└────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────┐
+│                    sh_tenant_audit_log                              │
+├────────────────────────────────────────────────────────────────────┤
+│ PK │ id                BIGINT                                      │
+│ FK │ tenant_id         BIGINT        NN                            │
+│ FK │ user_id           BIGINT                                      │
+│    │ action            VARCHAR(50)   NN                            │
+│    │ target_type       VARCHAR(50)                                 │
+│    │ target_id         BIGINT                                      │
+│    │ details           JSON                                       │
+│    │ ip_address        VARCHAR(45)                                 │
+│    │ created_at        DATETIME      NN                            │
+└────────────────────────────────────────────────────────────────────┘
+```

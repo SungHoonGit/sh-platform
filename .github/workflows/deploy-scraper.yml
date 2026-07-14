@@ -1,13 +1,10 @@
-name: Deploy Backend (Spring Boot)
+name: Deploy Scraper Platform
 
 on:
   push:
     branches: [main]
     paths:
-      - "sh-platform-auth/**"
-      - "sh-platform-common/**"
-      - "build.gradle.kts"
-      - "settings.gradle.kts"
+      - "scraper-platform-backend/**"
   workflow_dispatch:
 
 jobs:
@@ -25,14 +22,21 @@ jobs:
       - name: Build and Test with Gradle
         run: |
           chmod +x gradlew
-          ./gradlew :sh-platform-auth:build
+          ./gradlew :scraper-platform-backend:build
 
       - name: Upload Test Report
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
-          name: test-report
+          name: scraper-test-report
           path: "**/build/reports/tests/test/"
+
+      - name: Upload Javadoc
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: scraper-javadoc
+          path: "**/build/docs/javadoc/"
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -43,13 +47,16 @@ jobs:
           script: |
             set -e
 
-            sudo systemctl stop sh-platform 2>/dev/null || true
-
             cd /home/ubuntu/sh-platform
             git pull origin main
 
-            ./gradlew :sh-platform-auth:clean :sh-platform-auth:build -q
-            ./gradlew :sh-platform-auth:javadoc -q
+            ./gradlew :scraper-platform-backend:clean :scraper-platform-backend:build -q
+            ./gradlew :scraper-platform-backend:javadoc -q
 
-            sudo systemctl start sh-platform
+            # Restart scraper-platform
+            pkill -f "scraper-platform" 2>/dev/null || true
+            sleep 2
+            cd scraper-platform-backend
+            nohup ../gradlew :scraper-platform-backend:bootRun --args="--server.port=8081" > /home/ubuntu/data/scraper-platform.log 2>&1 &
+
             echo "Deploy complete!"
