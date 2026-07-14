@@ -19,7 +19,6 @@
         
         .container { display: flex; flex: 1; overflow: hidden; }
         
-        /* Sidebar */
         .sidebar { width: 300px; background: #f5f5f5; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
         .sidebar-header { padding: 10px 12px; border-bottom: 1px solid #ddd; font-weight: 600; color: #555; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; background: #eee; }
         .file-tree { flex: 1; overflow-y: auto; padding: 4px 0; font-size: 13px; }
@@ -34,7 +33,6 @@
         .tree-item.active .tree-meta { color: rgba(255,255,255,0.7); }
         .tree-dir > .tree-name { font-weight: 500; }
         
-        /* Content */
         .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .content-header { padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; background: white; }
         .content-header h2 { flex: 1; font-size: 14px; font-weight: 500; color: #333; }
@@ -55,7 +53,6 @@
         .content-body h3 { font-size: 15px; margin: 14px 0 8px; color: #555; }
         .content-body p { margin: 8px 0; }
         
-        /* Search */
         .search-results { padding: 20px; }
         .search-results h3 { margin-bottom: 16px; color: #333; font-size: 14px; }
         .search-result { margin-bottom: 12px; padding: 12px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #0078d4; }
@@ -93,7 +90,7 @@
                 <template x-if="loading">
                     <div class="loading">로딩 중...</div>
                 </template>
-                <template x-for="(item, idx) in visibleItems" :key="item._key">
+                <template x-for="item in visibleItems" :key="item.path">
                     <div class="tree-item"
                          :class="{
                             'active': currentFile === item.path,
@@ -104,7 +101,7 @@
                         <span class="tree-icon" x-text="getIcon(item)"></span>
                         <span class="tree-name" x-text="item.name"></span>
                         <span class="tree-meta" x-show="item.type === 'file'" x-text="formatSize(item.size)"></span>
-                        <span class="tree-meta" x-show="item.type === 'directory' && expandedDirs[item.path]" x-text="item.childCount + '개'"></span>
+                        <span class="tree-meta" x-show="item.type === 'directory'" x-text="item.childCount + '개'"></span>
                     </div>
                 </template>
             </div>
@@ -121,7 +118,7 @@
             
             <div class="search-results" x-show="searchMode">
                 <h3 x-text="'검색 결과: ' + searchResults.length + '건'"></h3>
-                <template x-for="(result, idx) in searchResults" :key="result.file + result.line">
+                <template x-for="result in searchResults" :key="result.file + result.line">
                     <div class="search-result">
                         <div class="file" x-text="result.file" @click="loadFile(result.file)"></div>
                         <div class="line" x-text="'라인 ' + result.line"></div>
@@ -142,7 +139,7 @@
             return {
                 rootPath: '/home/ubuntu/job-scraper/daily',
                 allItems: [],
-                expandedDirs: { '.': true },
+                expandedDirs: { '.': true, 'java': true, 'react': true },
                 currentFile: null,
                 currentTitle: '',
                 currentContent: '',
@@ -156,47 +153,39 @@
                 },
 
                 get visibleItems() {
-                    const result = [];
-                    const parentStack = [];
+                    const items = [];
+                    const skipUntilDepth = {};  // depth -> skip if parent not expanded
                     
                     for (const item of this.allItems) {
-                        if (item.depth === 0) {
-                            result.push({ ...item, _key: item.path });
-                            if (item.type === 'directory' && !this.expandedDirs[item.path]) {
-                                // Skip children
-                                const myDepth = item.depth;
-                                continue;
-                            }
-                        } else {
-                            // Check if parent is expanded
-                            const parentPath = this.getParentPath(item.path);
-                            if (this.isPathVisible(parentPath)) {
-                                result.push({ ...item, _key: item.path });
-                                if (item.type === 'directory' && !this.expandedDirs[item.path]) {
-                                    continue;
-                                }
-                            }
+                        // Check if this item's parent was collapsed
+                        const parentPath = this.getParentPath(item.path);
+                        const parentKey = parentPath === '.' ? '.' : parentPath;
+                        
+                        if (skipUntilDepth[item.depth] && item.depth >= skipUntilDepth[item.depth]) {
+                            continue;
+                        }
+                        
+                        // If parent is a directory that's collapsed, skip
+                        if (item.depth > 0 && !this.expandedDirs[parentKey]) {
+                            skipUntilDepth[item.depth] = item.depth;
+                            continue;
+                        }
+                        
+                        items.push(item);
+                        
+                        // If this is a collapsed directory, mark to skip its children
+                        if (item.type === 'directory' && !this.expandedDirs[item.path]) {
+                            skipUntilDepth[item.depth + 1] = item.depth + 1;
                         }
                     }
-                    return result;
-                },
-
-                isPathVisible(path) {
-                    if (path === '.' || path === '') return true;
-                    if (!this.expandedDirs[this.getDirOf(path)]) return false;
-                    return this.isPathVisible(this.getDirOf(path));
-                },
-
-                getDirOf(path) {
-                    const parts = path.split('/');
-                    if (parts.length <= 1) return '.';
-                    return parts.slice(0, -1).join('/');
+                    return items;
                 },
 
                 getParentPath(path) {
+                    if (path === '.' || !path) return '.';
                     const parts = path.split('/');
                     if (parts.length <= 1) return '.';
-                    return parts.slice(0, -1).join('/');
+                    return parts.slice(0, -1).join('/') || '.';
                 },
 
                 async loadTree() {
@@ -219,9 +208,11 @@
                 },
 
                 toggleDir(item) {
-                    if (this.expandedDirs[item.path]) {
+                    const wasExpanded = !!this.expandedDirs[item.path];
+                    
+                    if (wasExpanded) {
+                        // Collapse: remove this dir and all descendant dirs
                         delete this.expandedDirs[item.path];
-                        // Collapse all children
                         const prefix = item.path + '/';
                         Object.keys(this.expandedDirs).forEach(key => {
                             if (key.startsWith(prefix)) {
@@ -229,9 +220,11 @@
                             }
                         });
                     } else {
+                        // Expand
                         this.expandedDirs[item.path] = true;
                     }
-                    // Force reactivity
+                    
+                    // Force Alpine reactivity
                     this.expandedDirs = { ...this.expandedDirs };
                 },
 
@@ -242,7 +235,6 @@
                         const response = await fetch(`/scraper/docs/file?rootPath=${encodeURIComponent(this.rootPath)}&path=${encodeURIComponent(path)}&format=html`);
                         const data = await response.json();
                         this.currentTitle = data.title;
-                        // Add target="_blank" to all links
                         this.currentContent = data.content.replace(/<a href/g, '<a target="_blank" rel="noopener noreferrer" href');
                     } catch (error) {
                         console.error('Error loading file:', error);
