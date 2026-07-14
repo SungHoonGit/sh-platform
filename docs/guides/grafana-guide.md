@@ -297,3 +297,11 @@ sum(rate({job="spring-boot"} |= "ERROR" [5m])) by (level)
 # 로그에서 레이턴시 추출
 {job="spring-boot"} | logfmt | unwrap duration | (1000)
 ```
+
+---
+
+## 13. 상세 실습 가이드
+
+위 가이드가 개념 위주라면, 다음 문서는 **실제 클릭부터 대시보드 완성까지** 한 단계씩 설명합니다:
+
+- [Grafana 모니터링 실습 가이드](../grafana-practical-guide.md) — CPU/메모리/디스크 패널 만들기, 공유 대시보드 임포트, 알림 설정까지
