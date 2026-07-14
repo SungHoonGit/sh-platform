@@ -24,10 +24,10 @@ public class CrawlConfigController {
         return ResponseEntity.ok(crawlConfigService.getAllConfigs());
     }
 
-    @GetMapping("/{category}")
-    @Operation(summary = "카테고리별 설정 조회", description = "카테고리별 크롤링 설정을 조회합니다")
-    public ResponseEntity<CrawlConfig> getConfigByCategory(@PathVariable String category) {
-        return ResponseEntity.ok(crawlConfigService.getConfigByCategory(category));
+    @GetMapping("/{id}")
+    @Operation(summary = "설정 상세 조회", description = "ID로 크롤링 설정을 조회합니다")
+    public ResponseEntity<CrawlConfig> getConfigById(@PathVariable Long id) {
+        return ResponseEntity.ok(crawlConfigService.getConfigById(id));
     }
 
     @GetMapping("/active")
@@ -42,18 +42,18 @@ public class CrawlConfigController {
         return ResponseEntity.ok(crawlConfigService.createConfig(config));
     }
 
-    @PutMapping("/{category}")
-    @Operation(summary = "설정 수정", description = "카테고리별 크롤링 설정을 수정합니다")
+    @PutMapping("/{id}")
+    @Operation(summary = "설정 수정", description = "크롤링 설정을 수정합니다")
     public ResponseEntity<CrawlConfig> updateConfig(
-            @PathVariable String category,
+            @PathVariable Long id,
             @RequestBody CrawlConfig config) {
-        return ResponseEntity.ok(crawlConfigService.updateConfig(category, config));
+        return ResponseEntity.ok(crawlConfigService.updateConfig(id, config));
     }
 
-    @DeleteMapping("/{category}")
-    @Operation(summary = "설정 삭제", description = "카테고리별 크롤링 설정을 삭제합니다")
-    public ResponseEntity<Void> deleteConfig(@PathVariable String category) {
-        crawlConfigService.deleteConfig(category);
+    @DeleteMapping("/{id}")
+    @Operation(summary = "설정 삭제", description = "크롤링 설정을 삭제합니다")
+    public ResponseEntity<Void> deleteConfig(@PathVariable Long id) {
+        crawlConfigService.deleteConfig(id);
         return ResponseEntity.ok().build();
     }
 }

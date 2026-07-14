@@ -19,47 +19,50 @@ public class CrawlConfigService {
         return crawlConfigRepository.findAll();
     }
 
-    public CrawlConfig getConfigByCategory(String category) {
-        return crawlConfigRepository.findByCategory(category)
-                .orElseThrow(() -> new RuntimeException("Config not found: " + category));
+    public CrawlConfig getConfigById(Long id) {
+        return crawlConfigRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Config not found: " + id));
+    }
+
+    public CrawlConfig getConfigByName(String name) {
+        return crawlConfigRepository.findByName(name)
+                .orElseThrow(() -> new RuntimeException("Config not found: " + name));
     }
 
     public List<CrawlConfig> getActiveConfigs() {
         return crawlConfigRepository.findByIsActiveTrue();
     }
 
+    public List<CrawlConfig> getActiveConfigsWithSiteConfigs() {
+        return crawlConfigRepository.findAllActiveWithSiteConfigs();
+    }
+
     @Transactional
     public CrawlConfig createConfig(CrawlConfig config) {
-        if (crawlConfigRepository.existsByCategory(config.getCategory())) {
-            throw new RuntimeException("Duplicate category: " + config.getCategory());
+        if (crawlConfigRepository.existsByName(config.getName())) {
+            throw new RuntimeException("Duplicate config name: " + config.getName());
         }
         return crawlConfigRepository.save(config);
     }
 
     @Transactional
-    public CrawlConfig updateConfig(String category, CrawlConfig updatedConfig) {
-        CrawlConfig existing = crawlConfigRepository.findByCategory(category)
-                .orElseThrow(() -> new RuntimeException("Config not found: " + category));
+    public CrawlConfig updateConfig(Long id, CrawlConfig updatedConfig) {
+        CrawlConfig existing = crawlConfigRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Config not found: " + id));
         
-        existing.setQuery(updatedConfig.getQuery());
-        existing.setCareerLevel(updatedConfig.getCareerLevel());
-        existing.setCareerFrom(updatedConfig.getCareerFrom());
-        existing.setCareerTo(updatedConfig.getCareerTo());
-        existing.setSites(updatedConfig.getSites());
-        existing.setIncludeTitles(updatedConfig.getIncludeTitles());
-        existing.setExcludeTitles(updatedConfig.getExcludeTitles());
+        existing.setName(updatedConfig.getName());
+        existing.setDescription(updatedConfig.getDescription());
         existing.setSchedule(updatedConfig.getSchedule());
         existing.setRetentionDays(updatedConfig.getRetentionDays());
-        existing.setMaxPerSite(updatedConfig.getMaxPerSite());
         existing.setIsActive(updatedConfig.getIsActive());
         
         return crawlConfigRepository.save(existing);
     }
 
     @Transactional
-    public void deleteConfig(String category) {
-        CrawlConfig config = crawlConfigRepository.findByCategory(category)
-                .orElseThrow(() -> new RuntimeException("Config not found: " + category));
+    public void deleteConfig(Long id) {
+        CrawlConfig config = crawlConfigRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Config not found: " + id));
         crawlConfigRepository.delete(config);
     }
 }

@@ -1,6 +1,5 @@
 package com.scraper.platform.service;
 
-import com.scraper.platform.model.Category;
 import com.scraper.platform.model.CrawlData;
 import com.scraper.platform.repository.CrawlDataRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,26 +27,16 @@ class CrawlDataServiceTest {
     @Mock
     private CrawlDataRepository crawlDataRepository;
 
-    @Mock
-    private CategoryService categoryService;
-
     @InjectMocks
     private CrawlDataService crawlDataService;
 
-    private Category testCategory;
     private CrawlData testCrawlData;
 
     @BeforeEach
     void setUp() {
-        testCategory = Category.builder()
-                .id(1L)
-                .name("Java")
-                .slug("java")
-                .build();
-
         testCrawlData = CrawlData.builder()
                 .id(1L)
-                .category(testCategory)
+                .category("java")
                 .filePath("/data/java/2026-07-14/test.md")
                 .fileName("test.md")
                 .title("테스트 문서")
@@ -64,8 +53,7 @@ class CrawlDataServiceTest {
             // given
             PageRequest pageRequest = PageRequest.of(0, 20);
             Page<CrawlData> page = new PageImpl<>(List.of(testCrawlData));
-            given(categoryService.getCategoryBySlug("java")).willReturn(testCategory);
-            given(crawlDataRepository.findByCategoryId(1L, pageRequest)).willReturn(page);
+            given(crawlDataRepository.findByCategory("java", pageRequest)).willReturn(page);
 
             // when
             var result = crawlDataService.getCrawlDataByCategory("java", pageRequest);
@@ -105,8 +93,7 @@ class CrawlDataServiceTest {
         @DisplayName("카테고리별 데이터 수를 조회한다")
         void getCountByCategory_shouldReturnCount() {
             // given
-            given(categoryService.getCategoryBySlug("java")).willReturn(testCategory);
-            given(crawlDataRepository.countByCategoryId(1L)).willReturn(10L);
+            given(crawlDataRepository.countByCategory("java")).willReturn(10L);
 
             // when
             var result = crawlDataService.getCountByCategory("java");

@@ -34,38 +34,36 @@ class CrawlConfigServiceTest {
     void setUp() {
         testConfig = CrawlConfig.builder()
                 .id(1L)
-                .category("java")
-                .query("Java Spring 백엔드 개발자")
-                .careerLevel("경력")
-                .careerFrom(3)
-                .careerTo(5)
-                .sites("[\"saramin\",\"wanted\"]")
+                .name("Java 시니어 개발자")
+                .description("Java 시니어 개발자 크롤링 설정")
+                .schedule("0 9 * * *")
+                .retentionDays(30)
                 .isActive(true)
                 .build();
     }
 
     @Nested
-    @DisplayName("getConfigBySlug 메서드")
-    class GetConfigByCategory {
+    @DisplayName("getConfigById 메서드")
+    class GetConfigById {
 
         @Test
-        @DisplayName("카테고리로 설정을 조회한다")
-        void getConfigByCategory_shouldReturnConfig_whenExists() {
-            given(crawlConfigRepository.findByCategory("java")).willReturn(Optional.of(testConfig));
+        @DisplayName("ID로 설정을 조회한다")
+        void getConfigById_shouldReturnConfig_whenExists() {
+            given(crawlConfigRepository.findById(1L)).willReturn(Optional.of(testConfig));
 
-            var result = crawlConfigService.getConfigByCategory("java");
+            var result = crawlConfigService.getConfigById(1L);
 
             assertNotNull(result);
-            assertEquals("java", result.getCategory());
+            assertEquals("Java 시니어 개발자", result.getName());
         }
 
         @Test
-        @DisplayName("존재하지 않는 카테고리 조회 시 예외 발생")
-        void getConfigByCategory_shouldThrow_whenNotExists() {
-            given(crawlConfigRepository.findByCategory("nonexistent")).willReturn(Optional.empty());
+        @DisplayName("존재하지 않는 ID 조회 시 예외 발생")
+        void getConfigById_shouldThrow_whenNotExists() {
+            given(crawlConfigRepository.findById(999L)).willReturn(Optional.empty());
 
             assertThrows(RuntimeException.class,
-                    () -> crawlConfigService.getConfigByCategory("nonexistent"));
+                    () -> crawlConfigService.getConfigById(999L));
         }
     }
 
@@ -77,11 +75,10 @@ class CrawlConfigServiceTest {
         @DisplayName("정상적으로 설정을 생성한다")
         void createConfig_shouldCreate_whenValidInput() {
             CrawlConfig newConfig = CrawlConfig.builder()
-                    .category("react")
-                    .query("React 프론트엔드")
+                    .name("React 프론트엔드")
                     .build();
             
-            given(crawlConfigRepository.existsByCategory("react")).willReturn(false);
+            given(crawlConfigRepository.existsByName("React 프론트엔드")).willReturn(false);
             when(crawlConfigRepository.save(any(CrawlConfig.class))).thenReturn(newConfig);
 
             var result = crawlConfigService.createConfig(newConfig);
@@ -91,9 +88,9 @@ class CrawlConfigServiceTest {
         }
 
         @Test
-        @DisplayName("중복 카테고리로 생성 시 예외 발생")
-        void createConfig_shouldThrow_whenDuplicateCategory() {
-            given(crawlConfigRepository.existsByCategory("java")).willReturn(true);
+        @DisplayName("중복 이름으로 생성 시 예외 발생")
+        void createConfig_shouldThrow_whenDuplicateName() {
+            given(crawlConfigRepository.existsByName("Java 시니어 개발자")).willReturn(true);
 
             assertThrows(RuntimeException.class,
                     () -> crawlConfigService.createConfig(testConfig));
@@ -107,16 +104,15 @@ class CrawlConfigServiceTest {
         @Test
         @DisplayName("정상적으로 설정을 수정한다")
         void updateConfig_shouldUpdate_whenExists() {
-            given(crawlConfigRepository.findByCategory("java")).willReturn(Optional.of(testConfig));
+            given(crawlConfigRepository.findById(1L)).willReturn(Optional.of(testConfig));
             when(crawlConfigRepository.save(any(CrawlConfig.class))).thenReturn(testConfig);
 
             CrawlConfig updatedConfig = CrawlConfig.builder()
-                    .query("Java Spring 백엔드 개발자 서울")
-                    .careerFrom(5)
-                    .careerTo(8)
+                    .name("Java 시니어 개발자 (수정)")
+                    .schedule("0 10 * * *")
                     .build();
 
-            var result = crawlConfigService.updateConfig("java", updatedConfig);
+            var result = crawlConfigService.updateConfig(1L, updatedConfig);
 
             assertNotNull(result);
             verify(crawlConfigRepository).save(any(CrawlConfig.class));

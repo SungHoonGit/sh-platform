@@ -15,4 +15,6 @@ dependencies {
 
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
+    
+    compileOnly("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
 }

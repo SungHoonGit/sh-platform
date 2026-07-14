@@ -1,8 +1,11 @@
 package com.scraper.platform.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "crawl_config")
@@ -11,6 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class CrawlConfig {
 
     @Id
@@ -18,31 +22,10 @@ public class CrawlConfig {
     private Long id;
 
     @Column(nullable = false, length = 100)
-    private String category;
+    private String name;
 
-    @Column(nullable = false, length = 500)
-    private String query;
-
-    @Column(name = "career_level", length = 50)
-    @Builder.Default
-    private String careerLevel = "경력";
-
-    @Column(name = "career_from")
-    @Builder.Default
-    private Integer careerFrom = 0;
-
-    @Column(name = "career_to")
-    @Builder.Default
-    private Integer careerTo = 10;
-
-    @Column(columnDefinition = "JSON")
-    private String sites;
-
-    @Column(name = "include_titles", columnDefinition = "JSON")
-    private String includeTitles;
-
-    @Column(name = "exclude_titles", columnDefinition = "JSON")
-    private String excludeTitles;
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     @Column(length = 100)
     @Builder.Default
@@ -52,13 +35,13 @@ public class CrawlConfig {
     @Builder.Default
     private Integer retentionDays = 30;
 
-    @Column(name = "max_per_site")
-    @Builder.Default
-    private Integer maxPerSite = 15;
-
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
+
+    @OneToMany(mappedBy = "config", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CrawlSiteConfig> siteConfigs = new ArrayList<>();
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

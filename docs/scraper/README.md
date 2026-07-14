@@ -1,99 +1,81 @@
 # Scraper Platform 문서
 
-> 스크래퍼 데이터 관리 및 모니터링 플랫폼
+> 채용 공고 스크래퍼 관리 시스템
+
+---
+
+## 아키텍처
+
+```
+scraper-platform
+├── DB (scraper_platform)
+│   ├── site_definition          # 사이트 정의
+│   ├── site_parameter_definition # 사이트별 파라미터 정의
+│   ├── crawl_config             # 크롤링 설정 (메인)
+│   ├── crawl_site_config        # 사이트별 크롤링 설정
+│   ├── crawl_data               # 크롤링 데이터
+│   └── crawl_log                # 크롤링 로그
+│
+├── Backend (Spring Boot)
+│   ├── Controller              # REST API
+│   ├── Service                 # 비즈니스 로직
+│   ├── Repository              # DB 접근
+│   └── Entity                  # JPA 엔티티
+│
+└── Scraper (Python)
+    └── job-scraper             # 실제 크롤링 실행
+```
 
 ---
 
 ## 문서 구조
 
 ```
-docs/
-├── architecture.md     # 아키텍처 설계
-└── roadmap.md         # 로드맵
+docs/scraper/
+├── README.md                   # 이 문서
+├── architecture.md             # 아키텍처 상세
+├── ddl.sql                     # DB DDL
+├── data-paths.md               # 데이터 경로
+├── roadmap.md                  # 로드맵
+└── migration-v2.md             # v2 마이그레이션 가이드
 ```
 
 ---
 
-## 데이터 경로 규칙
+## DB 테이블
 
-### 파일 저장 위치
-
-```
-/home/ubuntu/data/
-├── scraper/                ← 스크래퍼 수집 데이터
-│   ├── java/
-│   │   ├── 2026-07-14.md
-│   │   └── ...
-│   └── react/
-│       └── ...
-└── shared/                 ← 공유 데이터 (선택)
-```
-
-### 경로 설정
-
-```yaml
-# application.yml
-app:
-  data:
-    base-path: /home/ubuntu/data
-    scraper:
-      path: /home/ubuntu/data/scraper
-```
-
-### 이유
-
-- **데이터 관리 용이**: 한 곳에서 모든 데이터 확인 가능
-- **백업 간단**: `/home/ubuntu/data/` 하나만 백업
-- **확장 용이**: 새 애플리케이션 추가 시 하위 폴더만 생성
-- **안전성**: 배포 시 데이터 덮어쓰기 방지
-
----
-
-## 아키텍처 요약
-
-| 항목 | 내용 |
-|------|------|
-| 백엔드 | Spring Boot 3.5.x |
-| 프론트엔드 | React, TypeScript |
-| DB | MariaDB |
-| 포트 | :8081 (API), :3001 (UI) |
-
----
-
-## 구현 단계
-
-| Phase | 내용 | 기간 |
-|-------|------|------|
-| Phase 1 | 기본 구조 | 1주 |
-| Phase 2 | 데이터 뷰어 | 1주 |
-| Phase 3 | 스크래퍼 설정 | 1주 |
-| Phase 4 | 알림 설정 | 1주 |
-| Phase 5 | 모니터링 | 1주 |
+| 테이블 | 설명 | 관계 |
+|--------|------|------|
+| `site_definition` | 지원 사이트 목록 | 1:N → site_parameter_definition |
+| `site_parameter_definition` | 사이트별 파라미터 정의 | N:1 → site_definition |
+| `crawl_config` | 크롤링 설정 (메인) | 1:N → crawl_site_config |
+| `crawl_site_config` | 사이트별 설정值 | N:1 → crawl_config, site_definition |
+| `crawl_data` | 수집된 채용 공고 | N:1 → crawl_config |
+| `crawl_log` | 크롤링 실행 로그 | N:1 → crawl_config, site_definition |
 
 ---
 
 ## API 엔드포인트
 
-### 데이터 뷰어
-- GET /api/v1/files - 파일 트리
-- GET /api/v1/files/{path} - 파일 내용
-- GET /api/v1/files/search - 검색
-
-### 스크래퍼 설정
-- GET /api/v1/scraper/configs - 설정 목록
-- POST /api/v1/scraper/configs - 설정 생성
-- POST /api/v1/scraper/configs/{id}/run - 수동 실행
-
-### 알림 설정
-- GET /api/v1/notifications - 알림 목록
-- POST /api/v1/notifications/test - 테스트 발송
+| Method | URL | 설명 |
+|--------|-----|------|
+| GET | `/scraper/sites` | 사이트 목록 |
+| GET | `/scraper/sites/{id}/parameters` | 사이트별 파라미터 정의 |
+| GET/POST/PUT/DELETE | `/scraper/configs` | 크롤링 설정 CRUD |
+| POST | `/scraper/data-import/all` | MD 파일 임포트 |
+| GET | `/scraper/crawl-data/search` | 키워드 검색 |
+| GET | `/scraper/crawl-data/advanced-search` | 고급 검색 |
+| GET | `/scraper/swagger-ui/index.html` | Swagger UI |
+| GET | `/scraper/javadoc/` | Javadoc |
+| GET | `/scraper/test-reports/` | JUnit 테스트 리포트 |
 
 ---
 
-## 관련 프로젝트
+## 현재 진행 상황
 
-| 프로젝트 | 위치 | 설명 |
-|----------|------|------|
-| sh-platform | /home/ubuntu/sh-platform | 메인 플랫폼 |
-| scraper-platform | /home/ubuntu/scraper-platform | 스크래퍼 관리 |
-| job-scraper | /home/ubuntu/job-scraper | 기존 스크래퍼 |
+| Phase | 내용 | 상태 |
+|-------|------|------|
+| Phase 1 | DB 구조 + API | ✅ 완료 |
+| Phase 2 | 프론트엔드 UI | 🔜 예정 |
+| Phase 3 | Python 스크래퍼 연동 | 🔜 예정 |
+| Phase 4 | 스케줄러 자동화 | 🔜 예정 |

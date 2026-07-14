@@ -1,32 +1,41 @@
 package com.scraper.platform.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "category")
+@Table(name = "crawl_site_config",
+       uniqueConstraints = @UniqueConstraint(columnNames = {"config_id", "site_definition_id"}))
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class Category {
+public class CrawlSiteConfig {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
-    private String name;
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "config_id", nullable = false)
+    private CrawlConfig config;
 
-    @Column(nullable = false, unique = true, length = 100)
-    private String slug;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "site_definition_id", nullable = false)
+    private SiteDefinition siteDefinition;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+    @Column(name = "is_enabled")
+    @Builder.Default
+    private Boolean isEnabled = true;
+
+    @Column(name = "param_values", columnDefinition = "TEXT")
+    private String paramValues;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

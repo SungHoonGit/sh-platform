@@ -20,8 +20,11 @@ public class CrawlData {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    private Category category;
+    @JoinColumn(name = "config_id")
+    private CrawlConfig config;
+
+    @Column(length = 100)
+    private String category;
 
     @Column(name = "file_path", nullable = false, length = 500)
     private String filePath;
@@ -53,8 +56,16 @@ public class CrawlData {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

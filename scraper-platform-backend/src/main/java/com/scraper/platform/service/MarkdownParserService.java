@@ -1,6 +1,5 @@
 package com.scraper.platform.service;
 
-import com.scraper.platform.model.Category;
 import com.scraper.platform.model.CrawlData;
 import com.scraper.platform.repository.CrawlDataRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,13 +24,12 @@ import java.util.regex.Pattern;
 public class MarkdownParserService {
 
     private final CrawlDataRepository crawlDataRepository;
-    private final CategoryService categoryService;
 
     private static final String DATA_DIR = "/home/ubuntu/data/scraper";
 
     @Transactional
     public int importAllFiles() {
-        int totalImported = 0;
+        AtomicInteger totalImported = new AtomicInteger(0);
         try {
             Path dataPath = Paths.get(DATA_DIR);
             if (!Files.exists(dataPath)) {
@@ -41,7 +40,8 @@ public class MarkdownParserService {
                 paths.filter(Files::isDirectory).forEach(categoryPath -> {
                     String categoryName = categoryPath.getFileName().toString();
                     try {
-                        importCategoryFiles(categoryName, categoryPath);
+                        int count = importCategoryFiles(categoryName, categoryPath);
+                        totalImported.addAndGet(count);
                     } catch (Exception e) {
                         log.error("Error importing category: {}", categoryName, e);
                     }
@@ -50,27 +50,27 @@ public class MarkdownParserService {
         } catch (IOException e) {
             log.error("Error reading data directory", e);
         }
-        return totalImported;
+        return totalImported.get();
     }
 
     @Transactional
     public int importCategoryFiles(String categoryName, Path categoryPath) throws IOException {
         int imported = 0;
-        Category category = findOrCreateCategory(categoryName);
         try (var paths = Files.list(categoryPath)) {
-            paths.filter(p -> p.toString().endsWith(".md")).forEach(mdFile -> {
+            for (Path mdFile : (Iterable<Path>) paths.filter(p -> p.toString().endsWith(".md"))::iterator) {
                 try {
-                    importSingleFile(category, mdFile);
+                    int count = importSingleFile(categoryName, mdFile);
+                    imported += count;
                 } catch (Exception e) {
                     log.error("Error importing file: {}", mdFile, e);
                 }
-            });
+            }
         }
         return imported;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public int importSingleFile(Category category, Path mdFile) {
+    public int importSingleFile(String categoryName, Path mdFile) {
         int imported = 0;
         String fileName = mdFile.getFileName().toString();
         LocalDate fileDate = extractDateFromFileName(fileName);
@@ -91,7 +91,7 @@ public class MarkdownParserService {
                 }
                 if (inTable && line.startsWith("|")) {
                     try {
-                        CrawlData data = parseTableRow(category, line, fileDate, fileName);
+                        CrawlData data = parseTableRow(categoryName, line, fileDate, fileName);
                         if (data != null && !isDuplicate(data)) {
                             crawlDataRepository.save(data);
                             imported++;
@@ -111,7 +111,7 @@ public class MarkdownParserService {
         return imported;
     }
 
-    private CrawlData parseTableRow(Category category, String line, LocalDate fileDate, String fileName) {
+    private CrawlData parseTableRow(String categoryName, String line, LocalDate fileDate, String fileName) {
         String[] columns = line.split("\\|");
         if (columns.length < 6) {
             return null;
@@ -127,7 +127,7 @@ public class MarkdownParserService {
         String url = extractUrl(titleWithLink);
         String tagsJson = convertToJsonArray(techStack);
         return CrawlData.builder()
-                .category(category)
+                .category(categoryName)
                 .filePath(fileName)
                 .fileName(fileName)
                 .title(company + " - " + title)
@@ -179,13 +179,6 @@ public class MarkdownParserService {
             return LocalDate.parse(matcher.group(1), DateTimeFormatter.ISO_LOCAL_DATE);
         }
         return null;
-    }
-
-    private Category findOrCreateCategory(String categoryName) {
-        return categoryService.getAllCategories().stream()
-                .filter(c -> c.getSlug().equals(categoryName))
-                .findFirst()
-                .orElseGet(() -> categoryService.createCategory(categoryName, categoryName, categoryName + " 관련 기술 문서"));
     }
 
     private boolean isDuplicate(CrawlData data) {

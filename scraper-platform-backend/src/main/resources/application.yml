@@ -1,7 +1,5 @@
 server:
   port: 8081
-  servlet:
-    context-path: /api
 
 spring:
   application:
@@ -25,7 +23,7 @@ springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
-    path: /swagger-ui.html
+    path: /api-docs-ui
     operationsSorter: method
 
 management:
