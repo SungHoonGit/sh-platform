@@ -112,3 +112,49 @@ sh-platform/ (Monorepo)
 ### 배포
 - SchemaSpy 자동 실행 스크립트 생성: 
 - 출력 디렉토리: 
+
+## 2026-07-14
+
+### 작업 내용
+1. **중앙 집중 로깅 계획서 작성**
+   -  작성 (218줄)
+   - Loki vs ELK 상세 비교
+   - 설치 계획, 테스트 계획, 로그 보관 정책 포함
+
+2. **Grafana 가이드에 Loki 섹션 추가**
+   - 에 섹션 12번으로 Loki 관련 내용 추가
+   - Loki datasource 설정, LogQL 기초, 연산자, 메트릭 전환 방법
+
+3. **.gitignore 업데이트**
+   - gradlew, gradlew.bat 파일 추가
+
+### 커밋 내역
+- : docs: add logging plan and Grafana Loki guide section
+- : chore: add gradlew files to gitignore
+
+### 비고
+- 사용자가 연차 사용하여 회사에서 작업 예정
+- 로깅 계획서 리뷰 후 Loki 설치 진행 예정
+
+## 2026-07-14
+
+### 작업 내용
+1. **중앙 집중 로깅 계획서 작성**
+   - docs/guides/logging-plan.md 작성 (218줄)
+   - Loki vs ELK 상세 비교
+   - 설치 계획, 테스트 계획, 로그 보관 정책 포함
+
+2. **Grafana 가이드에 Loki 섹션 추가**
+   - grafana-guide.md에 섹션 12번으로 Loki 관련 내용 추가
+   - Loki datasource 설정, LogQL 기초, 연산자, 메트릭 전환 방법
+
+3. **.gitignore 업데이트**
+   - gradlew, gradlew.bat 파일 추가
+
+### 커밋 내역
+- fcd13a0: docs: add logging plan and Grafana Loki guide section
+- 0060b1c: chore: add gradlew files to gitignore
+
+### 비고
+- 사용자가 연차 사용하여 회사에서 작업 예정
+- 로깅 계획서 리뷰 후 Loki 설치 진행 예정
