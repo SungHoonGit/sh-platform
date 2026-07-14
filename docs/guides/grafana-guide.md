@@ -220,3 +220,80 @@ For: 5m (5분간 지속 시 알림)
 - [Grafana 공식 문서](https://grafana.com/docs/)
 - [PromQLcheatsheet](https://promlabs.com/promql-cheat-sheet/)
 - [모니터링 설정 가이드](monitoring-guide.md)
+- [중앙 집중 로깅 계획서](logging-plan.md)
+
+---
+
+## 12. Loki (중앙 집중 로깅)
+
+Loki는 Grafana에서 기본 지원하는 로깅 시스템. Promtail이 로그를 수집하고 Loki가 저장.
+
+```
+Spring Boot 로그 ──┐
+nginx 로그 ────────┤──▶ Promtail ──▶ Loki ──▶ Grafana
+시스템 로그 ───────┘
+```
+
+### 12.1 Loki Datasource 설정
+
+1. ⚙️ Connections → Data sources → Add data source
+2. `Loki` 선택
+3. URL: `http://localhost:3100`
+4. **Save & Test** 클릭 → "Data source is working" 확인
+
+### 12.2 LogQL 기초
+
+LogQL은 PromQL과 유사한 로그 쿼리 언어.
+
+```logql
+# 모든 spring-boot 로그
+{job="spring-boot"}
+
+# ERROR 로그만 필터
+{job="spring-boot"} |= "ERROR"
+
+# DEBUG 제외
+{job="spring-boot"} != "DEBUG"
+
+# 특정 키워드 검색
+{job="spring-boot"} |= "timeout"
+
+# nginx 5xx 에러
+{job="nginx"} |= "500" or |= "502" or |= "503"
+
+# 시간 범위 내 에러 빈도
+rate({job="spring-boot"} |= "ERROR" [5m])
+```
+
+### 12.3 Grafana에서 로그 확인
+
+1. 좌측 메뉴 → 🔍 Explore
+2. 상단에서 **Loki** 선택
+3. 쿼리 입력 → **Run query**
+
+### 12.4 대시보드에 로그 패널 추가
+
+1. 대시보드 → Add panel → **Logs** 선택
+2. Data source: `Loki`
+3. 쿼리: `{job="spring-boot"}`
+
+### 12.5 LogQL 연산자
+
+| 연산자 | 설명 | 예시 |
+|--------|------|------|
+| `\|=` | 문자열 포함 | `\|= "ERROR"` |
+| `\|~` | 정규식 매칭 | `\|~ "timeout\|error"` |
+| `!=` | 문자열 불포함 | `!= "DEBUG"` |
+| `!~` | 정규식 불매칭 | `!~ "health"` |
+
+### 12.6 로그와 메트릭 전환
+
+Explore에서 로그 쿼리 → **Metric** 버튼 클릭 → LogQL에서 메트릭 추출 가능
+
+```logql
+# 에러 로그 카운트 (5분간)
+sum(rate({job="spring-boot"} |= "ERROR" [5m])) by (level)
+
+# 로그에서 레이턴시 추출
+{job="spring-boot"} | logfmt | unwrap duration | (1000)
+```
