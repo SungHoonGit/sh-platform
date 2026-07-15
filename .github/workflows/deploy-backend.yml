@@ -46,7 +46,7 @@ jobs:
             sudo systemctl stop sh-platform 2>/dev/null || true
 
             cd /home/ubuntu/sh-platform
-            git pull origin main
+            git pull origin master
 
             ./gradlew :sh-platform-auth:clean :sh-platform-auth:build -q
             ./gradlew :sh-platform-auth:javadoc -q
