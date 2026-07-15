@@ -4,8 +4,6 @@ import com.scraper.platform.crawler.CrawlerFactory;
 import com.scraper.platform.crawler.SiteCrawler;
 import com.scraper.platform.model.*;
 import com.scraper.platform.repository.*;
-import com.shplatform.common.scheduling.ScheduleLog;
-import com.shplatform.common.scheduling.ScheduleService;
 import com.shplatform.common.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +34,6 @@ public class CrawlExecutionService {
     private final CrawlSiteConfigRepository crawlSiteConfigRepository;
     private final CrawlDataRepository crawlDataRepository;
     private final CrawlLogRepository crawlLogRepository;
-    private final ScheduleService scheduleService;
     private final NotificationService notificationService;
     private final CrawlerFactory crawlerFactory;
 
@@ -57,8 +54,6 @@ public class CrawlExecutionService {
     public void executeCrawl(CrawlConfig config) {
         log.info("Executing crawl for config: {} (id: {})", config.getName(), config.getId());
 
-        ScheduleLog scheduleLog = scheduleService.startLog(config.getId());
-
         int total = 0;
         int success = 0;
         int error = 0;
@@ -73,7 +68,7 @@ public class CrawlExecutionService {
         log.info("Dedup: found {} existing URLs from previous {} days", existingUrls.size(), DEDUP_LOOKBACK_DAYS);
 
         List<CrawlSiteConfig> siteConfigs = crawlSiteConfigRepository
-                .findByConfigIdAndIsEnabledTrue(config.getId());
+                .findEnabledWithSite(config.getId());
 
         for (CrawlSiteConfig siteConfig : siteConfigs) {
             try {
@@ -127,9 +122,6 @@ public class CrawlExecutionService {
         } catch (IOException e) {
             log.error("Failed to save combined MD file for config: {}", config.getName(), e);
         }
-
-        scheduleService.updateCounts(scheduleLog.getId(), total, success, error);
-        scheduleService.completeLog(scheduleLog.getId(), error == 0, null);
 
         if (success > 0) {
             String msg = dupJobs > 0
