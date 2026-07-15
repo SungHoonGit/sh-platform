@@ -99,6 +99,8 @@ https://sunghoonyk.duckdns.org/javadoc/
 
 GitHub Actions deploy 시 `./gradlew :sh-platform-auth:javadoc` 이 자동 실행되어 서버에 문서가 갱신된다.
 
+> 상세: `docs/guides/javadoc-guide.md`
+
 ---
 
 ## JUnit 테스트 리포트
@@ -285,6 +287,7 @@ git push
 
 | 도구 | 문서 | 주요 내용 |
 |------|------|----------|
+| **Javadoc** | `docs/guides/javadoc-guide.md` | 작성 규칙, 생성 명령어, Swagger와 차이점 |
 | **JUnit** | `docs/guides/test-report-guide.md` | 리포트 구조, 로컬/CI 확인법, Artifact 관리 |
 | **Swagger** | `docs/guides/swagger-guide.md` | 적용 방법, 어노테이션, Security 예외 처리 |
 | **nginx** | `docs/guides/nginx-guide.md` | 설정 파일 위치, location 블록 설명, 자주 쓰는 명령어 |
