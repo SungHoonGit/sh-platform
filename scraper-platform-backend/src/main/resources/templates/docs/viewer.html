@@ -40,6 +40,12 @@
         .btn-run { background: #28a745; color: white; border-color: #28a745; }
         .btn-run:hover { background: #218838; }
         .btn-run:disabled { background: #6c757d; border-color: #6c757d; cursor: not-allowed; }
+        .exec-status { padding: 10px 12px; font-size: 12px; border-bottom: 1px solid #ddd; }
+        .exec-status.running { background: #fff3cd; color: #856404; }
+        .exec-status.done { background: #d4edda; color: #155724; }
+        .exec-status.error { background: #f8d7da; color: #721c24; }
+        .exec-status .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #856404; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 6px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .content-header { padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; background: white; }
         .content-header h2 { flex: 1; font-size: 14px; font-weight: 500; color: #333; }
@@ -133,6 +139,7 @@
                     </div>
                 </template>
             </div>
+            <div class="exec-status" :class="execStatus.type" x-show="execStatus.message" x-text="execStatus.message"></div>
             <div class="sidebar-header" x-show="selectedCrawler">파일 탐색기</div>
             <div class="file-tree" x-show="selectedCrawler">
                 <template x-if="loadingTree"><div class="loading">로딩 중...</div></template>
@@ -292,6 +299,7 @@
                 sortAsc: true,
                 quickFilter: '',
                 executing: false,
+                execStatus: { type: '', message: '' },
 
                 async init() {
                     await this.loadCrawlers();
@@ -314,23 +322,60 @@
                 async executeCrawler(crawler) {
                     if (this.executing) return;
                     this.executing = true;
+                    this.execStatus = { type: 'running', message: '크롤링 실행 중...' };
                     try {
                         const response = await fetch(`/scraper/crawl-config/${crawler.id}/execute`, { method: 'POST' });
                         const data = await response.json();
                         if (response.ok) {
-                            alert('크롤링이 시작되었습니다. 완료 후 자동으로 새로고침됩니다.');
-                            await this.loadTree(crawler.localPath);
-                            if (this.currentFile) {
-                                await this.loadJobs(crawler.localPath, this.currentFile, 0);
-                            }
+                            this.pollCrawlResult(crawler);
                         } else {
-                            alert('실행 실패: ' + (data.message || response.status));
+                            this.execStatus = { type: 'error', message: '실행 실패: ' + (data.message || response.status) };
+                            this.executing = false;
                         }
                     } catch (error) {
                         console.error('Error executing crawler:', error);
-                        alert('실행 오류: ' + error.message);
+                        this.execStatus = { type: 'error', message: '실행 오류: ' + error.message };
+                        this.executing = false;
                     }
-                    this.executing = false;
+                },
+
+                async pollCrawlResult(crawler) {
+                    let attempts = 0;
+                    const maxAttempts = 60;
+                    const poll = async () => {
+                        attempts++;
+                        try {
+                            const response = await fetch(`/scraper/crawl-logs/config/${crawler.id}/recent`);
+                            const logs = await response.json();
+                            if (logs && logs.length > 0) {
+                                const latest = logs[0];
+                                const logTime = new Date(latest.createdAt || latest.startedAt).getTime();
+                                const now = Date.now();
+                                if (now - logTime < 60000 && latest.status === 'SUCCESS') {
+                                    this.execStatus = { type: 'done', message: `완료: ${latest.newCount || latest.totalCount}건 수집` };
+                                    await this.loadTree(crawler.localPath);
+                                    if (this.currentFile) {
+                                        await this.loadJobs(crawler.localPath, this.currentFile, 0);
+                                    }
+                                    this.executing = false;
+                                    return;
+                                }
+                                if (latest.status === 'FAILED') {
+                                    this.execStatus = { type: 'error', message: '크롤링 실패' };
+                                    this.executing = false;
+                                    return;
+                                }
+                            }
+                        } catch (e) {}
+                        if (attempts < maxAttempts) {
+                            setTimeout(poll, 3000);
+                        } else {
+                            this.execStatus = { type: 'done', message: '실행 완료 (타임아웃)' };
+                            await this.loadTree(crawler.localPath);
+                            this.executing = false;
+                        }
+                    };
+                    setTimeout(poll, 3000);
                 },
 
                 async selectCrawler(crawler) {
