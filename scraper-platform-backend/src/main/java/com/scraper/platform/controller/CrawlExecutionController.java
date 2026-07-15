@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/crawl-config")
@@ -24,9 +25,18 @@ public class CrawlExecutionController {
     @Operation(summary = "크롤링 수동 실행", description = "지정된 설정으로 크롤링을 수동 실행합니다")
     public ResponseEntity<Map<String, String>> executeCrawl(@PathVariable Long id) {
         CrawlConfig config = crawlConfigService.getConfigById(id);
-        crawlExecutionService.executeCrawl(config);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                crawlExecutionService.executeCrawl(config);
+            } catch (Exception e) {
+                org.slf4j.LoggerFactory.getLogger(CrawlExecutionController.class)
+                    .error("Async crawl failed for config: {}", config.getName(), e);
+            }
+        });
+
         return ResponseEntity.ok(Map.of(
-            "status", "success",
+            "status", "started",
             "message", "Crawl execution started for config: " + config.getName()
         ));
     }
