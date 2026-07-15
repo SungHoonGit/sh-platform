@@ -9,6 +9,8 @@ import com.shplatform.auth.infrastructure.oauth2.CustomOAuth2User;
 import com.shplatform.shared.dto.ApiResponse;
 import com.shplatform.shared.exception.BusinessException;
 import com.shplatform.shared.exception.ErrorCode;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@Tag(name = "Auth", description = "회원가입 · 로그인 · 토큰 · OAuth2 계정 연결 · 회원 CRUD")
 public class AuthController {
 
     private final AuthService authService;
@@ -32,6 +35,7 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
+    @Operation(summary = "회원가입", description = "이메일 인증 완료 후 회원을 생성한다. name/email/password 필수.")
     public ResponseEntity<ApiResponse<Map<String, Object>>> signup(
             @Valid @RequestBody SignupRequest request
     ) {
@@ -49,6 +53,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "로그인", description = "email + password 로그인. access/refresh token 반환.")
     public ResponseEntity<ApiResponse<TokenResponse>> login(
             @Valid @RequestBody LoginRequest request
     ) {
@@ -57,6 +62,7 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
+    @Operation(summary = "토큰 갱신", description = "refreshToken으로 새 access/refresh token 발급.")
     public ResponseEntity<ApiResponse<TokenResponse>> refresh(
             @Valid @RequestBody RefreshRequest request
     ) {
@@ -65,6 +71,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
+    @Operation(summary = "로그아웃", description = "refreshToken을 무효화한다.")
     public ResponseEntity<ApiResponse<Void>> logout(
             @RequestBody RefreshRequest request
     ) {
@@ -73,6 +80,7 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
+    @Operation(summary = "인증메일 발송", description = "지정된 purpose(SIGNUP/CHANGE_EMAIL)에 따라 이메일 인증코드 발송.")
     public ResponseEntity<ApiResponse<Void>> sendVerificationEmail(
             @RequestBody Map<String, String> body
     ) {
@@ -81,6 +89,7 @@ public class AuthController {
     }
 
     @PostMapping("/verify-code")
+    @Operation(summary = "인증코드 확인", description = "email + code + purpose로 인증코드가 유효한지 검증한다.")
     public ResponseEntity<ApiResponse<Void>> verifyCode(
             @RequestBody Map<String, String> body
     ) {
@@ -89,6 +98,7 @@ public class AuthController {
     }
 
     @PostMapping("/oauth2/link-check")
+    @Operation(summary = "OAuth2 연결 여부 확인", description = "특정 provider가 현재 계정에 연결되어 있는지 확인한다.")
     public ResponseEntity<ApiResponse<LinkCheckResponse>> checkLink(
             @RequestBody LinkCheckRequest request,
             @AuthenticationPrincipal OAuth2User principal
@@ -100,6 +110,7 @@ public class AuthController {
     }
 
     @PostMapping("/oauth2/link")
+    @Operation(summary = "OAuth2 계정 연결", description = "외부 OAuth2 provider 계정을 현재 계정에 연결한다.")
     public ResponseEntity<ApiResponse<Void>> linkProvider(
             @RequestBody ProviderLinkRequest request,
             @AuthenticationPrincipal OAuth2User principal
@@ -110,6 +121,7 @@ public class AuthController {
     }
 
     @GetMapping("/oauth2/providers")
+    @Operation(summary = "연결된 OAuth2 목록", description = "현재 계정에 연결된 모든 OAuth2 provider 목록을 조회한다.")
     public ResponseEntity<ApiResponse<ProviderListResponse>> listProviders(
             @AuthenticationPrincipal OAuth2User principal
     ) {
@@ -122,6 +134,7 @@ public class AuthController {
     }
 
     @DeleteMapping("/oauth2/providers/{provider}")
+    @Operation(summary = "OAuth2 연결 해제", description = "특정 provider의 계정 연결을 해제한다.")
     public ResponseEntity<ApiResponse<Void>> unlinkProvider(
             @PathVariable String provider,
             @AuthenticationPrincipal OAuth2User principal
@@ -132,6 +145,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
+    @Operation(summary = "내 프로필 조회", description = "accessToken으로 현재 로그인한 사용자의 프로필을 조회한다.")
     public ResponseEntity<ApiResponse<UserResponse>> getMyProfile(
             @AuthenticationPrincipal Object principal
     ) {
@@ -141,6 +155,7 @@ public class AuthController {
     }
 
     @PutMapping("/me")
+    @Operation(summary = "내 프로필 수정", description = "name, locale 등을 수정한다. email은 변경 불가.")
     public ResponseEntity<ApiResponse<UserResponse>> updateMyProfile(
             @Valid @RequestBody UpdateProfileRequest request,
             @AuthenticationPrincipal Object principal
@@ -151,6 +166,7 @@ public class AuthController {
     }
 
     @PutMapping("/password")
+    @Operation(summary = "비밀번호 변경", description = "현재 password + 새 password(oldPassword, newPassword)를 받아 변경.")
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
             @AuthenticationPrincipal Object principal
@@ -160,6 +176,7 @@ public class AuthController {
     }
 
     @DeleteMapping("/me")
+    @Operation(summary = "회원 탈퇴", description = "password를 받아 계정을 삭제한다. 연결된 OAuth2 계정도 함께 해제.")
     public ResponseEntity<ApiResponse<Void>> deleteAccount(
             @RequestBody(required = false) Map<String, String> body,
             @AuthenticationPrincipal Object principal
