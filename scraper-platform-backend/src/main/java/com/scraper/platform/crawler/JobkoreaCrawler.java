@@ -101,6 +101,10 @@ public class JobkoreaCrawler implements SiteCrawler {
         return switch (career) {
             case "신입" -> "new";
             case "경력" -> "career";
+            case "1~3년" -> "career";
+            case "3~5년" -> "career";
+            case "5~10년" -> "career";
+            case "10년이상" -> "career";
             default -> "";
         };
     }
