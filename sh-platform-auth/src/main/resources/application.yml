@@ -23,6 +23,7 @@ spring:
 
 server:
   shutdown: graceful
+  forward-headers-strategy: framework
 
 oauth2:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
