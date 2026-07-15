@@ -15,6 +15,7 @@ dependencies {
     implementation("io.micrometer:micrometer-registry-prometheus")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("org.jsoup:jsoup:1.18.1")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client")
