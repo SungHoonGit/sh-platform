@@ -13,41 +13,46 @@ SH(SungHoon) SaaS 기반 통합 플랫폼. Monorepo + Multi-Module 구조.
 
 ```
 sh-platform/
-├── settings.gradle.kts          # 멀티모듈 설정
-├── build.gradle.kts             # 루트 빌드
-├── sh-platform-auth/            # 인증 서비스 (Spring Boot 앱)
-│   ├── build.gradle.kts
-│   └── src/
-├── sh-platform-common/          # 공통 라이브러리 (DTO, 예외, util)
-│   ├── build.gradle.kts
-│   └── src/
-├── docs/                        # 문서
-│   ├── architecture/            # 아키텍처 설계
-│   ├── auth/                    # 인증 관련
-│   ├── infra/                   # 인프라 설정
-│   └── daily/                   # 작업 일지
-└── .github/                     # GitHub Actions
+├── settings.gradle.kts
+├── build.gradle.kts
+├── sh-platform-auth/            # 인증 서비스
+├── sh-platform-common/          # 공통 라이브러리
+├── scraper-platform-backend/    # 채용공고 수집 서비스
+├── resume-platform/             # 이력서 서비스
+├── portfolio-platform/          # 포트폴리오 서비스
+├── SCRAPER-GUIDE.md             # 스크래퍼 상세 가이드
+└── docs/
 ```
 
 ## 모듈 설명
 
-| 모듈 | 설명 | 상태 |
-|------|------|------|
-| sh-platform-auth | 인증 서비스 (로그인, OAuth2, JWT, SSO) | ✅ 개발 중 |
-| sh-platform-common | 공통 라이브러리 (DTO, 예외 처리) | ✅ 생성됨 |
-| sh-platform-board | 게시판 (추후) | ⏳ 예정 |
-| sh-platform-shop | 쇼핑몰 (추후) | ⏳ 예정 |
+| 모듈 | 포트 | 설명 | 상태 |
+|------|------|------|------|
+| sh-platform-auth | 8080 | 인증 서비스 (로그인, OAuth2, JWT, SSO) | ✅ 완료 |
+| sh-platform-common | - | 공통 라이브러리 (파일뷰어, 스케줄링, 알림) | ✅ 완료 |
+| scraper-platform-backend | 8081 | 채용공고 수집 + 뷰어 | ✅ 완료 |
+| resume-platform | 8082 | 이력서 서비스 | ⏳ 예정 |
+| portfolio-platform | 8083 | 포트폴리오 서비스 | ⏳ 예정 |
 
-## OCI 인프라
+## 서비스 URL
 
-| VM | Public IP | 역할 | 사양 |
-|----|-----------|------|------|
-| WEB | 140.245.95.162 | nginx + Spring Boot | A1.Flex |
-| DB | 161.33.138.23 | MariaDB | A1.Flex |
+| 서비스 | URL |
+|--------|-----|
+| Auth Swagger | https://sunghoonyk.duckdns.org/swagger-ui/ |
+| Scraper Swagger | https://sunghoonyk.duckdns.org/scraper/swagger-ui/index.html |
+| 뷰어 | https://sunghoonyk.duckdns.org/scraper/docs/view |
+| 크롤링 설정 API | https://sunghoonyk.duckdns.org/scraper/crawl-config |
 
-> Always Free 한도: A1.Flex 2OCPU/12GB 공유
-> 
-> 인프라 설계 상세: https://github.com/SungHoonGit/OCI
+## 인프라
+
+| VM | IP | 역할 |
+|----|-----|------|
+| WEB | 140.245.95.162 | nginx + Spring Boot (4개 서비스) |
+| DB | 10.0.0.39 (internal) | MariaDB 10.11.14 |
+
+- 도메인: `sunghoonyk.duckdns.org`
+- SSL: Let Expire 2026-10-10
+- Oracle Always Free A1.Flex: 2 OCPU / 12GB (ARM64)
 
 ## 빌드 및 실행
 
@@ -55,16 +60,14 @@ sh-platform/
 # 전체 빌드
 ./gradlew build
 
-# auth 모듈만 빌드
-./gradlew :sh-platform-auth:build
+# 개별 모듈
+./gradlew :scraper-platform-backend:compileJava
+./gradlew :scraper-platform-backend:bootRun --args='--server.port=8081'
 
-# 실행
-./gradlew :sh-platform-auth:bootRun
+# systemd
+sudo systemctl restart sh-platform-{auth,scraper,resume,portfolio}
 ```
 
-## 관련 문서
+## 문서
 
-- [아키텍처 설계](docs/architecture/platform-architecture-design.md)
-- [인증 API 명세](docs/auth/api-auth.md)
-- [프론트엔드 인증 가이드](docs/auth/frontend-auth-guide.md)
-- [도메인/SSL 설정](docs/infra/domain-ssl-setup-guide.md)
+- [스크래퍼 가이드](SCRAPER-GUIDE.md) — 크롤러, API, 설정, 뷰어 상세
