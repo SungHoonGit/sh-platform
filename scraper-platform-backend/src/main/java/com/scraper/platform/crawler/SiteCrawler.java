@@ -10,19 +10,24 @@ public interface SiteCrawler {
     
     List<Map<String, String>> search(CrawlSiteConfig siteConfig) throws Exception;
     
-    default String buildMdContent(List<Map<String, String>> jobs, String keyword, String siteName) {
+    default String buildMdSection(List<Map<String, String>> jobs, String siteDisplayName) {
         StringBuilder sb = new StringBuilder();
-        sb.append("# ").append(java.time.LocalDate.now()).append(" ").append(keyword).append(" 채용공고\n\n");
-        
+        sb.append("## ").append(siteDisplayName).append(" (").append(jobs.size()).append("건)\n\n");
+
         for (Map<String, String> job : jobs) {
-            sb.append("## ").append(job.getOrDefault("company", "Unknown")).append("\n");
-            sb.append("- 포지션: ").append(job.getOrDefault("position", "")).append("\n");
-            sb.append("- 경력: ").append(job.getOrDefault("career", "")).append("\n");
-            sb.append("- 기술: ").append(job.getOrDefault("tech", "")).append("\n");
-            sb.append("- 지역: ").append(job.getOrDefault("location", "")).append("\n");
+            sb.append("### ").append(job.getOrDefault("company", "Unknown")).append("\n");
+            sb.append("- 포지션: ").append(job.getOrDefault("position", job.getOrDefault("title", ""))).append("\n");
+            String career = job.getOrDefault("career", "");
+            if (!career.isEmpty()) sb.append("- 경력: ").append(career).append("\n");
+            String tech = job.getOrDefault("tech", "");
+            if (!tech.isEmpty()) sb.append("- 기술: ").append(tech).append("\n");
+            String loc = job.getOrDefault("location", "");
+            if (!loc.isEmpty()) sb.append("- 지역: ").append(loc).append("\n");
+            String deadline = job.getOrDefault("deadline", "");
+            if (!deadline.isEmpty()) sb.append("- 마감: ").append(deadline).append("\n");
             sb.append("- 링크: ").append(job.getOrDefault("url", "")).append("\n\n");
         }
-        
+
         return sb.toString();
     }
 }

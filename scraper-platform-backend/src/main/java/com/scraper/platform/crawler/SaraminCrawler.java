@@ -38,20 +38,32 @@ public class SaraminCrawler implements SiteCrawler {
         String location = params.getOrDefault("location", "");
         String jobType = params.getOrDefault("job_type", "");
         
-        String url = buildUrl(keyword, career, location, jobType);
-        log.info("Saramin crawl URL: {}", url);
+        List<Map<String, String>> allJobs = new ArrayList<>();
         
-        // curl로 HTML을 가져옴 (Jsoup 직접 연결은 사람인 anti-bot에 차단됨)
-        String html = fetchWithCurl(url);
-        log.info("Fetched HTML size: {}", html.length());
+        // 최대 3페이지 (150건) 수집
+        for (int page = 1; page <= 3; page++) {
+            String url = buildUrl(keyword, career, location, jobType, page);
+            log.info("Saramin crawl URL (page {}): {}", page, url);
+            
+            String html = fetchWithCurl(url);
+            log.info("Fetched HTML size: {}", html.length());
+            
+            Document doc = Jsoup.parse(html);
+            log.info("Page {}: list_item={}", page, doc.select("div.list_item").size());
+            
+            List<Map<String, String>> pageJobs = parseJobs(doc, keyword);
+            if (pageJobs.isEmpty()) {
+                log.info("No more jobs at page {}, stopping", page);
+                break;
+            }
+            allJobs.addAll(pageJobs);
+            
+            // Rate limit
+            Thread.sleep(1000);
+        }
         
-        // Jsoup으로 파싱
-        Document doc = Jsoup.parse(html);
-        log.info("Page title: {}", doc.title());
-        log.info("list_item count: {}", doc.select("div.list_item").size());
-        log.info("box_item count: {}", doc.select("div.box_item").size());
-        
-        return parseJobs(doc, keyword);
+        log.info("Total Saramin jobs: {}", allJobs.size());
+        return allJobs;
     }
 
     /**
@@ -89,7 +101,7 @@ public class SaraminCrawler implements SiteCrawler {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private String buildUrl(String keyword, String career, String location, String jobType) {
+    private String buildUrl(String keyword, String career, String location, String jobType, int page) {
         StringBuilder sb = new StringBuilder(BASE_URL);
         sb.append("?cat_kewd=235"); // IT 개발 카테고리
         
@@ -102,6 +114,10 @@ public class SaraminCrawler implements SiteCrawler {
         
         if (!keyword.isEmpty()) {
             sb.append("&stext=").append(URLEncoder.encode(keyword, StandardCharsets.UTF_8));
+        }
+        
+        if (page > 1) {
+            sb.append("&page=").append(page);
         }
         
         return sb.toString();
