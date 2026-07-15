@@ -65,6 +65,41 @@
         .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #999; gap: 8px; }
         .empty-icon { font-size: 40px; }
         .empty-text { font-size: 14px; }
+        .tabs { display: flex; gap: 0; padding: 0 20px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
+        .tab { padding: 10px 18px; cursor: pointer; font-size: 13px; color: #666; border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.15s; }
+        .tab:hover { color: #333; background: #e8e8e8; }
+        .tab.active { color: #0078d4; border-bottom-color: #0078d4; background: white; }
+        .tab .badge { background: #ddd; color: #666; font-size: 11px; padding: 1px 6px; border-radius: 10px; margin-left: 6px; font-weight: 400; }
+        .tab.active .badge { background: #0078d4; color: white; }
+        .grid-container { flex: 1; overflow-y: auto; padding: 16px 20px; background: white; }
+        .grid-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .grid-table th { background: #f1f3f5; font-weight: 600; padding: 10px 12px; text-align: left; border-bottom: 2px solid #dee2e6; position: sticky; top: 0; z-index: 1; }
+        .grid-table td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+        .grid-table tr:hover { background: #f8f9fa; }
+        .grid-table .company { font-weight: 600; color: #1a1a1a; white-space: nowrap; }
+        .grid-table .position { color: #333; }
+        .grid-table .career { color: #666; font-size: 12px; }
+        .grid-table .tech { color: #555; }
+        .grid-table .tech span { display: inline-block; background: #e8f4fd; color: #0066cc; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin: 1px 2px; }
+        .grid-table .location { color: #888; font-size: 12px; white-space: nowrap; }
+        .grid-table .deadline { font-size: 12px; white-space: nowrap; }
+        .grid-table .deadline.urgent { color: #dc3545; font-weight: 600; }
+        .grid-table .link a { color: #0078d4; text-decoration: none; font-size: 12px; }
+        .grid-table .link a:hover { text-decoration: underline; }
+        .pagination { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 14px 20px; border-top: 1px solid #ddd; background: #f8f9fa; }
+        .pagination .btn { min-width: 34px; text-align: center; }
+        .pagination .btn.active { background: #0078d4; color: white; border-color: #0078d4; }
+        .pagination .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .pagination .info { font-size: 12px; color: #888; margin: 0 12px; }
+        .site-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+        .site-badge.saramin { background: #e3f2fd; color: #1565c0; }
+        .site-badge.jobkorea { background: #e8f5e9; color: #2e7d32; }
+        .site-badge.wanted { background: #fce4ec; color: #c62828; }
+        .site-badge.jumpit { background: #f3e5f5; color: #7b1fa2; }
+        .site-badge.default { background: #f5f5f5; color: #616161; }
+        .stats-bar { display: flex; align-items: center; gap: 12px; padding: 8px 20px; background: white; border-bottom: 1px solid #eee; font-size: 12px; color: #888; }
+        .stats-bar strong { color: #333; }
+        .content-body.raw-view { font-family: monospace; font-size: 13px; white-space: pre-wrap; background: #fafafa; }
     </style>
 </head>
 <body>
@@ -110,12 +145,87 @@
             </div>
         </div>
         <div class="content">
-            <div class="content-header" x-show="currentFile">
+            <!-- Site Tabs -->
+            <div class="tabs" x-show="jobsMode">
+                <template x-for="site in jobSites" :key="site">
+                    <div class="tab" :class="{ 'active': currentSiteTab === site }" @click="switchSiteTab(site)">
+                        <span x-text="siteLabel(site)"></span>
+                        <span class="badge" x-text="siteCount(site)"></span>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="stats-bar" x-show="jobsMode && jobData">
+                <span><strong x-text="jobData?.total || 0"></strong>건</span>
+                <span>|</span>
+                <span x-text="'페이지 ' + ((jobData?.page || 0) + 1) + ' / ' + (jobData?.totalPages || 1)"></span>
+                <span>|</span>
+                <span x-text="currentFile?.split('/').pop() || ''"></span>
+            </div>
+
+            <!-- Content Header (raw mode) -->
+            <div class="content-header" x-show="currentFile && !jobsMode && !searchMode">
                 <h2 x-text="currentTitle"></h2>
+                <button class="btn" @click="toggleViewMode()" x-text="viewMode === 'html' ? 'Raw' : 'HTML'"></button>
                 <button class="btn" @click="exportPdf()">PDF</button>
                 <button class="btn" @click="exportExcel()">Excel</button>
             </div>
-            <div class="content-body" x-show="currentFile && !searchMode" x-html="currentContent"></div>
+
+            <!-- Grid View (jobs mode) -->
+            <div class="grid-container" x-show="jobsMode && jobData">
+                <table class="grid-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50px">#</th>
+                            <th style="width:140px">사이트</th>
+                            <th style="width:160px">회사명</th>
+                            <th>포지션</th>
+                            <th style="width:180px">경력</th>
+                            <th style="width:220px">기술</th>
+                            <th style="width:130px">지역</th>
+                            <th style="width:80px">마감</th>
+                            <th style="width:50px">링크</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(job, idx) in (jobData?.jobs || [])" :key="idx">
+                            <tr>
+                                <td x-text="(jobData.page * jobData.size) + idx + 1" style="color:#aaa;font-size:12px"></td>
+                                <td><span class="site-badge" :class="siteClass(job.site)" x-text="job.site"></span></td>
+                                <td class="company" x-text="job.company"></td>
+                                <td class="position" x-text="job.position"></td>
+                                <td class="career" x-text="job.career"></td>
+                                <td class="tech">
+                                    <template x-for="t in (job.tech || '').split(',').slice(0, 3)" :key="t">
+                                        <span x-text="t.trim()"></span>
+                                    </template>
+                                </td>
+                                <td class="location" x-text="job.location"></td>
+                                <td class="deadline" :class="{ 'urgent': isUrgent(job.deadline) }" x-text="job.deadline"></td>
+                                <td class="link"><a :href="job.url" target="_blank" rel="noopener noreferrer">보기</a></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" x-show="jobsMode && jobData && jobData.totalPages > 1">
+                <button class="btn" @click="goPage(0)" :disabled="jobData?.page === 0">◀◀</button>
+                <button class="btn" @click="goPage(jobData.page - 1)" :disabled="jobData?.page === 0">◀</button>
+                <template x-for="p in paginationRange()" :key="p">
+                    <button class="btn" :class="{ 'active': p === jobData?.page }" @click="goPage(p)" x-text="p + 1"></button>
+                </template>
+                <button class="btn" @click="goPage(jobData.page + 1)" :disabled="jobData?.page >= jobData?.totalPages - 1">▶</button>
+                <button class="btn" @click="goPage(jobData.totalPages - 1)" :disabled="jobData?.page >= jobData?.totalPages - 1">▶▶</button>
+            </div>
+
+            <!-- HTML/Raw View -->
+            <div class="content-body" :class="{ 'raw-view': viewMode === 'raw' }" x-show="currentFile && !jobsMode && !searchMode" x-html="viewMode === 'html' ? currentContent : ''"></div>
+            <div class="content-body raw-view" x-show="currentFile && !jobsMode && !searchMode && viewMode === 'raw'" x-text="rawContent"></div>
+
+            <!-- Search Results -->
             <div class="search-results" x-show="searchMode">
                 <h3 x-text="'검색 결과: ' + searchResults.length + '건'"></h3>
                 <template x-for="result in searchResults" :key="result.file + result.line">
@@ -126,7 +236,9 @@
                     </div>
                 </template>
             </div>
-            <div class="empty" x-show="!currentFile && !searchMode">
+
+            <!-- Empty State -->
+            <div class="empty" x-show="!currentFile && !searchMode && !jobsMode">
                 <div class="empty-icon">📂</div>
                 <div class="empty-text" x-text="selectedCrawler ? '왼쪽에서 파일을 선택하세요' : '크롤러를 선택하세요'"></div>
             </div>
@@ -144,10 +256,17 @@
                 currentFile: null,
                 currentTitle: '',
                 currentContent: '',
+                rawContent: '',
+                viewMode: 'html',
                 searchQuery: '',
                 searchResults: [],
                 searchMode: false,
                 loadingTree: false,
+                jobsMode: false,
+                jobData: null,
+                jobSites: ['all'],
+                currentSiteTab: 'all',
+                allJobCounts: {},
 
                 async init() {
                     await this.loadCrawlers();
@@ -173,6 +292,8 @@
                     this.currentFile = null;
                     this.searchMode = false;
                     this.searchResults = [];
+                    this.jobsMode = false;
+                    this.jobData = null;
                     await this.loadTree(crawler.localPath);
                 },
 
@@ -236,8 +357,20 @@
                 async loadFile(path) {
                     this.searchMode = false;
                     this.currentFile = path;
+                    const rootPath = this.selectedCrawler.localPath;
+
+                    // MD 파일은 jobs 모드로 로드
+                    if (path.endsWith('.md')) {
+                        this.jobsMode = true;
+                        this.viewMode = 'html';
+                        await this.loadJobs(rootPath, path, 0);
+                        return;
+                    }
+
+                    // 기타 파일은 기존 방식
+                    this.jobsMode = false;
+                    this.viewMode = 'html';
                     try {
-                        const rootPath = this.selectedCrawler.localPath;
                         const response = await fetch(`/scraper/docs/file?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&format=html`);
                         const data = await response.json();
                         this.currentTitle = data.title;
@@ -247,9 +380,113 @@
                     }
                 },
 
+                async loadJobs(rootPath, path, page, site) {
+                    site = site || this.currentSiteTab;
+                    try {
+                        let url = `/scraper/docs/jobs?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&page=${page}&size=20`;
+                        if (site && site !== 'all') {
+                            url += `&site=${encodeURIComponent(site)}`;
+                        }
+                        const response = await fetch(url);
+                        this.jobData = await response.json();
+                        this.currentTitle = this.jobData.total + '건 - ' + path.split('/').pop();
+                        this.currentSiteTab = this.jobData.currentSite;
+
+                        // 전체 사이트별 카운트 로드 (all 모드에서)
+                        if (site === 'all' || !site) {
+                            await this.loadAllSiteCounts(rootPath, path, this.jobData.sites);
+                        }
+                    } catch (error) {
+                        console.error('Error loading jobs:', error);
+                    }
+                },
+
+                async loadAllSiteCounts(rootPath, path, sites) {
+                    this.allJobCounts = {};
+                    this.allJobCounts['all'] = this.jobData.total;
+                    this.jobSites = ['all', ...sites];
+
+                    // 전체 사이트별 건수 조회
+                    for (const site of sites) {
+                        try {
+                            const response = await fetch(`/scraper/docs/jobs?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&site=${encodeURIComponent(site)}&page=0&size=1`);
+                            const data = await response.json();
+                            this.allJobCounts[site] = data.total;
+                        } catch (error) {
+                            this.allJobCounts[site] = 0;
+                        }
+                    }
+                },
+
+                async switchSiteTab(site) {
+                    this.currentSiteTab = site;
+                    const rootPath = this.selectedCrawler.localPath;
+                    await this.loadJobs(rootPath, this.currentFile, 0, site);
+                },
+
+                siteCount(site) {
+                    return this.allJobCounts[site] || 0;
+                },
+
+                siteLabel(site) {
+                    if (site === 'all') return '전체';
+                    return site;
+                },
+
+                siteClass(site) {
+                    const s = (site || '').toLowerCase();
+                    if (s.includes('사람인') || s.includes('saramin')) return 'saramin';
+                    if (s.includes('잡코리아') || s.includes('jobkorea')) return 'jobkorea';
+                    if (s.includes('원티드') || s.includes('wanted')) return 'wanted';
+                    if (s.includes('점핏') || s.includes('jumpit')) return 'jumpit';
+                    return 'default';
+                },
+
+                isUrgent(deadline) {
+                    if (!deadline) return false;
+                    return deadline.startsWith('D-') && parseInt(deadline.split('-')[1]) <= 3;
+                },
+
+                goPage(page) {
+                    if (page < 0 || page >= this.jobData.totalPages) return;
+                    this.loadJobs(this.selectedCrawler.localPath, this.currentFile, page);
+                },
+
+                paginationRange() {
+                    if (!this.jobData) return [];
+                    const { page, totalPages } = this.jobData;
+                    let start = Math.max(0, page - 4);
+                    let end = Math.min(totalPages, start + 9);
+                    start = Math.max(0, end - 9);
+                    const pages = [];
+                    for (let i = start; i < end; i++) pages.push(i);
+                    return pages;
+                },
+
+                toggleViewMode() {
+                    if (this.viewMode === 'html') {
+                        this.viewMode = 'raw';
+                        this.loadRawContent();
+                    } else {
+                        this.viewMode = 'html';
+                    }
+                },
+
+                async loadRawContent() {
+                    try {
+                        const rootPath = this.selectedCrawler.localPath;
+                        const response = await fetch(`/scraper/docs/file?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(this.currentFile)}&format=raw`);
+                        const data = await response.json();
+                        this.rawContent = data.content;
+                    } catch (error) {
+                        console.error('Error loading raw content:', error);
+                    }
+                },
+
                 async searchAll() {
                     if (!this.searchQuery.trim()) return;
                     this.searchMode = true;
+                    this.jobsMode = false;
                     this.currentFile = null;
                     const allResults = [];
                     for (const crawler of this.crawlers) {
@@ -267,10 +504,13 @@
 
                 resetView() {
                     this.searchMode = false;
+                    this.jobsMode = false;
                     this.currentFile = null;
                     this.currentTitle = '';
                     this.currentContent = '';
+                    this.rawContent = '';
                     this.searchResults = [];
+                    this.jobData = null;
                 },
 
                 exportPdf() {

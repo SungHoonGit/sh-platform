@@ -1,12 +1,14 @@
 package com.shplatform.common.file.controller;
 
 import com.shplatform.common.file.model.FileNode;
+import com.shplatform.common.file.model.JobItem;
 import com.shplatform.common.file.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/docs")
@@ -49,6 +51,48 @@ public class FileController {
             result.put("content", fileReadService.readAsHtml(rootPath, path));
             result.put("format", "html");
         }
+
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/jobs")
+    public ResponseEntity<Map<String, Object>> getJobs(
+            @RequestParam String rootPath,
+            @RequestParam String path,
+            @RequestParam(required = false) String site,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        List<JobItem> allJobs = fileReadService.parseJobs(rootPath, path);
+
+        // 사이트 필터
+        if (site != null && !site.isEmpty() && !"all".equals(site)) {
+            allJobs = allJobs.stream()
+                    .filter(j -> site.equals(j.getSite()))
+                    .collect(Collectors.toList());
+        }
+
+        // 전체 사이트 목록
+        List<String> sites = fileReadService.parseJobs(rootPath, path).stream()
+                .map(JobItem::getSite)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 페이징
+        int total = allJobs.size();
+        int totalPages = (int) Math.ceil((double) total / size);
+        int from = Math.min(page * size, total);
+        int to = Math.min(from + size, total);
+        List<JobItem> paged = allJobs.subList(from, to);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("jobs", paged);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("totalPages", totalPages);
+        result.put("sites", sites);
+        result.put("currentSite", site != null ? site : "all");
 
         return ResponseEntity.ok(result);
     }

@@ -1,5 +1,6 @@
 package com.shplatform.common.file.service;
 
+import com.shplatform.common.file.model.JobItem;
 import com.vladsch.flexmark.ext.tables.TablesExtension;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.util.Arrays;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -53,6 +54,62 @@ public class FileReadService {
             }
         }
         return relativePath;
+    }
+
+    public List<JobItem> parseJobs(String rootPath, String relativePath) {
+        String content = readRaw(rootPath, relativePath);
+        return parseJobsFromContent(content);
+    }
+
+    public List<JobItem> parseJobsFromContent(String mdContent) {
+        List<JobItem> jobs = new ArrayList<>();
+        String[] lines = mdContent.split("\n");
+        String currentSite = "";
+        JobItem.JobItemBuilder currentJob = null;
+
+        for (String line : lines) {
+            line = line.trim();
+
+            // ## 사람인 (150건) — 섹션 헤더
+            if (line.startsWith("## ") && line.contains("(")) {
+                currentSite = line.substring(3, line.indexOf("(")).trim();
+                continue;
+            }
+
+            // ### 회사명 — 채용 헤더
+            if (line.startsWith("### ")) {
+                if (currentJob != null) {
+                    jobs.add(currentJob.build());
+                }
+                currentJob = JobItem.builder()
+                        .site(currentSite)
+                        .company(line.substring(4).trim());
+                continue;
+            }
+
+            if (currentJob == null) continue;
+
+            // - 포지션: ...
+            if (line.startsWith("- 포지션:")) {
+                currentJob.position(line.substring(6).trim());
+            } else if (line.startsWith("- 경력:")) {
+                currentJob.career(line.substring(5).trim());
+            } else if (line.startsWith("- 기술:")) {
+                currentJob.tech(line.substring(5).trim());
+            } else if (line.startsWith("- 지역:")) {
+                currentJob.location(line.substring(5).trim());
+            } else if (line.startsWith("- 마감:")) {
+                currentJob.deadline(line.substring(5).trim());
+            } else if (line.startsWith("- 링크:")) {
+                currentJob.url(line.substring(6).trim());
+            }
+        }
+
+        if (currentJob != null) {
+            jobs.add(currentJob.build());
+        }
+
+        return jobs;
     }
 
     private Path resolveAndValidate(String rootPath, String relativePath) {
