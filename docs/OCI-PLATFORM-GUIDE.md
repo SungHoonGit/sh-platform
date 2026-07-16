@@ -168,3 +168,63 @@ ssh oci-db     # DB 서버 (같은 머신)
 
 ---
 최종 업데이트: 2026-07-15
+
+## React 프론트엔드 (scraper-platform)
+
+### 개요
+
+- **위치**: `/home/ubuntu/sh-platform/frontend/web/`
+- **기술**: React 19 + Vite 8 + TypeScript + Tailwind CSS 4 + Zustand + TanStack Query
+- **배포**: nginx에서 정적 파일 서빙 (`/home/ubuntu/sh-platform/frontend/web/dist/`)
+- **목표**: 플랫폼 프레임 내부 모듈 (현재는 독립 SPA)
+
+### 페이지 구조
+
+| 페이지 | 경로 | 설명 |
+|--------|------|------|
+| 통합검색 | `/` | 키워드/경력/지역/사이트별 채용공고 검색 |
+| 스케줄등록 | `/schedule` | 크롤링 스케줄 등록/관리 |
+| 뷰어 | `/viewer` | 수집된 채용공고 조회 |
+
+### API 프록시
+
+```nginx
+# React 빌드 결과
+location / {
+    root /home/ubuntu/sh-platform/frontend/web/dist;
+    try_files $uri $uri/ /index.html;
+}
+
+# API 프록시
+location /scraper/ {
+    proxy_pass http://127.0.0.1:8081/;
+}
+```
+
+### 빌드/배포
+
+```bash
+# 빌드
+cd /home/ubuntu/sh-platform/frontend/web
+npm install
+npm run build
+
+# 배포 (nginx 리로드 불필요 - 정적 파일)
+```
+
+### 구현 상태
+
+| 기능 | 상태 | 비고 |
+|------|------|------|
+| 통합검색 | ⚠️ 부분완료 | 경력/지역 필터 필요, 체크박스 UI 필요 |
+| 스케줄등록 | ⚠️ 부분완료 | 기존 스케줄 상세 조회 필요 |
+| 뷰어 | ⚠️ 부분완료 | jstree 트리 구조 필요 |
+| 플랫폼 프레임 | ❌ 미착수 | 인증 완료 후 구현 예정 |
+
+### 향후 계획
+
+1. **Phase 1**: 문서 현행화 (V3 설계)
+2. **Phase 2**: 통합검색 고도화 (경력/지역 필터, 체크박스)
+3. **Phase 3**: 스케줄 관리 고도화 (상세 조회, 수정/삭제)
+4. **Phase 4**: 뷰어 고도화 (jstree 트리)
+5. **Phase 5**: 플랫폼 프레임 연동 (인증, 네비게이션)

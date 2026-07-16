@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ko" x-data="docViewer()" x-init="init()">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>문서 뷰어 - Scraper Platform</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+        .header { background: #2c3e50; color: white; padding: 10px 20px; display: flex; align-items: center; gap: 16px; }
+        .header h1 { font-size: 16px; font-weight: 600; }
+        .search-box { flex: 1; max-width: 360px; }
+        .search-box input { width: 100%; padding: 7px 12px; border: 1px solid #34495e; border-radius: 4px; background: #34495e; color: white; font-size: 13px; }
+        .search-box input::placeholder { color: #95a5a6; }
+        .search-box input:focus { outline: none; border-color: #3498db; }
+        .header-right { display: flex; gap: 8px; }
+        .container { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 300px; background: #f5f5f5; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 10px 12px; border-bottom: 1px solid #ddd; font-weight: 600; color: #555; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; background: #eee; }
+        .file-tree { flex: 1; overflow-y: auto; padding: 4px 0; font-size: 13px; }
+        .tree-item { padding: 5px 8px; cursor: pointer; display: flex; align-items: center; white-space: nowrap; user-select: none; }
+        .tree-item:hover { background: #e8e8e8; }
+        .tree-item.active { background: #0078d4; color: white; }
+        .tree-icon { display: inline-block; width: 18px; text-align: center; margin-right: 4px; font-size: 12px; }
+        .tree-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+        .tree-meta { font-size: 11px; color: #999; margin-left: 8px; }
+        .tree-item.active .tree-meta { color: rgba(255,255,255,0.7); }
+        .tree-dir > .tree-name { font-weight: 500; }
+        .crawler-list { padding: 4px 0; }
+        .crawler-item { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #eee; }
+        .crawler-item:hover { background: #e8e8e8; }
+        .crawler-item.active { background: #0078d4; color: white; }
+        .crawler-icon { font-size: 16px; }
+        .crawler-name { font-weight: 500; font-size: 13px; }
+        .crawler-path { font-size: 11px; color: #888; }
+        .crawler-item.active .crawler-path { color: rgba(255,255,255,0.7); }
+        .crawler-actions { display: flex; gap: 4px; margin-left: auto; }
+        .crawler-actions .btn { font-size: 10px; padding: 3px 8px; }
+        .crawler-config { padding: 8px 12px; background: #f8f9fa; border-bottom: 1px solid #eee; font-size: 12px; }
+        .crawler-config-title { font-weight: 600; color: #555; margin-bottom: 6px; }
+        .crawler-site { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid #eee; }
+        .crawler-site:last-child { border-bottom: none; }
+        .crawler-site-name { font-weight: 500; min-width: 60px; }
+        .crawler-site-params { color: #666; font-size: 11px; flex: 1; }
+        .crawler-site-enabled { width: 14px; height: 14px; }
+        .btn-run { background: #28a745; color: white; border-color: #28a745; }
+        .btn-run:hover { background: #218838; }
+        .btn-run:disabled { background: #6c757d; border-color: #6c757d; cursor: not-allowed; }
+        .exec-status { padding: 10px 12px; font-size: 12px; border-bottom: 1px solid #ddd; }
+        .exec-status.running { background: #fff3cd; color: #856404; }
+        .exec-status.done { background: #d4edda; color: #155724; }
+        .exec-status.error { background: #f8d7da; color: #721c24; }
+        .exec-status .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #856404; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 6px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content-header { padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; background: white; }
+        .content-header h2 { flex: 1; font-size: 14px; font-weight: 500; color: #333; }
+        .btn { padding: 5px 12px; border: 1px solid #ccc; border-radius: 3px; background: white; cursor: pointer; font-size: 12px; color: #333; }
+        .btn:hover { background: #f0f0f0; }
+        .btn-primary { background: #0078d4; color: white; border-color: #0078d4; }
+        .btn-primary:hover { background: #106ebe; }
+        .tabs { display: flex; gap: 0; padding: 0 20px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
+        .tab { padding: 10px 18px; cursor: pointer; font-size: 13px; color: #666; border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.15s; }
+        .tab:hover { color: #333; background: #e8e8e8; }
+        .tab.active { color: #0078d4; border-bottom-color: #0078d4; background: white; }
+        .tab .badge { background: #ddd; color: #666; font-size: 11px; padding: 1px 6px; border-radius: 10px; margin-left: 6px; font-weight: 400; }
+        .tab.active .badge { background: #0078d4; color: white; }
+        .stats-bar { display: flex; align-items: center; gap: 12px; padding: 8px 20px; background: white; border-bottom: 1px solid #eee; font-size: 12px; color: #888; }
+        .stats-bar strong { color: #333; }
+        .grid-container { flex: 1; overflow-y: auto; padding: 0; background: white; }
+        .grid-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .grid-table th { background: #f1f3f5; font-weight: 600; padding: 10px 12px; text-align: left; border-bottom: 2px solid #dee2e6; position: sticky; top: 0; z-index: 1; cursor: pointer; user-select: none; white-space: nowrap; }
+        .grid-table th:hover { background: #e2e6ea; }
+        .grid-table th .sort-icon { margin-left: 4px; font-size: 10px; color: #aaa; }
+        .grid-table th.sorted .sort-icon { color: #0078d4; }
+        .grid-table td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+        .grid-table tr:hover { background: #f8f9fa; }
+        .grid-table .company { font-weight: 600; color: #1a1a1a; white-space: nowrap; }
+        .grid-table .position { color: #333; }
+        .grid-table .career { color: #666; font-size: 12px; }
+        .grid-table .tech { color: #555; }
+        .grid-table .tech span { display: inline-block; background: #e8f4fd; color: #0066cc; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin: 1px 2px; }
+        .grid-table .location { color: #888; font-size: 12px; white-space: nowrap; }
+        .grid-table .deadline { font-size: 12px; white-space: nowrap; }
+        .grid-table .deadline.urgent { color: #dc3545; font-weight: 600; }
+        .grid-table .link a { color: #0078d4; text-decoration: none; font-size: 12px; }
+        .grid-table .link a:hover { text-decoration: underline; }
+        .pagination { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 14px 20px; border-top: 1px solid #ddd; background: #f8f9fa; }
+        .pagination .btn { min-width: 34px; text-align: center; }
+        .pagination .btn.active { background: #0078d4; color: white; border-color: #0078d4; }
+        .pagination .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .pagination .info { font-size: 12px; color: #888; margin: 0 12px; }
+        .site-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+        .site-badge.saramin { background: #e3f2fd; color: #1565c0; }
+        .site-badge.jobkorea { background: #e8f5e9; color: #2e7d32; }
+        .site-badge.wanted { background: #fce4ec; color: #c62828; }
+        .site-badge.jumpit { background: #f3e5f5; color: #7b1fa2; }
+        .site-badge.default { background: #f5f5f5; color: #616161; }
+        .content-body { flex: 1; overflow-y: auto; padding: 20px 24px; background: white; line-height: 1.6; }
+        .content-body.raw-view { font-family: monospace; font-size: 13px; white-space: pre-wrap; background: #fafafa; }
+        .search-results { padding: 20px; }
+        .search-results h3 { margin-bottom: 16px; color: #333; font-size: 14px; }
+        .search-result { margin-bottom: 12px; padding: 12px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #0078d4; }
+        .search-result .file { font-weight: 500; color: #0078d4; margin-bottom: 4px; cursor: pointer; font-size: 13px; }
+        .search-result .file:hover { text-decoration: underline; }
+        .search-result .line { font-size: 11px; color: #888; margin-bottom: 4px; }
+        .search-result .content { font-size: 13px; }
+        .search-result mark { background: #fff3cd; padding: 1px 2px; border-radius: 2px; }
+        .loading { display: flex; align-items: center; justify-content: center; height: 60px; color: #888; font-size: 13px; }
+        .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #999; gap: 8px; }
+        .empty-icon { font-size: 40px; }
+        .empty-text { font-size: 14px; }
+        .filter-bar { display: flex; align-items: center; gap: 10px; padding: 8px 20px; background: white; border-bottom: 1px solid #eee; }
+        .filter-bar input { padding: 5px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; width: 200px; }
+        .filter-bar input:focus { outline: none; border-color: #0078d4; }
+        .filter-bar .btn { font-size: 11px; padding: 4px 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>문서 뷰어</h1>
+        <div class="search-box">
+            <input type="text" x-model="searchQuery" @keyup.enter="searchAll()" placeholder="전체 검색">
+        </div>
+        <div class="header-right">
+            <button class="btn btn-primary" @click="searchAll()">검색</button>
+            <button class="btn" @click="resetView()">초기화</button>
+        </div>
+    </div>
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header">크롤러 목록</div>
+            <div class="crawler-list">
+                <template x-if="loadingCrawlers"><div class="loading">로딩 중...</div></template>
+                <template x-for="crawler in crawlers" :key="crawler.id">
+                    <div class="crawler-item" :class="{ 'active': selectedCrawler?.id === crawler.id }" @click="selectCrawler(crawler)">
+                        <span class="crawler-icon">🤖</span>
+                        <div style="flex:1;min-width:0">
+                            <div class="crawler-name" x-text="crawler.name"></div>
+                            <div class="crawler-path" x-text="shortPath(crawler.localPath)"></div>
+                        </div>
+                        <div class="crawler-actions" x-show="selectedCrawler?.id === crawler.id">
+                            <button class="btn btn-run" @click.stop="executeCrawler(crawler)" :disabled="executing" x-text="executing ? '실행중...' : '▶ 실행'"></button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <div class="exec-status" :class="execStatus.type" x-show="execStatus.message" x-text="execStatus.message"></div>
+            <div class="sidebar-header" x-show="selectedCrawler">파일 탐색기</div>
+            <div class="file-tree" x-show="selectedCrawler">
+                <template x-if="loadingTree"><div class="loading">로딩 중...</div></template>
+                <template x-for="item in visibleItems" :key="item._key">
+                    <div class="tree-item"
+                         :class="{ 'active': currentFile === item.path, 'tree-dir': item.type === 'directory' }"
+                         :style="'padding-left:' + (item.depth * 16 + 8) + 'px'"
+                         @click="item.type === 'file' ? loadFile(item.path) : toggleDir(item)">
+                        <span class="tree-icon" x-text="getIcon(item)"></span>
+                        <span class="tree-name" x-text="item.name"></span>
+                        <span class="tree-meta" x-show="item.type === 'file'" x-text="formatSize(item.size)"></span>
+                        <span class="tree-meta" x-show="item.type === 'directory'" x-text="item.childCount + '개'"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+        <div class="content">
+            <!-- Site Tabs -->
+            <div class="tabs" x-show="jobsMode">
+                <template x-for="site in jobSites" :key="site">
+                    <div class="tab" :class="{ 'active': currentSiteTab === site }" @click="switchSiteTab(site)">
+                        <span x-text="siteLabel(site)"></span>
+                        <span class="badge" x-text="siteCount(site)"></span>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="stats-bar" x-show="jobsMode && jobData">
+                <span><strong x-text="jobData?.total || 0"></strong>건</span>
+                <span>|</span>
+                <span x-text="'페이지 ' + ((jobData?.page || 0) + 1) + ' / ' + (jobData?.totalPages || 1)"></span>
+                <span x-show="sortField">|</span>
+                <span x-show="sortField" x-text="'정렬: ' + sortLabel(sortField) + (sortAsc ? ' ▲' : ' ▼')"></span>
+                <span>|</span>
+                <span x-text="currentFile?.split('/').pop() || ''"></span>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar" x-show="jobsMode && jobData">
+                <input type="text" x-model="quickFilter" @input="applyQuickFilter()" placeholder="회사명/포지션/기술 검색...">
+                <button class="btn" @click="quickFilter=''; applyQuickFilter()" x-show="quickFilter">초기화</button>
+            </div>
+
+            <!-- Grid View (jobs mode) -->
+            <div class="grid-container" x-show="jobsMode && jobData">
+                <table class="grid-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50px" @click="toggleSort('index')" :class="{ 'sorted': sortField === 'index' }">
+                                # <span class="sort-icon" x-text="sortField === 'index' ? (sortAsc ? '▲' : '▼') : '⇅'"></span>
+                            </th>
+                            <th style="width:100px" @click="toggleSort('site')" :class="{ 'sorted': sortField === 'site' }">
+                                사이트 <span class="sort-icon" x-text="sortField === 'site' ? (sortAsc ? '▲' : '▼') : '⇅'"></span>
+                            </th>
+                            <th style="width:160px" @click="toggleSort('company')" :class="{ 'sorted': sortField === 'company' }">
+                                회사명 <span class="sort-icon" x-text="sortField === 'company' ? (sortAsc ? '▲' : '▼') : '⇅'"></span>
+                            </th>
+                            <th @click="toggleSort('position')" :class="{ 'sorted': sortField === 'position' }">
+                                포지션 <span class="sort-icon" x-text="sortField === 'position' ? (sortAsc ? '▲' : '▼') : '⇅'"></span>
+                            </th>
+                            <th style="width:180px" @click="toggleSort('career')" :class="{ 'sorted': sortField === 'career' }">
+                                경력 <span class="sort-icon" x-text="sortField === 'career' ? (sortAsc ? '▲' : '▼') : '⇅'"></span>
+                            </th>
+                            <th style="width:220px" @click="toggleSort('tech')" :class="{ 'sorted': sortField === 'tech' }">
+                                기술 <span class="sort-icon" x-text="sortField === 'tech' ? (sortAsc ? '▲' : '▼') : '⇅'"></span>
+                            </th>
+                            <th style="width:120px" @click="toggleSort('location')" :class="{ 'sorted': sortField === 'location' }">
+                                지역 <span class="sort-icon" x-text="sortField === 'location' ? (sortAsc ? '▲' : '▼') : '⇅'"></span>
+                            </th>
+                            <th style="width:80px" @click="toggleSort('deadline')" :class="{ 'sorted': sortField === 'deadline' }">
+                                마감 <span class="sort-icon" x-text="sortField === 'deadline' ? (sortAsc ? '▲' : '▼') : '⇅'"></span>
+                            </th>
+                            <th style="width:50px">링크</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(job, idx) in sortedJobs" :key="idx">
+                            <tr>
+                                <td x-text="(jobData.page * jobData.size) + idx + 1" style="color:#aaa;font-size:12px"></td>
+                                <td><span class="site-badge" :class="siteClass(job.site)" x-text="job.site"></span></td>
+                                <td class="company" x-text="job.company"></td>
+                                <td class="position" x-text="job.position"></td>
+                                <td class="career" x-text="job.career"></td>
+                                <td class="tech">
+                                    <template x-for="t in (job.tech || '').split(',').slice(0, 3)" :key="t">
+                                        <span x-text="t.trim()"></span>
+                                    </template>
+                                </td>
+                                <td class="location" x-text="job.location"></td>
+                                <td class="deadline" :class="{ 'urgent': isUrgent(job.deadline) }" x-text="job.deadline"></td>
+                                <td class="link"><a :href="job.url" target="_blank" rel="noopener noreferrer">보기</a></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" x-show="jobsMode && jobData && jobData.totalPages > 1">
+                <button class="btn" @click="goPage(0)" :disabled="jobData?.page === 0">◀◀</button>
+                <button class="btn" @click="goPage(jobData.page - 1)" :disabled="jobData?.page === 0">◀</button>
+                <template x-for="p in paginationRange()" :key="p">
+                    <button class="btn" :class="{ 'active': p === jobData?.page }" @click="goPage(p)" x-text="p + 1"></button>
+                </template>
+                <button class="btn" @click="goPage(jobData.page + 1)" :disabled="jobData?.page >= jobData?.totalPages - 1">▶</button>
+                <button class="btn" @click="goPage(jobData.totalPages - 1)" :disabled="jobData?.page >= jobData?.totalPages - 1">▶▶</button>
+            </div>
+
+            <!-- HTML/Raw View -->
+            <div class="content-body" :class="{ 'raw-view': viewMode === 'raw' }" x-show="currentFile && !jobsMode && !searchMode" x-html="viewMode === 'html' ? currentContent : ''"></div>
+            <div class="content-body raw-view" x-show="currentFile && !jobsMode && !searchMode && viewMode === 'raw'" x-text="rawContent"></div>
+
+            <!-- Search Results -->
+            <div class="search-results" x-show="searchMode">
+                <h3 x-text="'검색 결과: ' + searchResults.length + '건'"></h3>
+                <template x-for="result in searchResults" :key="result.file + result.line">
+                    <div class="search-result">
+                        <div class="file" x-text="result.file" @click="loadFile(result.file)"></div>
+                        <div class="line" x-text="'라인 ' + result.line"></div>
+                        <div class="content" x-html="result.highlight"></div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty" x-show="!currentFile && !searchMode && !jobsMode">
+                <div class="empty-icon">📂</div>
+                <div class="empty-text" x-text="selectedCrawler ? '왼쪽에서 파일을 선택하세요' : '크롤러를 선택하세요'"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function docViewer() {
+            return {
+                crawlers: [],
+                selectedCrawler: null,
+                loadingCrawlers: false,
+                allItems: [],
+                expandedDirs: {},
+                currentFile: null,
+                currentTitle: '',
+                currentContent: '',
+                rawContent: '',
+                viewMode: 'html',
+                searchQuery: '',
+                searchResults: [],
+                searchMode: false,
+                loadingTree: false,
+                jobsMode: false,
+                jobData: null,
+                jobSites: ['all'],
+                currentSiteTab: 'all',
+                allJobCounts: {},
+                sortField: null,
+                sortAsc: true,
+                quickFilter: '',
+                executing: false,
+                execStatus: { type: '', message: '' },
+
+                async init() {
+                    await this.loadCrawlers();
+                },
+
+                async loadCrawlers() {
+                    this.loadingCrawlers = true;
+                    try {
+                        const response = await fetch('/scraper/docs/crawlers');
+                        this.crawlers = await response.json();
+                        if (this.crawlers.length > 0) {
+                            await this.selectCrawler(this.crawlers[0]);
+                        }
+                    } catch (error) {
+                        console.error('Error loading crawlers:', error);
+                    }
+                    this.loadingCrawlers = false;
+                },
+
+                async executeCrawler(crawler) {
+                    if (this.executing) return;
+                    this.executing = true;
+                    this.execStatus = { type: 'running', message: '크롤링 실행 중...' };
+                    try {
+                        const response = await fetch(`/scraper/crawl-config/${crawler.id}/execute`, { method: 'POST' });
+                        const data = await response.json();
+                        if (response.ok) {
+                            this.pollCrawlResult(crawler);
+                        } else {
+                            this.execStatus = { type: 'error', message: '실행 실패: ' + (data.message || response.status) };
+                            this.executing = false;
+                        }
+                    } catch (error) {
+                        console.error('Error executing crawler:', error);
+                        this.execStatus = { type: 'error', message: '실행 오류: ' + error.message };
+                        this.executing = false;
+                    }
+                },
+
+                async pollCrawlResult(crawler) {
+                    let attempts = 0;
+                    const maxAttempts = 60;
+                    const poll = async () => {
+                        attempts++;
+                        try {
+                            const response = await fetch(`/scraper/crawl-logs/config/${crawler.id}/recent`);
+                            const logs = await response.json();
+                            if (logs && logs.length > 0) {
+                                const latest = logs[0];
+                                const logTime = new Date(latest.createdAt || latest.startedAt).getTime();
+                                const now = Date.now();
+                                if (now - logTime < 60000 && latest.status === 'SUCCESS') {
+                                    this.execStatus = { type: 'done', message: `완료: ${latest.newCount || latest.totalCount}건 수집` };
+                                    await this.loadTree(crawler.localPath);
+                                    if (this.currentFile) {
+                                        await this.loadJobs(crawler.localPath, this.currentFile, 0);
+                                    }
+                                    this.executing = false;
+                                    return;
+                                }
+                                if (latest.status === 'FAILED') {
+                                    this.execStatus = { type: 'error', message: '크롤링 실패' };
+                                    this.executing = false;
+                                    return;
+                                }
+                            }
+                        } catch (e) {}
+                        if (attempts < maxAttempts) {
+                            setTimeout(poll, 3000);
+                        } else {
+                            this.execStatus = { type: 'done', message: '실행 완료 (타임아웃)' };
+                            await this.loadTree(crawler.localPath);
+                            this.executing = false;
+                        }
+                    };
+                    setTimeout(poll, 3000);
+                },
+
+                async selectCrawler(crawler) {
+                    this.selectedCrawler = crawler;
+                    this.expandedDirs = {};
+                    this.currentFile = null;
+                    this.searchMode = false;
+                    this.searchResults = [];
+                    this.jobsMode = false;
+                    this.jobData = null;
+                    this.sortField = null;
+                    this.sortAsc = true;
+                    this.quickFilter = '';
+                    await this.loadTree(crawler.localPath);
+                },
+
+                isAncestorVisible(itemPath) {
+                    let current = this.getParentPath(itemPath);
+                    while (current !== '.') {
+                        if (!this.expandedDirs[current]) return false;
+                        current = this.getParentPath(current);
+                    }
+                    return true;
+                },
+
+                get visibleItems() {
+                    const items = [];
+                    for (const item of this.allItems) {
+                        if (item.depth === 0) continue;
+                        if (!this.isAncestorVisible(item.path)) continue;
+                        items.push({ ...item, _key: item.path + '_' + item.depth });
+                    }
+                    return items;
+                },
+
+                getParentPath(path) {
+                    if (!path || path === '.') return '.';
+                    const parts = path.split('/');
+                    if (parts.length <= 1) return '.';
+                    return parts.slice(0, -1).join('/') || '.';
+                },
+
+                async loadTree(rootPath) {
+                    this.loadingTree = true;
+                    this.allItems = [];
+                    try {
+                        const response = await fetch(`/scraper/docs/tree/view?rootPath=${encodeURIComponent(rootPath)}`);
+                        this.allItems = await response.json();
+                    } catch (error) {
+                        console.error('Error loading tree:', error);
+                    }
+                    this.loadingTree = false;
+                },
+
+                getIcon(item) {
+                    if (item.type === 'directory') return this.expandedDirs[item.path] ? '📂' : '📁';
+                    if (item.name.endsWith('.md')) return '📄';
+                    return '📋';
+                },
+
+                toggleDir(item) {
+                    if (this.expandedDirs[item.path]) {
+                        delete this.expandedDirs[item.path];
+                        const prefix = item.path + '/';
+                        Object.keys(this.expandedDirs).forEach(key => {
+                            if (key.startsWith(prefix)) delete this.expandedDirs[key];
+                        });
+                    } else {
+                        this.expandedDirs[item.path] = true;
+                    }
+                    this.expandedDirs = { ...this.expandedDirs };
+                },
+
+                async loadFile(path) {
+                    this.searchMode = false;
+                    this.currentFile = path;
+                    const rootPath = this.selectedCrawler.localPath;
+
+                    if (path.endsWith('.md')) {
+                        this.jobsMode = true;
+                        this.viewMode = 'html';
+                        this.sortField = null;
+                        this.sortAsc = true;
+                        this.quickFilter = '';
+                        await this.loadJobs(rootPath, path, 0);
+                        return;
+                    }
+
+                    this.jobsMode = false;
+                    this.viewMode = 'html';
+                    try {
+                        const response = await fetch(`/scraper/docs/file?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&format=html`);
+                        const data = await response.json();
+                        this.currentTitle = data.title;
+                        this.currentContent = data.content.replace(/<a href/g, '<a target="_blank" rel="noopener noreferrer" href');
+                    } catch (error) {
+                        console.error('Error loading file:', error);
+                    }
+                },
+
+                async loadJobs(rootPath, path, page, site) {
+                    site = site || this.currentSiteTab;
+                    try {
+                        let url = `/scraper/docs/jobs?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&page=${page}&size=20`;
+                        if (site && site !== 'all') {
+                            url += `&site=${encodeURIComponent(site)}`;
+                        }
+                        const response = await fetch(url);
+                        this.jobData = await response.json();
+                        this.currentTitle = this.jobData.total + '건 - ' + path.split('/').pop();
+                        this.currentSiteTab = this.jobData.currentSite;
+
+                        if (site === 'all' || !site) {
+                            await this.loadAllSiteCounts(rootPath, path, this.jobData.sites);
+                        }
+                    } catch (error) {
+                        console.error('Error loading jobs:', error);
+                    }
+                },
+
+                async loadAllSiteCounts(rootPath, path, sites) {
+                    this.allJobCounts = {};
+                    this.allJobCounts['all'] = this.jobData.total;
+                    this.jobSites = ['all', ...sites];
+
+                    for (const site of sites) {
+                        try {
+                            const response = await fetch(`/scraper/docs/jobs?rootPath=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&site=${encodeURIComponent(site)}&page=0&size=1`);
+                            const data = await response.json();
+                            this.allJobCounts[site] = data.total;
+                        } catch (error) {
+                            this.allJobCounts[site] = 0;
+                        }
+                    }
+                },
+
+                async switchSiteTab(site) {
+                    this.currentSiteTab = site;
+                    this.sortField = null;
+                    this.quickFilter = '';
+                    const rootPath = this.selectedCrawler.localPath;
+                    await this.loadJobs(rootPath, this.currentFile, 0, site);
+                },
+
+                siteCount(site) {
+                    return this.allJobCounts[site] || 0;
+                },
+
+                siteLabel(site) {
+                    if (site === 'all') return '전체';
+                    return site;
+                },
+
+                siteClass(site) {
+                    const s = (site || '').toLowerCase();
+                    if (s.includes('사람인') || s.includes('saramin')) return 'saramin';
+                    if (s.includes('잡코리아') || s.includes('jobkorea')) return 'jobkorea';
+                    if (s.includes('원티드') || s.includes('wanted')) return 'wanted';
+                    if (s.includes('점핏') || s.includes('jumpit')) return 'jumpit';
+                    return 'default';
+                },
+
+                isUrgent(deadline) {
+                    if (!deadline) return false;
+                    return deadline.startsWith('D-') && parseInt(deadline.split('-')[1]) <= 3;
+                },
+
+                // Column sorting
+                toggleSort(field) {
+                    if (this.sortField === field) {
+                        this.sortAsc = !this.sortAsc;
+                    } else {
+                        this.sortField = field;
+                        this.sortAsc = true;
+                    }
+                },
+
+                get sortedJobs() {
+                    let jobs = [...(this.jobData?.jobs || [])];
+
+                    // Quick filter
+                    if (this.quickFilter) {
+                        const q = this.quickFilter.toLowerCase();
+                        jobs = jobs.filter(j =>
+                            (j.company || '').toLowerCase().includes(q) ||
+                            (j.position || '').toLowerCase().includes(q) ||
+                            (j.tech || '').toLowerCase().includes(q)
+                        );
+                    }
+
+                    // Sort
+                    if (this.sortField) {
+                        const field = this.sortField;
+                        const asc = this.sortAsc;
+                        jobs.sort((a, b) => {
+                            let va, vb;
+                            if (field === 'index') return 0;
+                            if (field === 'deadline') {
+                                va = this.deadlineWeight(a.deadline);
+                                vb = this.deadlineWeight(b.deadline);
+                            } else {
+                                va = (a[field] || '').toLowerCase();
+                                vb = (b[field] || '').toLowerCase();
+                            }
+                            if (va < vb) return asc ? -1 : 1;
+                            if (va > vb) return asc ? 1 : -1;
+                            return 0;
+                        });
+                    }
+
+                    return jobs;
+                },
+
+                deadlineWeight(d) {
+                    if (!d) return 999;
+                    if (d === '채용시') return 998;
+                    if (d.startsWith('D-')) return parseInt(d.split('-')[1]) || 0;
+                    if (d.startsWith('~')) return 500;
+                    return 500;
+                },
+
+                sortLabel(field) {
+                    const labels = { site: '사이트', company: '회사명', position: '포지션', career: '경력', tech: '기술', location: '지역', deadline: '마감' };
+                    return labels[field] || field;
+                },
+
+                applyQuickFilter() {
+                    // sortedJobs is a getter, filter is applied automatically
+                },
+
+                goPage(page) {
+                    if (page < 0 || page >= this.jobData.totalPages) return;
+                    this.loadJobs(this.selectedCrawler.localPath, this.currentFile, page);
+                },
+
+                paginationRange() {
+                    if (!this.jobData) return [];
+                    const { page, totalPages } = this.jobData;
+                    let start = Math.max(0, page - 4);
+                    let end = Math.min(totalPages, start + 9);
+                    start = Math.max(0, end - 9);
+                    const pages = [];
+                    for (let i = start; i < end; i++) pages.push(i);
+                    return pages;
+                },
+
+                async searchAll() {
+                    if (!this.searchQuery.trim()) return;
+                    this.searchMode = true;
+                    this.jobsMode = false;
+                    this.currentFile = null;
+                    const allResults = [];
+                    for (const crawler of this.crawlers) {
+                        try {
+                            const response = await fetch(`/scraper/docs/search?rootPath=${encodeURIComponent(crawler.localPath)}&q=${encodeURIComponent(this.searchQuery)}`);
+                            const data = await response.json();
+                            data.results.forEach(r => { r.file = crawler.name + '/' + r.file; });
+                            allResults.push(...data.results);
+                        } catch (error) {
+                            console.error('Error searching:', error);
+                        }
+                    }
+                    this.searchResults = allResults;
+                },
+
+                resetView() {
+                    this.searchMode = false;
+                    this.jobsMode = false;
+                    this.currentFile = null;
+                    this.currentTitle = '';
+                    this.currentContent = '';
+                    this.rawContent = '';
+                    this.searchResults = [];
+                    this.jobData = null;
+                    this.sortField = null;
+                    this.quickFilter = '';
+                },
+
+                shortPath(path) {
+                    if (!path) return '';
+                    return path.split('/').slice(-2).join('/');
+                },
+
+                formatSize(bytes) {
+                    if (bytes < 1024) return bytes + 'B';
+                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+                    return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
+                }
+            };
+        }
+    </script>
+</body>
+</html>

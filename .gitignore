@@ -1,46 +1,25 @@
-# Gradle
-.gradle/
+# Build outputs
 build/
-!gradle/wrapper/gradle-wrapper.jar
+dist/
+target/
+
+# Dependencies
+node_modules/
+.gradle/
 
 # IDE
 .idea/
 *.iml
 .vscode/
-*.swp
-*.swo
-*~
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-logs/
-
 # Environment
 .env
-.env.local
+*.key
 
-# Frontend
-frontend/web/node_modules/
-frontend/web/dist/
-frontend/web/build/
-frontend/backend/node_modules/
-frontend/backend/dist/
-
-# Data (never commit - production data)
-data/
-
-# Keys (never commit)
-keys/
-
-# Scraper Platform
-backend/.gradle/
-backend/build/
-backend/out/
-backend/bin/
-
-# SchemaSpy
-/var/www/schemaSpy/
+# Logs
+logs/
+*.log

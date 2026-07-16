@@ -1,7 +1,7 @@
 rootProject.name = "sh-platform"
 
-include("sh-platform-auth")
-include("sh-platform-common")
-include("scraper-platform-backend")
-include("resume-platform")
-include("portfolio-platform")
+include("common")
+include("modules:auth:backend")
+include("modules:scraper:backend")
+include("modules:resume:backend")
+include("modules:portfolio:backend")
