@@ -6,11 +6,19 @@
 
 ```
 sh-platform/
-├── sh-platform-auth/          # 인증 모듈 (현재 개발 중)
-├── sh-platform-common/        # 공통 라이브러리
-├── sh-platform-core/          # 코어 모듈
-├── frontend/                  # 프론트엔드 (Vite + React + TS)
-└── docs/                      # 프로젝트 문서
+├── common/                          # 공통 라이브러리
+├── modules/
+│   ├── auth/backend/                # 인증 서비스 (port 8080)
+│   ├── auth/frontend/               # React 로그인/회원가입
+│   ├── scraper/backend/             # 채용공고 수집 (port 8081)
+│   ├── scraper/frontend/            # React 스크래퍼 SPA
+│   ├── resume/backend/              # 이력서 서비스 (port 8082)
+│   └── portfolio/backend/           # 포트폴리오 서비스 (port 8083)
+├── platform/frontend/               # 플랫폼 프레임 (대시보드+관리자)
+├── docs/                            # 프로젝트 문서
+├── scripts/                         # DB 파티션 등 유틸
+├── AGENTS.md                        # AI 개발 규칙
+└── .env                             # 중앙 설정
 ```
 
 ### 2. 로컬 개발 환경
@@ -25,7 +33,7 @@ sh-platform/
 ```bash
 ./gradlew build -x test    # 테스트 제외 빌드
 ./gradlew test             # 전체 테스트 실행
-./gradlew :sh-platform-auth:test  # auth 모듈만 테스트
+./gradlew :modules:auth:backend:test  # auth 모듈만 테스트
 ```
 
 ### 3. 모듈 개발 사이클
@@ -97,7 +105,7 @@ https://sunghoonyk.duckdns.org/javadoc/
 
 ### CI 연동
 
-GitHub Actions deploy 시 `./gradlew :sh-platform-auth:javadoc` 이 자동 실행되어 서버에 문서가 갱신된다.
+GitHub Actions deploy 시 `./gradlew :modules:auth:backend:javadoc` 이 자동 실행되어 서버에 문서가 갱신된다.
 
 > 상세: `docs/guides/javadoc-guide.md`
 
@@ -161,7 +169,7 @@ https://sunghoonyk.duckdns.org/test-reports/
 
 ### 적용
 
-`sh-platform-auth/build.gradle.kts`:
+`modules/auth/backend/build.gradle.kts`:
 
 ```kotlin
 implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
@@ -239,7 +247,7 @@ https://sunghoonyk.duckdns.org/swagger-ui/
 ```
 git push
   → GitHub Actions 실행
-      1. ./gradlew :sh-platform-auth:build  (테스트 포함)
+      1. ./gradlew :modules:auth:backend:build  (테스트 포함)
       2. JUnit 테스트 29개 자동 실행
          └── 실패 시 → deploy 중단, artifact에서 원인 확인
          └── 성공 시 → 계속 진행

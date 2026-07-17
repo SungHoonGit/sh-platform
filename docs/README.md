@@ -32,6 +32,12 @@
 | [Swagger 가이드](./guides/swagger-guide.md) | guides/ | API 문서 |
 | [모니터링 가이드](./guides/monitoring-guide.md) | guides/ | Prometheus/Grafana |
 | [Nginx 가이드](./guides/nginx-guide.md) | guides/ | 리버스 프록시 설정 |
+| [포트 관리 가이드](./PORT-MANAGEMENT.md) | root | 포트/서비스 매핑, 충돌 해결 |
+| [AI 개발 규칙](../AGENTS.md) | root | AI 코딩 에이전트 규칙 파일 |
+| [Javadoc 가이드](./guides/javadoc-guide.md) | guides/ | 코드 문서 자동 생성 |
+| [테스트 리포트 가이드](./guides/test-report-guide.md) | guides/ | JUnit 테스트 결과 |
+| [스키마스파이 가이드](./guides/schemaSpy-guide.md) | guides/ | DB 문서 자동 생성 |
+| [로깅 가이드](./guides/logging-guide.md) | guides/ | 로깅 설정 |
 
 ## 빠른 링크
 
@@ -43,6 +49,6 @@ ssh oci-db   # DB 서버
 
 ### 주요 URL
 - 메인: https://sunghoonyk.duckdns.org/
-- Swagger: https://sunghoonyk.duckdns.org/scraper/swagger-ui.html
+- Swagger: https://sunghoonyk.duckdns.org/swagger-ui/
 - Grafana: https://sunghoonyk.duckdns.org/grafana/
 - Prometheus: https://sunghoonyk.duckdns.org/prometheus/
