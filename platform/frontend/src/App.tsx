@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PlatformLayout from "./layouts/PlatformLayout";
 import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminTenants from "./pages/admin/AdminTenants";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +24,9 @@ function App() {
             <Route path="/platform/scraper/*" element={<div>스크래퍼 모듈 (임베딩 예정)</div>} />
             <Route path="/platform/resume/*" element={<div>이력서 모듈 (추후)</div>} />
             <Route path="/platform/portfolio/*" element={<div>포트폴리오 모듈 (추후)</div>} />
+            <Route path="/platform/admin" element={<AdminDashboard />} />
+            <Route path="/platform/admin/users" element={<AdminUsers />} />
+            <Route path="/platform/admin/tenants" element={<AdminTenants />} />
           </Route>
         </Routes>
       </BrowserRouter>
