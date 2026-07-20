@@ -58,15 +58,10 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
 
-      - name: Stop services + echo test
+      - name: Stop services + git pull
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl stop sh-platform 2>/dev/null; echo STOP_OK"
-
-      - name: Git pull (set HTTPS remote for public repo)
-        env:
-          SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && git remote set-url origin https://github.com/SungHoonGit/sh-platform.git && git pull origin master"
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl stop sh-platform 2>/dev/null; cd /home/ubuntu/sh-platform && git pull origin master 2>&1 || echo 'PULL_FAIL'"
 
       - name: Build backend
         env:
