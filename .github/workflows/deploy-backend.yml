@@ -63,10 +63,10 @@ jobs:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl stop sh-platform 2>/dev/null; echo STOP_OK"
 
-      - name: Git pull with GIT_ASKPASS
+      - name: Git pull (set HTTPS remote for public repo)
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "GIT_TERMINAL_PROMPT=0 git -C /home/ubuntu/sh-platform pull origin master 2>&1"
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && git remote set-url origin https://github.com/SungHoonGit/sh-platform.git && git pull origin master"
 
       - name: Build backend
         env:
