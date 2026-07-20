@@ -55,23 +55,35 @@ jobs:
           name: test-report
           path: "**/build/reports/tests/test/"
 
-      - name: Deploy via SSH
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: Stop services + git pull
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
-          export SSHPASS="${{ secrets.OCI_SSH_PW }}"
-          sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
+            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
+            sudo systemctl stop sh-platform 2>/dev/null
+            git -C /home/ubuntu/sh-platform pull origin master
+          "
 
-          ssh() { sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "$@"; }
+      - name: Build backend
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && ./gradlew :modules:auth:backend:clean :modules:auth:backend:build :modules:scraper:backend:build -q"
 
-          echo "=== 1/6 Stop ===" && ssh "sudo systemctl stop sh-platform 2>/dev/null; echo Y"
+      - name: Build frontend scraper
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform/modules/scraper/frontend && npm ci && npx tsc --noEmit && npm run build"
 
-          echo "=== 2/6 Deploy backend ===" && ssh "cd /home/ubuntu/sh-platform && git pull origin master && ./gradlew :modules:auth:backend:clean :modules:auth:backend:build :modules:scraper:backend:build -q"
+      - name: Build frontend platform
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform/platform/frontend && npm ci && npx tsc --noEmit && npm run build"
 
-          echo "=== 3/6 Frontend scraper ===" && ssh "cd /home/ubuntu/sh-platform/modules/scraper/frontend && npm ci && npx tsc --noEmit && npm run build"
-
-          echo "=== 4/6 Frontend platform ===" && ssh "cd /home/ubuntu/sh-platform/platform/frontend && npm ci && npx tsc --noEmit && npm run build"
-
-          echo "=== 5/6 Start ===" && ssh "sudo systemctl start sh-platform"
-
-          echo "=== DEPLOY COMPLETE ==="
+      - name: Start services
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl start sh-platform"
