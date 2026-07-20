@@ -58,15 +58,15 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
 
-      - name: Stop services + git pull
+      - name: Stop services + echo test
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: |
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
-            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
-            sudo systemctl stop sh-platform 2>/dev/null
-            git -C /home/ubuntu/sh-platform pull origin master
-          "
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl stop sh-platform 2>/dev/null; echo STOP_OK"
+
+      - name: Git pull
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "git -C /home/ubuntu/sh-platform pull origin master"
 
       - name: Build backend
         env:
