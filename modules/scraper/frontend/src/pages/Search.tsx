@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { fetchCrawlers } from "../api/scraper";
@@ -13,6 +13,43 @@ const SITES = [
 const CAREERS = ["전체", "경력무관", "1~3년", "3~5년", "5~10년", "10년 이상"];
 const LOCATIONS = ["전체", "서울", "경기", "인천", "부산", "대구", "기타"];
 const PAGE_SIZE = 20;
+const LOOKBACK_DAYS = 7;
+
+function getDateStr(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - offset);
+  return d.toISOString().split("T")[0];
+}
+
+const siteNames: Record<string, string> = {
+  saramin: "사람인", jobkorea: "잡코리아", wanted: "원티드", remember: "리멤버",
+};
+
+async function fetchJobsForConfig(
+  localPath: string,
+  siteName: string
+): Promise<any[]> {
+  // Try dates from today backwards
+  for (let offset = 0; offset < LOOKBACK_DAYS; offset++) {
+    const dateStr = getDateStr(offset);
+    const params = new URLSearchParams({
+      rootPath: localPath,
+      path: `${dateStr}.md`,
+      site: siteName,
+      page: "0",
+      size: "500",
+    });
+    try {
+      const res = await fetch(`/scraper/docs/jobs?${params}`);
+      if (!res.ok) continue;
+      const json = await res.json();
+      return json.jobs || [];
+    } catch {
+      continue;
+    }
+  }
+  return [];
+}
 
 export default function Search() {
   const navigate = useNavigate();
@@ -34,38 +71,29 @@ export default function Search() {
     setPage(0);
   }, [keyword]);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["search", searchTrigger, crawlers],
-    queryFn: async () => {
-      if (!crawlers || crawlers.length === 0) throw new Error("크롤러 설정이 없습니다");
-      if (!keyword.trim()) throw new Error("키워드를 입력하세요");
+  const configPaths = useMemo(() => {
+    if (!crawlers || crawlers.length === 0) return [];
+    return crawlers.map((c: any) => c.localPath).filter(Boolean);
+  }, [crawlers]);
 
-      const config = crawlers[0];
-      const siteNames: Record<string, string> = {
-        saramin: "사람인", jobkorea: "잡코리아", wanted: "원티드", remember: "리멤버",
-      };
-      const today = new Date().toISOString().split("T")[0];
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["search-v2", searchTrigger, ...configPaths, ...selectedSites],
+    queryFn: async () => {
+      if (configPaths.length === 0) throw new Error("크롤러 설정이 없습니다");
+      if (!keyword.trim()) throw new Error("키워드를 입력하세요");
+      if (selectedSites.length === 0) throw new Error("검색할 사이트를 선택하세요");
 
       const results = await Promise.all(
-        selectedSites.map(async (siteId) => {
-          const siteName = siteNames[siteId];
-          if (!siteName) return null;
-          const params = new URLSearchParams({
-            rootPath: config.localPath,
-            path: `${today}.md`,
-            site: siteName,
-            page: "0",
-            size: "500",
-          });
-          const res = await fetch(`/scraper/docs/jobs?${params}`);
-          if (!res.ok) return null;
-          const json = await res.json();
-          return (json.jobs || []) as any[];
-        })
+        configPaths.flatMap((localPath: string) =>
+          selectedSites.map((siteId) => {
+            const siteName = siteNames[siteId];
+            if (!siteName) return Promise.resolve([]);
+            return fetchJobsForConfig(localPath, siteName);
+          })
+        )
       );
 
       const allJobs = results
-        .filter(Boolean)
         .flat()
         .filter((j: any) => {
           const matchKeyword = !keyword ||
@@ -217,7 +245,7 @@ export default function Search() {
           <div className="flex flex-col items-center justify-center h-full">
             <div className="text-slate-500 text-lg mb-2">검색 중...</div>
             <div className="text-sm text-slate-400">
-              {selectedSites.length}개 사이트에서 데이터를 불러오는 중
+              {configPaths.length}개 스케줄 × {selectedSites.length}개 사이트 검사 중
             </div>
           </div>
         ) : error || crawlersError ? (
@@ -252,7 +280,14 @@ export default function Search() {
 
             {totalCount === 0 ? (
               <div className="text-center py-16 text-slate-400">
-                검색 결과가 없습니다
+                <div className="text-5xl mb-3">📭</div>
+                <div className="text-lg mb-2">검색 결과가 없습니다</div>
+                <div className="text-sm">
+                  오늘({getDateStr(0)}) 기준 최근 {LOOKBACK_DAYS}일간 데이터를 검색했습니다.
+                  {configPaths.length > 0 && (
+                    <> 스케줄 실행 후 다시 시도해 주세요.</>
+                  )}
+                </div>
               </div>
             ) : (
               <>
