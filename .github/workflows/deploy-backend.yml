@@ -56,26 +56,38 @@ jobs:
           path: "**/build/reports/tests/test/"
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.OCI_WEB_HOST }}
-          username: ${{ secrets.OCI_SSH_USER }}
-          password: ${{ secrets.OCI_SSH_PW }}
-          script: |
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq sshpass >/dev/null 2>&1
+
+          host="${{ secrets.OCI_WEB_HOST }}"
+          user="${{ secrets.OCI_SSH_USER }}"
+
+          echo "=== Connecting ==="
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${user}@${host}" '
+            echo "=== Connected ==="
             set -e
 
             sudo systemctl stop sh-platform 2>/dev/null || true
 
             cd /home/ubuntu/sh-platform
+            echo "=== git pull ==="
             git pull origin master
 
+            echo "=== Gradle build ==="
             ./gradlew :modules:auth:backend:clean :modules:auth:backend:build :modules:scraper:backend:build -q
 
+            echo "=== Frontend (scraper) ==="
             cd /home/ubuntu/sh-platform/modules/scraper/frontend
             npm ci && npx tsc --noEmit && npm run build
 
+            echo "=== Frontend (platform) ==="
             cd /home/ubuntu/sh-platform/platform/frontend
             npm ci && npx tsc --noEmit && npm run build
 
+            echo "=== Starting services ==="
             sudo systemctl start sh-platform
-            echo "Deploy complete!"
+
+            echo "=== DEPLOY COMPLETE ==="
+          '
