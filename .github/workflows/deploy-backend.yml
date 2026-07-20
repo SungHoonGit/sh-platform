@@ -63,10 +63,14 @@ jobs:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl stop sh-platform 2>/dev/null; echo STOP_OK"
 
-      - name: Git pull
+      - name: Git remote check
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "git -C /home/ubuntu/sh-platform pull origin master"
+        run: |
+          result=$(sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
+            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" \
+            "cd /home/ubuntu/sh-platform && git remote -v && echo SEP && git log --oneline -3 && echo SEP && git status --short" 2>&1)
+          echo "::notice title=Git Check::$result"
 
       - name: Build backend
         env:
