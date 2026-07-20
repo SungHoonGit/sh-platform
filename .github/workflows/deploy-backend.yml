@@ -2,10 +2,16 @@ name: Deploy Backend (Spring Boot)
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "sh-platform-auth/**"
       - "sh-platform-common/**"
+      - "modules/auth/**"
+      - "modules/scraper/**"
+      - "modules/resume/**"
+      - "modules/portfolio/**"
+      - "platform/**"
+      - "common/**"
       - "build.gradle.kts"
       - "settings.gradle.kts"
   workflow_dispatch:
@@ -25,7 +31,21 @@ jobs:
       - name: Build and Test with Gradle
         run: |
           chmod +x gradlew
-          ./gradlew :sh-platform-auth:build
+          ./gradlew :modules:auth:backend:build :modules:scraper:backend:build
+
+      - name: Build Frontend (scraper)
+        run: |
+          cd modules/scraper/frontend
+          npm ci
+          npx tsc --noEmit
+          npm run build
+
+      - name: Build Frontend (platform)
+        run: |
+          cd platform/frontend
+          npm ci
+          npx tsc --noEmit
+          npm run build
 
       - name: Upload Test Report
         uses: actions/upload-artifact@v4
@@ -48,8 +68,13 @@ jobs:
             cd /home/ubuntu/sh-platform
             git pull origin master
 
-            ./gradlew :sh-platform-auth:clean :sh-platform-auth:build -q
-            ./gradlew :sh-platform-auth:javadoc -q
+            ./gradlew :modules:auth:backend:clean :modules:auth:backend:build :modules:scraper:backend:build -q
+
+            cd /home/ubuntu/sh-platform/modules/scraper/frontend
+            npm ci && npx tsc --noEmit && npm run build
+
+            cd /home/ubuntu/sh-platform/platform/frontend
+            npm ci && npx tsc --noEmit && npm run build
 
             sudo systemctl start sh-platform
             echo "Deploy complete!"
