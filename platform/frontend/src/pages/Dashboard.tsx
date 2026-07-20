@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Search, FileText, Briefcase, ArrowRight } from "lucide-react";
+import { Search, FileText, Briefcase, ArrowRight, ExternalLink } from "lucide-react";
 
 const modules = [
   {
@@ -8,6 +8,7 @@ const modules = [
     icon: Search,
     path: "/",
     color: "bg-blue-500",
+    external: true,
   },
   {
     name: "이력서",
@@ -37,20 +38,39 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {modules.map((module) => (
-          <div
-            key={module.name}
-            onClick={() => navigate(module.path)}
-            className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group"
-          >
-            <div className={`w-12 h-12 ${module.color} rounded-xl flex items-center justify-center mb-4`}>
-              <module.icon className="text-white" size={24} />
+          module.external ? (
+            <a
+              key={module.name}
+              href={module.path}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all group block"
+            >
+              <div className={`w-12 h-12 ${module.color} rounded-xl flex items-center justify-center mb-4`}>
+                <module.icon className="text-white" size={24} />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-1">{module.name}</h3>
+              <p className="text-sm text-slate-500 mb-4">{module.description}</p>
+              <div className="flex items-center gap-1 text-sm text-blue-600 group-hover:text-blue-700">
+                새 탭에서 열기 <ExternalLink size={14} />
+              </div>
+            </a>
+          ) : (
+            <div
+              key={module.name}
+              onClick={() => navigate(module.path)}
+              className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group"
+            >
+              <div className={`w-12 h-12 ${module.color} rounded-xl flex items-center justify-center mb-4`}>
+                <module.icon className="text-white" size={24} />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-1">{module.name}</h3>
+              <p className="text-sm text-slate-500 mb-4">{module.description}</p>
+              <div className="flex items-center text-sm text-blue-600 group-hover:text-blue-700">
+                바로가기 <ArrowRight size={16} className="ml-1" />
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-slate-800 mb-1">{module.name}</h3>
-            <p className="text-sm text-slate-500 mb-4">{module.description}</p>
-            <div className="flex items-center text-sm text-blue-600 group-hover:text-blue-700">
-              바로가기 <ArrowRight size={16} className="ml-1" />
-            </div>
-          </div>
+          )
         ))}
       </div>
     </div>

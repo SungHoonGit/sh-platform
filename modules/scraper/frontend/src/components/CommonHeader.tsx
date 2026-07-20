@@ -3,7 +3,6 @@ import { LogOut, User } from "lucide-react";
 
 const platformLinks = [
   { to: "/platform", label: "대시보드" },
-  { to: "/platform/scraper", label: "스크래퍼" },
   { to: "/platform/resume", label: "이력서" },
   { to: "/platform/portfolio", label: "포트폴리오" },
 ];
