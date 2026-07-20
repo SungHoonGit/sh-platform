@@ -59,26 +59,19 @@ jobs:
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq sshpass >/dev/null 2>&1
+          export SSHPASS="${{ secrets.OCI_SSH_PW }}"
+          sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
 
-          user="${{ secrets.OCI_SSH_USER }}"
-          host="${{ secrets.OCI_WEB_HOST }}"
-          conn="-o StrictHostKeyChecking=accept-new"
+          ssh() { sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "$@"; }
 
-          # Stop services
-          sshpass -e ssh $conn -o ConnectTimeout=30 "${user}@${host}" "sudo systemctl stop sh-platform 2>/dev/null; echo STOP_DONE"
+          echo "=== 1/6 Stop ===" && ssh "sudo systemctl stop sh-platform 2>/dev/null; echo Y"
 
-          # Git pull
-          sshpass -e ssh $conn -o ConnectTimeout=30 "${user}@${host}" "git -C /home/ubuntu/sh-platform pull origin master"
+          echo "=== 2/6 Deploy backend ===" && ssh "cd /home/ubuntu/sh-platform && git pull origin master && ./gradlew :modules:auth:backend:clean :modules:auth:backend:build :modules:scraper:backend:build -q"
 
-          # Gradle build
-          sshpass -e ssh $conn -o ConnectTimeout=300 "${user}@${host}" "cd /home/ubuntu/sh-platform && ./gradlew :modules:auth:backend:clean :modules:auth:backend:build :modules:scraper:backend:build -q"
+          echo "=== 3/6 Frontend scraper ===" && ssh "cd /home/ubuntu/sh-platform/modules/scraper/frontend && npm ci && npx tsc --noEmit && npm run build"
 
-          # Frontend scraper
-          sshpass -e ssh $conn -o ConnectTimeout=300 "${user}@${host}" "cd /home/ubuntu/sh-platform/modules/scraper/frontend && npm ci && npx tsc --noEmit && npm run build"
+          echo "=== 4/6 Frontend platform ===" && ssh "cd /home/ubuntu/sh-platform/platform/frontend && npm ci && npx tsc --noEmit && npm run build"
 
-          # Frontend platform
-          sshpass -e ssh $conn -o ConnectTimeout=300 "${user}@${host}" "cd /home/ubuntu/sh-platform/platform/frontend && npm ci && npx tsc --noEmit && npm run build"
+          echo "=== 5/6 Start ===" && ssh "sudo systemctl start sh-platform"
 
-          # Start services
-          sshpass -e ssh $conn -o ConnectTimeout=30 "${user}@${host}" "sudo systemctl start sh-platform && echo DEPLOY_COMPLETE"
+          echo "=== DEPLOY COMPLETE ==="
