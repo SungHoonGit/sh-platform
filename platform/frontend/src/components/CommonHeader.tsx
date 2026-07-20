@@ -3,7 +3,7 @@ import { LayoutDashboard, Search, FileText, Briefcase, LogOut, User } from "luci
 
 const platformLinks = [
   { to: "/platform", icon: LayoutDashboard, label: "대시보드" },
-  { to: "/platform/scraper", icon: Search, label: "스크래퍼" },
+  { to: "/", icon: Search, label: "스크래퍼" },
   { to: "/platform/resume", icon: FileText, label: "이력서" },
   { to: "/platform/portfolio", icon: Briefcase, label: "포트폴리오" },
 ];
@@ -20,7 +20,7 @@ export default function CommonHeader() {
         </a>
         <nav className="flex items-center gap-1">
           {platformLinks.map((link) => {
-            const isActive = currentPath.startsWith(link.to);
+            const isActive = link.to === "/" ? currentPath === "/" : currentPath.startsWith(link.to);
             return (
               <a
                 key={link.to}

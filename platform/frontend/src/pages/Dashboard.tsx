@@ -6,7 +6,7 @@ const modules = [
     name: "스크래퍼",
     description: "채용공고 수집 및 검색",
     icon: Search,
-    path: "/platform/scraper",
+    path: "/",
     color: "bg-blue-500",
   },
   {
