@@ -44,3 +44,35 @@ export async function fetchCrawlLogs(configId: number): Promise<any[]> {
   if (!res.ok) return [];
   return res.json();
 }
+
+export interface SearchSiteResult {
+  site: string;
+  siteId: string;
+  count?: number;
+  error?: string;
+  jobs: Array<{
+    company: string;
+    position: string;
+    title?: string;
+    career?: string;
+    tech?: string;
+    location?: string;
+    deadline?: string;
+    url: string;
+  }>;
+}
+
+export async function searchJobsRealtime(params: {
+  keyword: string;
+  career: string;
+  location: string;
+  siteIds: string[];
+}): Promise<SearchSiteResult[]> {
+  const res = await fetch(`${BASE}/crawl/search`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error("실시간 검색 실패");
+  return res.json();
+}

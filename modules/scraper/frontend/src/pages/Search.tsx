@@ -1,7 +1,6 @@
-import { useState, useCallback, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchCrawlers } from "../api/scraper";
+import { searchJobsRealtime, type SearchSiteResult } from "../api/scraper";
 
 const SITES = [
   { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700" },
@@ -10,46 +9,9 @@ const SITES = [
   { id: "remember", name: "리멤버", color: "bg-purple-100 text-purple-700" },
 ];
 
-const CAREERS = ["전체", "경력무관", "1~3년", "3~5년", "5~10년", "10년 이상"];
+const CAREERS = ["전체", "신입", "경력", "1~3년", "3~5년", "5~10년", "10년이상"];
 const LOCATIONS = ["전체", "서울", "경기", "인천", "부산", "대구", "기타"];
 const PAGE_SIZE = 20;
-const LOOKBACK_DAYS = 7;
-
-function getDateStr(offset: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - offset);
-  return d.toISOString().split("T")[0];
-}
-
-const siteNames: Record<string, string> = {
-  saramin: "사람인", jobkorea: "잡코리아", wanted: "원티드", remember: "리멤버",
-};
-
-async function fetchJobsForConfig(
-  localPath: string,
-  siteName: string
-): Promise<any[]> {
-  // Try dates from today backwards
-  for (let offset = 0; offset < LOOKBACK_DAYS; offset++) {
-    const dateStr = getDateStr(offset);
-    const params = new URLSearchParams({
-      rootPath: localPath,
-      path: `${dateStr}.md`,
-      site: siteName,
-      page: "0",
-      size: "500",
-    });
-    try {
-      const res = await fetch(`/scraper/docs/jobs?${params}`);
-      if (!res.ok) continue;
-      const json = await res.json();
-      return json.jobs || [];
-    } catch {
-      continue;
-    }
-  }
-  return [];
-}
 
 export default function Search() {
   const navigate = useNavigate();
@@ -57,66 +19,51 @@ export default function Search() {
   const [career, setCareer] = useState("전체");
   const [location, setLocation] = useState("전체");
   const [selectedSites, setSelectedSites] = useState<string[]>(["saramin", "jobkorea", "wanted", "remember"]);
-  const [searchTrigger, setSearchTrigger] = useState(0);
+  const [results, setResults] = useState<SearchSiteResult[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
 
-  const { data: crawlers, error: crawlersError } = useQuery({
-    queryKey: ["crawlers"],
-    queryFn: fetchCrawlers,
-  });
+  const allJobs = results?.flatMap((r) =>
+    (r.jobs || []).map((j) => ({ ...j, site: r.site }))
+  ) ?? [];
+  const totalCount = allJobs.length;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const pagedData = allJobs.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const handleSearch = useCallback(() => {
+  const handleSearch = useCallback(async () => {
     if (!keyword.trim()) return;
-    setSearchTrigger((t) => t + 1);
+    if (selectedSites.length === 0) return;
+    setLoading(true);
+    setError(null);
+    setResults(null);
     setPage(0);
-  }, [keyword]);
+    try {
+      const data = await searchJobsRealtime({
+        keyword: keyword.trim(),
+        career,
+        location,
+        siteIds: selectedSites,
+      });
+      setResults(data);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [keyword, career, location, selectedSites]);
 
-  const configPaths = useMemo(() => {
-    if (!crawlers || crawlers.length === 0) return [];
-    return crawlers.map((c: any) => c.localPath).filter(Boolean);
-  }, [crawlers]);
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["search-v2", searchTrigger, ...configPaths, ...selectedSites],
-    queryFn: async () => {
-      if (configPaths.length === 0) throw new Error("크롤러 설정이 없습니다");
-      if (!keyword.trim()) throw new Error("키워드를 입력하세요");
-      if (selectedSites.length === 0) throw new Error("검색할 사이트를 선택하세요");
-
-      const results = await Promise.all(
-        configPaths.flatMap((localPath: string) =>
-          selectedSites.map((siteId) => {
-            const siteName = siteNames[siteId];
-            if (!siteName) return Promise.resolve([]);
-            return fetchJobsForConfig(localPath, siteName);
-          })
-        )
-      );
-
-      const allJobs = results
-        .flat()
-        .filter((j: any) => {
-          const matchKeyword = !keyword ||
-            [j.company, j.position, j.tech, j.location]
-              .filter(Boolean)
-              .some((v: string) => v.toLowerCase().includes(keyword.toLowerCase()));
-          const matchCareer = career === "전체" || !j.career || j.career.includes(career);
-          const matchLocation = location === "전체" || !j.location || j.location.includes(location);
-          return matchKeyword && matchCareer && matchLocation;
-        });
-
-      return allJobs;
-    },
-    enabled: searchTrigger > 0,
-  });
-
-  const totalPages = data ? Math.ceil(data.length / PAGE_SIZE) : 0;
-  const pagedData = data ? data.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) : [];
-  const totalCount = data ? data.length : 0;
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSearch();
+  };
 
   const goToSchedule = () => {
     navigate("/schedule", { state: { keyword, career, location, sites: selectedSites } });
   };
+
+  const siteResult = results ?? [];
+  const successCount = siteResult.filter((r) => r.error == null).length;
+  const errorCount = siteResult.filter((r) => r.error != null).length;
 
   return (
     <div className="flex h-full">
@@ -129,9 +76,9 @@ export default function Search() {
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="React, Java, Spring..."
             className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           />
         </div>
 
@@ -220,14 +167,15 @@ export default function Search() {
         <div className="space-y-2">
           <button
             onClick={handleSearch}
-            disabled={!keyword.trim() || isLoading}
+            disabled={!keyword.trim() || selectedSites.length === 0 || loading}
             className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? "검색 중..." : "🔍 검색"}
+            {loading ? "크롤링 중..." : "🔍 검색하기"}
           </button>
           <button
             onClick={goToSchedule}
-            className="w-full py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+            disabled={loading}
+            className="w-full py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors disabled:opacity-50"
           >
             📅 이 조건으로 스케줄 등록
           </button>
@@ -235,32 +183,31 @@ export default function Search() {
       </div>
 
       <div className="flex-1 overflow-auto">
-        {searchTrigger === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400">
-            <div className="text-6xl mb-4">🔍</div>
-            <div className="text-lg">키워드를 입력하고 검색하세요</div>
-            <div className="text-sm mt-2">예: React, Java, Python, Spring</div>
-          </div>
-        ) : isLoading ? (
+        {loading ? (
           <div className="flex flex-col items-center justify-center h-full">
-            <div className="text-slate-500 text-lg mb-2">검색 중...</div>
+            <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 border-t-blue-600 mb-4" />
+            <div className="text-slate-500 text-lg mb-2">실시간 크롤링 중...</div>
             <div className="text-sm text-slate-400">
-              {configPaths.length}개 스케줄 × {selectedSites.length}개 사이트 검사 중
+              {selectedSites.length}개 사이트에서 채용정보를 수집하고 있습니다
             </div>
           </div>
-        ) : error || crawlersError ? (
+        ) : error ? (
           <div className="flex flex-col items-center justify-center h-full">
             <div className="text-6xl mb-4">⚠️</div>
             <div className="text-lg text-red-600 mb-2">검색 중 오류 발생</div>
-            <div className="text-sm text-slate-500">
-              {(error as any)?.message || (crawlersError as any)?.message || "알 수 없는 오류"}
-            </div>
+            <div className="text-sm text-slate-500">{error}</div>
             <button
-              onClick={() => setSearchTrigger((t) => t + 1)}
+              onClick={handleSearch}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
             >
               다시 시도
             </button>
+          </div>
+        ) : results === null ? (
+          <div className="flex flex-col items-center justify-center h-full text-slate-400">
+            <div className="text-6xl mb-4">🔍</div>
+            <div className="text-lg">키워드를 입력하고 검색하세요</div>
+            <div className="text-sm mt-2">실시간으로 채용 사이트를 크롤링합니다</div>
           </div>
         ) : (
           <div className="p-6">
@@ -271,10 +218,13 @@ export default function Search() {
                   {totalCount}건
                 </span>
               </h2>
-              <div className="text-sm text-slate-500">
-                {keyword && `키워드: ${keyword}`}
-                {career !== "전체" && ` | 경력: ${career}`}
-                {location !== "전체" && ` | 지역: ${location}`}
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-slate-500">
+                  {successCount}/{selectedSites.length}개 사이트 성공
+                  {errorCount > 0 && (
+                    <span className="text-red-500 ml-1">({errorCount}개 실패)</span>
+                  )}
+                </span>
               </div>
             </div>
 
@@ -283,10 +233,7 @@ export default function Search() {
                 <div className="text-5xl mb-3">📭</div>
                 <div className="text-lg mb-2">검색 결과가 없습니다</div>
                 <div className="text-sm">
-                  오늘({getDateStr(0)}) 기준 최근 {LOOKBACK_DAYS}일간 데이터를 검색했습니다.
-                  {configPaths.length > 0 && (
-                    <> 스케줄 실행 후 다시 시도해 주세요.</>
-                  )}
+                  다른 키워드나 조건으로 다시 검색해 보세요
                 </div>
               </div>
             ) : (
@@ -305,7 +252,7 @@ export default function Search() {
                       </tr>
                     </thead>
                     <tbody>
-                      {pagedData.map((job: any, i: number) => {
+                      {pagedData.map((job, i) => {
                         const siteInfo = SITES.find((s) => s.name === job.site);
                         return (
                           <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">

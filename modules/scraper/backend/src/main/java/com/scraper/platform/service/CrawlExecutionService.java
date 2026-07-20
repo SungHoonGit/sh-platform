@@ -34,8 +34,61 @@ public class CrawlExecutionService {
     private final CrawlSiteConfigRepository crawlSiteConfigRepository;
     private final CrawlDataRepository crawlDataRepository;
     private final CrawlLogRepository crawlLogRepository;
+    private final SiteDefinitionRepository siteDefinitionRepository;
     private final NotificationService notificationService;
     private final CrawlerFactory crawlerFactory;
+
+    public List<Map<String, Object>> searchSites(String keyword, String career, String location, List<String> siteIds) {
+        log.info("Real-time search: keyword={}, career={}, location={}, sites={}", keyword, career, location, siteIds);
+
+        Map<String, String> paramMap = new LinkedHashMap<>();
+        if (keyword != null && !keyword.isBlank()) paramMap.put("keyword", keyword.trim());
+        if (career != null && !career.isBlank() && !career.equals("전체")) paramMap.put("career", career.trim());
+        if (location != null && !location.isBlank() && !location.equals("전체")) paramMap.put("location", location.trim());
+        String paramValues;
+        try {
+            paramValues = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(paramMap);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to build paramValues JSON", e);
+        }
+
+        List<Map<String, Object>> siteResults = new ArrayList<>();
+        for (String siteId : siteIds) {
+            SiteDefinition siteDef = siteDefinitionRepository.findBySiteName(siteId).orElse(null);
+            if (siteDef == null) {
+                log.warn("Unknown site: {}", siteId);
+                continue;
+            }
+            SiteCrawler crawler = crawlerFactory.getCrawler(siteId);
+            if (crawler == null) {
+                log.warn("No crawler for: {}", siteId);
+                continue;
+            }
+
+            CrawlSiteConfig tempConfig = CrawlSiteConfig.builder()
+                    .siteDefinition(siteDef)
+                    .paramValues(paramValues)
+                    .isEnabled(true)
+                    .build();
+            try {
+                List<Map<String, String>> jobs = crawler.search(tempConfig);
+                Map<String, Object> result = new HashMap<>();
+                result.put("site", siteDef.getDisplayName());
+                result.put("siteId", siteId);
+                result.put("count", jobs.size());
+                result.put("jobs", jobs);
+                siteResults.add(result);
+            } catch (Exception e) {
+                log.error("Search failed for site: {}", siteId, e);
+                Map<String, Object> errorResult = new HashMap<>();
+                errorResult.put("site", siteDef.getDisplayName());
+                errorResult.put("siteId", siteId);
+                errorResult.put("error", e.getMessage());
+                siteResults.add(errorResult);
+            }
+        }
+        return siteResults;
+    }
 
     @Scheduled(cron = "${scraper.schedule.cron:0 9 * * *}")
     public void executeScheduledCrawls() {
