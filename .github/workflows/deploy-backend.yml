@@ -55,62 +55,30 @@ jobs:
           name: test-report
           path: "**/build/reports/tests/test/"
 
-      - name: Test SSH auth
+      - name: Deploy via SSH
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq sshpass >/dev/null 2>&1
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 \
-            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "hostname"
 
-      - name: Deploy step 1 - check server state
-        env:
-          SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: |
-          output=$(sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
-            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" '
-            set -e
-            echo "WHOAMI: $(whoami)"
-            echo "SUDO: $(sudo -n echo SUDO_OK 2>/dev/null || echo FAIL)"
-            echo "DIR: $(test -d /home/ubuntu/sh-platform && echo EXISTS || echo MISSING)"
-            echo "GIT: $(test -f /home/ubuntu/sh-platform/.git/HEAD && echo OK || echo MISSING)"
-            echo "DISK: $(df -h / | tail -1)"
-          ' 2>&1)
-          ec=$?
-          echo "exit_code=$ec"
-          echo "::notice title=Server Check::$output"
-          echo "::notice title=Server Check Exit Code::$ec"
-          if [ $ec -ne 0 ]; then
-            exit 1
-          fi
+          user="${{ secrets.OCI_SSH_USER }}"
+          host="${{ secrets.OCI_WEB_HOST }}"
+          conn="-o StrictHostKeyChecking=accept-new"
 
-      - name: Deploy step 2 - Gradle build
-        env:
-          SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: |
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 \
-            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
-            cd /home/ubuntu/sh-platform
-            ./gradlew :modules:auth:backend:clean :modules:auth:backend:build :modules:scraper:backend:build -q
-          "
+          # Stop services
+          sshpass -e ssh $conn -o ConnectTimeout=30 "${user}@${host}" "sudo systemctl stop sh-platform 2>/dev/null; echo STOP_DONE"
 
-      - name: Deploy step 3 - frontend build + restart
-        env:
-          SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: |
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 \
-            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
-            set -e
-            echo OK_FE_SCRAPER
-            cd /home/ubuntu/sh-platform/modules/scraper/frontend
-            npm ci && npx tsc --noEmit && npm run build
+          # Git pull
+          sshpass -e ssh $conn -o ConnectTimeout=30 "${user}@${host}" "git -C /home/ubuntu/sh-platform pull origin master"
 
-            echo OK_FE_PLATFORM
-            cd /home/ubuntu/sh-platform/platform/frontend
-            npm ci && npx tsc --noEmit && npm run build
+          # Gradle build
+          sshpass -e ssh $conn -o ConnectTimeout=300 "${user}@${host}" "cd /home/ubuntu/sh-platform && ./gradlew :modules:auth:backend:clean :modules:auth:backend:build :modules:scraper:backend:build -q"
 
-            echo OK_START
-            sudo systemctl start sh-platform
+          # Frontend scraper
+          sshpass -e ssh $conn -o ConnectTimeout=300 "${user}@${host}" "cd /home/ubuntu/sh-platform/modules/scraper/frontend && npm ci && npx tsc --noEmit && npm run build"
 
-            echo '=== DEPLOY COMPLETE ==='
-          "
+          # Frontend platform
+          sshpass -e ssh $conn -o ConnectTimeout=300 "${user}@${host}" "cd /home/ubuntu/sh-platform/platform/frontend && npm ci && npx tsc --noEmit && npm run build"
+
+          # Start services
+          sshpass -e ssh $conn -o ConnectTimeout=30 "${user}@${host}" "sudo systemctl start sh-platform && echo DEPLOY_COMPLETE"
