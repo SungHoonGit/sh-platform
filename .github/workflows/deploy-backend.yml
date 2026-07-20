@@ -54,12 +54,20 @@ jobs:
           name: test-report
           path: "**/build/reports/tests/test/"
 
+      - name: Test SSH connectivity
+        run: |
+          nc -zv ${{ secrets.OCI_WEB_HOST }} 22 || echo "PORT CLOSED"
+
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.2.1
         with:
           host: ${{ secrets.OCI_WEB_HOST }}
           username: ${{ secrets.OCI_SSH_USER }}
           password: ${{ secrets.OCI_SSH_PW }}
+          port: 22
+          timeout: 30s
+          command_timeout: 180s
+          debug: true
           script: |
             set -e
 
