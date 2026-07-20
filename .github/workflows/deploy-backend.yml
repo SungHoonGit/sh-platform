@@ -56,22 +56,14 @@ jobs:
           path: "**/build/reports/tests/test/"
 
       - name: Deploy via SSH
-        env:
-          SSH_HOST: ${{ secrets.OCI_WEB_HOST }}
-          SSH_USER: ${{ secrets.OCI_SSH_USER }}
-          SSH_PASS: ${{ secrets.OCI_SSH_PW }}
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq sshpass netcat-openbsd >/dev/null 2>&1
-
-          echo "=== Testing TCP connectivity ==="
-          nc -zv "$SSH_HOST" 22
-
-          echo "=== Testing password login ==="
-          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "$SSH_USER@$SSH_HOST" "echo AUTH_OK" || { echo "SSH login failed"; exit 1; }
-
-          echo "=== Deploying ==="
-          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.OCI_WEB_HOST }}
+          username: ${{ secrets.OCI_SSH_USER }}
+          password: ${{ secrets.OCI_SSH_PW }}
+          script: |
             set -e
+
             sudo systemctl stop sh-platform 2>/dev/null || true
 
             cd /home/ubuntu/sh-platform
@@ -86,5 +78,4 @@ jobs:
             npm ci && npx tsc --noEmit && npm run build
 
             sudo systemctl start sh-platform
-            echo '=== DEPLOY COMPLETE ==='
-          "
+            echo "Deploy complete!"
