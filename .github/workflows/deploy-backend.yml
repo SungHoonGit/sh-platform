@@ -66,7 +66,7 @@ jobs:
       - name: Git pull via HTTPS
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && git remote set-url origin https://github.com/SungHoonGit/sh-platform.git && git pull origin master 2>&1 && echo PULL_OK || echo PULL_FAIL"
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && git remote set-url origin https://github.com/SungHoonGit/sh-platform.git && git stash 2>/dev/null; git fetch origin 2>&1 && echo FETCH_OK; git reset --hard origin/master 2>&1 && echo RESET_OK"
 
       - name: Build backend
         env:
