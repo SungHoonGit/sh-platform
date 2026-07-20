@@ -4,6 +4,7 @@ on:
   push:
     branches: [master]
     paths:
+      - ".github/workflows/**"
       - "sh-platform-auth/**"
       - "sh-platform-common/**"
       - "modules/auth/**"
