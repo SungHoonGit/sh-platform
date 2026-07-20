@@ -9,7 +9,7 @@ const SITES = [
   { id: "remember", name: "리멤버", color: "bg-purple-100 text-purple-700" },
 ];
 
-const CAREERS = ["전체", "신입", "경력", "1~3년", "3~5년", "5~10년", "10년이상"];
+const CAREERS = ["전체", "경력무관", "1~3년", "3~5년", "5~10년", "10년 이상"];
 const LOCATIONS = ["전체", "서울", "경기", "인천", "부산", "대구", "기타"];
 const PAGE_SIZE = 20;
 
@@ -19,6 +19,7 @@ export default function Search() {
   const [career, setCareer] = useState("전체");
   const [location, setLocation] = useState("전체");
   const [selectedSites, setSelectedSites] = useState<string[]>(["saramin", "jobkorea", "wanted", "remember"]);
+  const [searchTrigger, setSearchTrigger] = useState(0);
   const [results, setResults] = useState<SearchSiteResult[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +39,7 @@ export default function Search() {
     setError(null);
     setResults(null);
     setPage(0);
+    setSearchTrigger((t) => t + 1);
     try {
       const data = await searchJobsRealtime({
         keyword: keyword.trim(),
@@ -52,10 +54,6 @@ export default function Search() {
       setLoading(false);
     }
   }, [keyword, career, location, selectedSites]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSearch();
-  };
 
   const goToSchedule = () => {
     navigate("/schedule", { state: { keyword, career, location, sites: selectedSites } });
@@ -76,9 +74,9 @@ export default function Search() {
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            onKeyDown={handleKeyDown}
             placeholder="React, Java, Spring..."
             className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           />
         </div>
 
@@ -170,7 +168,7 @@ export default function Search() {
             disabled={!keyword.trim() || selectedSites.length === 0 || loading}
             className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "크롤링 중..." : "🔍 검색하기"}
+            {loading ? "검색 중..." : "🔍 검색"}
           </button>
           <button
             onClick={goToSchedule}
@@ -183,12 +181,18 @@ export default function Search() {
       </div>
 
       <div className="flex-1 overflow-auto">
-        {loading ? (
+        {searchTrigger === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-slate-400">
+            <div className="text-6xl mb-4">🔍</div>
+            <div className="text-lg">키워드를 입력하고 검색하세요</div>
+            <div className="text-sm mt-2">예: React, Java, Python, Spring</div>
+          </div>
+        ) : loading ? (
           <div className="flex flex-col items-center justify-center h-full">
             <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 border-t-blue-600 mb-4" />
-            <div className="text-slate-500 text-lg mb-2">실시간 크롤링 중...</div>
+            <div className="text-slate-500 text-lg mb-2">검색 중...</div>
             <div className="text-sm text-slate-400">
-              {selectedSites.length}개 사이트에서 채용정보를 수집하고 있습니다
+              {selectedSites.length}개 사이트 실시간 수집 중
             </div>
           </div>
         ) : error ? (
@@ -203,12 +207,6 @@ export default function Search() {
               다시 시도
             </button>
           </div>
-        ) : results === null ? (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400">
-            <div className="text-6xl mb-4">🔍</div>
-            <div className="text-lg">키워드를 입력하고 검색하세요</div>
-            <div className="text-sm mt-2">실시간으로 채용 사이트를 크롤링합니다</div>
-          </div>
         ) : (
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -218,13 +216,18 @@ export default function Search() {
                   {totalCount}건
                 </span>
               </h2>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-slate-500">
-                  {successCount}/{selectedSites.length}개 사이트 성공
-                  {errorCount > 0 && (
-                    <span className="text-red-500 ml-1">({errorCount}개 실패)</span>
-                  )}
-                </span>
+              <div className="text-sm text-slate-500">
+                {keyword && `키워드: ${keyword}`}
+                {career !== "전체" && ` | 경력: ${career}`}
+                {location !== "전체" && ` | 지역: ${location}`}
+                {selectedSites.length > 0 && (
+                  <span className="ml-2">
+                    | {successCount}/{selectedSites.length}개 사이트 성공
+                    {errorCount > 0 && (
+                      <span className="text-red-500 ml-1">({errorCount}개 실패)</span>
+                    )}
+                  </span>
+                )}
               </div>
             </div>
 
