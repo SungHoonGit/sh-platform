@@ -55,49 +55,57 @@ jobs:
           name: test-report
           path: "**/build/reports/tests/test/"
 
-      - name: SSH Auth Test
+      - name: Test SSH auth
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq sshpass >/dev/null 2>&1
-          set +e
-          output=$(sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 \
-            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "hostname" 2>&1)
-          ec=$?
-          echo "::group::SSH Debug"
-          echo "exit_code=$ec"
-          echo "$output"
-          echo "::endgroup::"
-          echo "ssh_status=$ec" >> "$GITHUB_OUTPUT"
-          if [ $ec -ne 0 ]; then
-            echo "::error title=SSH Auth Failed::$output"
-            exit 1
-          fi
-        id: ssh_test
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 \
+            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "hostname"
 
-      - name: Deploy via SSH
+      - name: Deploy step 1 - stop + cd + git pull
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
-          host="${{ secrets.OCI_WEB_HOST }}"
-          user="${{ secrets.OCI_SSH_USER }}"
-
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${user}@${host}" '
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
+            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
             set -e
-
+            echo OK_STOP
             sudo systemctl stop sh-platform 2>/dev/null || true
+            echo OK_CD
+            ls -la /home/ubuntu/sh-platform/.git/HEAD
+            echo OK_GIT
+            git -C /home/ubuntu/sh-platform pull origin master
+            echo OK_PULL_DONE
+          "
 
+      - name: Deploy step 2 - Gradle build
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 \
+            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
             cd /home/ubuntu/sh-platform
-            git pull origin master
-
             ./gradlew :modules:auth:backend:clean :modules:auth:backend:build :modules:scraper:backend:build -q
+          "
 
+      - name: Deploy step 3 - frontend build + restart
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 \
+            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
+            set -e
+            echo OK_FE_SCRAPER
             cd /home/ubuntu/sh-platform/modules/scraper/frontend
             npm ci && npx tsc --noEmit && npm run build
 
+            echo OK_FE_PLATFORM
             cd /home/ubuntu/sh-platform/platform/frontend
             npm ci && npx tsc --noEmit && npm run build
 
+            echo OK_START
             sudo systemctl start sh-platform
-            echo "Deploy complete!"
-          '
+
+            echo '=== DEPLOY COMPLETE ==='
+          "
