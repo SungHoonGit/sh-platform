@@ -76,3 +76,5 @@ export async function searchJobsRealtime(params: {
   if (!res.ok) throw new Error("실시간 검색 실패");
   return res.json();
 }
+
+// force deploy
