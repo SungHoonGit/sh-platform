@@ -63,21 +63,26 @@ jobs:
           sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 \
             "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "hostname"
 
-      - name: Deploy step 1 - stop + cd + git pull
+      - name: Deploy step 1 - check server state
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
-            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
+          output=$(sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
+            "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" '
             set -e
-            echo OK_STOP
-            sudo systemctl stop sh-platform 2>/dev/null || true
-            echo OK_CD
-            ls -la /home/ubuntu/sh-platform/.git/HEAD
-            echo OK_GIT
-            git -C /home/ubuntu/sh-platform pull origin master
-            echo OK_PULL_DONE
-          "
+            echo "WHOAMI: $(whoami)"
+            echo "SUDO: $(sudo -n echo SUDO_OK 2>/dev/null || echo FAIL)"
+            echo "DIR: $(test -d /home/ubuntu/sh-platform && echo EXISTS || echo MISSING)"
+            echo "GIT: $(test -f /home/ubuntu/sh-platform/.git/HEAD && echo OK || echo MISSING)"
+            echo "DISK: $(df -h / | tail -1)"
+          ' 2>&1)
+          ec=$?
+          echo "exit_code=$ec"
+          echo "::notice title=Server Check::$output"
+          echo "::notice title=Server Check Exit Code::$ec"
+          if [ $ec -ne 0 ]; then
+            exit 1
+          fi
 
       - name: Deploy step 2 - Gradle build
         env:
