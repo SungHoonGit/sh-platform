@@ -92,7 +92,40 @@ jobs:
       - name: Start services
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=120 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl start sh-platform-auth && sleep 15 && sudo systemctl start sh-platform-scraper"
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=120 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
+          echo '=== Current service status ===';
+          sudo systemctl status sh-platform-auth --no-pager 2>&1 || echo 'Service sh-platform-auth not found';
+          echo;
+          echo '=== Auth unit file ===';
+          sudo systemctl cat sh-platform-auth 2>&1 || echo 'No unit file found';
+          echo;
+          echo '=== JAR files ===';
+          ls -la /home/ubuntu/sh-platform/modules/auth/backend/build/libs/ 2>&1 || echo 'No JARs found';
+          ls -la /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/ 2>&1 || echo 'No scraper JARs found';
+        "
+
+      - name: Fix service paths if needed
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
+          # Find actual JAR files
+          AUTH_JAR=\$(ls /home/ubuntu/sh-platform/modules/auth/backend/build/libs/*.jar 2>/dev/null | head -1);
+          SCRAPER_JAR=\$(ls /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/*.jar 2>/dev/null | head -1);
+          echo 'Auth JAR:' \$AUTH_JAR;
+          echo 'Scraper JAR:' \$SCRAPER_JAR;
+          if [ -n \"\$AUTH_JAR\" ]; then
+            echo 'Starting auth directly...';
+            cd /home/ubuntu/sh-platform;
+            sudo -u ubuntu SPRING_PROFILES_ACTIVE=prod nohup java -jar \$AUTH_JAR > /dev/null 2>&1 &
+            echo 'Auth started, PID:' \$!;
+          fi
+          if [ -n \"\$SCRAPER_JAR\" ]; then
+            echo 'Starting scraper directly...';
+            cd /home/ubuntu/sh-platform;
+            sudo -u ubuntu SPRING_PROFILES_ACTIVE=prod nohup java -jar \$SCRAPER_JAR > /dev/null 2>&1 &
+            echo 'Scraper started, PID:' \$!;
+          fi
+        "
 
       - name: Health check (auth)
         env:
