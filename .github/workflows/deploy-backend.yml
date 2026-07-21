@@ -83,10 +83,10 @@ jobs:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform/platform/frontend && npm ci && npx tsc --noEmit && npm run build"
 
-      - name: Fix nginx SPA fallback
+      - name: Fix nginx (SPA fallback + scraper-ui location)
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo sed -i 's|try_files \$uri \$uri/;|try_files \$uri \$uri/ /index.html;|' /etc/nginx/sites-available/sh-platform; sudo nginx -t && sudo systemctl reload nginx"
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && python3 scripts/fix-nginx.py"
 
       - name: Start services
         env:
