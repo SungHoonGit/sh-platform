@@ -1,3 +1,11 @@
+﻿---
+title: Readme
+description: Readme - general module documentation
+category: general
+created: 2026-07-14
+updated: 2026-07-21
+---
+
 # SH Platform 문서
 
 ## 문서 목록

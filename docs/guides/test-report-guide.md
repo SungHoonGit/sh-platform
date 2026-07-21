@@ -1,3 +1,11 @@
+﻿---
+title: Test Report Guide
+description: Test Report Guide - guide module documentation
+category: guide
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # 테스트 리포트 & 문서 자동화 가이드
 
 ## 1. JUnit 테스트 리포트

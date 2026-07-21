@@ -1,3 +1,11 @@
+﻿---
+title: DB Design Standard
+description: DB Design Standard - architecture module documentation
+category: architecture
+created: 2026-07-15
+updated: 2026-07-21
+---
+
 # DB 설계 표준 정의서
 
 > SH Platform 모든 모듈의 DB 설계 시 반드시 따르는 표준입니다.

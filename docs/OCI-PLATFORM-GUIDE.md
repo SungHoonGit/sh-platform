@@ -1,3 +1,11 @@
+﻿---
+title: OCI Platform Guide
+description: OCI Platform Guide - general module documentation
+category: general
+created: 2026-07-15
+updated: 2026-07-21
+---
+
 # OCI Platform 가이드 (회사 opencode용)
 
 ## 플랫폼 개요

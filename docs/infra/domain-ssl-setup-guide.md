@@ -1,3 +1,11 @@
+﻿---
+title: Domain SSL Setup Guide
+description: Domain SSL Setup Guide - infra module documentation
+category: infra
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # 도메인 및 SSL 인증서 설정 가이드
 
 ## 개요

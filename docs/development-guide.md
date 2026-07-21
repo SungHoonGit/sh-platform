@@ -1,3 +1,11 @@
+﻿---
+title: Development Guide
+description: Development Guide - general module documentation
+category: general
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # 개발 가이드
 
 ## 시작하기

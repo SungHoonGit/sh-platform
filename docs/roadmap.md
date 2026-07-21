@@ -1,3 +1,11 @@
+﻿---
+title: Roadmap
+description: Roadmap - general module documentation
+category: general
+created: 2026-07-10
+updated: 2026-07-21
+---
+
 # 로드맵
 
 ## 변경 이력

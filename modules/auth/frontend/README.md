@@ -1,3 +1,11 @@
+﻿---
+title: Readme
+description: Readme - general module documentation
+category: general
+created: 2026-07-16
+updated: 2026-07-21
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.

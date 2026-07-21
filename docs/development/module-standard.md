@@ -1,3 +1,11 @@
+﻿---
+title: Module Standard
+description: Module Standard - development module documentation
+category: development
+created: 2026-07-14
+updated: 2026-07-21
+---
+
 # 신규 모듈 표준: 모니터링 + 로깅 + 테넌트 관리
 
 > 모든 신규 모듈은 반드시 모니터링, 로깅, 테넌트 관리를 포함해야 합니다.

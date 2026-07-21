@@ -1,3 +1,11 @@
+﻿---
+title: API Auth
+description: API Auth - auth module documentation
+category: auth
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # 인증 API 명세
 
 Base URL: `https://api.sung-hoon.io/api/v1`

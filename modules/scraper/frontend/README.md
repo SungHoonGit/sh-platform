@@ -1,3 +1,11 @@
+﻿---
+title: Readme
+description: Readme - general module documentation
+category: general
+created: 2026-07-16
+updated: 2026-07-21
+---
+
 # SH Platform Frontend
 
 React + TypeScript + Vite.

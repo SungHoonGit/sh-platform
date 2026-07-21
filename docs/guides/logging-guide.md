@@ -1,3 +1,11 @@
+﻿---
+title: Logging Guide
+description: Logging Guide - guide module documentation
+category: guide
+created: 2026-07-14
+updated: 2026-07-21
+---
+
 # 중앙 집중 로깅 사용 가이드
 
 ## 1. Grafana에서 로그 조회

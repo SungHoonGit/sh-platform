@@ -1,3 +1,11 @@
+﻿---
+title: README
+description: SH Platform - Monorepo 멀티모듈 MSA 플랫폼
+category: readme
+created: 2026-07-10
+updated: 2026-07-21
+---
+
 # SH Platform
 
 SH(SungHoon) SaaS 기반 통합 플랫폼. Monorepo + Multi-Module 구조.
@@ -27,6 +35,23 @@ sh-platform/
 ├── AGENTS.md                        # AI 개발 규칙
 └── .env                             # 중앙 설정
 ```
+
+## 문서 규칙
+
+모든 `.md` 문서는 YAML frontmatter로 시작합니다:
+
+```yaml
+---
+title: 문서 제목
+description: 요약
+category: 카테고리명
+created: 작성일
+updated: 수정일
+---
+```
+
+카테고리 및 템플릿: [`docs/frontmatter-template.md`](docs/frontmatter-template.md)
+AI 개발 규칙: [`AGENTS.md`](AGENTS.md)
 
 ## 모듈 현황
 

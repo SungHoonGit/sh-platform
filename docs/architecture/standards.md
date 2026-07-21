@@ -1,3 +1,11 @@
+﻿---
+title: Standards
+description: Standards - architecture module documentation
+category: architecture
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # 개발 표준 정의서
 
 ## 1. 프로젝트 개요

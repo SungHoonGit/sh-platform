@@ -1,3 +1,11 @@
+﻿---
+title: Architecture
+description: Architecture - architecture module documentation
+category: architecture
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # 아키텍처
 
 ## MSA 구성

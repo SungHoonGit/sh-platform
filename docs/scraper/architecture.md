@@ -1,3 +1,11 @@
+﻿---
+title: Architecture
+description: Architecture - scraper module documentation
+category: scraper
+created: 2026-07-14
+updated: 2026-07-21
+---
+
 # Scraper Management Platform - 아키텍처 설계
 
 > 스크래퍼 데이터 관리 및 모니터링 플랫폼

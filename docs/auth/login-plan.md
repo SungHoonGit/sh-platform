@@ -1,3 +1,11 @@
+﻿---
+title: Login Plan
+description: Login Plan - auth module documentation
+category: auth
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # 로그인/인증 기획
 
 ## 방식

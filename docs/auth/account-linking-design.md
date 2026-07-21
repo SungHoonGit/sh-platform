@@ -1,3 +1,11 @@
+﻿---
+title: Account Linking Design
+description: Account Linking Design - auth module documentation
+category: auth
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # OAuth2 계정 연결 (Account Linking) 설계
 
 ## 개요

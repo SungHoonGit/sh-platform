@@ -1,3 +1,11 @@
+﻿---
+title: Admin Platform Design
+description: Admin Platform Design - general module documentation
+category: general
+created: 2026-07-17
+updated: 2026-07-21
+---
+
 # 관리자 플랫폼 프레임 설계
 
 ## 1. 목적

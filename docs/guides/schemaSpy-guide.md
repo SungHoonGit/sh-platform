@@ -1,3 +1,11 @@
+﻿---
+title: Schemaspy Guide
+description: Schemaspy Guide - guide module documentation
+category: guide
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # SchemaSpy - DB 문서 자동화 가이드
 
 ## 1. 개요

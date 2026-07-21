@@ -1,3 +1,11 @@
+﻿---
+title: Doc Viewer
+description: Doc Viewer - plan module documentation
+category: plan
+created: 2026-07-15
+updated: 2026-07-21
+---
+
 # 문서 뷰어 서비스 구현 계획
 
 ## 1. 개요

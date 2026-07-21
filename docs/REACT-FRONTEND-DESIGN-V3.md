@@ -1,3 +1,11 @@
+﻿---
+title: React Frontend Design v3
+description: React Frontend Design v3 - general module documentation
+category: general
+created: 2026-07-16
+updated: 2026-07-21
+---
+
 # React 프론트엔드 설계 V3
 
 ## 1. 아키텍처 의도

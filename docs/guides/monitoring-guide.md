@@ -1,3 +1,11 @@
+﻿---
+title: Monitoring Guide
+description: Monitoring Guide - guide module documentation
+category: guide
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # 모니터링 설정 가이드
 
 ## 1. 구성 요소

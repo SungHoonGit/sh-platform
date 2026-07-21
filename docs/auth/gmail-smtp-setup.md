@@ -1,3 +1,11 @@
+﻿---
+title: Gmail Smtp Setup
+description: Gmail Smtp Setup - auth module documentation
+category: auth
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # Gmail SMTP 설정 가이드
 
 SH Platform 이메일 인증을 위한 Gmail SMTP 설정 방법입니다.

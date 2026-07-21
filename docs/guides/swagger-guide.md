@@ -1,3 +1,11 @@
+﻿---
+title: Swagger Guide
+description: Swagger Guide - guide module documentation
+category: guide
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # Swagger (SpringDoc) API 문서 가이드
 
 ## 1. 개념

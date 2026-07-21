@@ -1,3 +1,11 @@
+﻿---
+title: Tenant Management Design
+description: Tenant Management Design - saas module documentation
+category: saas
+created: 2026-07-14
+updated: 2026-07-21
+---
+
 # SaaS 테넌트 관리 기획 설계 문서
 
 > 이 문서는 SH Platform의 SaaS 테넌트 관리 아키텍처를 분석하고 설계합니다.

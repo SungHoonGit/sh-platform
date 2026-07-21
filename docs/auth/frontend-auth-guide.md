@@ -1,3 +1,11 @@
+﻿---
+title: Frontend Auth Guide
+description: Frontend Auth Guide - auth module documentation
+category: auth
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # 프론트엔드 인증 구현 가이드
 
 ## 개요

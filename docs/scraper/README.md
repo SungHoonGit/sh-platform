@@ -1,3 +1,11 @@
+﻿---
+title: Readme
+description: Readme - scraper module documentation
+category: scraper
+created: 2026-07-14
+updated: 2026-07-21
+---
+
 # Scraper Platform 문서
 
 > 채용 공고 스크래퍼 관리 시스템

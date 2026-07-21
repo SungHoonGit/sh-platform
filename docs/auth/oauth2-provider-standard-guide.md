@@ -1,3 +1,11 @@
+﻿---
+title: Oauth2 Provider Standard Guide
+description: Oauth2 Provider Standard Guide - auth module documentation
+category: auth
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # OAuth2 프로바이더 표준 설정 가이드
 
 ## 개요

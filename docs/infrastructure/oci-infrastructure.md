@@ -1,3 +1,11 @@
+﻿---
+title: OCI Infrastructure
+description: OCI Infrastructure - general module documentation
+category: general
+created: 2026-07-15
+updated: 2026-07-21
+---
+
 # OCI 인프라 문서
 
 ## 1. Oracle Cloud 계정 정보

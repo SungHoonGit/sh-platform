@@ -1,3 +1,11 @@
+﻿---
+title: Work History
+description: Work History - daily module documentation
+category: daily
+created: 2026-07-13
+updated: 2026-07-21
+---
+
 # 작업 이력
 
 ## 2026-07-13

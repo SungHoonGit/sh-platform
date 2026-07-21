@@ -1,3 +1,11 @@
+﻿---
+title: Migration v2
+description: Migration v2 - scraper module documentation
+category: scraper
+created: 2026-07-15
+updated: 2026-07-21
+---
+
 # Scraper Platform DB 마이그레이션 v2 가이드
 
 > 기존 테이블 구조를 표준에 맞게 변경

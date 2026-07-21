@@ -1,3 +1,11 @@
+﻿---
+title: Logging Install
+description: Logging Install - guide module documentation
+category: guide
+created: 2026-07-14
+updated: 2026-07-21
+---
+
 # 중앙 집중 로깅 설치 가이드
 
 ## 1. 사전 요구사항

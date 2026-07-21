@@ -1,3 +1,11 @@
+﻿---
+title: Roadmap
+description: Roadmap - scraper module documentation
+category: scraper
+created: 2026-07-14
+updated: 2026-07-21
+---
+
 # Scraper Platform 로드맵
 
 ## Phase 1: 기본 구조 (1주)

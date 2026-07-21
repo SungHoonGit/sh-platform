@@ -1,3 +1,11 @@
+﻿---
+title: Data Paths
+description: Data Paths - scraper module documentation
+category: scraper
+created: 2026-07-14
+updated: 2026-07-21
+---
+
 # Scraper Platform - 데이터 경로
 
 > 스크래퍼 데이터 저장 위치 및 관리 규칙

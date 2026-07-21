@@ -1,3 +1,11 @@
+﻿---
+title: Scraper Guide
+description: Scraper Guide - scraper module documentation
+category: scraper
+created: 2026-07-16
+updated: 2026-07-21
+---
+
 # Scraper Platform Guide
 
 > Java 기반 채용공고 수집 플랫폼. 사용자 설정 기반 자동 스케줄 크롤링 + 웹 뷰어.
