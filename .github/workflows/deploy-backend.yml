@@ -62,7 +62,7 @@ jobs:
       - name: Stop services
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl stop sh-platform 2>/dev/null; echo STOP_OK"
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl stop sh-platform-auth sh-platform-scraper 2>/dev/null; sudo fuser -k 8080/tcp 8081/tcp 2>/dev/null; echo STOP_OK"
 
       - name: Git pull via HTTPS
         env:
@@ -92,4 +92,9 @@ jobs:
       - name: Start services
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl start sh-platform"
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=120 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl start sh-platform-auth && sleep 15 && sudo systemctl start sh-platform-scraper"
+
+      - name: Health check (auth)
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=120 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" 'for i in $(seq 1 12); do code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/auth/me 2>/dev/null); if [ "$code" = "200" ] || [ "$code" = "401" ]; then echo "Auth up ($code)"; exit 0; fi; echo "Waiting... ($i/12)"; sleep 10; done; echo "Auth failed to start"; exit 1'
