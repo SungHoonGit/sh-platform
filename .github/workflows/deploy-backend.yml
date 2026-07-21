@@ -116,8 +116,8 @@ jobs:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
           sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
-            AUTH_JAR=$(ls /home/ubuntu/sh-platform/modules/auth/backend/build/libs/*.jar 2>/dev/null | head -1)
-            SCRAPER_JAR=$(ls /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/*.jar 2>/dev/null | head -1)
+            AUTH_JAR=$(ls /home/ubuntu/sh-platform/modules/auth/backend/build/libs/*.jar 2>/dev/null | grep -v plain | head -1)
+            SCRAPER_JAR=$(ls /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/*.jar 2>/dev/null | grep -v plain | head -1)
 
             echo "=== JAR files ==="
             echo "auth: $AUTH_JAR"
