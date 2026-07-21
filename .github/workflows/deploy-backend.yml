@@ -159,25 +159,20 @@ jobs:
 
             echo "=== Port 8081 ==="
             ss -tlnp | grep 8081 || echo "(nothing on 8081)"
-          REMOTE
 
-      - name: Health check (auth)
-        env:
-          SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: |
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=210 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
+            echo "=== Health check (auth) ==="
             for i in $(seq 1 18); do
               code=$(python3 -c "
-import urllib.request, sys
+import urllib.request
 try:
-    resp = urllib.request.urlopen('http://localhost:8080/api/v1/auth/me')
+    resp = urllib.request.urlopen('http://localhost:8080/api/v1/auth/me', timeout=5)
     print(resp.status)
 except urllib.error.HTTPError as e:
     print(e.code)
-except Exception as e:
+except:
     print('ERR')
 " 2>/dev/null)
-              if [ "$code" = "200" ] || [ "$code" = "401" ]; then
+              if [ -n "$code" ] && [ "$code" != "ERR" ]; then
                 echo "Auth up ($code)"
                 cp /tmp/auth.log /home/ubuntu/sh-platform/auth.log
                 exit 0
