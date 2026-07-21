@@ -141,4 +141,25 @@ jobs:
       - name: Health check (auth)
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=180 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" 'for i in $(seq 1 18); do code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/auth/me 2>/dev/null); if [ "$code" = "200" ] || [ "$code" = "401" ]; then echo "Auth up ($code)"; exit 0; fi; echo "Waiting... ($i/18)"; sleep 10; done; echo "Auth failed to start"; exit 1'
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=210 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
+            for i in $(seq 1 18); do
+              code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/auth/me 2>/dev/null)
+              if [ "$code" = "200" ] || [ "$code" = "401" ]; then
+                echo "Auth up ($code)"
+                exit 0
+              fi
+              echo "Waiting... ($i/18)"
+              sleep 10
+            done
+            echo "Auth failed - dumping logs..."
+            echo "=== /tmp/auth.log ==="
+            tail -80 /tmp/auth.log 2>/dev/null || echo '(no /tmp/auth.log)'
+            echo "=== java processes ==="
+            ps aux | grep java || echo '(no java)'
+            echo "=== port 8080 ==="
+            ss -tlnp | grep 8080 || echo '(nothing on 8080)'
+            echo "=== .env ==="
+            cat /home/ubuntu/sh-platform/.env 2>/dev/null || echo '(no .env)'
+            exit 1
+          REMOTE
