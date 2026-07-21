@@ -185,23 +185,17 @@ jobs:
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE' > diag-output.txt 2>&1
-            echo "=== java processes ==="
-            ps aux | grep java 2>/dev/null || echo "(no java)"
-            echo "=== port 8080 ==="
-            ss -tlnp | grep 8080 2>/dev/null || echo "(nothing on 8080)"
-            echo "=== auth log (full) ==="
-            cat /tmp/auth.log 2>/dev/null || echo "(no /tmp/auth.log)"
-            echo "=== .env ==="
-            cat /home/ubuntu/sh-platform/.env 2>/dev/null || echo "(no .env)"
-            echo "=== java version ==="
-            java -version 2>&1 || echo "(no java)"
-          REMOTE
-          echo "Diagnostics saved to diag-output.txt"
-
-      - name: Upload diagnostics artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: diagnostics
-          path: diag-output.txt
+          {
+            sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
+              echo "=== java processes ==="
+              ps aux | grep java 2>/dev/null || echo "(no java)"
+              echo "=== port 8080 ==="
+              ss -tlnp | grep 8080 2>/dev/null || echo "(nothing on 8080)"
+              echo "=== auth log ==="
+              cat /tmp/auth.log 2>/dev/null || echo "(no /tmp/auth.log)"
+              echo "=== .env ==="
+              cat /home/ubuntu/sh-platform/.env 2>/dev/null || echo "(no .env)"
+              echo "=== java version ==="
+              java -version 2>&1 || echo "(no java)"
+            REMOTE
+          } 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
