@@ -119,6 +119,10 @@ jobs:
             AUTH_JAR=$(ls /home/ubuntu/sh-platform/modules/auth/backend/build/libs/*.jar 2>/dev/null | head -1)
             SCRAPER_JAR=$(ls /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/*.jar 2>/dev/null | head -1)
 
+            echo "=== JAR files ==="
+            echo "auth: $AUTH_JAR"
+            echo "scraper: $SCRAPER_JAR"
+
             start_jar() {
               JAR="$1"
               NAME="$2"
@@ -126,7 +130,8 @@ jobs:
               if [ -f "$JAR" ]; then
                 echo "Starting $NAME from $JAR (port $PORT) ..."
                 cd /home/ubuntu/sh-platform
-                SPRING_PROFILES_ACTIVE=prod nohup java -jar "$JAR" > /tmp/$NAME.log 2>&1 &
+                export SPRING_PROFILES_ACTIVE=prod
+                nohup java -jar "$JAR" > /tmp/$NAME.log 2>&1 &
                 echo "  PID: $!"
               else
                 echo "JAR for $NAME not found at $JAR"
@@ -136,6 +141,24 @@ jobs:
 
             start_jar "$AUTH_JAR" "auth" "8080"
             start_jar "$SCRAPER_JAR" "scraper" "8081"
+
+            echo "=== Waiting 30s for startup ==="
+            sleep 30
+
+            echo "=== Java processes ==="
+            ps aux | grep java || echo "(no java)"
+
+            echo "=== auth log (tail 50) ==="
+            tail -50 /tmp/auth.log 2>/dev/null || echo "(no auth log)"
+
+            echo "=== scraper log (tail 20) ==="
+            tail -20 /tmp/scraper.log 2>/dev/null || echo "(no scraper log)"
+
+            echo "=== Port 8080 ==="
+            ss -tlnp | grep 8080 || echo "(nothing on 8080)"
+
+            echo "=== Port 8081 ==="
+            ss -tlnp | grep 8081 || echo "(nothing on 8081)"
           REMOTE
 
       - name: Health check (auth)
