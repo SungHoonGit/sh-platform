@@ -89,45 +89,56 @@ jobs:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && python3 scripts/fix-nginx.py"
 
+      - name: Diagnose services
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=120 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
+            echo '=== service status ==='
+            sudo systemctl status sh-platform-auth --no-pager 2>&1 || echo '(no sh-platform-auth service)'
+            echo
+            echo '=== unit file ==='
+            sudo systemctl cat sh-platform-auth 2>&1 || echo '(no unit)'
+            echo
+            echo '=== JARs ==='
+            ls -la /home/ubuntu/sh-platform/modules/auth/backend/build/libs/
+            ls -la /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/
+            echo
+            echo '=== port 8080 ==='
+            ss -tlnp | grep 8080 || echo '(nothing on 8080)'
+            echo
+            echo '=== .env SPRING_PROFILES ==='
+            grep -i profile /home/ubuntu/sh-platform/.env 2>/dev/null || echo '(not set in .env)'
+          REMOTE
+
       - name: Start services
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=120 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
-          echo '=== Current service status ===';
-          sudo systemctl status sh-platform-auth --no-pager 2>&1 || echo 'Service sh-platform-auth not found';
-          echo;
-          echo '=== Auth unit file ===';
-          sudo systemctl cat sh-platform-auth 2>&1 || echo 'No unit file found';
-          echo;
-          echo '=== JAR files ===';
-          ls -la /home/ubuntu/sh-platform/modules/auth/backend/build/libs/ 2>&1 || echo 'No JARs found';
-          ls -la /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/ 2>&1 || echo 'No scraper JARs found';
-        "
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
+            AUTH_JAR=$(ls /home/ubuntu/sh-platform/modules/auth/backend/build/libs/*.jar 2>/dev/null | head -1)
+            SCRAPER_JAR=$(ls /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/*.jar 2>/dev/null | head -1)
 
-      - name: Fix service paths if needed
-        env:
-          SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "
-          # Find actual JAR files
-          AUTH_JAR=\$(ls /home/ubuntu/sh-platform/modules/auth/backend/build/libs/*.jar 2>/dev/null | head -1);
-          SCRAPER_JAR=\$(ls /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/*.jar 2>/dev/null | head -1);
-          echo 'Auth JAR:' \$AUTH_JAR;
-          echo 'Scraper JAR:' \$SCRAPER_JAR;
-          if [ -n \"\$AUTH_JAR\" ]; then
-            echo 'Starting auth directly...';
-            cd /home/ubuntu/sh-platform;
-            sudo -u ubuntu SPRING_PROFILES_ACTIVE=prod nohup java -jar \$AUTH_JAR > /dev/null 2>&1 &
-            echo 'Auth started, PID:' \$!;
-          fi
-          if [ -n \"\$SCRAPER_JAR\" ]; then
-            echo 'Starting scraper directly...';
-            cd /home/ubuntu/sh-platform;
-            sudo -u ubuntu SPRING_PROFILES_ACTIVE=prod nohup java -jar \$SCRAPER_JAR > /dev/null 2>&1 &
-            echo 'Scraper started, PID:' \$!;
-          fi
-        "
+            start_jar() {
+              JAR="$1"
+              NAME="$2"
+              PORT="$3"
+              if [ -f "$JAR" ]; then
+                echo "Starting $NAME from $JAR (port $PORT) ..."
+                cd /home/ubuntu/sh-platform
+                SPRING_PROFILES_ACTIVE=prod nohup java -jar "$JAR" > /tmp/$NAME.log 2>&1 &
+                echo "  PID: $!"
+              else
+                echo "JAR for $NAME not found at $JAR"
+                return 1
+              fi
+            }
+
+            start_jar "$AUTH_JAR" "auth" "8080"
+            start_jar "$SCRAPER_JAR" "scraper" "8081"
+          REMOTE
 
       - name: Health check (auth)
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=120 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" 'for i in $(seq 1 12); do code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/auth/me 2>/dev/null); if [ "$code" = "200" ] || [ "$code" = "401" ]; then echo "Auth up ($code)"; exit 0; fi; echo "Waiting... ($i/12)"; sleep 10; done; echo "Auth failed to start"; exit 1'
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=180 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" 'for i in $(seq 1 18); do code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/auth/me 2>/dev/null); if [ "$code" = "200" ] || [ "$code" = "401" ]; then echo "Auth up ($code)"; exit 0; fi; echo "Waiting... ($i/18)"; sleep 10; done; echo "Auth failed to start"; exit 1'
