@@ -163,15 +163,19 @@ jobs:
             echo "=== Health check (auth) ==="
             for i in $(seq 1 18); do
               code=$(python3 -c "
-import urllib.request
-try:
-    resp = urllib.request.urlopen('http://localhost:8080/api/v1/auth/me', timeout=5)
-    print(resp.status)
-except urllib.error.HTTPError as e:
-    print(e.code)
-except:
-    print('ERR')
-" 2>/dev/null)
+            import urllib.request
+            class NoRedirect(urllib.request.HTTPRedirectHandler):
+                def redirect_request(self, req, fp, code, msg, hdrs, newurl):
+                    return None
+            opener = urllib.request.build_opener(NoRedirect)
+            try:
+                resp = opener.open('http://localhost:8080/api/v1/auth/me', timeout=5)
+                print(resp.status)
+            except urllib.error.HTTPError as e:
+                print(e.code)
+            except:
+                print('ERR')
+            " 2>/dev/null)
               if [ -n "$code" ] && [ "$code" != "ERR" ]; then
                 echo "Auth up ($code)"
                 cp /tmp/auth.log /home/ubuntu/sh-platform/auth.log
