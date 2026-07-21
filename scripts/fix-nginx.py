@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """nginx 설정 자동 수정: SPA fallback + scraper-ui location 블록 추가"""
-import subprocess, sys, os, tempfile
+import re, subprocess, sys, os, tempfile
 
 CONFIG = '/etc/nginx/sites-available/sh-platform'
 
@@ -25,18 +25,24 @@ def main():
         'try_files $uri $uri/ /index.html;'
     )
 
-    if 'location /scraper-ui' not in content:
-        block = '''
+    block = '''
     # Scraper frontend
     location /scraper-ui {
         alias /home/ubuntu/sh-platform/modules/scraper/frontend/dist;
         try_files $uri $uri/ /scraper-ui/index.html;
     }'''
-        content = content.rstrip()
-        if content.endswith('}'):
-            i = content.rfind('\n}')
-            if i > 0:
-                content = content[:i] + block + '\n}'
+
+    # Remove any existing scraper-ui block (was being added to wrong server block)
+    content = re.sub(
+        r'^\s+# Scraper frontend\n\s+location /scraper-ui \{[^}]+}\s*\n?',
+        '', content, count=1, flags=re.MULTILINE
+    )
+
+    # Add to HTTPS server block (first server block, closes before }\n\nserver {)
+    m = re.search(r'\n}\n\nserver \{', content)
+    if m:
+        insert_at = m.start() + 1  # position of '}'
+        content = content[:insert_at] + block + '\n' + content[insert_at:]
 
     if content == original:
         print("NO_CHANGES")
