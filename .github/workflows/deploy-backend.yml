@@ -166,14 +166,15 @@ jobs:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
           sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=210 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
+            sudo apt-get update -qq && sudo apt-get install -y -qq curl 2>/dev/null
             for i in $(seq 1 18); do
-              code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/auth/me 2>/dev/null)
+              code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/auth/me 2>/dev/null || echo "000")
               if [ "$code" = "200" ] || [ "$code" = "401" ]; then
                 echo "Auth up ($code)"
                 cp /tmp/auth.log /home/ubuntu/sh-platform/auth.log
                 exit 0
               fi
-              echo "Waiting... ($i/18)"
+              echo "Waiting... ($i/36)"
               sleep 10
             done
             echo "Auth failed"
