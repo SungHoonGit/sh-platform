@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""nginx 설정 자동 수정: SPA fallback + scraper-ui location 블록 추가"""
+"""nginx 설정 자동 수정: scraper-ui SPA location 블록 추가"""
 import re, subprocess, sys, os, tempfile
 
-CONFIG = '/etc/nginx/sites-available/sh-platform'
+# sites-enabled가 실제 활성 config (sites-available과 별도 파일 주의)
+CONFIG = '/etc/nginx/sites-enabled/sh-platform'
 
 def read_config():
     r = subprocess.run(['sudo', 'cat', CONFIG], capture_output=True, text=True)
@@ -20,28 +21,27 @@ def main():
     content = read_config()
     original = content
 
-    content = content.replace(
-        'try_files $uri $uri/;',
-        'try_files $uri $uri/ /index.html;'
-    )
-
     block = '''
+    location = /scraper-ui {
+        return 301 /scraper-ui/;
+    }
+
     # Scraper frontend
-    location /scraper-ui {
-        alias /home/ubuntu/sh-platform/modules/scraper/frontend/dist;
-        try_files $uri $uri/ /scraper-ui/index.html;
+    location /scraper-ui/ {
+        alias /home/ubuntu/sh-platform/modules/scraper/frontend/dist/;
+        error_page 404 = /scraper-ui/index.html;
     }'''
 
-    # Remove any existing scraper-ui block (was being added to wrong server block)
+    # Remove any existing scraper-ui block
     content = re.sub(
-        r'^\s+# Scraper frontend\n\s+location /scraper-ui \{[^}]+}\s*\n?',
-        '', content, count=1, flags=re.MULTILINE
+        r'\s+# Scraper frontend\n\s+location /scraper-ui/? \{.*?\n    \}',
+        '', content, count=1, flags=re.DOTALL
     )
 
-    # Add to HTTPS server block (first server block, closes before }\n\nserver {)
-    m = re.search(r'\n}\n\nserver \{', content)
+    # Add before Auth Frontend section
+    m = re.search(r'\n    # === Auth Frontend', content)
     if m:
-        insert_at = m.start() + 1  # position of '}'
+        insert_at = m.start() + 1
         content = content[:insert_at] + block + '\n' + content[insert_at:]
 
     if content == original:

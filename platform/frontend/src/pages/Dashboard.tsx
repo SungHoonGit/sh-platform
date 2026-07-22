@@ -39,7 +39,11 @@ export default function Dashboard() {
         {modules.map((module) => (
           <div
             key={module.name}
-            onClick={() => navigate(module.path)}
+            onClick={() =>
+              module.path.startsWith("/platform")
+                ? navigate(module.path)
+                : (window.location.href = module.path)
+            }
             className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group"
           >
             <div className={`w-12 h-12 ${module.color} rounded-xl flex items-center justify-center mb-4`}>
