@@ -20,7 +20,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@common": ["./src/common/index.ts"],
+      "@common/*": ["./src/common/*"]
+    }
   },
   "include": ["src"]
 }
