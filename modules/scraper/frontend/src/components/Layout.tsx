@@ -7,9 +7,9 @@ export default function Layout() {
     location.pathname === path || (path === "/" && location.pathname === "/search");
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col bg-slate-100">
       <CommonHeader />
-      <div className="bg-white border-b border-slate-200 px-5 flex items-center h-10 gap-4 shrink-0">
+      <div className="bg-slate-100 border-b border-slate-200 px-5 flex items-center h-10 gap-4 shrink-0">
         <Link
           to="/"
           className={`text-sm font-medium ${isActive("/") ? "text-blue-600 border-b-2 border-blue-600" : "text-slate-500 hover:text-slate-700"}`}
