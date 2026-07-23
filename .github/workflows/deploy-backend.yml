@@ -90,10 +90,10 @@ jobs:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && ln -sf ../../../../common/frontend/src modules/scraper/frontend/src/common && ln -sf ../../../common/frontend/src platform/frontend/src/common && cd platform/frontend && npm ci && npx tsc --noEmit && npm run build"
 
-      - name: Fix nginx (SPA fallback + scraper-ui location)
+      - name: Deploy nginx config
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && python3 scripts/fix-nginx.py"
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && sudo cp nginx/sh-platform.conf /etc/nginx/sites-enabled/sh-platform && sudo cp nginx/sh-platform.conf /etc/nginx/sites-available/sh-platform && sudo nginx -t && sudo systemctl reload nginx && echo NGINX_OK"
 
       - name: Diagnose services
         env:
