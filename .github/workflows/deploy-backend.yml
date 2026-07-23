@@ -68,7 +68,7 @@ jobs:
       - name: Stop services
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo systemctl stop sh-platform-auth sh-platform-scraper 2>/dev/null; sudo fuser -k 8080/tcp 8081/tcp 2>/dev/null; echo STOP_OK"
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo apt-get install -y psmisc 2>/dev/null; sudo systemctl stop sh-platform-auth sh-platform-scraper 2>/dev/null; sudo fuser -k 8080/tcp 8081/tcp 2>/dev/null; echo STOP_OK"
 
       - name: Git pull via HTTPS
         env:
@@ -123,6 +123,7 @@ jobs:
         run: |
           sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
             echo "=== Stopping systemd services ==="
+            sudo apt-get install -y psmisc 2>/dev/null
             sudo systemctl stop sh-platform-auth sh-platform-scraper 2>/dev/null || true
 
             echo "=== Force killing on ports 8080-8081 ==="
@@ -138,6 +139,10 @@ jobs:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
           sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
+            echo "=== Pre-start port check ==="
+            sudo fuser -k -9 8080/tcp 8081/tcp 2>/dev/null || true
+            sleep 2
+
             AUTH_JAR=$(ls /home/ubuntu/sh-platform/modules/auth/backend/build/libs/*.jar 2>/dev/null | grep -v plain | head -1)
             SCRAPER_JAR=$(ls /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/*.jar 2>/dev/null | grep -v plain | head -1)
 
