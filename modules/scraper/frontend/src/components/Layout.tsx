@@ -9,22 +9,22 @@ export default function Layout() {
   return (
     <div className="h-screen flex flex-col bg-slate-100">
       <CommonHeader />
-      <div className="bg-slate-100 border-b border-slate-200 px-5 flex items-center h-10 gap-4 shrink-0">
+      <div className="bg-slate-800 border-b border-slate-700 px-5 flex items-center h-10 gap-4 shrink-0">
         <Link
           to="/"
-          className={`text-sm font-medium ${isActive("/") ? "text-blue-600 border-b-2 border-blue-600" : "text-slate-500 hover:text-slate-700"}`}
+          className={`text-sm font-medium ${isActive("/") ? "text-white" : "text-slate-400 hover:text-white"}`}
         >
           🔍 통합검색
         </Link>
         <Link
           to="/schedule"
-          className={`text-sm font-medium ${isActive("/schedule") ? "text-blue-600 border-b-2 border-blue-600" : "text-slate-500 hover:text-slate-700"}`}
+          className={`text-sm font-medium ${isActive("/schedule") ? "text-white" : "text-slate-400 hover:text-white"}`}
         >
           📅 스케줄등록
         </Link>
         <Link
           to="/viewer"
-          className={`text-sm font-medium ${isActive("/viewer") ? "text-blue-600 border-b-2 border-blue-600" : "text-slate-500 hover:text-slate-700"}`}
+          className={`text-sm font-medium ${isActive("/viewer") ? "text-white" : "text-slate-400 hover:text-white"}`}
         >
           📄 뷰어
         </Link>
