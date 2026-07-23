@@ -15,16 +15,17 @@ export default function CommonHeader() {
   return (
     <header className="bg-slate-900 text-white h-14 flex items-center justify-between px-5 shrink-0 border-b border-slate-700">
       <div className="flex items-center gap-6">
-        <a href="/platform" className="text-lg font-bold tracking-tight">
+        <a href={isAuthenticated ? "/platform" : "/"} className="text-lg font-bold tracking-tight">
           SH Platform
         </a>
         <nav className="flex items-center gap-1">
           {platformLinks.map((link) => {
             const isActive = currentPath.startsWith(link.to);
+            const href = isAuthenticated ? link.to : "/";
             return (
               <a
                 key={link.to}
-                href={link.to}
+                href={href}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   isActive
                     ? "bg-blue-600 text-white"
