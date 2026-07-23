@@ -10,7 +10,7 @@ const adminItems = [
 
 export default function PlatformLayout() {
   return (
-    <div className="h-screen flex flex-col bg-slate-100">
+    <div className="h-screen flex flex-col bg-slate-900">
       <CommonHeader />
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-56 bg-slate-900 text-white flex flex-col shrink-0">
