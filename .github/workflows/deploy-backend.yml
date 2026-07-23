@@ -35,6 +35,12 @@ jobs:
           chmod +x gradlew
           ./gradlew :modules:auth:backend:build :modules:scraper:backend:build
 
+      - name: Create common frontend symlinks
+        run: |
+          ln -sf ../../../../common/frontend/src modules/scraper/frontend/src/common
+          ln -sf ../../../common/frontend/src platform/frontend/src/common
+          ls -la modules/scraper/frontend/src/common platform/frontend/src/common
+
       - name: Build Frontend (scraper)
         run: |
           cd modules/scraper/frontend
@@ -77,12 +83,12 @@ jobs:
       - name: Build frontend scraper
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform/modules/scraper/frontend && npm ci && npx tsc --noEmit && npm run build"
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && ln -sf ../../../../common/frontend/src modules/scraper/frontend/src/common && ln -sf ../../../common/frontend/src platform/frontend/src/common && cd modules/scraper/frontend && npm ci && npx tsc --noEmit && npm run build"
 
       - name: Build frontend platform
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform/platform/frontend && npm ci && npx tsc --noEmit && npm run build"
+        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && ln -sf ../../../../common/frontend/src modules/scraper/frontend/src/common && ln -sf ../../../common/frontend/src platform/frontend/src/common && cd platform/frontend && npm ci && npx tsc --noEmit && npm run build"
 
       - name: Fix nginx (SPA fallback + scraper-ui location)
         env:
