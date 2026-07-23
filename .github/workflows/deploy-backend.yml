@@ -124,24 +124,13 @@ jobs:
           sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
             echo "=== Stopping systemd services ==="
             sudo systemctl stop sh-platform-auth sh-platform-scraper 2>/dev/null || true
-            sudo systemctl disable sh-platform-auth sh-platform-scraper 2>/dev/null || true
 
-            echo "=== Killing ALL java processes ==="
-            sudo pkill -9 -f "java.*jar" 2>/dev/null || true
+            echo "=== Force killing on ports 8080-8081 ==="
+            sudo fuser -k -9 8080/tcp 8081/tcp 2>/dev/null || true
             sleep 3
 
             echo "=== Verifying ports ==="
-            for port in 8080 8081; do
-              pid=$(sudo ss -tlnp | grep ":$port " | grep -oP 'pid=\K[0-9]+' || true)
-              if [ -n "$pid" ]; then
-                echo "Port $port still held by PID $pid, killing..."
-                sudo kill -9 $pid 2>/dev/null || true
-              fi
-            done
-            sleep 2
-
-            echo "=== Final port check ==="
-            ss -tlnp | grep -E '808[01]' || echo "Ports 8080-8081 are free"
+            ss -tlnp | grep -E '808[01]' && echo "FAIL: ports still in use" || echo "OK: ports 8080-8081 free"
           REMOTE
 
       - name: Start services
