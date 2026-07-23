@@ -1,9 +1,9 @@
 ﻿---
 title: Nginx Guide
-description: Nginx Guide - guide module documentation
+description: Nginx 설정 가이드 - 리버스 프록시, location 블록, 관리 방식
 category: guide
 created: 2026-07-13
-updated: 2026-07-21
+updated: 2026-07-23
 ---
 
 # nginx 설정 가이드
@@ -13,8 +13,10 @@ updated: 2026-07-21
 | 파일 | 설명 |
 |------|------|
 | `/etc/nginx/sites-available/sh-platform` | 사이트 설정 (실제 설정) |
-| `/etc/nginx/sites-enabled/sh-platform` | 활성화된 설정 (sites-available의 심링크) |
+| `/etc/nginx/sites-enabled/sh-platform` | 활성화된 설정 (sites-available과 동일 파일 복사) |
 | `/etc/nginx/nginx.conf` | 메인 설정 (sites-enabled include) |
+
+> **주의**: `sites-enabled`는 심볼릭 링크가 아니라 실제 파일. `fix-nginx.py`나 CI/CD에서 설정 변경 시 `sites-enabled`를 직접 수정해야 함.
 
 ## 현재 설정 구조
 
@@ -78,3 +80,9 @@ sudo nginx -t && sudo systemctl reload nginx
 | `proxy_pass` | Spring Boot 앱으로 전달 | `proxy_pass http://127.0.0.1:8080;` |
 | `alias` | 정적 HTML 파일 직접 서빙 | `alias /path/to/files/;` |
 | `rewrite` | URL 리다이렉트 | `rewrite ^/old$ /new permanent;` |
+
+## 설정 관리 방식
+
+nginx 설정을 어떻게 관리할지에 대한 분석은 [nginx-management.md](../nginx-management.md) 참고.
+
+현재: `fix-nginx.py`로 regex 패치 → 향후: git에 설정 파일 직접 저장 방식으로 전환 검토.
