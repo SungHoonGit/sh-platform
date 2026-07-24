@@ -105,6 +105,74 @@ docs/
 | [SaaS 테넌트 설계](./saas/tenant-management-design.md) | 테넌트 관리 설계 |
 | [작업 일지](./daily/) | 일별 작업 기록 |
 
+---
+
+## 작업 일지 작성 규칙 (`daily/`)
+
+### 파일명
+```
+YYYY-MM-DD-work-log.md    # 작업 일지 (권장)
+YYYY-MM-DD-todo.md        # 작업 예정 (해당일만)
+```
+
+### Frontmatter 표준
+```yaml
+---
+title: "YYYY-MM-DD 작업 일지"        # 반드시 따옴표, 날짜 포함
+description: "주요 작업 한 줄 요약"   # 하드코딩 금지, 실제 내용 기반
+category: daily
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+---
+```
+
+### 본문 구조
+```markdown
+# YYYY-MM-DD 작업 일지
+
+## 요약
+- 작업 A (커밋 해시)
+- 작업 B (커밋 해시)
+
+---
+
+## 1. 작업 제목 (커밋 해시)
+
+### 문제/배경
+- **문제**:什么原因
+- **증상**: 어떤 현상
+
+### 해결
+- 어떤 조치를 취했는지
+- **커밋**: `abc1234`
+
+---
+
+## 2. 다음 작업
+(동일 형식)
+```
+
+### 작성 규칙
+1. **날짜는 파일명과 title에 포함**: `2026-07-23-work-log.md`
+2. **description은 실제 요약**: `AuthGuard 컴포넌트, CI/CD 안정화` (X: `daily module documentation`)
+3. **커밋 해시 기록**: 각 작업 항목에 커밋 해시 포함
+4. **구분선 사용**: `---`로 주요 섹션 구분
+5. **번호 매기기**: `## 1.`, `## 2.` 형식으로 순서대로
+6. **todo/예정 문서는 당일만**: `YYYY-MM-DD-todo.md`는 해당일 작업 예정에 한함, 완료 후 work-log로 병합
+7. **work-history.md 폐기**: 개별 work-log로 대체, history는 로드맵이나 별도 파일로 관리
+
+### 좋지 않은 예
+```yaml
+description: daily module documentation    # 하드코딩
+title: 2026 07 22 Work Log                # 따옴표 없음
+```
+
+### 좋은 예
+```yaml
+description: AuthGuard 컴포넌트, CI/CD 안정화, Platform CSS 누락 수정
+title: "2026-07-23 작업 일지"
+```
+
 ## 빠른 링크
 
 ### 서버 접속
