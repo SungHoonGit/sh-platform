@@ -169,8 +169,8 @@ jobs:
             start_jar "$AUTH_JAR" "auth" "8080"
             start_jar "$SCRAPER_JAR" "scraper" "8081"
 
-            echo "=== Waiting 30s for startup ==="
-            sleep 30
+            echo "=== Waiting 60s for startup ==="
+            sleep 60
 
             echo "=== Java processes ==="
             ps aux | grep java || echo "(no java)"
