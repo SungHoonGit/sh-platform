@@ -1,7 +1,7 @@
 ﻿---
 title: Admin Platform Design
 description: Admin Platform Design - general module documentation
-category: general
+category: front
 created: 2026-07-17
 updated: 2026-07-21
 ---

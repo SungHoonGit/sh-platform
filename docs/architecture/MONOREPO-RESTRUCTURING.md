@@ -1,7 +1,7 @@
 ﻿---
 title: Monorepo Restructuring
 description: Monorepo Restructuring - general module documentation
-category: general
+category: architecture
 created: 2026-07-16
 updated: 2026-07-21
 ---

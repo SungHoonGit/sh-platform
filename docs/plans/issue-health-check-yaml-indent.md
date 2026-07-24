@@ -1,7 +1,7 @@
 ---
 title: Health Check YAML Indent + 302 Redirect
 description: 배포 워크플로우 헬스체크 실패 원인 분석 및 수정
-category: plan
+category: plans
 created: 2026-07-21
 updated: 2026-07-21
 ---

@@ -1,7 +1,7 @@
 ﻿---
 title: React Frontend Design v2
 description: React Frontend Design v2 - general module documentation
-category: general
+category: front
 created: 2026-07-16
 updated: 2026-07-21
 ---

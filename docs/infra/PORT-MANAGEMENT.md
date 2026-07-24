@@ -1,7 +1,7 @@
 ﻿---
 title: Port Management
 description: Port Management - general module documentation
-category: general
+category: infra
 created: 2026-07-17
 updated: 2026-07-21
 ---

@@ -1,7 +1,7 @@
 ﻿---
 title: OCI Platform Guide
 description: OCI Platform Guide - general module documentation
-category: general
+category: infra
 created: 2026-07-15
 updated: 2026-07-21
 ---

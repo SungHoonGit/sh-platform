@@ -1,7 +1,7 @@
 ﻿---
 title: React Frontend Design
 description: React Frontend Design - general module documentation
-category: general
+category: front
 created: 2026-07-16
 updated: 2026-07-21
 ---

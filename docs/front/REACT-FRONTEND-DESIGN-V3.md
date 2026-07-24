@@ -1,7 +1,7 @@
 ﻿---
 title: React Frontend Design v3
 description: React Frontend Design v3 - general module documentation
-category: general
+category: front
 created: 2026-07-16
 updated: 2026-07-21
 ---

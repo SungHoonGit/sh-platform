@@ -1,7 +1,7 @@
 ﻿---
 title: Opencode Guide
 description: Opencode Guide - general module documentation
-category: general
+category: guides
 created: 2026-07-15
 updated: 2026-07-21
 ---

@@ -1,7 +1,7 @@
 ﻿---
 title: Grafana Practical Guide
 description: Grafana Practical Guide - general module documentation
-category: general
+category: guides
 created: 2026-07-14
 updated: 2026-07-21
 ---
