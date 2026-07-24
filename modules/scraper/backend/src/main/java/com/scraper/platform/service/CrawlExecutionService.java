@@ -72,6 +72,24 @@ public class CrawlExecutionService {
                     .build();
             try {
                 List<Map<String, String>> jobs = crawler.search(tempConfig);
+
+                // API가 키워드 검색을 지원하지 않는 사이트(Wanted, Remember)는 서버에서 필터링
+                String keywordFilter = paramMap.getOrDefault("keyword", "");
+                if (!keywordFilter.isEmpty() && Set.of("wanted", "remember").contains(siteId)) {
+                    String kw = keywordFilter.toLowerCase();
+                    jobs = jobs.stream()
+                            .filter(job -> {
+                                String haystack = String.join(" ",
+                                        job.getOrDefault("company", ""),
+                                        job.getOrDefault("position", ""),
+                                        job.getOrDefault("title", ""),
+                                        job.getOrDefault("tech", "")
+                                ).toLowerCase();
+                                return haystack.contains(kw);
+                            })
+                            .toList();
+                }
+
                 Map<String, Object> result = new HashMap<>();
                 result.put("site", siteDef.getDisplayName());
                 result.put("siteId", siteId);
