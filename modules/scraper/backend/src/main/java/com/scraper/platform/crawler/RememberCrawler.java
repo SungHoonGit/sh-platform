@@ -167,8 +167,8 @@ public class RememberCrawler implements SiteCrawler {
 // 지역 - API 응답 필드명이 다를 수 있어 여러 가능성 시도
         JsonNode address = node.get("address");
         if (address != null && address.isObject()) {
-            // 디버깅: address 필드 내용 로그
-            log.debug("Remember address fields: {}", address.fieldNames());
+            // 디버깅: address 필드 내용 로그 (info 레벨로 강제 출력)
+            System.out.println("Remember address fields: " + address.fieldNames());
             String location = "";
             // 가능한 필드명들 시도: sido/gugun, city/district, region/area, etc.
             String[] possibleFields = {"sido", "city", "region", "province", "state", "address", "location", "workplace"};
