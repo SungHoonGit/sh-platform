@@ -116,6 +116,9 @@ public class RememberCrawler implements SiteCrawler {
     private Map<String, String> parseJobNode(JsonNode node) {
         Map<String, String> job = new HashMap<>();
 
+        // 디버깅: 전체 노드 키 출력
+        System.out.println("Remember job node keys: " + node.fieldNames());
+
         // 포지션
         String title = getTextNode(node, "title");
         if (!title.isEmpty()) {
