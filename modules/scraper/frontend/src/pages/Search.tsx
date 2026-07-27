@@ -12,7 +12,17 @@ const CAREERS = ["전체", "경력무관", "1~3년", "3~5년", "5~10년", "10년
 const LOCATIONS = ["전체", "서울", "경기", "인천", "부산", "대구", "기타"];
 const PAGE_SIZE = 20;
 
-type SortKey = "site" | "company" | "position";
+type SortKey = "site" | "company" | "position" | "career" | "location" | "tech" | "deadline";
+
+const COLUMNS: { key: SortKey; label: string; width?: string }[] = [
+  { key: "site", label: "사이트", width: "w-16" },
+  { key: "position", label: "포지션" },
+  { key: "company", label: "회사명", width: "w-32" },
+  { key: "career", label: "경력", width: "w-20" },
+  { key: "location", label: "지역", width: "w-20" },
+  { key: "tech", label: "기술", width: "w-36" },
+  { key: "deadline", label: "마감", width: "w-20" },
+];
 
 export default function Search() {
   const [keyword, setKeyword] = useState("");
@@ -24,6 +34,7 @@ export default function Search() {
   const [error, setError] = useState<string | null>(null);
   const [activeSite, setActiveSite] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortKey>("site");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
 
   const allJobs = useMemo(() =>
@@ -36,11 +47,29 @@ export default function Search() {
   const filteredJobs = useMemo(() => {
     const base = activeSite === "all" ? allJobs : allJobs.filter((j) => j.siteId === activeSite);
     return [...base].sort((a, b) => {
-      if (sortBy === "site") return a.site.localeCompare(b.site);
-      if (sortBy === "company") return (a.company || "").localeCompare(b.company || "");
-      return (a.position || a.title || "").localeCompare(b.position || b.title || "");
+      const getVal = (j: typeof a) => {
+        if (sortBy === "site") return j.site;
+        if (sortBy === "company") return j.company || "";
+        if (sortBy === "position") return j.position || j.title || "";
+        if (sortBy === "career") return j.career || "";
+        if (sortBy === "location") return j.location || "";
+        if (sortBy === "tech") return j.tech || "";
+        return j.deadline || "";
+      };
+      const cmp = getVal(a).localeCompare(getVal(b), "ko");
+      return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [allJobs, activeSite, sortBy]);
+  }, [allJobs, activeSite, sortBy, sortDir]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortBy === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir("asc");
+    }
+    setPage(1);
+  };
 
   const totalPages = Math.max(1, Math.ceil(filteredJobs.length / PAGE_SIZE));
   const pagedJobs = filteredJobs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -82,67 +111,67 @@ export default function Search() {
   return (
     <div className="flex h-full">
       {/* Left sidebar */}
-      <div className="w-72 bg-white border-r border-slate-200 p-5 shrink-0 overflow-auto">
-        <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">검색 조건</h3>
+      <div className="w-64 bg-white border-r border-slate-200 p-4 shrink-0 overflow-auto">
+        <h3 className="text-xs font-bold text-slate-800 mb-3 uppercase tracking-wide">검색 조건</h3>
 
-        <div className="mb-5">
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">키워드</label>
+        <div className="mb-4">
+          <label className="block text-[11px] font-medium text-slate-600 mb-1">키워드</label>
           <input
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="React, Java, Spring..."
-            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           />
         </div>
 
-        <div className="mb-5">
-          <label className="block text-xs font-medium text-slate-600 mb-2">경력</label>
-          <div className="space-y-1.5">
+        <div className="mb-4">
+          <label className="block text-[11px] font-medium text-slate-600 mb-1.5">경력</label>
+          <div className="space-y-1">
             {CAREERS.map((c) => (
-              <label key={c} className="flex items-center gap-2 cursor-pointer">
+              <label key={c} className="flex items-center gap-1.5 cursor-pointer">
                 <input type="radio" name="career" value={c} checked={career === c}
-                  onChange={(e) => setCareer(e.target.value)} className="w-4 h-4 text-blue-600" />
-                <span className="text-sm text-slate-700">{c}</span>
+                  onChange={(e) => setCareer(e.target.value)} className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs text-slate-700">{c}</span>
               </label>
             ))}
           </div>
         </div>
 
-        <div className="mb-5">
-          <label className="block text-xs font-medium text-slate-600 mb-2">지역</label>
-          <div className="space-y-1.5">
+        <div className="mb-4">
+          <label className="block text-[11px] font-medium text-slate-600 mb-1.5">지역</label>
+          <div className="space-y-1">
             {LOCATIONS.map((l) => (
-              <label key={l} className="flex items-center gap-2 cursor-pointer">
+              <label key={l} className="flex items-center gap-1.5 cursor-pointer">
                 <input type="radio" name="location" value={l} checked={location === l}
-                  onChange={(e) => setLocation(e.target.value)} className="w-4 h-4 text-blue-600" />
-                <span className="text-sm text-slate-700">{l}</span>
+                  onChange={(e) => setLocation(e.target.value)} className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs text-slate-700">{l}</span>
               </label>
             ))}
           </div>
         </div>
 
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-medium text-slate-600">사이트</label>
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-[11px] font-medium text-slate-600">사이트</label>
             <button
               onClick={() => setSelectedSites((prev) => prev.length === SITES.length ? [] : SITES.map((s) => s.id))}
-              className="text-xs text-blue-600 hover:text-blue-800"
+              className="text-[10px] text-blue-600 hover:text-blue-800"
             >
               {selectedSites.length === SITES.length ? "전체해제" : "전체선택"}
             </button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {SITES.map((site) => (
               <label key={site.id}
-                className={`flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer border transition-colors ${
+                className={`flex items-center gap-2 p-2 rounded cursor-pointer border transition-colors ${
                   selectedSites.includes(site.id) ? "border-blue-300 bg-blue-50" : "border-slate-200 hover:border-slate-300"
                 }`}>
                 <input type="checkbox" checked={selectedSites.includes(site.id)}
                   onChange={() => setSelectedSites((prev) => prev.includes(site.id) ? prev.filter((s) => s !== site.id) : [...prev, site.id])}
-                  className="w-4 h-4 rounded text-blue-600" />
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${site.color}`}>{site.name}</span>
+                  className="w-3.5 h-3.5 rounded text-blue-600" />
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${site.color}`}>{site.name}</span>
               </label>
             ))}
           </div>
@@ -151,7 +180,7 @@ export default function Search() {
         <button
           onClick={handleSearch}
           disabled={!keyword.trim() || selectedSites.length === 0 || loading}
-          className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "검색 중..." : "검색"}
         </button>
@@ -206,19 +235,10 @@ export default function Search() {
             </div>
 
             {/* Toolbar */}
-            <div className="px-5 py-2.5 bg-white border-b border-slate-200 flex items-center justify-between text-sm shrink-0">
+            <div className="px-5 py-2 bg-white border-b border-slate-200 flex items-center text-xs shrink-0">
               <div className="text-slate-500">
                 총 <span className="font-semibold text-slate-800">{filteredJobs.length}</span>건
                 {keyword && <span className="ml-2">키워드: <span className="font-medium text-slate-700">{keyword}</span></span>}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-400 mr-1">정렬:</span>
-                {(["site", "company", "position"] as SortKey[]).map((s) => (
-                  <button key={s} onClick={() => setSortBy(s)}
-                    className={`px-2 py-0.5 text-xs rounded ${sortBy === s ? "bg-blue-100 text-blue-700 font-medium" : "text-slate-500 hover:text-slate-700"}`}>
-                    {{ site: "사이트", company: "회사명", position: "포지션" }[s]}
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -231,17 +251,22 @@ export default function Search() {
                   <div className="text-sm">다른 키워드나 조건으로 다시 검색해 보세요</div>
                 </div>
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                     <tr>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 w-12">No</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 w-20">사이트</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">포지션</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 w-36">회사</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 w-24">경력</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 w-24">지역</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 w-40">기술</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 w-24">마감</th>
+                      <th className="px-2 py-2 text-left font-semibold text-slate-500 w-10">#</th>
+                      {COLUMNS.map((col) => (
+                        <th key={col.key}
+                          onClick={() => handleSort(col.key)}
+                          className={`px-2 py-2 text-left font-semibold text-slate-500 cursor-pointer hover:text-blue-600 select-none ${col.width || ""}`}>
+                          <span className="inline-flex items-center gap-1">
+                            {col.label}
+                            {sortBy === col.key && (
+                              <span className="text-blue-600">{sortDir === "asc" ? "▲" : "▼"}</span>
+                            )}
+                          </span>
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -252,24 +277,24 @@ export default function Search() {
                         <tr key={i}
                           onClick={() => window.open(job.url, "_blank")}
                           className="hover:bg-blue-50/50 cursor-pointer transition-colors">
-                          <td className="px-3 py-2.5 text-slate-400">{no}</td>
-                          <td className="px-3 py-2.5">
-                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${siteDef?.color || "bg-slate-100 text-slate-600"}`}>
+                          <td className="px-2 py-1.5 text-slate-400">{no}</td>
+                          <td className="px-2 py-1.5">
+                            <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${siteDef?.color || "bg-slate-100 text-slate-600"}`}>
                               {job.site}
                             </span>
                           </td>
-                          <td className="px-3 py-2.5 font-medium text-slate-800 truncate max-w-[300px]">
+                          <td className="px-2 py-1.5 font-medium text-slate-800 truncate max-w-[280px]">
                             {job.position || job.title}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-600 truncate">{job.company}</td>
-                          <td className="px-3 py-2.5 text-slate-500 text-xs">{job.career || "-"}</td>
-                          <td className="px-3 py-2.5 text-slate-500 text-xs">{job.location || "-"}</td>
-                          <td className="px-3 py-2.5">
+                          <td className="px-2 py-1.5 text-slate-600 truncate">{job.company}</td>
+                          <td className="px-2 py-1.5 text-slate-500 whitespace-nowrap">{job.career || "-"}</td>
+                          <td className="px-2 py-1.5 text-slate-500">{job.location || "-"}</td>
+                          <td className="px-2 py-1.5">
                             {job.tech ? (
-                              <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded truncate block max-w-[180px]">{job.tech}</span>
+                              <span className="text-[10px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded truncate block max-w-[160px]">{job.tech}</span>
                             ) : <span className="text-slate-300">-</span>}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-400 text-xs whitespace-nowrap">{job.deadline || "-"}</td>
+                          <td className="px-2 py-1.5 text-slate-400 whitespace-nowrap">{job.deadline || "-"}</td>
                         </tr>
                       );
                     })}
@@ -280,13 +305,13 @@ export default function Search() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="px-5 py-3 bg-white border-t border-slate-200 flex items-center justify-center gap-1 shrink-0">
+              <div className="px-5 py-2 bg-white border-t border-slate-200 flex items-center justify-center gap-0.5 shrink-0">
                 <button onClick={() => setPage(1)} disabled={page === 1}
-                  className="px-2 py-1 text-sm rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">
+                  className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">
                   &laquo;
                 </button>
                 <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                  className="px-2 py-1 text-sm rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">
+                  className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">
                   &lsaquo;
                 </button>
                 {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
@@ -302,7 +327,7 @@ export default function Search() {
                   }
                   return (
                     <button key={pageNum} onClick={() => setPage(pageNum)}
-                      className={`w-8 h-8 text-sm rounded ${
+                      className={`w-6 h-6 text-xs rounded ${
                         page === pageNum
                           ? "bg-blue-600 text-white font-medium"
                           : "text-slate-600 hover:bg-slate-100"
@@ -312,14 +337,14 @@ export default function Search() {
                   );
                 })}
                 <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                  className="px-2 py-1 text-sm rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">
+                  className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">
                   &rsaquo;
                 </button>
                 <button onClick={() => setPage(totalPages)} disabled={page === totalPages}
-                  className="px-2 py-1 text-sm rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">
+                  className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">
                   &raquo;
                 </button>
-                <span className="ml-3 text-xs text-slate-400">{page} / {totalPages}</span>
+                <span className="ml-2 text-[10px] text-slate-400">{page}/{totalPages}</span>
               </div>
             )}
           </>
