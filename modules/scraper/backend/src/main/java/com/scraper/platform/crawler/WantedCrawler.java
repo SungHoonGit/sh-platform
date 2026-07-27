@@ -106,11 +106,8 @@ public class WantedCrawler implements SiteCrawler {
         sb.append("&page=").append(page);
         sb.append("&per_page=").append(perPage);
 
-        if (!keyword.isEmpty()) {
-            // Wanted 검색어는 직접 검색 불가 → 키워드로 tag_type 필터링
-            // 대신 keyword를 saramin 스타일로 필터링하는 대신 전체 목록에서 필터
-        }
-
+        // Wanted API는 Cloudflare 보호로 키워드 검색 불가
+        // 전체 목록을 가져와서 CrawlExecutionService에서 서버 필터링
         return sb.toString();
     }
 
