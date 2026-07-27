@@ -14,14 +14,14 @@ const PAGE_SIZE = 20;
 
 type SortKey = "site" | "company" | "position" | "career" | "location" | "tech" | "deadline";
 
-const COLUMNS: { key: SortKey; label: string; width?: string }[] = [
-  { key: "site", label: "사이트", width: "w-16" },
-  { key: "position", label: "포지션" },
-  { key: "company", label: "회사명", width: "w-32" },
-  { key: "career", label: "경력", width: "w-20" },
-  { key: "location", label: "지역", width: "w-20" },
-  { key: "tech", label: "기술", width: "w-36" },
-  { key: "deadline", label: "마감", width: "w-20" },
+const COLUMNS: { key: SortKey; label: string; w: string }[] = [
+  { key: "site", label: "사이트", w: "w-[70px]" },
+  { key: "position", label: "포지션", w: "w-auto" },
+  { key: "company", label: "회사명", w: "w-[140px]" },
+  { key: "career", label: "경력", w: "w-[80px]" },
+  { key: "location", label: "지역", w: "w-[80px]" },
+  { key: "tech", label: "기술", w: "w-[160px]" },
+  { key: "deadline", label: "마감", w: "w-[80px]" },
 ];
 
 export default function Search() {
@@ -251,14 +251,14 @@ export default function Search() {
                   <div className="text-sm">다른 키워드나 조건으로 다시 검색해 보세요</div>
                 </div>
               ) : (
-                <table className="w-full text-xs">
+                <table className="w-full text-xs table-fixed">
                   <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                     <tr>
-                      <th className="px-2 py-2 text-left font-semibold text-slate-500 w-10">#</th>
+                      <th className="px-2 py-2 text-left font-semibold text-slate-500 w-[40px]">#</th>
                       {COLUMNS.map((col) => (
                         <th key={col.key}
                           onClick={() => handleSort(col.key)}
-                          className={`px-2 py-2 text-left font-semibold text-slate-500 cursor-pointer hover:text-blue-600 select-none ${col.width || ""}`}>
+                          className={`px-2 py-2 text-left font-semibold text-slate-500 cursor-pointer hover:text-blue-600 select-none ${col.w}`}>
                           <span className="inline-flex items-center gap-1">
                             {col.label}
                             {sortBy === col.key && (
@@ -283,18 +283,18 @@ export default function Search() {
                               {job.site}
                             </span>
                           </td>
-                          <td className="px-2 py-1.5 font-medium text-slate-800 truncate max-w-[280px]">
+                          <td className="px-2 py-1.5 font-medium text-slate-800 truncate">
                             {job.position || job.title}
                           </td>
                           <td className="px-2 py-1.5 text-slate-600 truncate">{job.company}</td>
-                          <td className="px-2 py-1.5 text-slate-500 whitespace-nowrap">{job.career || "-"}</td>
-                          <td className="px-2 py-1.5 text-slate-500">{job.location || "-"}</td>
+                          <td className="px-2 py-1.5 text-slate-500 truncate">{job.career || "-"}</td>
+                          <td className="px-2 py-1.5 text-slate-500 truncate">{job.location || "-"}</td>
                           <td className="px-2 py-1.5">
                             {job.tech ? (
-                              <span className="text-[10px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded truncate block max-w-[160px]">{job.tech}</span>
+                              <span className="text-[10px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded truncate block">{job.tech}</span>
                             ) : <span className="text-slate-300">-</span>}
                           </td>
-                          <td className="px-2 py-1.5 text-slate-400 whitespace-nowrap">{job.deadline || "-"}</td>
+                          <td className="px-2 py-1.5 text-slate-400 truncate">{job.deadline || "-"}</td>
                         </tr>
                       );
                     })}

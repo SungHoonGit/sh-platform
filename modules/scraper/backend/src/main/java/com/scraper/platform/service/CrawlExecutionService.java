@@ -96,6 +96,29 @@ public class CrawlExecutionService {
                             .toList();
                 }
 
+                // 서버에서 지역 필터링
+                String locationFilter = paramMap.getOrDefault("location", "");
+                if (!locationFilter.isEmpty() && !locationFilter.equals("전체")) {
+                    String loc = locationFilter.toLowerCase();
+                    jobs = jobs.stream()
+                            .filter(job -> {
+                                String location = job.getOrDefault("location", "").toLowerCase();
+                                return location.contains(loc);
+                            })
+                            .toList();
+                }
+
+                // 서버에서 경력 필터링
+                String careerFilter = paramMap.getOrDefault("career", "");
+                if (!careerFilter.isEmpty() && !careerFilter.equals("전체")) {
+                    jobs = jobs.stream()
+                            .filter(job -> {
+                                String career = job.getOrDefault("career", "");
+                                return career.contains(careerFilter) || careerFilter.contains(career);
+                            })
+                            .toList();
+                }
+
                 Map<String, Object> result = new HashMap<>();
                 result.put("site", siteDef.getDisplayName());
                 result.put("siteId", siteId);

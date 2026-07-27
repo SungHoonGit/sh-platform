@@ -142,11 +142,11 @@ public class WantedCrawler implements SiteCrawler {
             }
         }
 
-        // 경력 (연봉으로 대체 — Wanted는 연봉 정보 제공)
+        // 경력: annual_from/annual_to는 연봉 정보이므로 career 키워드로 대체
         JsonNode annualFrom = node.get("annual_from");
         JsonNode annualTo = node.get("annual_to");
         if (annualFrom != null && annualTo != null) {
-            job.put("career", annualFrom.asInt() + "~" + annualTo.asInt() + "년");
+            job.put("career", annualFrom.asInt() + "~" + annualTo.asInt() + "만원");
         }
 
         // 마감일
@@ -155,16 +155,24 @@ public class WantedCrawler implements SiteCrawler {
             job.put("deadline", dueTime.asText());
         }
 
-        // 카테고리 태그 → 기술
+        // 기술 태그: category_tags + tags
+        List<String> techTags = new ArrayList<>();
         JsonNode categoryTags = node.get("category_tags");
         if (categoryTags != null && categoryTags.isArray()) {
-            List<String> tags = new ArrayList<>();
             for (JsonNode tag : categoryTags) {
-                // parent_id 521 = 직무 카테고리
-                if (tag.has("parent_id") && tag.get("parent_id").asInt() == 521) {
-                    // 카테고리 ID → 이름은 API에서 별도로 제공하지 않으므로 ID만
-                }
+                String name = getTextNode(tag, "name");
+                if (!name.isEmpty()) techTags.add(name);
             }
+        }
+        JsonNode tags = node.get("tags");
+        if (tags != null && tags.isArray()) {
+            for (JsonNode tag : tags) {
+                String name = getTextNode(tag, "name");
+                if (!name.isEmpty() && !techTags.contains(name)) techTags.add(name);
+            }
+        }
+        if (!techTags.isEmpty()) {
+            job.put("tech", String.join(", ", techTags));
         }
 
         return job;

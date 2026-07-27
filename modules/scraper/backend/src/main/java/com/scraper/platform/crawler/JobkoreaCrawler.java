@@ -111,11 +111,10 @@ public class JobkoreaCrawler implements SiteCrawler {
     }
 
     private void parseContentArray(String payload, List<Map<String, String>> jobs) {
-        // "content":[...] 블록 추출
         int contentIdx = payload.indexOf("\"content\":[");
         if (contentIdx < 0) return;
 
-        int arrayStart = contentIdx + "\"content\":".length();
+        int arrayStart = contentIdx + "\"content\":[".length();
         int depth = 0;
         int arrayEnd = -1;
         for (int i = arrayStart; i < payload.length(); i++) {
@@ -123,39 +122,92 @@ public class JobkoreaCrawler implements SiteCrawler {
             if (c == '[') depth++;
             else if (c == ']') {
                 depth--;
-                if (depth == 0) {
-                    arrayEnd = i;
-                    break;
-                }
+                if (depth == 0) { arrayEnd = i; break; }
             }
         }
-
         if (arrayEnd < 0) return;
 
-        String contentArray = payload.substring(arrayStart, arrayEnd + 1);
+        String contentArray = payload.substring(arrayStart, arrayEnd);
 
-        // 개별 채용 공고 객체 추출 - {"id":...} 패턴
-        Pattern jobPattern = Pattern.compile("\\{\"id\":\"(\\d+)\"[^}]*\"title\":\"([^\"]+)\"[^}]*\"postingCompanyName\":\"([^\"]+)\"", Pattern.DOTALL);
-        Matcher jobMatcher = jobPattern.matcher(contentArray);
+        // 개별 JSON 객체를 깊이 카운팅으로 추출
+        int i = 0;
+        while (i < contentArray.length()) {
+            if (contentArray.charAt(i) != '{') { i++; continue; }
 
-        while (jobMatcher.find()) {
-            String id = jobMatcher.group(1);
-            String title = jobMatcher.group(2);
-            String company = jobMatcher.group(3);
+            int objStart = i;
+            int objDepth = 0;
+            int objEnd = -1;
+            for (int j = i; j < contentArray.length(); j++) {
+                char c = contentArray.charAt(j);
+                if (c == '{') objDepth++;
+                else if (c == '}') {
+                    objDepth--;
+                    if (objDepth == 0) { objEnd = j; break; }
+                }
+            }
+            if (objEnd < 0) break;
 
-            Map<String, String> job = new HashMap<>();
-            job.put("title", decodeUnicode(title));
-            job.put("position", decodeUnicode(title));
-            job.put("company", decodeUnicode(company));
-            job.put("url", "https://www.jobkorea.co.kr/Recruit/GI_Read/" + id);
-            job.put("tech", "");
-            job.put("location", "");
-            job.put("career", "");
+            String objStr = contentArray.substring(objStart, objEnd + 1);
+            i = objEnd + 1;
 
-            // 중복 체크
-            boolean duplicate = jobs.stream().anyMatch(j -> j.get("url").equals(job.get("url")));
-            if (!duplicate) {
-                jobs.add(job);
+            try {
+                JsonNode node = objectMapper.readTree(objStr);
+                String id = node.path("id").asText("");
+                if (id.isEmpty()) continue;
+
+                String title = node.path("title").asText("");
+                String company = node.path("postingCompanyName").asText("");
+                if (title.isEmpty()) continue;
+
+                // location: _internal_featureLocationCode 또는 areaCodeList
+                String location = node.path("_internal_featureLocationCode").asText("");
+                if (location.isEmpty()) {
+                    JsonNode areaCodes = node.path("areaCodeList");
+                    if (areaCodes.isArray() && areaCodes.size() > 0) {
+                        location = areaCodes.get(0).asText("");
+                    }
+                }
+
+                // career: careerType + careerRange
+                String career = "";
+                String careerType = node.path("careerType").asText("");
+                int careerRange = node.path("careerRange").asInt(0);
+                switch (careerType) {
+                    case "1": career = "신입"; break;
+                    case "2": career = careerRange > 0 ? careerRange + "년 이상" : "경력"; break;
+                    case "3": career = "경력무관"; break;
+                    default: career = careerType.isEmpty() ? "" : "경력무관";
+                }
+
+                // tech: _internal_featureToolCode
+                String tech = node.path("_internal_featureToolCode").asText("");
+
+                // deadline: applicationPeriod.end
+                String deadline = "";
+                JsonNode appPeriod = node.path("applicationPeriod");
+                if (!appPeriod.isMissingNode()) {
+                    String endStr = appPeriod.path("end").asText("");
+                    if (!endStr.isEmpty() && endStr.length() >= 10) {
+                        deadline = endStr.substring(0, 10);
+                    }
+                }
+
+                Map<String, String> job = new HashMap<>();
+                job.put("title", decodeUnicode(title));
+                job.put("position", decodeUnicode(title));
+                job.put("company", decodeUnicode(company));
+                job.put("url", "https://www.jobkorea.co.kr/Recruit/GI_Read/" + id);
+                job.put("tech", tech);
+                job.put("location", location);
+                job.put("career", career);
+                job.put("deadline", deadline);
+
+                boolean duplicate = jobs.stream().anyMatch(j -> j.get("url").equals(job.get("url")));
+                if (!duplicate) {
+                    jobs.add(job);
+                }
+            } catch (Exception e) {
+                log.debug("Failed to parse job object: {}", objStr.substring(0, Math.min(100, objStr.length())), e);
             }
         }
     }
