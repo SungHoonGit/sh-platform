@@ -40,8 +40,8 @@ public class SaraminCrawler implements SiteCrawler {
         
         List<Map<String, String>> allJobs = new ArrayList<>();
         
-        // 최대 3페이지 (150건) 수집
-        for (int page = 1; page <= 3; page++) {
+        // 최대 1페이지 (50건) 수집 — 실시간 검색용
+        for (int page = 1; page <= 1; page++) {
             String url = buildUrl(keyword, career, location, jobType, page);
             log.info("Saramin crawl URL (page {}): {}", page, url);
             
