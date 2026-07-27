@@ -203,8 +203,6 @@ public class RememberCrawler implements SiteCrawler {
             if (!location.isEmpty()) {
                 job.put("location", location.trim());
             }
-        }
-        }
 
         // 마감일
         String endsAt = getTextNode(node, "ends_at");
