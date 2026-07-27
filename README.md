@@ -3,7 +3,7 @@ title: README
 description: SH Platform - Monorepo 멀티모듈 MSA 플랫폼
 category: readme
 created: 2026-07-10
-updated: 2026-07-21
+updated: 2026-07-27
 ---
 
 # SH Platform
@@ -55,14 +55,27 @@ AI 개발 규칙: [`AGENTS.md`](AGENTS.md)
 
 ## 모듈 현황
 
-| 모듈 | 포트 | 설명 | 상태 |
-|------|------|------|------|
-| auth | 8080 | 인증 (로그인, OAuth2, JWT, 관리자 API) | 완료 |
-| common | - | 공통 라이브러리 (스케줄링, 알림, 파일뷰어) | 완료 |
-| scraper | 8081 | 채용공고 수집 + 통합검색 + 스케줄러 | 완료 |
-| platform | - | 플랫폼 프레임 (대시보드, 관리자) | 완료 |
-| resume | 8082 | 이력서 서비스 | 예정 |
-| portfolio | 8083 | 포트폴리오 서비스 | 예정 |
+| 모듈 | 포트 | 설명 | 개발 | 배포 |
+|------|------|------|------|------|
+| auth | 8080 | 인증 (로그인, OAuth2, JWT, 관리자 API) | 완료 | 가동중 |
+| common | - | 공통 라이브러리 (AuthGuard, CommonHeader, useAuth) | 완료 | - |
+| scraper | 8081 | 채용공고 수집 + 통합검색 + 스케줄러 | 완료 | 가동중 |
+| platform | - | 플랫폼 프레임 (대시보드, 관리자) | 완료 | 배포됨 |
+| resume | 8082 | 이력서 서비스 | 개발중 | 가동중 |
+| portfolio | 8083 | 포트폴리오 서비스 | 개발중 | 가동중 |
+
+## 현재 서비스 가동 현황
+
+| 서비스 | 포트 | systemd 서비스 | 상태 | 비고 |
+|--------|------|----------------|------|------|
+| Auth | 8080 | `sh-platform-auth` | **가동중** | 로그인, JWT 발급, 세션 관리 |
+| Scraper Backend | 8081 | `sh-platform-scraper` | **가동중** | 크롤러 4개 (사람인/잡코리아/원티드/리멤버) |
+| Resume | 8082 | `sh-platform-resume` | **가동중** | 이력서 서비스 |
+| Portfolio | 8083 | `sh-platform-portfolio` | **가동중** | 포트폴리오 서비스 |
+| Scraper Frontend | - | nginx 정적파일 | **배포됨** | `/scraper-ui/` 경로 |
+| Platform Frontend | - | nginx 정적파일 | **배포됨** | `/platform/` 경로 |
+| Auth Frontend | - | nginx 정적파일 | **배포됨** | `/` 루트 |
+| nginx | 443/80 | `nginx` | **가동중** | SSL 리버스 프록시 |
 
 ## 서비스 URL
 
@@ -70,6 +83,7 @@ AI 개발 규칙: [`AGENTS.md`](AGENTS.md)
 |--------|-----|
 | 로그인/회원가입 | https://sunghoonyk.duckdns.org/ |
 | 플랫폼 프레임 | https://sunghoonyk.duckdns.org/platform/ |
+| 통합검색 (Scraper) | https://sunghoonyk.duckdns.org/scraper-ui/ |
 | Auth Swagger | https://sunghoonyk.duckdns.org/swagger-ui/ |
 | Scraper Swagger | https://sunghoonyk.duckdns.org/scraper/swagger-ui/ |
 | 채용공고 뷰어 | https://sunghoonyk.duckdns.org/scraper/docs/view |
