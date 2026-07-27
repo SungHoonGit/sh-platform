@@ -4,6 +4,10 @@ plugins {
 
 group = "com.portfolio"
 
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    archiveBaseName.set("sh-platform-portfolio")
+}
+
 dependencies {
     implementation(project(":common"))
     

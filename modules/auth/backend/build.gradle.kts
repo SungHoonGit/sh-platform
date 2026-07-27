@@ -2,6 +2,10 @@ plugins {
     id("org.springframework.boot")
 }
 
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    archiveBaseName.set("sh-platform-auth")
+}
+
 dependencies {
     implementation(project(":common"))
 

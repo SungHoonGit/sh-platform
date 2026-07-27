@@ -4,6 +4,10 @@ plugins {
 
 group = "com.scraper"
 
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    archiveBaseName.set("sh-platform-scraper")
+}
+
 dependencies {
     implementation(project(":common"))
     
