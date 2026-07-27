@@ -4,26 +4,21 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scraper.platform.model.CrawlSiteConfig;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Component
 public class JobkoreaCrawler implements SiteCrawler {
 
-    private static final String BASE_URL = "https://www.jobkorea.co.kr/recruit/joblist";
+    private static final String SEARCH_URL = "https://www.jobkorea.co.kr/Search/";
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -40,17 +35,21 @@ public class JobkoreaCrawler implements SiteCrawler {
         String career = params.getOrDefault("career", "");
         String location = params.getOrDefault("location", "");
 
-        String url = buildUrl(keyword, career, location);
-        log.info("Jobkorea crawl URL: {}", url);
+        if (keyword.isEmpty()) {
+            log.warn("Jobkorea search requires keyword");
+            return Collections.emptyList();
+        }
 
-        // curl로 HTML을 가져옴 (Java HttpClient도 anti-bot에 차단될 수 있음)
+        String url = SEARCH_URL + "?stext=" + URLEncoder.encode(keyword, StandardCharsets.UTF_8);
+        log.info("Jobkorea search URL: {}", url);
+
         String html = fetchWithCurl(url);
         log.info("Fetched HTML size: {}", html.length());
 
-        Document doc = Jsoup.parse(html);
-        log.info("Page title: {}", doc.title());
+        List<Map<String, String>> jobs = parseRscPayload(html, keyword);
+        log.info("Parsed {} jobs from jobkorea", jobs.size());
 
-        return parseJobs(doc, keyword);
+        return jobs;
     }
 
     private String fetchWithCurl(String url) throws IOException, InterruptedException {
@@ -82,112 +81,97 @@ public class JobkoreaCrawler implements SiteCrawler {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private String buildUrl(String keyword, String career, String location) {
-        StringBuilder sb = new StringBuilder(BASE_URL);
-        sb.append("?menucode=duty&dutyCtgr=1003101"); // IT 개발 직무
-
-        // 잡코리아는 stext= 파라미터를 무시하므로 키워드 미전송
-
-        if (!career.isEmpty()) {
-            sb.append("&careerType=").append(mapCareerType(career));
-        }
-
-        return sb.toString();
-    }
-
-    private String mapCareerType(String career) {
-        return switch (career) {
-            case "신입" -> "new";
-            case "경력" -> "career";
-            case "1~3년" -> "career";
-            case "3~5년" -> "career";
-            case "5~10년" -> "career";
-            case "10년이상" -> "career";
-            default -> "";
-        };
-    }
-
-    private List<Map<String, String>> parseJobs(Document doc, String keyword) {
+    /**
+     * Next.js RSC payload에서 채용 데이터를 추출한다.
+     * self.__next_f.push() 호출 내부의 JSON content 배열을 파싱한다.
+     */
+    private List<Map<String, String>> parseRscPayload(String html, String keyword) {
         List<Map<String, String>> jobs = new ArrayList<>();
 
-        Elements rows = doc.select("tr.devloopArea");
-        log.info("Found {} job rows", rows.size());
+        // self.__next_f.push() 호출에서 RSC 데이터 추출
+        Pattern pushPattern = Pattern.compile("self\\.__next_f\\.push\\(\\[1,\"(.*?)\"\\]\\)", Pattern.DOTALL);
+        Matcher pushMatcher = pushPattern.matcher(html);
 
-        for (Element row : rows) {
-            try {
-                Map<String, String> job = parseRow(row);
-                if (job != null && !job.isEmpty()) {
-                    jobs.add(job);
+        while (pushMatcher.find()) {
+            String payload = pushMatcher.group(1);
+            // 이스케이프된 문자열 복원
+            payload = payload.replace("\\\"", "\"").replace("\\\\", "\\").replace("\\n", "\n");
+
+            // content 배열에서 채용 공고 추출
+            if (payload.contains("\"content\":") && payload.contains("\"title\":")) {
+                try {
+                    parseContentArray(payload, jobs);
+                } catch (Exception e) {
+                    log.debug("Failed to parse RSC content chunk", e);
                 }
-            } catch (Exception e) {
-                log.debug("Failed to parse job row", e);
             }
         }
 
         return jobs;
     }
 
-    private Map<String, String> parseRow(Element row) {
-        Map<String, String> job = new HashMap<>();
+    private void parseContentArray(String payload, List<Map<String, String>> jobs) {
+        // "content":[...] 블록 추출
+        int contentIdx = payload.indexOf("\"content\":[");
+        if (contentIdx < 0) return;
 
-        // 회사명
-        Element coTd = row.selectFirst("td.tplCo");
-        if (coTd != null) {
-            Element companyA = coTd.selectFirst("a");
-            if (companyA != null) {
-                job.put("company", companyA.text().trim().replace("관심기업", "").trim());
-            } else {
-                job.put("company", coTd.text().trim().replace("관심기업", "").trim());
-            }
-        }
-
-        // 제목 + 링크
-        Element titTd = row.selectFirst("td.tplTit");
-        if (titTd != null) {
-            Element titleA = titTd.selectFirst("div.titBx a");
-            if (titleA != null) {
-                job.put("title", titleA.text().trim());
-                job.put("position", titleA.text().trim());
-                String href = titleA.attr("href");
-                if (!href.startsWith("http")) {
-                    href = "https://www.jobkorea.co.kr" + href;
-                }
-                job.put("url", href);
-            }
-
-            // 경력, 학력, 지역, 고용형태, 연봉
-            Elements cells = titTd.select("p.etc span.cell");
-            for (Element cell : cells) {
-                String text = cell.text().trim();
-                if (text.isEmpty()) continue;
-                if (text.contains("신입") || text.contains("경력")) {
-                    job.put("career", text);
-                } else if (text.contains("대학") || text.contains("고졸") || text.contains("학력무관") || text.contains("석사") || text.contains("박사")) {
-                    job.put("education", text);
-                } else if (text.contains("서울") || text.contains("경기") || text.contains("부산") || text.contains("대전") || text.contains("대구") || text.contains("광주") || text.contains("인천") || text.contains("울산") || text.contains("세종") || text.contains("강원") || text.contains("충청") || text.contains("전라") || text.contains("경상") || text.contains("제주")) {
-                    job.put("location", text);
-                } else if (text.contains("정규직") || text.contains("계약직") || text.contains("인턴") || text.contains("파견") || text.contains("무기계약")) {
-                    job.put("employmentType", text);
-                } else if (text.contains("만원")) {
-                    job.put("salary", text);
+        int arrayStart = contentIdx + "\"content\":".length();
+        int depth = 0;
+        int arrayEnd = -1;
+        for (int i = arrayStart; i < payload.length(); i++) {
+            char c = payload.charAt(i);
+            if (c == '[') depth++;
+            else if (c == ']') {
+                depth--;
+                if (depth == 0) {
+                    arrayEnd = i;
+                    break;
                 }
             }
-
-            // p.dsc는 페이지 전체 카테고리 목록(수백 개)이므로 tech로 사용하지 않음
-            // 잡코리아 목록 페이지에는 기술 스택 정보 없음 → 서버 필터에서 title/position/company로 검색
         }
 
-        // 마감일
-        Element dateTd = row.selectFirst("td.odd");
-        if (dateTd != null) {
-            String text = dateTd.text().trim();
-            if (text.contains("~")) {
-                String deadline = text.substring(text.lastIndexOf("~")).trim();
-                job.put("deadline", deadline);
+        if (arrayEnd < 0) return;
+
+        String contentArray = payload.substring(arrayStart, arrayEnd + 1);
+
+        // 개별 채용 공고 객체 추출 - {"id":...} 패턴
+        Pattern jobPattern = Pattern.compile("\\{\"id\":\"(\\d+)\"[^}]*\"title\":\"([^\"]+)\"[^}]*\"postingCompanyName\":\"([^\"]+)\"", Pattern.DOTALL);
+        Matcher jobMatcher = jobPattern.matcher(contentArray);
+
+        while (jobMatcher.find()) {
+            String id = jobMatcher.group(1);
+            String title = jobMatcher.group(2);
+            String company = jobMatcher.group(3);
+
+            Map<String, String> job = new HashMap<>();
+            job.put("title", decodeUnicode(title));
+            job.put("position", decodeUnicode(title));
+            job.put("company", decodeUnicode(company));
+            job.put("url", "https://www.jobkorea.co.kr/Recruit/GI_Read/" + id);
+            job.put("tech", "");
+            job.put("location", "");
+            job.put("career", "");
+
+            // 중복 체크
+            boolean duplicate = jobs.stream().anyMatch(j -> j.get("url").equals(job.get("url")));
+            if (!duplicate) {
+                jobs.add(job);
             }
         }
+    }
 
-        return job;
+    private String decodeUnicode(String s) {
+        if (s == null) return "";
+        try {
+            return s.replace("\\u0022", "\"")
+                    .replace("\\u0026", "&")
+                    .replace("\\u003C", "<")
+                    .replace("\\u003E", ">")
+                    .replace("&amp;", "&")
+                    .replace("&#x27;", "'");
+        } catch (Exception e) {
+            return s;
+        }
     }
 
     private Map<String, String> parseParams(String paramValues) {
