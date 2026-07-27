@@ -88,31 +88,45 @@ public class JobkoreaCrawler implements SiteCrawler {
     private List<Map<String, String>> parseRscPayload(String html, String keyword) {
         List<Map<String, String>> jobs = new ArrayList<>();
 
-        // self.__next_f.push() 호출에서 RSC 데이터 추출
         Pattern pushPattern = Pattern.compile("self\\.__next_f\\.push\\(\\[1,\"(.*?)\"\\]\\)", Pattern.DOTALL);
         Matcher pushMatcher = pushPattern.matcher(html);
 
+        int pushCount = 0;
+        int contentMatchCount = 0;
         while (pushMatcher.find()) {
+            pushCount++;
             String payload = pushMatcher.group(1);
-            // 이스케이프된 문자열 복원
             payload = payload.replace("\\\"", "\"").replace("\\\\", "\\").replace("\\n", "\n");
 
-            // content 배열에서 채용 공고 추출
-            if (payload.contains("\"content\":") && payload.contains("\"title\":")) {
+            if (payload.contains("\"content\"") && payload.contains("\"title\"")) {
+                contentMatchCount++;
                 try {
+                    int before = jobs.size();
                     parseContentArray(payload, jobs);
+                    log.info("RSC chunk {}: parsed {} jobs (total {})", contentMatchCount, jobs.size() - before, jobs.size());
                 } catch (Exception e) {
-                    log.debug("Failed to parse RSC content chunk", e);
+                    log.warn("Failed to parse RSC content chunk {}: {}", contentMatchCount, e.getMessage());
                 }
             }
         }
+        log.info("Jobkorea RSC: {} push blocks found, {} with content+title", pushCount, contentMatchCount);
 
         return jobs;
     }
 
     private void parseContentArray(String payload, List<Map<String, String>> jobs) {
         int contentIdx = payload.indexOf("\"content\":[");
-        if (contentIdx < 0) return;
+        if (contentIdx < 0) {
+            // variations 시도
+            contentIdx = payload.indexOf("\"content\" :[");
+            if (contentIdx < 0) {
+                contentIdx = payload.indexOf("\"content\": [");
+                if (contentIdx < 0) {
+                    log.debug("No content array found in payload (first 200 chars): {}", payload.substring(0, Math.min(200, payload.length())));
+                    return;
+                }
+            }
+        }
 
         int arrayStart = contentIdx + "\"content\":[".length();
         int depth = 0;

@@ -76,9 +76,16 @@ public class CrawlExecutionService {
                 // 디버그: 파싱된 필드 확인
                 if (!jobs.isEmpty()) {
                     Map<String, String> sample = jobs.get(0);
-                    log.info("Site {} raw job #0 keys={}, company={}, position={}, title={}, tech={}",
+                    log.info("Site {} raw job #0 keys={}, company={}, position={}, title={}, tech={}, location={}, career={}",
                             siteId, sample.keySet(), sample.get("company"),
-                            sample.get("position"), sample.get("title"), sample.get("tech"));
+                            sample.get("position"), sample.get("title"), sample.get("tech"),
+                            sample.get("location"), sample.get("career"));
+                    // 처음 3개 샘플 출력
+                    for (int si = 0; si < Math.min(3, jobs.size()); si++) {
+                        Map<String, String> s = jobs.get(si);
+                        log.info("  sample[{}] location='{}' career='{}' tech='{}'",
+                                si, s.get("location"), s.get("career"), s.get("tech"));
+                    }
                 }
 
                 // 서버에서 키워드 필터링: title, position, company, tech에서 검색
@@ -96,25 +103,39 @@ public class CrawlExecutionService {
                             .toList();
                 }
 
-                // 서버에서 지역 필터링
+                // 서버에서 지역 필터링: 광역시/도 단위 매칭
                 String locationFilter = paramMap.getOrDefault("location", "");
                 if (!locationFilter.isEmpty() && !locationFilter.equals("전체")) {
                     String loc = locationFilter.toLowerCase();
                     jobs = jobs.stream()
                             .filter(job -> {
                                 String jobLocation = job.getOrDefault("location", "").toLowerCase();
-                                return jobLocation.contains(loc);
+                                if (jobLocation.isEmpty()) return false;
+                                // 지역 데이터가 있으면 필터 키워드를 포함하는지 확인
+                                // "서울" → "서울특별시", "서울 금천구" 등 매칭
+                                return jobLocation.contains(loc) || loc.contains(jobLocation);
                             })
                             .toList();
                 }
 
-                // 서버에서 경력 필터링
+                // 서버에서 경력 필터링 (유연한 매칭)
                 String careerFilter = paramMap.getOrDefault("career", "");
                 if (!careerFilter.isEmpty() && !careerFilter.equals("전체")) {
                     jobs = jobs.stream()
                             .filter(job -> {
-                                String jobCareer = job.getOrDefault("career", "");
-                                return jobCareer.contains(careerFilter) || careerFilter.contains(jobCareer);
+                                String jobCareer = job.getOrDefault("career", "").toLowerCase();
+                                if (jobCareer.isEmpty()) return false;
+                                String cf = careerFilter.toLowerCase();
+                                // 포함 관계 또는 숫자 추출 후 범위 비교
+                                if (jobCareer.contains(cf) || cf.contains(jobCareer)) return true;
+                                // "1년 이상" vs "1~3년" → 숫자 비교
+                                try {
+                                    int minRequired = Integer.parseInt(cf.replaceAll("[^0-9].*", ""));
+                                    int jobMin = Integer.parseInt(jobCareer.replaceAll("[^0-9].*", ""));
+                                    return jobMin <= minRequired + 2;
+                                } catch (Exception e) {
+                                    return true;
+                                }
                             })
                             .toList();
                 }
