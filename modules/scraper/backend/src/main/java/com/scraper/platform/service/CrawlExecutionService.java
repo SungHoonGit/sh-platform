@@ -73,9 +73,9 @@ public class CrawlExecutionService {
             try {
                 List<Map<String, String>> jobs = crawler.search(tempConfig);
 
-                // API가 키워드 검색을 지원하지 않는 사이트(Wanted, Remember)는 서버에서 필터링
+                // 사이트별 키워드 검색 미지원 또는 불완전 → 모든 사이트 서버에서 필터링
                 String keywordFilter = paramMap.getOrDefault("keyword", "");
-                if (!keywordFilter.isEmpty() && Set.of("wanted", "remember").contains(siteId)) {
+                if (!keywordFilter.isEmpty()) {
                     String kw = keywordFilter.toLowerCase();
                     jobs = jobs.stream()
                             .filter(job -> {

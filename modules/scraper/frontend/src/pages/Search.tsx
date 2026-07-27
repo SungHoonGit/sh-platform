@@ -47,19 +47,7 @@ export default function Search() {
         location,
         siteIds: selectedSites,
       });
-      const sitesWithoutSearch = ["wanted", "remember"];
-      const filtered = data.map((siteResult) => {
-        if (!sitesWithoutSearch.includes(siteResult.siteId) || !siteResult.jobs) return siteResult;
-        const kw = keyword.trim().toLowerCase();
-        return {
-          ...siteResult,
-          jobs: siteResult.jobs.filter((j) => {
-            const haystack = [j.company, j.position, j.title, j.tech].filter(Boolean).join(" ").toLowerCase();
-            return haystack.includes(kw);
-          }),
-        };
-      });
-      setResults(filtered);
+      setResults(data);
     } catch (e) {
       setError((e as Error).message);
     } finally {
