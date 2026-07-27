@@ -32,8 +32,6 @@ public class JobkoreaCrawler implements SiteCrawler {
         Map<String, String> params = parseParams(paramValues);
 
         String keyword = params.getOrDefault("keyword", "");
-        String career = params.getOrDefault("career", "");
-        String location = params.getOrDefault("location", "");
 
         if (keyword.isEmpty()) {
             log.warn("Jobkorea search requires keyword");
@@ -46,7 +44,7 @@ public class JobkoreaCrawler implements SiteCrawler {
         String html = fetchWithCurl(url);
         log.info("Fetched HTML size: {}", html.length());
 
-        List<Map<String, String>> jobs = parseRscPayload(html, keyword);
+        List<Map<String, String>> jobs = parseRscPayload(html);
         log.info("Parsed {} jobs from jobkorea", jobs.size());
 
         return jobs;
@@ -70,7 +68,7 @@ public class JobkoreaCrawler implements SiteCrawler {
 
         if (!finished) {
             process.destroyForcibly();
-            throw new IOException("curl timed out for URL: " + url);
+            throw new IOException("curl timed out for URL: + url");
         }
 
         int exitCode = process.exitValue();
@@ -81,78 +79,39 @@ public class JobkoreaCrawler implements SiteCrawler {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    /**
-     * Next.js RSC payload에서 채용 데이터를 추출한다.
-     * self.__next_f.push() 호출 내부의 JSON content 배열을 파싱한다.
-     */
-    private List<Map<String, String>> parseRscPayload(String html, String keyword) {
+    private List<Map<String, String>> parseRscPayload(String html) {
         List<Map<String, String>> jobs = new ArrayList<>();
 
         Pattern pushPattern = Pattern.compile("self\\.__next_f\\.push\\(\\[1,\"(.*?)\"\\]\\)", Pattern.DOTALL);
         Matcher pushMatcher = pushPattern.matcher(html);
 
-        int pushCount = 0;
-        int contentMatchCount = 0;
         while (pushMatcher.find()) {
-            pushCount++;
             String payload = pushMatcher.group(1);
             payload = payload.replace("\\\"", "\"").replace("\\\\", "\\").replace("\\n", "\n");
 
-            if (payload.contains("\"content\"") && payload.contains("\"title\"")) {
-                contentMatchCount++;
-                try {
-                    int before = jobs.size();
-                    parseContentArray(payload, jobs);
-                    log.info("RSC chunk {}: parsed {} jobs (total {})", contentMatchCount, jobs.size() - before, jobs.size());
-                } catch (Exception e) {
-                    log.warn("Failed to parse RSC content chunk {}: {}", contentMatchCount, e.getMessage());
-                }
-            }
+            parseJsonObjects(payload, jobs);
         }
-        log.info("Jobkorea RSC: {} push blocks found, {} with content+title", pushCount, contentMatchCount);
 
+        log.info("Jobkorea RSC: {} jobs parsed total", jobs.size());
         return jobs;
     }
 
-    private void parseContentArray(String payload, List<Map<String, String>> jobs) {
-        int contentIdx = payload.indexOf("\"content\":[");
-        if (contentIdx < 0) {
-            // variations 시도
-            contentIdx = payload.indexOf("\"content\" :[");
-            if (contentIdx < 0) {
-                contentIdx = payload.indexOf("\"content\": [");
-                if (contentIdx < 0) {
-                    log.debug("No content array found in payload (first 200 chars): {}", payload.substring(0, Math.min(200, payload.length())));
-                    return;
-                }
-            }
-        }
-
-        int arrayStart = contentIdx + "\"content\":[".length();
-        int depth = 0;
-        int arrayEnd = -1;
-        for (int i = arrayStart; i < payload.length(); i++) {
-            char c = payload.charAt(i);
-            if (c == '[') depth++;
-            else if (c == ']') {
-                depth--;
-                if (depth == 0) { arrayEnd = i; break; }
-            }
-        }
-        if (arrayEnd < 0) return;
-
-        String contentArray = payload.substring(arrayStart, arrayEnd);
-
-        // 개별 JSON 객체를 깊이 카운팅으로 추출
+    private void parseJsonObjects(String text, List<Map<String, String>> jobs) {
         int i = 0;
-        while (i < contentArray.length()) {
-            if (contentArray.charAt(i) != '{') { i++; continue; }
+        while (i < text.length() - 20) {
+            if (text.charAt(i) != '{' || text.charAt(i + 1) != '"') { i++; continue; }
 
             int objStart = i;
             int objDepth = 0;
             int objEnd = -1;
-            for (int j = i; j < contentArray.length(); j++) {
-                char c = contentArray.charAt(j);
+            boolean inString = false;
+            boolean escaped = false;
+            for (int j = i; j < text.length(); j++) {
+                char c = text.charAt(j);
+                if (escaped) { escaped = false; continue; }
+                if (c == '\\') { escaped = true; continue; }
+                if (c == '"') { inString = !inString; continue; }
+                if (inString) continue;
                 if (c == '{') objDepth++;
                 else if (c == '}') {
                     objDepth--;
@@ -161,19 +120,20 @@ public class JobkoreaCrawler implements SiteCrawler {
             }
             if (objEnd < 0) break;
 
-            String objStr = contentArray.substring(objStart, objEnd + 1);
+            String objStr = text.substring(objStart, objEnd + 1);
             i = objEnd + 1;
+
+            if (objStr.length() < 50) continue;
 
             try {
                 JsonNode node = objectMapper.readTree(objStr);
                 String id = node.path("id").asText("");
-                if (id.isEmpty()) continue;
+                if (id.isEmpty() || id.length() < 5) continue;
 
                 String title = node.path("title").asText("");
                 String company = node.path("postingCompanyName").asText("");
-                if (title.isEmpty()) continue;
+                if (title.isEmpty() || company.isEmpty()) continue;
 
-                // location: _internal_featureLocationCode 또는 areaCodeList
                 String location = node.path("_internal_featureLocationCode").asText("");
                 if (location.isEmpty()) {
                     JsonNode areaCodes = node.path("areaCodeList");
@@ -182,7 +142,6 @@ public class JobkoreaCrawler implements SiteCrawler {
                     }
                 }
 
-                // career: careerType + careerRange
                 String career = "";
                 String careerType = node.path("careerType").asText("");
                 int careerRange = node.path("careerRange").asInt(0);
@@ -193,10 +152,8 @@ public class JobkoreaCrawler implements SiteCrawler {
                     default: career = careerType.isEmpty() ? "" : "경력무관";
                 }
 
-                // tech: _internal_featureToolCode
                 String tech = node.path("_internal_featureToolCode").asText("");
 
-                // deadline: applicationPeriod.end
                 String deadline = "";
                 JsonNode appPeriod = node.path("applicationPeriod");
                 if (!appPeriod.isMissingNode()) {
@@ -220,8 +177,7 @@ public class JobkoreaCrawler implements SiteCrawler {
                 if (!duplicate) {
                     jobs.add(job);
                 }
-            } catch (Exception e) {
-                log.debug("Failed to parse job object: {}", objStr.substring(0, Math.min(100, objStr.length())), e);
+            } catch (Exception ignored) {
             }
         }
     }
