@@ -80,19 +80,29 @@ public class WantedCrawler implements SiteCrawler {
     private String fetchJson(String url) throws Exception {
         ProcessBuilder pb = new ProcessBuilder(
             "curl", "-s", "-L",
-            "--max-time", "15",
+            "--max-time", "20",
+            "--compressed",
             "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "-H", "Accept: application/json, text/plain, */*",
             "-H", "Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+            "-H", "Accept-Encoding: gzip, deflate, br",
             "-H", "Referer: https://www.wanted.co.kr/",
             "-H", "Origin: https://www.wanted.co.kr",
+            "-H", "Sec-Fetch-Dest: empty",
+            "-H", "Sec-Fetch-Mode: cors",
+            "-H", "Sec-Fetch-Site: same-origin",
+            "-H", "Sec-Ch-Ua: \"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"",
+            "-H", "Sec-Ch-Ua-Mobile: ?0",
+            "-H", "Sec-Ch-Ua-Platform: \"macOS\"",
+            "-H", "Cache-Control: no-cache",
+            "-H", "Pragma: no-cache",
             url
         );
         pb.redirectErrorStream(true);
 
         Process process = pb.start();
         byte[] bytes = process.getInputStream().readAllBytes();
-        boolean finished = process.waitFor(20, TimeUnit.SECONDS);
+        boolean finished = process.waitFor(25, TimeUnit.SECONDS);
 
         if (!finished) {
             process.destroyForcibly();
@@ -108,8 +118,13 @@ public class WantedCrawler implements SiteCrawler {
 
         String response = new String(bytes, StandardCharsets.UTF_8);
         // Cloudflare 체크
-        if (response.contains("cf-chl-bypass") || response.contains("Just a moment")) {
+        if (response.contains("cf-chl-bypass") || response.contains("Just a moment") || response.contains("Ray ID")) {
             log.warn("Wanted API blocked by Cloudflare");
+            return null;
+        }
+        // HTML 응답 체크 (JSON이어야 함)
+        if (response.trim().startsWith("<")) {
+            log.warn("Wanted API returned HTML instead of JSON");
             return null;
         }
         return response;
