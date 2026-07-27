@@ -73,6 +73,14 @@ public class CrawlExecutionService {
             try {
                 List<Map<String, String>> jobs = crawler.search(tempConfig);
 
+                // 디버그: 파싱된 필드 확인
+                if (!jobs.isEmpty()) {
+                    Map<String, String> sample = jobs.get(0);
+                    log.info("Site {} raw job #0 keys={}, company={}, position={}, title={}, tech={}",
+                            siteId, sample.keySet(), sample.get("company"),
+                            sample.get("position"), sample.get("title"), sample.get("tech"));
+                }
+
                 // 사이트별 키워드 검색 미지원 또는 불완전 → 모든 사이트 서버에서 필터링
                 String keywordFilter = paramMap.getOrDefault("keyword", "");
                 if (!keywordFilter.isEmpty()) {
