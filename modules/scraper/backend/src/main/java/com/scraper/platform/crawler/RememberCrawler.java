@@ -34,7 +34,7 @@ public class RememberCrawler implements SiteCrawler {
         Map<String, String> params = parseParams(paramValues);
 
         String keyword = params.getOrDefault("keyword", "");
-        int maxPages = 5;
+        int maxPages = 2;
         int perPage = 30;
         List<Map<String, String>> allJobs = new ArrayList<>();
 

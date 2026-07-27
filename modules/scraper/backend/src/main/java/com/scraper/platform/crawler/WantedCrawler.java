@@ -14,6 +14,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -77,24 +78,41 @@ public class WantedCrawler implements SiteCrawler {
     }
 
     private String fetchJson(String url) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
-                .header("Accept", "application/json")
-                .header("Accept-Language", "ko-KR,ko;q=0.9")
-                .header("Referer", "https://www.wanted.co.kr/")
-                .timeout(Duration.ofSeconds(15))
-                .GET()
-                .build();
+        ProcessBuilder pb = new ProcessBuilder(
+            "curl", "-s", "-L",
+            "--max-time", "15",
+            "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "-H", "Accept: application/json, text/plain, */*",
+            "-H", "Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+            "-H", "Referer: https://www.wanted.co.kr/",
+            "-H", "Origin: https://www.wanted.co.kr",
+            url
+        );
+        pb.redirectErrorStream(true);
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        Process process = pb.start();
+        byte[] bytes = process.getInputStream().readAllBytes();
+        boolean finished = process.waitFor(20, TimeUnit.SECONDS);
 
-        if (response.statusCode() != 200) {
-            log.warn("Wanted API returned status {}: {}", response.statusCode(), url);
+        if (!finished) {
+            process.destroyForcibly();
+            log.warn("curl timed out for Wanted API: {}", url);
             return null;
         }
 
-        return response.body();
+        int exitCode = process.exitValue();
+        if (exitCode != 0) {
+            log.warn("curl failed with exit code {} for Wanted API: {}", exitCode, url);
+            return null;
+        }
+
+        String response = new String(bytes, StandardCharsets.UTF_8);
+        // Cloudflare 체크
+        if (response.contains("cf-chl-bypass") || response.contains("Just a moment")) {
+            log.warn("Wanted API blocked by Cloudflare");
+            return null;
+        }
+        return response;
     }
 
     private String buildUrl(String keyword, int page, int perPage) {
