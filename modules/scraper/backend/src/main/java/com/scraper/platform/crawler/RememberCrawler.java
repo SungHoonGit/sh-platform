@@ -164,14 +164,46 @@ public class RememberCrawler implements SiteCrawler {
             }
         }
 
-        // 지역
+// 지역 - API 응답 필드명이 다를 수 있어 여러 가능성 시도
         JsonNode address = node.get("address");
         if (address != null && address.isObject()) {
-            String sido = getTextNode(address, "sido");
-            String gugun = getTextNode(address, "gugun");
-            if (!sido.isEmpty()) {
-                job.put("location", sido + (gugun.isEmpty() ? "" : " " + gugun));
+            String location = "";
+            // 가능한 필드명들 시도: sido/gugun, city/district, region/area, etc.
+            String[] possibleFields = {"sido", "city", "region", "province", "state"};
+            String[] possibleSubFields = {"gugun", "district", "area", "county", "gu"};
+            
+            for (String field : possibleFields) {
+                String val = getTextNode(address, field);
+                if (!val.isEmpty()) {
+                    location = val;
+                    break;
+                }
             }
+            if (location.isEmpty()) {
+                // 시도 필드가 없으면 첫 번째 필드 값 사용
+                for (String field : possibleFields) {
+                    JsonNode f = address.get(field);
+                    if (f != null && !f.isNull()) {
+                        location = f.asText();
+                        break;
+                    }
+                }
+            }
+            
+            // 하위 지역(구/군) 추가
+            for (String field : possibleSubFields) {
+                String val = getTextNode(address, field);
+                if (!val.isEmpty()) {
+                    if (!location.isEmpty()) location += " ";
+                    location += val;
+                    break;
+                }
+            }
+            
+            if (!location.isEmpty()) {
+                job.put("location", location.trim());
+            }
+        }
         }
 
         // 마감일
