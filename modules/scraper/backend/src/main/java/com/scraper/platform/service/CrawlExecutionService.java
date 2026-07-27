@@ -102,8 +102,8 @@ public class CrawlExecutionService {
                     String loc = locationFilter.toLowerCase();
                     jobs = jobs.stream()
                             .filter(job -> {
-                                String location = job.getOrDefault("location", "").toLowerCase();
-                                return location.contains(loc);
+                                String jobLocation = job.getOrDefault("location", "").toLowerCase();
+                                return jobLocation.contains(loc);
                             })
                             .toList();
                 }
@@ -113,8 +113,8 @@ public class CrawlExecutionService {
                 if (!careerFilter.isEmpty() && !careerFilter.equals("전체")) {
                     jobs = jobs.stream()
                             .filter(job -> {
-                                String career = job.getOrDefault("career", "");
-                                return career.contains(careerFilter) || careerFilter.contains(career);
+                                String jobCareer = job.getOrDefault("career", "");
+                                return jobCareer.contains(careerFilter) || careerFilter.contains(jobCareer);
                             })
                             .toList();
                 }
