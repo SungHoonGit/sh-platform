@@ -5,15 +5,11 @@ on:
     branches: [master]
     paths:
       - ".github/workflows/**"
-      - "sh-platform-auth/**"
-      - "sh-platform-common/**"
       - "modules/auth/**"
       - "modules/scraper/**"
       - "modules/resume/**"
       - "modules/portfolio/**"
-      - "platform/**"
       - "common/**"
-      - "scripts/**"
       - "build.gradle.kts"
       - "settings.gradle.kts"
   workflow_dispatch:
@@ -30,10 +26,10 @@ jobs:
           java-version: "21"
           distribution: "temurin"
 
-      - name: Build and Test with Gradle
+      - name: Build Fat JARs
         run: |
           chmod +x gradlew
-          ./gradlew :modules:auth:backend:build :modules:scraper:backend:build
+          ./gradlew :modules:auth:backend:bootJar :modules:scraper:backend:bootJar :modules:resume:backend:bootJar :modules:portfolio:backend:bootJar -q
 
       - name: Create common frontend symlinks
         run: |
@@ -65,141 +61,110 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
 
-      - name: Stop services
+      - name: Stop services & deploy JARs
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "sudo apt-get install -y psmisc 2>/dev/null; sudo systemctl stop sh-platform-auth sh-platform-scraper 2>/dev/null; sudo fuser -k 8080/tcp 8081/tcp 2>/dev/null; echo STOP_OK"
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
+            echo "=== Stopping services ==="
+            sudo apt-get install -y psmisc 2>/dev/null
+            sudo systemctl stop sh-platform-auth sh-platform-scraper sh-platform-resume sh-platform-portfolio 2>/dev/null || true
+            sudo fuser -k 8080/tcp 8081/tcp 8082/tcp 8083/tcp 2>/dev/null || true
+            sleep 3
+            echo "OK: services stopped"
+          REMOTE
 
-      - name: Git pull via HTTPS
+      - name: Git pull & build on server
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && git remote set-url origin https://github.com/SungHoonGit/sh-platform.git && git stash 2>/dev/null; git fetch origin 2>&1; git reset --hard origin/master 2>&1"
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
+            cd /home/ubuntu/sh-platform
+            git remote set-url origin https://github.com/SungHoonGit/sh-platform.git
+            git stash 2>/dev/null; git fetch origin 2>&1; git reset --hard origin/master 2>&1
 
-      - name: Build backend
-        env:
-          SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && ./gradlew :modules:auth:backend:clean :modules:auth:backend:build :modules:scraper:backend:build -q"
+            echo "=== Building Fat JARs ==="
+            ./gradlew :modules:auth:backend:bootJar :modules:scraper:backend:bootJar :modules:resume:backend:bootJar :modules:portfolio:backend:bootJar -q
 
-      - name: Build frontend scraper
-        env:
-          SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && ln -sf ../../../../common/frontend/src modules/scraper/frontend/src/common && ln -sf ../../../common/frontend/src platform/frontend/src/common && cd modules/scraper/frontend && npm ci && npx tsc --noEmit && npm run build"
+            echo "=== Copying to builds/ ==="
+            mkdir -p builds
+            cp modules/auth/backend/build/libs/sh-platform-auth-*.jar builds/sh-platform-auth.jar
+            cp modules/scraper/backend/build/libs/sh-platform-scraper-*.jar builds/sh-platform-scraper.jar
+            cp modules/resume/backend/build/libs/sh-platform-resume-*.jar builds/sh-platform-resume.jar
+            cp modules/portfolio/backend/build/libs/sh-platform-portfolio-*.jar builds/sh-platform-portfolio.jar
 
-      - name: Build frontend platform
+            echo "=== JAR files ==="
+            ls -lh builds/*.jar
+          REMOTE
+
+      - name: Build frontend on server
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && ln -sf ../../../../common/frontend/src modules/scraper/frontend/src/common && ln -sf ../../../common/frontend/src platform/frontend/src/common && cd platform/frontend && npm ci && npx tsc --noEmit && npm run build"
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=300 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
+            cd /home/ubuntu/sh-platform
+            ln -sf ../../../../common/frontend/src modules/scraper/frontend/src/common
+            ln -sf ../../../common/frontend/src platform/frontend/src/common
+
+            cd modules/scraper/frontend && npm ci && npx tsc --noEmit && npm run build
+            cd /home/ubuntu/sh-platform/platform/frontend && npm ci && npx tsc --noEmit && npm run build
+            echo "OK: frontends built"
+          REMOTE
 
       - name: Deploy nginx config
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && sudo cp nginx/sh-platform.conf /etc/nginx/sites-enabled/sh-platform && sudo cp nginx/sh-platform.conf /etc/nginx/sites-available/sh-platform && sudo nginx -t && sudo systemctl reload nginx && echo NGINX_OK"
-
-      - name: Diagnose services
-        env:
-          SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=120 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
-            echo '=== service status ==='
-            sudo systemctl status sh-platform-auth --no-pager 2>&1 || echo '(no sh-platform-auth service)'
-            echo
-            echo '=== unit file ==='
-            sudo systemctl cat sh-platform-auth 2>&1 || echo '(no unit)'
-            echo
-            echo '=== JARs ==='
-            ls -la /home/ubuntu/sh-platform/modules/auth/backend/build/libs/
-            ls -la /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/
-            echo
-            echo '=== port 8080 ==='
-            ss -tlnp | grep 8080 || echo '(nothing on 8080)'
-            echo
-            echo '=== .env SPRING_PROFILES ==='
-            grep -i profile /home/ubuntu/sh-platform/.env 2>/dev/null || echo '(not set in .env)'
-          REMOTE
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" "cd /home/ubuntu/sh-platform && sudo cp nginx/sh-platform.conf /etc/nginx/sites-enabled/sh-platform && sudo cp nginx/sh-platform.conf /etc/nginx/sites-available/sh-platform && sudo nginx -t && sudo systemctl reload nginx && echo NGINX_OK"
 
-      - name: Force stop all services
+      - name: Update systemd & start services
         env:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
           sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
-            echo "=== Stopping systemd services ==="
-            sudo apt-get install -y psmisc 2>/dev/null
-            sudo systemctl stop sh-platform-auth sh-platform-scraper 2>/dev/null || true
+            echo "=== Deploying systemd files ==="
+            cd /home/ubuntu/sh-platform
+            sudo cp systemd/sh-platform-auth.service /etc/systemd/system/
+            sudo cp systemd/sh-platform-scraper.service /etc/systemd/system/
+            sudo cp systemd/sh-platform-resume.service /etc/systemd/system/
+            sudo cp systemd/sh-platform-portfolio.service /etc/systemd/system/
+            sudo systemctl daemon-reload
 
-            echo "=== Force killing on ports 8080-8081 ==="
-            sudo fuser -k -9 8080/tcp 8081/tcp 2>/dev/null || true
-            sleep 3
-
-            echo "=== Verifying ports ==="
-            ss -tlnp | grep -E '808[01]' && echo "FAIL: ports still in use" || echo "OK: ports 8080-8081 free"
-          REMOTE
-
-      - name: Start services
-        env:
-          SSHPASS: ${{ secrets.OCI_SSH_PW }}
-        run: |
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
-            echo "=== Pre-start port check ==="
-            sudo fuser -k -9 8080/tcp 8081/tcp 2>/dev/null || true
-            sleep 2
-
-            AUTH_JAR=$(ls /home/ubuntu/sh-platform/modules/auth/backend/build/libs/*.jar 2>/dev/null | grep -v plain | head -1)
-            SCRAPER_JAR=$(ls /home/ubuntu/sh-platform/modules/scraper/backend/build/libs/*.jar 2>/dev/null | grep -v plain | head -1)
-
-            echo "=== JAR files ==="
-            echo "auth: $AUTH_JAR"
-            echo "scraper: $SCRAPER_JAR"
-
-            start_jar() {
-              JAR="$1"
-              NAME="$2"
-              PORT="$3"
-              if [ -f "$JAR" ]; then
-                echo "Starting $NAME from $JAR (port $PORT) ..."
-                cd /home/ubuntu/sh-platform
-                export SPRING_PROFILES_ACTIVE=prod
-                nohup java -jar "$JAR" > /tmp/$NAME.log 2>&1 &
-                echo "  PID: $!"
-              else
-                echo "JAR for $NAME not found at $JAR"
-                return 1
-              fi
-            }
-
-            start_jar "$AUTH_JAR" "auth" "8080"
-            start_jar "$SCRAPER_JAR" "scraper" "8081"
-
-            echo "=== Waiting 60s for startup ==="
+            echo "=== Starting auth ==="
+            sudo systemctl start sh-platform-auth
             sleep 60
 
-            echo "=== Java processes ==="
-            ps aux | grep java || echo "(no java)"
+            echo "=== Starting scraper ==="
+            sudo systemctl start sh-platform-scraper
+            sleep 30
 
-            echo "=== auth log (tail 50) ==="
-            tail -50 /tmp/auth.log 2>/dev/null || echo "(no auth log)"
+            echo "=== Starting resume + portfolio ==="
+            sudo systemctl start sh-platform-resume sh-platform-portfolio
+            sleep 10
 
-            echo "=== scraper log (tail 20) ==="
-            tail -20 /tmp/scraper.log 2>/dev/null || echo "(no scraper log)"
+            echo "=== Service status ==="
+            sudo systemctl status sh-platform-auth sh-platform-scraper sh-platform-resume sh-platform-portfolio --no-pager | grep -E 'Active:|Memory:'
+          REMOTE
 
-            echo "=== Port 8080 ==="
-            ss -tlnp | grep 8080 || echo "(nothing on 8080)"
+      - name: Health check
+        env:
+          SSHPASS: ${{ secrets.OCI_SSH_PW }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=60 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE'
+            echo "=== Port check ==="
+            ss -tlnp | grep 808
 
-            echo "=== Port 8081 ==="
-            ss -tlnp | grep 8081 || echo "(nothing on 8081)"
-
-            echo "=== Health check (auth) ==="
-            for i in $(seq 1 18); do
-              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8080/api/v1/auth/me 2>/dev/null || echo "ERR")
-              if [ -n "$code" ] && [ "$code" != "ERR" ]; then
-                echo "Auth up ($code)"
-                cp /tmp/auth.log /home/ubuntu/sh-platform/auth.log
-                exit 0
-              fi
-              echo "Waiting... ($i/18)"
-              sleep 10
+            echo "=== HTTP health ==="
+            for port in 8080 8081 8082 8083; do
+              code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:$port/ 2>/dev/null || echo "ERR")
+              echo "Port $port: $code"
             done
-            echo "Auth failed"
-            exit 1
+
+            echo "=== Java processes ==="
+            ps -ef | grep java | grep -v grep | wc -l
+
+            echo "=== Memory ==="
+            free -m | head -2
           REMOTE
 
       - name: Collect diagnostics (always)
@@ -208,14 +173,12 @@ jobs:
           SSHPASS: ${{ secrets.OCI_SSH_PW }}
         run: |
           sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "${{ secrets.OCI_SSH_USER }}@${{ secrets.OCI_WEB_HOST }}" << 'REMOTE' 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "=== service status ==="
+            sudo systemctl status sh-platform-auth sh-platform-scraper sh-platform-resume sh-platform-portfolio --no-pager 2>&1
             echo "=== java processes ==="
-            ps aux | grep java 2>/dev/null || echo "(no java)"
-            echo "=== port 8080 ==="
-            ss -tlnp | grep 8080 2>/dev/null || echo "(nothing on 8080)"
-            echo "=== auth log ==="
-            cat /tmp/auth.log 2>/dev/null || echo "(no /tmp/auth.log)"
-            echo "=== .env ==="
-            cat /home/ubuntu/sh-platform/.env 2>/dev/null || echo "(no .env)"
-            echo "=== java version ==="
-            java -version 2>&1 || echo "(no java)"
+            ps -ef | grep java | grep -v grep 2>/dev/null || echo "(no java)"
+            echo "=== ports ==="
+            ss -tlnp | grep 808 2>/dev/null || echo "(nothing on 808x)"
+            echo "=== builds ==="
+            ls -lh /home/ubuntu/sh-platform/builds/ 2>/dev/null || echo "(no builds)"
           REMOTE
