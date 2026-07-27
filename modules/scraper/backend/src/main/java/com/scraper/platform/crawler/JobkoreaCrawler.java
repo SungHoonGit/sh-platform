@@ -86,9 +86,7 @@ public class JobkoreaCrawler implements SiteCrawler {
         StringBuilder sb = new StringBuilder(BASE_URL);
         sb.append("?menucode=duty&dutyCtgr=1003101"); // IT 개발 직무
 
-        if (!keyword.isEmpty()) {
-            sb.append("&stext=").append(java.net.URLEncoder.encode(keyword, StandardCharsets.UTF_8));
-        }
+        // 잡코리아는 stext= 파라미터를 무시하므로 키워드 미전송
 
         if (!career.isEmpty()) {
             sb.append("&careerType=").append(mapCareerType(career));
@@ -175,11 +173,8 @@ public class JobkoreaCrawler implements SiteCrawler {
                 }
             }
 
-            // 기술스택
-            Element dsc = titTd.selectFirst("p.dsc");
-            if (dsc != null) {
-                job.put("tech", dsc.text().trim());
-            }
+            // p.dsc는 페이지 전체 카테고리 목록(수백 개)이므로 tech로 사용하지 않음
+            // 잡코리아 목록 페이지에는 기술 스택 정보 없음 → 서버 필터에서 title/position/company로 검색
         }
 
         // 마감일

@@ -81,14 +81,17 @@ public class CrawlExecutionService {
                             sample.get("position"), sample.get("title"), sample.get("tech"));
                 }
 
-                // 사이트별 키워드 검색 미지원 또는 불완전 → 모든 사이트 서버에서 필터링
+                // 서버에서 키워드 필터링: title, position, company, tech에서 검색
                 String keywordFilter = paramMap.getOrDefault("keyword", "");
                 if (!keywordFilter.isEmpty()) {
                     String kw = keywordFilter.toLowerCase();
                     jobs = jobs.stream()
                             .filter(job -> {
-                                String haystack = String.join(" ", job.values()).toLowerCase();
-                                return haystack.contains(kw);
+                                String title = job.getOrDefault("title", "").toLowerCase();
+                                String position = job.getOrDefault("position", "").toLowerCase();
+                                String company = job.getOrDefault("company", "").toLowerCase();
+                                String tech = job.getOrDefault("tech", "").toLowerCase();
+                                return title.contains(kw) || position.contains(kw) || company.contains(kw) || tech.contains(kw);
                             })
                             .toList();
                 }
