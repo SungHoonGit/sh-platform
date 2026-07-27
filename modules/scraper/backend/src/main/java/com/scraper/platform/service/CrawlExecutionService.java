@@ -87,12 +87,7 @@ public class CrawlExecutionService {
                     String kw = keywordFilter.toLowerCase();
                     jobs = jobs.stream()
                             .filter(job -> {
-                                String haystack = String.join(" ",
-                                        job.getOrDefault("company", ""),
-                                        job.getOrDefault("position", ""),
-                                        job.getOrDefault("title", ""),
-                                        job.getOrDefault("tech", "")
-                                ).toLowerCase();
+                                String haystack = String.join(" ", job.values()).toLowerCase();
                                 return haystack.contains(kw);
                             })
                             .toList();
