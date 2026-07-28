@@ -19,8 +19,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,9 +29,6 @@ class SearchServiceTest {
 
     @Mock
     private SiteDefinitionRepository siteDefinitionRepository;
-
-    @Mock
-    private SiteSearchMapper siteSearchMapper;
 
     @InjectMocks
     private SearchService searchService;
@@ -77,7 +72,6 @@ class SearchServiceTest {
 
         when(crawlerFactory.getCrawler("saramin")).thenReturn(mockCrawler);
         when(siteDefinitionRepository.findBySiteName("saramin")).thenReturn(Optional.of(mockSite));
-        when(siteSearchMapper.toSiteParams(anyString(), anyMap())).thenReturn(Map.of("stext", "Java"));
 
         // When
         SearchResponse response = searchService.search(request);
@@ -120,7 +114,6 @@ class SearchServiceTest {
         when(crawlerFactory.getCrawler("wanted")).thenReturn(wantedCrawler);
         when(siteDefinitionRepository.findBySiteName("saramin")).thenReturn(Optional.of(mockSite));
         when(siteDefinitionRepository.findBySiteName("wanted")).thenReturn(Optional.of(wantedSite));
-        when(siteSearchMapper.toSiteParams(anyString(), anyMap())).thenReturn(Map.of("query", "React"));
 
         // When
         SearchResponse response = searchService.search(request);
@@ -149,7 +142,6 @@ class SearchServiceTest {
 
         when(crawlerFactory.getCrawler("saramin")).thenReturn(emptyCrawler);
         when(siteDefinitionRepository.findBySiteName("saramin")).thenReturn(Optional.of(mockSite));
-        when(siteSearchMapper.toSiteParams(anyString(), anyMap())).thenReturn(Map.of());
 
         // When
         SearchResponse response = searchService.search(request);
@@ -178,7 +170,6 @@ class SearchServiceTest {
 
         when(crawlerFactory.getCrawler("saramin")).thenReturn(failingCrawler);
         when(siteDefinitionRepository.findBySiteName("saramin")).thenReturn(Optional.of(mockSite));
-        when(siteSearchMapper.toSiteParams(anyString(), anyMap())).thenReturn(Map.of());
 
         // When
         SearchResponse response = searchService.search(request);
