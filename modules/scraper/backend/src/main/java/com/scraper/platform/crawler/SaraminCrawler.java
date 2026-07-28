@@ -3,6 +3,8 @@ package com.scraper.platform.crawler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scraper.platform.model.CrawlSiteConfig;
+import com.scraper.platform.service.SiteSearchMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -18,10 +20,13 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class SaraminCrawler implements SiteCrawler {
 
     private static final String BASE_URL = "https://www.saramin.co.kr/zf_user/jobs/list/job-category";
     private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    private final SiteSearchMapper siteSearchMapper;
 
     @Override
     public String getSiteName() {
@@ -31,18 +36,15 @@ public class SaraminCrawler implements SiteCrawler {
     @Override
     public List<Map<String, String>> search(CrawlSiteConfig siteConfig) throws Exception {
         String paramValues = siteConfig.getParamValues();
-        Map<String, String> params = parseParams(paramValues);
-        
-        String keyword = params.getOrDefault("keyword", "");
-        String career = params.getOrDefault("career", "");
-        String location = params.getOrDefault("location", "");
-        String jobType = params.getOrDefault("job_type", "");
-        
+
+        // SiteSearchMapper를 사용하여 표준 파라미터를 사이트별 URL 파라미터로 변환
+        Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
+
         List<Map<String, String>> allJobs = new ArrayList<>();
-        
+
         // 최대 3페이지 (150건) 수집
         for (int page = 1; page <= 3; page++) {
-            String url = buildUrl(keyword, career, location, jobType, page);
+            String url = buildUrl(siteParams, page);
             log.info("Saramin crawl URL (page {}): {}", page, url);
             
             String html = fetchWithCurl(url);
@@ -51,6 +53,7 @@ public class SaraminCrawler implements SiteCrawler {
             Document doc = Jsoup.parse(html);
             log.info("Page {}: list_item={}", page, doc.select("div.list_item").size());
             
+            String keyword = siteParams.getOrDefault("stext", "");
             List<Map<String, String>> pageJobs = parseJobs(doc, keyword);
             if (pageJobs.isEmpty()) {
                 log.info("No more jobs at page {}, stopping", page);
@@ -101,32 +104,20 @@ public class SaraminCrawler implements SiteCrawler {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private String buildUrl(String keyword, String career, String location, String jobType, int page) {
+    private String buildUrl(Map<String, String> siteParams, int page) {
         StringBuilder sb = new StringBuilder(BASE_URL);
         sb.append("?cat_kewd=235"); // IT 개발 카테고리
-        
-        if (!keyword.isEmpty()) {
-            sb.append("&stext=").append(URLEncoder.encode(keyword, StandardCharsets.UTF_8));
+
+        // SiteSearchMapper에서 변환된 파라미터를 URL에 추가
+        for (Map.Entry<String, String> entry : siteParams.entrySet()) {
+            sb.append("&").append(entry.getKey()).append("=")
+              .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
         }
-        
-        if (!career.isEmpty()) {
-            String careerCode = mapCareerCode(career);
-            if (!careerCode.isEmpty()) {
-                sb.append("&career_level=").append(careerCode);
-            }
-        }
-        
-        if (!location.isEmpty()) {
-            String locCd = mapLocationCode(location);
-            if (!locCd.isEmpty()) {
-                sb.append("&loc_cd=").append(locCd);
-            }
-        }
-        
+
         if (page > 1) {
             sb.append("&page=").append(page);
         }
-        
+
         return sb.toString();
     }
 

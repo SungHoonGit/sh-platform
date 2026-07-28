@@ -3,6 +3,8 @@ package com.scraper.platform.crawler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scraper.platform.model.CrawlSiteConfig;
+import com.scraper.platform.service.SiteSearchMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +19,7 @@ import java.util.*;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class WantedCrawler implements SiteCrawler {
 
     private static final String API_BASE = "https://www.wanted.co.kr/api/v4/jobs";
@@ -24,6 +27,8 @@ public class WantedCrawler implements SiteCrawler {
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
+
+    private final SiteSearchMapper siteSearchMapper;
 
     @Override
     public String getSiteName() {
@@ -33,18 +38,16 @@ public class WantedCrawler implements SiteCrawler {
     @Override
     public List<Map<String, String>> search(CrawlSiteConfig siteConfig) throws Exception {
         String paramValues = siteConfig.getParamValues();
-        Map<String, String> params = parseParams(paramValues);
 
-        String keyword = params.getOrDefault("keyword", "");
-        String career = params.getOrDefault("career", "");
-        String location = params.getOrDefault("location", "");
-        int page = 1;
+        // SiteSearchMapper를 사용하여 표준 파라미터를 사이트별 URL 파라미터로 변환
+        Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
+
         int perPage = 20;
         List<Map<String, String>> allJobs = new ArrayList<>();
 
         // 최대 5페이지 (100건) 수집
         for (int p = 1; p <= 5; p++) {
-            String url = buildUrl(keyword, career, location, p, perPage);
+            String url = buildUrl(siteParams, p, perPage);
             log.info("Wanted API URL (page {}): {}", p, url);
 
             String json = fetchJson(url);
@@ -99,32 +102,21 @@ public class WantedCrawler implements SiteCrawler {
         return response.body();
     }
 
-    private String buildUrl(String keyword, String career, String location, int page, int perPage) {
+    private String buildUrl(Map<String, String> siteParams, int page, int perPage) {
         StringBuilder sb = new StringBuilder(API_BASE);
         sb.append("?country=kr");
         sb.append("&job_sort=job.latest_order");
         sb.append("&page=").append(page);
         sb.append("&per_page=").append(perPage);
 
-        if (!keyword.isEmpty()) {
-            sb.append("&query=").append(URLEncoder.encode(keyword, StandardCharsets.UTF_8));
+        // SiteSearchMapper에서 변환된 파라미터를 URL에 추가
+        for (Map.Entry<String, String> entry : siteParams.entrySet()) {
+            sb.append("&").append(entry.getKey()).append("=")
+              .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
         }
 
-        if (!career.isEmpty()) {
-            String years = mapCareerToYears(career);
-            if (!years.isEmpty()) {
-                sb.append("&years=").append(years);
-            }
-        }
-
-        if (!location.isEmpty()) {
-            String locKey = mapLocationCode(location);
-            if (!locKey.isEmpty()) {
-                sb.append("&locations=").append(locKey);
-            } else {
-                sb.append("&locations=all");
-            }
-        } else {
+        // locations 파라미터가 없으면 all로 기본값 설정
+        if (!siteParams.containsKey("locations")) {
             sb.append("&locations=all");
         }
 

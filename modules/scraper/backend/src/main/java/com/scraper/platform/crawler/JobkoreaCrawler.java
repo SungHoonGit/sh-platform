@@ -3,6 +3,8 @@ package com.scraper.platform.crawler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scraper.platform.model.CrawlSiteConfig;
+import com.scraper.platform.service.SiteSearchMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -21,10 +23,13 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class JobkoreaCrawler implements SiteCrawler {
 
     private static final String BASE_URL = "https://www.jobkorea.co.kr/recruit/joblist";
     private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    private final SiteSearchMapper siteSearchMapper;
 
     @Override
     public String getSiteName() {
@@ -34,13 +39,11 @@ public class JobkoreaCrawler implements SiteCrawler {
     @Override
     public List<Map<String, String>> search(CrawlSiteConfig siteConfig) throws Exception {
         String paramValues = siteConfig.getParamValues();
-        Map<String, String> params = parseParams(paramValues);
 
-        String keyword = params.getOrDefault("keyword", "");
-        String career = params.getOrDefault("career", "");
-        String location = params.getOrDefault("location", "");
+        // SiteSearchMapper를 사용하여 표준 파라미터를 사이트별 URL 파라미터로 변환
+        Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
 
-        String url = buildUrl(keyword, career, location);
+        String url = buildUrl(siteParams);
         log.info("Jobkorea crawl URL: {}", url);
 
         // curl로 HTML을 가져옴 (Java HttpClient도 anti-bot에 차단될 수 있음)
@@ -50,6 +53,7 @@ public class JobkoreaCrawler implements SiteCrawler {
         Document doc = Jsoup.parse(html);
         log.info("Page title: {}", doc.title());
 
+        String keyword = siteParams.getOrDefault("stext", "");
         return parseJobs(doc, keyword);
     }
 
@@ -82,23 +86,14 @@ public class JobkoreaCrawler implements SiteCrawler {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private String buildUrl(String keyword, String career, String location) {
+    private String buildUrl(Map<String, String> siteParams) {
         StringBuilder sb = new StringBuilder(BASE_URL);
         sb.append("?menucode=duty&dutyCtgr=1003101"); // IT 개발 직무
 
-        if (!keyword.isEmpty()) {
-            sb.append("&stext=").append(java.net.URLEncoder.encode(keyword, StandardCharsets.UTF_8));
-        }
-
-        if (!career.isEmpty()) {
-            sb.append("&careerType=").append(mapCareerType(career));
-        }
-
-        if (!location.isEmpty()) {
-            String localCode = mapLocationCode(location);
-            if (!localCode.isEmpty()) {
-                sb.append("&local=").append(localCode);
-            }
+        // SiteSearchMapper에서 변환된 파라미터를 URL에 추가
+        for (Map.Entry<String, String> entry : siteParams.entrySet()) {
+            sb.append("&").append(entry.getKey()).append("=")
+              .append(java.net.URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
         }
 
         return sb.toString();

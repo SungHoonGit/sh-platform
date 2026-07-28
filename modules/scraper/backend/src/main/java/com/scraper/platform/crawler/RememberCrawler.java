@@ -3,6 +3,8 @@ package com.scraper.platform.crawler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scraper.platform.model.CrawlSiteConfig;
+import com.scraper.platform.service.SiteSearchMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +17,7 @@ import java.util.*;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class RememberCrawler implements SiteCrawler {
 
     private static final String API_URL = "https://career-api.rememberapp.co.kr/job_postings/search";
@@ -22,6 +25,8 @@ public class RememberCrawler implements SiteCrawler {
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
+
+    private final SiteSearchMapper siteSearchMapper;
 
     @Override
     public String getSiteName() {
@@ -31,17 +36,16 @@ public class RememberCrawler implements SiteCrawler {
     @Override
     public List<Map<String, String>> search(CrawlSiteConfig siteConfig) throws Exception {
         String paramValues = siteConfig.getParamValues();
-        Map<String, String> params = parseParams(paramValues);
 
-        String keyword = params.getOrDefault("keyword", "");
-        String career = params.getOrDefault("career", "");
-        String location = params.getOrDefault("location", "");
+        // SiteSearchMapper를 사용하여 표준 파라미터를 사이트별 URL 파라미터로 변환
+        Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
+
         int maxPages = 5;
         int perPage = 30;
         List<Map<String, String>> allJobs = new ArrayList<>();
 
         for (int page = 1; page <= maxPages; page++) {
-            String requestBody = buildRequestBody(keyword, career, location, page, perPage);
+            String requestBody = buildRequestBody(siteParams, page, perPage);
             log.info("Remember API request (page {}): {}", page, requestBody);
 
             String json = postJson(requestBody);
@@ -98,26 +102,16 @@ public class RememberCrawler implements SiteCrawler {
         return response.body();
     }
 
-    private String buildRequestBody(String keyword, String career, String location, int page, int perPage) {
+    private String buildRequestBody(Map<String, String> siteParams, int page, int perPage) {
         try {
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("page", page);
             body.put("per", perPage);
             body.put("sort", "starts_at_desc");
 
-            if (!keyword.isEmpty()) {
-                body.put("query", keyword);
-            }
-
-            if (!career.isEmpty()) {
-                String minExp = mapCareerToExperience(career);
-                if (!minExp.isEmpty()) {
-                    body.put("min_experience", minExp);
-                }
-            }
-
-            if (!location.isEmpty()) {
-                body.put("sido", location);
+            // SiteSearchMapper에서 변환된 파라미터를 요청 바디에 추가
+            for (Map.Entry<String, String> entry : siteParams.entrySet()) {
+                body.put(entry.getKey(), entry.getValue());
             }
 
             return objectMapper.writeValueAsString(body);
