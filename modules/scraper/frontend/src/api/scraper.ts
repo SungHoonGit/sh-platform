@@ -18,7 +18,7 @@ export interface SearchResponse {
 }
 
 export async function realTimeSearch(request: SearchRequest): Promise<SearchResponse> {
-  const res = await fetch(`${BASE}/api/v1/search`, {
+  const res = await fetch(`${BASE}/search`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
