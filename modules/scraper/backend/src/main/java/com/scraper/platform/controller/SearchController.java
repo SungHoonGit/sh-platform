@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/scraper/api/v1/search")
+@RequestMapping("/api/v1/search")
 @RequiredArgsConstructor
 @Tag(name = "Search", description = "실시간 검색 API")
 public class SearchController {
