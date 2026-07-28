@@ -14,7 +14,6 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -37,13 +36,15 @@ public class WantedCrawler implements SiteCrawler {
         Map<String, String> params = parseParams(paramValues);
 
         String keyword = params.getOrDefault("keyword", "");
+        String career = params.getOrDefault("career", "");
+        String location = params.getOrDefault("location", "");
         int page = 1;
         int perPage = 20;
         List<Map<String, String>> allJobs = new ArrayList<>();
 
         // 최대 5페이지 (100건) 수집
         for (int p = 1; p <= 5; p++) {
-            String url = buildUrl(keyword, p, perPage);
+            String url = buildUrl(keyword, career, location, p, perPage);
             log.info("Wanted API URL (page {}): {}", p, url);
 
             String json = fetchJson(url);
@@ -78,70 +79,95 @@ public class WantedCrawler implements SiteCrawler {
     }
 
     private String fetchJson(String url) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder(
-            "curl", "-s", "-L",
-            "--max-time", "20",
-            "--compressed",
-            "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "-H", "Accept: application/json, text/plain, */*",
-            "-H", "Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-            "-H", "Accept-Encoding: gzip, deflate, br",
-            "-H", "Referer: https://www.wanted.co.kr/",
-            "-H", "Origin: https://www.wanted.co.kr",
-            "-H", "Sec-Fetch-Dest: empty",
-            "-H", "Sec-Fetch-Mode: cors",
-            "-H", "Sec-Fetch-Site: same-origin",
-            "-H", "Sec-Ch-Ua: \"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"",
-            "-H", "Sec-Ch-Ua-Mobile: ?0",
-            "-H", "Sec-Ch-Ua-Platform: \"macOS\"",
-            "-H", "Cache-Control: no-cache",
-            "-H", "Pragma: no-cache",
-            url
-        );
-        pb.redirectErrorStream(true);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+                .header("Accept", "application/json")
+                .header("Accept-Language", "ko-KR,ko;q=0.9")
+                .header("Referer", "https://www.wanted.co.kr/")
+                .timeout(Duration.ofSeconds(15))
+                .GET()
+                .build();
 
-        Process process = pb.start();
-        byte[] bytes = process.getInputStream().readAllBytes();
-        boolean finished = process.waitFor(25, TimeUnit.SECONDS);
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        if (!finished) {
-            process.destroyForcibly();
-            log.warn("curl timed out for Wanted API: {}", url);
+        if (response.statusCode() != 200) {
+            log.warn("Wanted API returned status {}: {}", response.statusCode(), url);
             return null;
         }
 
-        int exitCode = process.exitValue();
-        if (exitCode != 0) {
-            log.warn("curl failed with exit code {} for Wanted API: {}", exitCode, url);
-            return null;
-        }
-
-        String response = new String(bytes, StandardCharsets.UTF_8);
-        // Cloudflare 체크
-        if (response.contains("cf-chl-bypass") || response.contains("Just a moment") || response.contains("Ray ID")) {
-            log.warn("Wanted API blocked by Cloudflare");
-            return null;
-        }
-        // HTML 응답 체크 (JSON이어야 함)
-        if (response.trim().startsWith("<")) {
-            log.warn("Wanted API returned HTML instead of JSON");
-            return null;
-        }
-        return response;
+        return response.body();
     }
 
-    private String buildUrl(String keyword, int page, int perPage) {
+    private String buildUrl(String keyword, String career, String location, int page, int perPage) {
         StringBuilder sb = new StringBuilder(API_BASE);
         sb.append("?country=kr");
         sb.append("&job_sort=job.latest_order");
-        sb.append("&years=-1");
-        sb.append("&locations=all");
         sb.append("&page=").append(page);
         sb.append("&per_page=").append(perPage);
 
-        // Wanted API는 Cloudflare 보호로 키워드 검색 불가
-        // 전체 목록을 가져와서 CrawlExecutionService에서 서버 필터링
+        if (!keyword.isEmpty()) {
+            sb.append("&query=").append(URLEncoder.encode(keyword, StandardCharsets.UTF_8));
+        }
+
+        if (!career.isEmpty()) {
+            String years = mapCareerToYears(career);
+            if (!years.isEmpty()) {
+                sb.append("&years=").append(years);
+            }
+        }
+
+        if (!location.isEmpty()) {
+            String locKey = mapLocationCode(location);
+            if (!locKey.isEmpty()) {
+                sb.append("&locations=").append(locKey);
+            } else {
+                sb.append("&locations=all");
+            }
+        } else {
+            sb.append("&locations=all");
+        }
+
         return sb.toString();
+    }
+
+    /**
+     * 경력 한글명을 원티드 years 파라미터 값으로 변환한다.
+     *
+     * @param career 경력 한글명 (신입, 1~3년, 3~5년, 5~10년, 10년이상)
+     * @return 원티드 years 값 (0, 1, 3, 5, 10)
+     */
+    String mapCareerToYears(String career) {
+        return switch (career) {
+            case "신입" -> "0";
+            case "1~3년" -> "1";
+            case "3~5년" -> "3";
+            case "5~10년" -> "5";
+            case "10년이상" -> "10";
+            default -> "";
+        };
+    }
+
+    /**
+     * 지역 한글명을 원티드 locations 키로 변환한다.
+     *
+     * @param location 지역 한글명 (서울, 경기, 인천, 부산, 대구, 대전, 광주, 세종, 강원, 제주)
+     * @return 원티드 locations 키 (seoul, gyeonggi, incheon, busan, ...)
+     */
+    String mapLocationCode(String location) {
+        return switch (location) {
+            case "서울" -> "seoul";
+            case "경기" -> "gyeonggi";
+            case "인천" -> "incheon";
+            case "부산" -> "busan";
+            case "대구" -> "daegu";
+            case "대전" -> "daejeon";
+            case "광주" -> "gwangju";
+            case "세종" -> "sejong";
+            case "강원" -> "gangwon";
+            case "제주" -> "jeju";
+            default -> "";
+        };
     }
 
     private Map<String, String> parseJobNode(JsonNode node) {
@@ -175,11 +201,11 @@ public class WantedCrawler implements SiteCrawler {
             }
         }
 
-        // 경력: annual_from/annual_to는 연봉 정보이므로 career 키워드로 대체
+        // 경력 (연봉으로 대체 — Wanted는 연봉 정보 제공)
         JsonNode annualFrom = node.get("annual_from");
         JsonNode annualTo = node.get("annual_to");
         if (annualFrom != null && annualTo != null) {
-            job.put("career", annualFrom.asInt() + "~" + annualTo.asInt() + "만원");
+            job.put("career", annualFrom.asInt() + "~" + annualTo.asInt() + "년");
         }
 
         // 마감일
@@ -188,24 +214,16 @@ public class WantedCrawler implements SiteCrawler {
             job.put("deadline", dueTime.asText());
         }
 
-        // 기술 태그: category_tags + tags
-        List<String> techTags = new ArrayList<>();
+        // 카테고리 태그 → 기술
         JsonNode categoryTags = node.get("category_tags");
         if (categoryTags != null && categoryTags.isArray()) {
+            List<String> tags = new ArrayList<>();
             for (JsonNode tag : categoryTags) {
-                String name = getTextNode(tag, "name");
-                if (!name.isEmpty()) techTags.add(name);
+                // parent_id 521 = 직무 카테고리
+                if (tag.has("parent_id") && tag.get("parent_id").asInt() == 521) {
+                    // 카테고리 ID → 이름은 API에서 별도로 제공하지 않으므로 ID만
+                }
             }
-        }
-        JsonNode tags = node.get("tags");
-        if (tags != null && tags.isArray()) {
-            for (JsonNode tag : tags) {
-                String name = getTextNode(tag, "name");
-                if (!name.isEmpty() && !techTags.contains(name)) techTags.add(name);
-            }
-        }
-        if (!techTags.isEmpty()) {
-            job.put("tech", String.join(", ", techTags));
         }
 
         return job;

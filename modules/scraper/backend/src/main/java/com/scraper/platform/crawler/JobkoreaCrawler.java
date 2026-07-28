@@ -4,21 +4,26 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scraper.platform.model.CrawlSiteConfig;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.URLEncoder;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Slf4j
 @Component
 public class JobkoreaCrawler implements SiteCrawler {
 
-    private static final String SEARCH_URL = "https://www.jobkorea.co.kr/Search/";
+    private static final String BASE_URL = "https://www.jobkorea.co.kr/recruit/joblist";
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -30,153 +35,215 @@ public class JobkoreaCrawler implements SiteCrawler {
     public List<Map<String, String>> search(CrawlSiteConfig siteConfig) throws Exception {
         String paramValues = siteConfig.getParamValues();
         Map<String, String> params = parseParams(paramValues);
+
         String keyword = params.getOrDefault("keyword", "");
+        String career = params.getOrDefault("career", "");
+        String location = params.getOrDefault("location", "");
 
-        if (keyword.isEmpty()) {
-            log.warn("Jobkorea search requires keyword");
-            return Collections.emptyList();
-        }
+        String url = buildUrl(keyword, career, location);
+        log.info("Jobkorea crawl URL: {}", url);
 
-        String url = SEARCH_URL + "?stext=" + URLEncoder.encode(keyword, StandardCharsets.UTF_8);
-        log.info("Jobkorea search URL: {}", url);
-
+        // curl로 HTML을 가져옴 (Java HttpClient도 anti-bot에 차단될 수 있음)
         String html = fetchWithCurl(url);
         log.info("Fetched HTML size: {}", html.length());
 
-        List<Map<String, String>> jobs = parseRscPayload(html);
-        log.info("Parsed {} jobs from jobkorea", jobs.size());
+        Document doc = Jsoup.parse(html);
+        log.info("Page title: {}", doc.title());
 
-        return jobs;
+        return parseJobs(doc, keyword);
     }
 
     private String fetchWithCurl(String url) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(
-            "curl", "-s", "-L", "--max-time", "30", "--compressed",
+            "curl", "-s", "-L",
+            "--max-time", "30",
+            "--compressed",
             "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "-H", "Accept-Language: ko-KR,ko;q=0.9",
             "-H", "Accept: text/html,application/xhtml+xml",
             url
         );
         pb.redirectErrorStream(true);
+
         Process process = pb.start();
         byte[] bytes = process.getInputStream().readAllBytes();
         boolean finished = process.waitFor(35, TimeUnit.SECONDS);
-        if (!finished) { process.destroyForcibly(); throw new IOException("curl timed out"); }
-        if (process.exitValue() != 0) throw new IOException("curl failed with exit code " + process.exitValue());
+
+        if (!finished) {
+            process.destroyForcibly();
+            throw new IOException("curl timed out for URL: " + url);
+        }
+
+        int exitCode = process.exitValue();
+        if (exitCode != 0) {
+            throw new IOException("curl failed with exit code " + exitCode);
+        }
+
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private List<Map<String, String>> parseRscPayload(String html) {
+    private String buildUrl(String keyword, String career, String location) {
+        StringBuilder sb = new StringBuilder(BASE_URL);
+        sb.append("?menucode=duty&dutyCtgr=1003101"); // IT 개발 직무
+
+        if (!keyword.isEmpty()) {
+            sb.append("&stext=").append(java.net.URLEncoder.encode(keyword, StandardCharsets.UTF_8));
+        }
+
+        if (!career.isEmpty()) {
+            sb.append("&careerType=").append(mapCareerType(career));
+        }
+
+        if (!location.isEmpty()) {
+            String localCode = mapLocationCode(location);
+            if (!localCode.isEmpty()) {
+                sb.append("&local=").append(localCode);
+            }
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * 경력 한글명을 잡코리아 careerType 코드로 변환한다.
+     *
+     * @param career 경력 한글명 (신입, 경력, 1~3년, 3~5년, 5~10년, 10년이상)
+     * @return 잡코리아 careerType 코드 (new, career)
+     */
+    String mapCareerType(String career) {
+        return switch (career) {
+            case "신입" -> "new";
+            case "경력" -> "career";
+            case "1~3년" -> "career";
+            case "3~5년" -> "career";
+            case "5~10년" -> "career";
+            case "10년이상" -> "career";
+            default -> "";
+        };
+    }
+
+    /**
+     * 지역 한글명을 잡코리아 local 코드로 변환한다.
+     *
+     * @param location 지역 한글명 (서울, 경기, 인천, 부산, 대구, 대전, 광주, 세종, 강원, 제주, 충남, 충북, 전남, 전북, 경남, 경북)
+     * @return 잡코리아 local 코드 (I000, I100, I200, ...)
+     */
+    String mapLocationCode(String location) {
+        return switch (location) {
+            case "서울" -> "I000";
+            case "경기" -> "I100";
+            case "인천" -> "I200";
+            case "부산" -> "I300";
+            case "대구" -> "I400";
+            case "대전" -> "I500";
+            case "광주" -> "I600";
+            case "세종" -> "I700";
+            case "강원" -> "I800";
+            case "제주" -> "I900";
+            case "충남" -> "I110";
+            case "충북" -> "I120";
+            case "전남" -> "I130";
+            case "전북" -> "I140";
+            case "경남" -> "I150";
+            case "경북" -> "I160";
+            default -> "";
+        };
+    }
+
+    private List<Map<String, String>> parseJobs(Document doc, String keyword) {
         List<Map<String, String>> jobs = new ArrayList<>();
 
-        // Push block 캡처 — 비탐욕적 매칭
-        Pattern pushPattern = Pattern.compile("self\\.__next_f\\.push\\(\\[1,\"(.*?)\"\\]\\)", Pattern.DOTALL);
-        Matcher pushMatcher = pushPattern.matcher(html);
+        Elements rows = doc.select("tr.devloopArea");
+        log.info("Found {} job rows", rows.size());
 
-        int pushCount = 0;
-        while (pushMatcher.find()) {
-            pushCount++;
-            String raw = pushMatcher.group(1);
-            String payload = raw.replace("\\\"", "\"").replace("\\\\", "\\").replace("\\n", "\n");
-
-            if (!payload.contains("postingCompanyName")) continue;
-
-            log.info("Push block {} has postingCompanyName, payload size={}", pushCount, payload.length());
-
-            // postingCompanyName 주변 JSON 객체들을 파싱
-            // 방법: "id":"숫자" 패턴을 찾아 각각 주변 JSON을 추출
-            Pattern idPattern = Pattern.compile("\\{\"id\":\"(\\d{5,})\"");
-            Matcher idMatcher = idPattern.matcher(payload);
-            int found = 0;
-
-            while (idMatcher.find()) {
-                int start = idMatcher.start();
-                // 이 위치에서부터 JSON 객체 닫힘까지 탐색
-                int depth = 0;
-                int end = -1;
-                boolean inStr = false;
-                boolean esc = false;
-                for (int j = start; j < payload.length(); j++) {
-                    char c = payload.charAt(j);
-                    if (esc) { esc = false; continue; }
-                    if (c == '\\') { esc = true; continue; }
-                    if (c == '"') { inStr = !inStr; continue; }
-                    if (inStr) continue;
-                    if (c == '{') depth++;
-                    else if (c == '}') { depth--; if (depth == 0) { end = j; break; } }
+        for (Element row : rows) {
+            try {
+                Map<String, String> job = parseRow(row);
+                if (job != null && !job.isEmpty()) {
+                    jobs.add(job);
                 }
-                if (end < 0) continue;
-
-                String objStr = payload.substring(start, end + 1);
-                try {
-                    JsonNode node = objectMapper.readTree(objStr);
-                    String id = node.path("id").asText("");
-                    String title = node.path("title").asText("");
-                    String company = node.path("postingCompanyName").asText("");
-                    if (title.isEmpty() || company.isEmpty()) continue;
-
-                    String location = node.path("_internal_featureLocationCode").asText("");
-                    if (location.isEmpty()) {
-                        JsonNode areaCodes = node.path("areaCodeList");
-                        if (areaCodes.isArray() && areaCodes.size() > 0) {
-                            location = areaCodes.get(0).asText("");
-                        }
-                    }
-
-                    String career = "";
-                    String careerType = node.path("careerType").asText("");
-                    int careerRange = node.path("careerRange").asInt(0);
-                    switch (careerType) {
-                        case "1": career = "신입"; break;
-                        case "2": career = careerRange > 0 ? careerRange + "년 이상" : "경력"; break;
-                        case "3": career = "경력무관"; break;
-                        default: career = careerType.isEmpty() ? "" : "경력무관";
-                    }
-
-                    String tech = node.path("_internal_featureToolCode").asText("");
-
-                    String deadline = "";
-                    JsonNode appPeriod = node.path("applicationPeriod");
-                    if (!appPeriod.isMissingNode()) {
-                        String endStr = appPeriod.path("end").asText("");
-                        if (!endStr.isEmpty() && endStr.length() >= 10) {
-                            deadline = endStr.substring(0, 10);
-                        }
-                    }
-
-                    Map<String, String> job = new HashMap<>();
-                    job.put("title", decodeUnicode(title));
-                    job.put("position", decodeUnicode(title));
-                    job.put("company", decodeUnicode(company));
-                    job.put("url", "https://www.jobkorea.co.kr/Recruit/GI_Read/" + id);
-                    job.put("tech", tech);
-                    job.put("location", location);
-                    job.put("career", career);
-                    job.put("deadline", deadline);
-
-                    boolean dup = jobs.stream().anyMatch(j -> j.get("url").equals(job.get("url")));
-                    if (!dup) { jobs.add(job); found++; }
-                } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.debug("Failed to parse job row", e);
             }
-            log.info("Push block {}: extracted {} jobs", pushCount, found);
         }
 
         return jobs;
     }
 
-    private String decodeUnicode(String s) {
-        if (s == null) return "";
-        return s.replace("\\u0022", "\"").replace("\\u0026", "&")
-                .replace("\\u003C", "<").replace("\\u003E", ">")
-                .replace("&amp;", "&").replace("&#x27;", "'");
+    private Map<String, String> parseRow(Element row) {
+        Map<String, String> job = new HashMap<>();
+
+        // 회사명
+        Element coTd = row.selectFirst("td.tplCo");
+        if (coTd != null) {
+            Element companyA = coTd.selectFirst("a");
+            if (companyA != null) {
+                job.put("company", companyA.text().trim().replace("관심기업", "").trim());
+            } else {
+                job.put("company", coTd.text().trim().replace("관심기업", "").trim());
+            }
+        }
+
+        // 제목 + 링크
+        Element titTd = row.selectFirst("td.tplTit");
+        if (titTd != null) {
+            Element titleA = titTd.selectFirst("div.titBx a");
+            if (titleA != null) {
+                job.put("title", titleA.text().trim());
+                job.put("position", titleA.text().trim());
+                String href = titleA.attr("href");
+                if (!href.startsWith("http")) {
+                    href = "https://www.jobkorea.co.kr" + href;
+                }
+                job.put("url", href);
+            }
+
+            // 경력, 학력, 지역, 고용형태, 연봉
+            Elements cells = titTd.select("p.etc span.cell");
+            for (Element cell : cells) {
+                String text = cell.text().trim();
+                if (text.isEmpty()) continue;
+                if (text.contains("신입") || text.contains("경력")) {
+                    job.put("career", text);
+                } else if (text.contains("대학") || text.contains("고졸") || text.contains("학력무관") || text.contains("석사") || text.contains("박사")) {
+                    job.put("education", text);
+                } else if (text.contains("서울") || text.contains("경기") || text.contains("부산") || text.contains("대전") || text.contains("대구") || text.contains("광주") || text.contains("인천") || text.contains("울산") || text.contains("세종") || text.contains("강원") || text.contains("충청") || text.contains("전라") || text.contains("경상") || text.contains("제주")) {
+                    job.put("location", text);
+                } else if (text.contains("정규직") || text.contains("계약직") || text.contains("인턴") || text.contains("파견") || text.contains("무기계약")) {
+                    job.put("employmentType", text);
+                } else if (text.contains("만원")) {
+                    job.put("salary", text);
+                }
+            }
+
+            // 기술스택
+            Element dsc = titTd.selectFirst("p.dsc");
+            if (dsc != null) {
+                job.put("tech", dsc.text().trim());
+            }
+        }
+
+        // 마감일
+        Element dateTd = row.selectFirst("td.odd");
+        if (dateTd != null) {
+            String text = dateTd.text().trim();
+            if (text.contains("~")) {
+                String deadline = text.substring(text.lastIndexOf("~")).trim();
+                job.put("deadline", deadline);
+            }
+        }
+
+        return job;
     }
 
     private Map<String, String> parseParams(String paramValues) {
-        if (paramValues == null || paramValues.isEmpty()) return new HashMap<>();
+        if (paramValues == null || paramValues.isEmpty()) {
+            return new HashMap<>();
+        }
         try {
             JsonNode node = objectMapper.readTree(paramValues);
             Map<String, String> params = new HashMap<>();
-            node.fields().forEachRemaining(e -> params.put(e.getKey(), e.getValue().asText()));
+            node.fields().forEachRemaining(entry -> params.put(entry.getKey(), entry.getValue().asText()));
             return params;
         } catch (Exception e) {
             log.error("Failed to parse paramValues: {}", paramValues, e);

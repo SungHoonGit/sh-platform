@@ -40,8 +40,8 @@ public class SaraminCrawler implements SiteCrawler {
         
         List<Map<String, String>> allJobs = new ArrayList<>();
         
-        // 최대 1페이지 (50건) 수집 — 실시간 검색용
-        for (int page = 1; page <= 1; page++) {
+        // 최대 3페이지 (150건) 수집
+        for (int page = 1; page <= 3; page++) {
             String url = buildUrl(keyword, career, location, jobType, page);
             log.info("Saramin crawl URL (page {}): {}", page, url);
             
@@ -105,6 +105,10 @@ public class SaraminCrawler implements SiteCrawler {
         StringBuilder sb = new StringBuilder(BASE_URL);
         sb.append("?cat_kewd=235"); // IT 개발 카테고리
         
+        if (!keyword.isEmpty()) {
+            sb.append("&stext=").append(URLEncoder.encode(keyword, StandardCharsets.UTF_8));
+        }
+        
         if (!career.isEmpty()) {
             String careerCode = mapCareerCode(career);
             if (!careerCode.isEmpty()) {
@@ -112,8 +116,11 @@ public class SaraminCrawler implements SiteCrawler {
             }
         }
         
-        if (!keyword.isEmpty()) {
-            sb.append("&stext=").append(URLEncoder.encode(keyword, StandardCharsets.UTF_8));
+        if (!location.isEmpty()) {
+            String locCd = mapLocationCode(location);
+            if (!locCd.isEmpty()) {
+                sb.append("&loc_cd=").append(locCd);
+            }
         }
         
         if (page > 1) {
@@ -123,7 +130,13 @@ public class SaraminCrawler implements SiteCrawler {
         return sb.toString();
     }
 
-    private String mapCareerCode(String career) {
+    /**
+     * 경력 한글명을 사람인 career_level 코드로 변환한다.
+     *
+     * @param career 경력 한글명 (신입, 경력, 1~3년, 3~5년, 5~10년, 10년이상)
+     * @return 사람인 career_level 코드 (1, 2, 3, 5, 8, 12)
+     */
+    String mapCareerCode(String career) {
         return switch (career) {
             case "신입" -> "1";
             case "경력" -> "2";
@@ -131,6 +144,34 @@ public class SaraminCrawler implements SiteCrawler {
             case "3~5년" -> "5";
             case "5~10년" -> "8";
             case "10년이상" -> "12";
+            default -> "";
+        };
+    }
+
+    /**
+     * 지역 한글명을 사람인 법정동코드(loc_cd)로 변환한다.
+     *
+     * @param location 지역 한글명 (서울, 경기, 인천, 부산, 대구, 대전, 광주, 세종, 강원, 제주, 충남, 충북, 전남, 전북, 경남, 경북)
+     * @return 법정동코드 (101000, 102000, 230000, ...)
+     */
+    String mapLocationCode(String location) {
+        return switch (location) {
+            case "서울" -> "101000";
+            case "경기" -> "102000";
+            case "인천" -> "230000";
+            case "부산" -> "260000";
+            case "대구" -> "270000";
+            case "대전" -> "300000";
+            case "광주" -> "290000";
+            case "세종" -> "360000";
+            case "강원" -> "420000";
+            case "제주" -> "500000";
+            case "충남" -> "440000";
+            case "충북" -> "430000";
+            case "전남" -> "460000";
+            case "전북" -> "450000";
+            case "경남" -> "480000";
+            case "경북" -> "470000";
             default -> "";
         };
     }

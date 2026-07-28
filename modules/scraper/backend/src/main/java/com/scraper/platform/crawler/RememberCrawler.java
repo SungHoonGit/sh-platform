@@ -34,12 +34,14 @@ public class RememberCrawler implements SiteCrawler {
         Map<String, String> params = parseParams(paramValues);
 
         String keyword = params.getOrDefault("keyword", "");
-        int maxPages = 2;
+        String career = params.getOrDefault("career", "");
+        String location = params.getOrDefault("location", "");
+        int maxPages = 5;
         int perPage = 30;
         List<Map<String, String>> allJobs = new ArrayList<>();
 
         for (int page = 1; page <= maxPages; page++) {
-            String requestBody = buildRequestBody(keyword, page, perPage);
+            String requestBody = buildRequestBody(keyword, career, location, page, perPage);
             log.info("Remember API request (page {}): {}", page, requestBody);
 
             String json = postJson(requestBody);
@@ -96,15 +98,27 @@ public class RememberCrawler implements SiteCrawler {
         return response.body();
     }
 
-    private String buildRequestBody(String keyword, int page, int perPage) {
+    private String buildRequestBody(String keyword, String career, String location, int page, int perPage) {
         try {
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("page", page);
             body.put("per", perPage);
             body.put("sort", "starts_at_desc");
 
-            // Remember API keyword search not supported - returns error
-            // List all jobs and let the viewer filter by site
+            if (!keyword.isEmpty()) {
+                body.put("query", keyword);
+            }
+
+            if (!career.isEmpty()) {
+                String minExp = mapCareerToExperience(career);
+                if (!minExp.isEmpty()) {
+                    body.put("min_experience", minExp);
+                }
+            }
+
+            if (!location.isEmpty()) {
+                body.put("sido", location);
+            }
 
             return objectMapper.writeValueAsString(body);
         } catch (Exception e) {
@@ -113,11 +127,25 @@ public class RememberCrawler implements SiteCrawler {
         }
     }
 
+    /**
+     * 경력 한글명을 리멤버 min_experience 값으로 변환한다.
+     *
+     * @param career 경력 한글명 (신입, 1~3년, 3~5년, 5~10년, 10년이상)
+     * @return 리멤버 min_experience 값 (0, 1, 3, 5, 10)
+     */
+    String mapCareerToExperience(String career) {
+        return switch (career) {
+            case "신입" -> "0";
+            case "1~3년" -> "1";
+            case "3~5년" -> "3";
+            case "5~10년" -> "5";
+            case "10년이상" -> "10";
+            default -> "";
+        };
+    }
+
     private Map<String, String> parseJobNode(JsonNode node) {
         Map<String, String> job = new HashMap<>();
-
-        // 디버깅: 전체 노드 키 출력
-        System.out.println("Remember job node keys: " + node.fieldNames());
 
         // 포지션
         String title = getTextNode(node, "title");
@@ -167,46 +195,13 @@ public class RememberCrawler implements SiteCrawler {
             }
         }
 
-// 지역 - API 응답 필드명이 다를 수 있어 여러 가능성 시도
+        // 지역
         JsonNode address = node.get("address");
         if (address != null && address.isObject()) {
-            // 디버깅: address 필드 내용 로그 (info 레벨로 강제 출력)
-            System.out.println("Remember address fields: " + address.fieldNames());
-            String location = "";
-            // 가능한 필드명들 시도: sido/gugun, city/district, region/area, etc.
-            String[] possibleFields = {"sido", "city", "region", "province", "state", "address", "location", "workplace"};
-            String[] possibleSubFields = {"gugun", "district", "area", "county", "gu", "detail"};
-            
-            for (String field : possibleFields) {
-                String val = getTextNode(address, field);
-                if (!val.isEmpty()) {
-                    location = val;
-                    break;
-                }
-            }
-            if (location.isEmpty()) {
-                // 시도 필드가 없으면 첫 번째 필드 값 사용
-                for (String field : possibleFields) {
-                    JsonNode f = address.get(field);
-                    if (f != null && !f.isNull()) {
-                        location = f.asText();
-                        break;
-                    }
-                }
-            }
-            
-            // 하위 지역(구/군) 추가
-            for (String field : possibleSubFields) {
-                String val = getTextNode(address, field);
-                if (!val.isEmpty()) {
-                    if (!location.isEmpty()) location += " ";
-                    location += val;
-                    break;
-                }
-            }
-            
-            if (!location.isEmpty()) {
-                job.put("location", location.trim());
+            String sido = getTextNode(address, "sido");
+            String gugun = getTextNode(address, "gugun");
+            if (!sido.isEmpty()) {
+                job.put("location", sido + (gugun.isEmpty() ? "" : " " + gugun));
             }
         }
 
