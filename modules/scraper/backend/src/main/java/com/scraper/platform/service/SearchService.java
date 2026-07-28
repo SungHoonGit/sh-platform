@@ -46,8 +46,13 @@ public class SearchService {
                 continue;
             }
 
-            futures.put(siteName, CompletableFuture.supplyAsync(
-                () -> executeSiteSearch(siteName, standardParams), executorService));
+            futures.put(siteName, CompletableFuture.supplyAsync(() -> {
+                try {
+                    return executeSiteSearch(siteName, standardParams);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to crawl " + siteName, e);
+                }
+            }, executorService));
         }
 
         // 결과 수집
