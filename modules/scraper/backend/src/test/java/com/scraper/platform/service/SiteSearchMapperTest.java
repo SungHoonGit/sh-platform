@@ -206,7 +206,7 @@ class SiteSearchMapperTest {
         @DisplayName("null 파라미터는 빈 맵을 반환한다")
         void null_빈맵() {
             // when
-            Map<String, String> result = siteSearchMapper.toSiteParams("saramin", null);
+            Map<String, String> result = siteSearchMapper.toSiteParams("saramin", (String) null);
 
             // then
             assertTrue(result.isEmpty());

@@ -1,19 +1,23 @@
 package com.scraper.platform.crawler;
 
+import com.scraper.platform.service.SiteSearchMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 @DisplayName("크롤러 매핑 함수 테스트")
 class CrawlerMappingTest {
+
+    private final SiteSearchMapper mockMapper = mock(SiteSearchMapper.class);
 
     @Nested
     @DisplayName("SaraminCrawler 매핑")
     class SaraminMapping {
 
-        private final SaraminCrawler crawler = new SaraminCrawler();
+        private final SaraminCrawler crawler = new SaraminCrawler(mockMapper);
 
         @Nested
         @DisplayName("mapCareerCode 메서드")
@@ -131,7 +135,7 @@ class CrawlerMappingTest {
     @DisplayName("JobkoreaCrawler 매핑")
     class JobkoreaMapping {
 
-        private final JobkoreaCrawler crawler = new JobkoreaCrawler();
+        private final JobkoreaCrawler crawler = new JobkoreaCrawler(mockMapper);
 
         @Nested
         @DisplayName("mapCareerType 메서드")
@@ -226,7 +230,7 @@ class CrawlerMappingTest {
     @DisplayName("WantedCrawler 매핑")
     class WantedMapping {
 
-        private final WantedCrawler crawler = new WantedCrawler();
+        private final WantedCrawler crawler = new WantedCrawler(mockMapper);
 
         @Nested
         @DisplayName("mapCareerToYears 메서드")
@@ -315,7 +319,7 @@ class CrawlerMappingTest {
     @DisplayName("RememberCrawler 매핑")
     class RememberMapping {
 
-        private final RememberCrawler crawler = new RememberCrawler();
+        private final RememberCrawler crawler = new RememberCrawler(mockMapper);
 
         @Nested
         @DisplayName("mapCareerToExperience 메서드")
