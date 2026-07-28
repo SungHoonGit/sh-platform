@@ -21,7 +21,7 @@ public class SearchService {
     private final CrawlerFactory crawlerFactory;
     private final SiteDefinitionRepository siteDefinitionRepository;
 
-    private final ExecutorService executorService = Executors.newFixedThreadPool(4);
+    private ExecutorService executorService = Executors.newFixedThreadPool(4);
 
     /**
      * 실시간 검색을 수행한다.
