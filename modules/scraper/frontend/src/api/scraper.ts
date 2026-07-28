@@ -2,6 +2,32 @@ import type { Crawler, JobsResponse } from "../types";
 
 const BASE = "/scraper";
 
+export interface SearchRequest {
+  keyword?: string;
+  career?: string;
+  location?: string;
+  sites?: string[];
+}
+
+export interface SearchResponse {
+  total: number;
+  jobs: Record<string, string>[];
+  siteCounts: Record<string, number>;
+  searchTime: number;
+  failedSites: string[];
+}
+
+export async function realTimeSearch(request: SearchRequest): Promise<SearchResponse> {
+  const res = await fetch(`${BASE}/api/v1/search`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) throw new Error("실시간 검색 실패");
+  const json = await res.json();
+  return json.data;
+}
+
 export async function fetchCrawlers(): Promise<Crawler[]> {
   const res = await fetch(`${BASE}/docs/crawlers`);
   if (!res.ok) throw new Error("크롤러 목록 조회 실패");
@@ -44,37 +70,3 @@ export async function fetchCrawlLogs(configId: number): Promise<any[]> {
   if (!res.ok) return [];
   return res.json();
 }
-
-export interface SearchSiteResult {
-  site: string;
-  siteId: string;
-  count?: number;
-  error?: string;
-  jobs: Array<{
-    company: string;
-    position: string;
-    title?: string;
-    career?: string;
-    tech?: string;
-    location?: string;
-    deadline?: string;
-    url: string;
-  }>;
-}
-
-export async function searchJobsRealtime(params: {
-  keyword: string;
-  career: string;
-  location: string;
-  siteIds: string[];
-}): Promise<SearchSiteResult[]> {
-  const res = await fetch(`${BASE}/crawl/search`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(params),
-  });
-  if (!res.ok) throw new Error("실시간 검색 실패");
-  return res.json();
-}
-
-
