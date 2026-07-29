@@ -1,11 +1,3 @@
-﻿---
-title: AGENTS
-description: AI 코딩 에이전트 프로젝트 규칙 (프로젝트 구조, 코드 규칙, 문서 규칙)
-category: config
-created: 2026-07-17
-updated: 2026-07-21
----
-
 # AGENTS.md — AI 개발 규칙
 
 이 파일은 AI 코딩 에이전트(opencode, cursor, copilot 등)가 프로젝트 규칙을 자동 인식하도록 합니다.
@@ -92,6 +84,23 @@ sudo systemctl start sh-platform-scraper sh-platform-resume sh-platform-portfoli
 
 **포트 충돌 해결**: `ss -tlnp | grep 8080` → `sudo fuser -k 8080/tcp`
 
+**중요: 배포 시 JAR 복사 필요**
+
+Gradle 빌드 출력 → systemd 실행 경로가 다름:
+
+| 모듈 | 빌드 출력 | systemd 경로 |
+|------|-----------|-------------|
+| auth | `modules/auth/backend/build/libs/sh-platform-auth-*.jar` | `builds/sh-platform-auth.jar` |
+| scraper | `modules/scraper/backend/build/libs/sh-platform-scraper-*.jar` | `builds/sh-platform-scraper.jar` |
+| resume | `modules/resume/backend/build/libs/sh-platform-resume-*.jar` | `builds/sh-platform-resume.jar` |
+| portfolio | `modules/portfolio/backend/build/libs/sh-platform-portfolio-*.jar` | `builds/sh-platform-portfolio.jar` |
+
+**수동 배포 시**: `cp modules/scraper/backend/build/libs/sh-platform-scraper-*.jar builds/sh-platform-scraper.jar`
+
+**`ddl-site-search-mapping.sql`** 실행 필요: `mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-site-search-mapping.sql`
+
+DB명은 `scraper_platform` (sh_platform 아님).
+
 ## 개발 사이클 (중요)
 
 모든 기능 개발은 다음 순서를 따릅니다:
@@ -111,40 +120,6 @@ sudo systemctl start sh-platform-scraper sh-platform-resume sh-platform-portfoli
    ├── 테스트 리포트: https://sunghoonyk.duckdns.org/test-reports/
    └── DB 문서:     https://sunghoonyk.duckdns.org/schemaSpy/
 ```
-
-## 문서 규칙
-
-### Frontmatter 표준
-
-모든 `.md` 파일은 YAML frontmatter를 포함해야 합니다:
-
-```yaml
----
-title: 문서 제목
-description: 한 줄 요약
-category: 카테고리
-created: 2026-07-21
-updated: 2026-07-21
----
-```
-
-- `title`: 파일명 기반 kebab-case → Title Case 변환
-- `category`: 상위 디렉토리명 (architecture, auth, scraper, guide, infra, common, database, plan, daily, front, config, readme)
-- `created` / `updated`: YYYY-MM-DD 형식
-- 템플릿 참고: `docs/frontmatter-template.md`
-
-### 문서 저장 위치
-
-| 구분 | 경로 | 예시 |
-|------|------|------|
-| 프로젝트 문서 | `docs/` | `docs/auth/api-auth.md` |
-| 설계 문서 | `docs/architecture/` | `docs/architecture/erd.md` |
-| 가이드 | `docs/guides/` | `docs/guides/nginx-guide.md` |
-| 작업 일지 | `docs/daily/` | `docs/daily/2026-07-21-work-log.md` |
-| AI 참고용 외부 문서 | `~/iCloudDrive/0.memo/{프로젝트명}/docs/` | (agent 전용, git 미포함) |
-
-- AI 에이전트 생성 문서는 iCloudDrive 경로 우선
-- 프로젝트에 포함될 문서는 `docs/` 하위에 작성
 
 ## 코드 규칙
 
