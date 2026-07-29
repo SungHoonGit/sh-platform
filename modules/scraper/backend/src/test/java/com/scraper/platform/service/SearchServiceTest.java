@@ -87,7 +87,7 @@ class SearchServiceTest {
     @Test
     void search_withMultipleSites() {
         // Given
-        SearchRequest request = new SearchRequest("React", "신입", "전체", List.of("saramin", "wanted"));
+        SearchRequest request = new SearchRequest("React", "3~5년", "전체", List.of("saramin", "wanted"));
 
         SiteCrawler wantedCrawler = new SiteCrawler() {
             @Override

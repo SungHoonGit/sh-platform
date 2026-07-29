@@ -114,7 +114,7 @@ public class SearchService {
     }
 
     private boolean matchesCareer(String jobCareer, String targetCareer) {
-        if (jobCareer.isEmpty()) return false;
+        if (jobCareer.isEmpty()) return true;
         String t = targetCareer.replaceAll("[~\\s]", "");
         String j = jobCareer.replaceAll("[~\\s]", "");
         return j.contains(t) || t.contains(j);
