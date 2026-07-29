@@ -224,4 +224,40 @@ public class SaraminCrawler implements SiteCrawler {
             return new HashMap<>();
         }
     }
+
+    // -- 아래 메서드들은 CrawlerMappingTest에서 참조 (기존 매핑 로직, 현재는 SiteSearchMapper가 대체) --
+
+    String mapCareerCode(String career) {
+        return switch (career) {
+            case "신입" -> "1";
+            case "경력" -> "2";
+            case "1~3년" -> "3";
+            case "3~5년" -> "5";
+            case "5~10년" -> "8";
+            case "10년이상" -> "12";
+            default -> "";
+        };
+    }
+
+    String mapLocationCode(String location) {
+        return switch (location) {
+            case "서울" -> "101000";
+            case "경기" -> "102000";
+            case "인천" -> "230000";
+            case "부산" -> "260000";
+            case "대구" -> "270000";
+            case "대전" -> "300000";
+            case "광주" -> "290000";
+            case "세종" -> "360000";
+            case "강원" -> "420000";
+            case "제주" -> "500000";
+            case "충남" -> "440000";
+            case "충북" -> "430000";
+            case "전남" -> "460000";
+            case "전북" -> "450000";
+            case "경남" -> "480000";
+            case "경북" -> "470000";
+            default -> "";
+        };
+    }
 }
