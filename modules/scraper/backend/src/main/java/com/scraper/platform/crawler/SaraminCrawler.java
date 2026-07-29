@@ -105,7 +105,7 @@ public class SaraminCrawler implements SiteCrawler {
 
     private String buildUrl(Map<String, String> siteParams, int page) {
         StringBuilder sb = new StringBuilder(BASE_URL);
-        sb.append("?search_area=main&cat_kewd=235");
+        sb.append("?search_area=main");
 
         for (Map.Entry<String, String> entry : siteParams.entrySet()) {
             sb.append("&").append(entry.getKey()).append("=")
