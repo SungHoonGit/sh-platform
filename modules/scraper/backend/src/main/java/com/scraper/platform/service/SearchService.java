@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -98,7 +99,7 @@ public class SearchService {
     private List<Map<String, String>> filterJobs(List<Map<String, String>> jobs, String career, String location) {
         boolean filterCareer = career != null && !career.isEmpty() && !career.equals("전체") && !career.equals("경력무관");
         boolean filterLocation = location != null && !location.isEmpty() && !location.equals("전체");
-        if (!filterCareer && !filterLocation) return jobs;
+        if (!filterCareer && !filterLocation) return new ArrayList<>(jobs);
         return jobs.stream().filter(job -> {
             if (filterCareer) {
                 String jobCareer = job.getOrDefault("career", "");
@@ -109,7 +110,7 @@ public class SearchService {
                 if (!matchesLocation(jobLoc, location)) return false;
             }
             return true;
-        }).map(job -> new HashMap<>(job)).toList();
+        }).<Map<String, String>>map(HashMap::new).collect(Collectors.toList());
     }
 
     private boolean matchesCareer(String jobCareer, String targetCareer) {
