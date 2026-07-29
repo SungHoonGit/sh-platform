@@ -144,7 +144,7 @@ public class SaraminCrawler implements SiteCrawler {
 
     private List<Map<String, String>> parseJobs(Document doc) {
         List<Map<String, String>> jobs = new ArrayList<>();
-        Elements items = doc.select("div.area_job");
+        Elements items = doc.select("div.item_recruit");
 
         for (Element item : items) {
             try {
@@ -168,7 +168,7 @@ public class SaraminCrawler implements SiteCrawler {
             job.put("company", companyEl.text().trim());
         }
 
-        Element titleEl = item.selectFirst("h2.job_tit a");
+        Element titleEl = item.selectFirst("div.area_job h2.job_tit a");
         if (titleEl != null) {
             String title = titleEl.text().trim();
             job.put("title", title);
