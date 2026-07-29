@@ -101,7 +101,7 @@
 ### 3.1 API
 
 ```
-POST /scraper/api/v1/search
+POST /search
 {
     "keyword": "Java",
     "career": "3~5년",
@@ -109,6 +109,7 @@ POST /scraper/api/v1/search
     "sites": ["saramin", "jobkorea", "wanted", "remember"]
 }
 ```
+> 프록시 경로: `https://sunghoonyk.duckdns.org/scraper/search` (nginx가 /scraper/ prefix 추가)
 
 ### 3.2 처리 흐름
 
@@ -285,8 +286,8 @@ SMTP 발송
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| POST | `/scraper/api/v1/search` | 실시간 검색 (크롤링 포함) |
-| GET | `/scraper/api/v1/search/history` | 검색 기록 조회 |
+| POST | `/search` | 실시간 검색 (크롤링 포함, 배포 완료) |
+| GET | `/search/history` | 검색 기록 조회 |
 
 ### 7.2 스케줄 관리
 
@@ -315,9 +316,9 @@ SMTP 발송
 |------|------|------|
 | 1 | 검색 파라미터 표준화 (SiteSearchMapper) | ✅ 완료 |
 | 2 | 크롤러별 URL 파라미터 적용 | ✅ 완료 |
-| 3 | 실시간 검색 API 구현 | 🔜 예정 |
+| 3 | 실시간 검색 API 구현 (`POST /search`) | ✅ 완료 |
 | 4 | 스케줄 관리 API + DB | 🔜 예정 |
-| 5 | 프론트엔드 실시간 검색 UI | 🔜 예정 |
+| 5 | 프론트엔드 실시간 검색 UI (`Search.tsx`, `scraper.ts`) | ✅ 완료 |
 | 6 | 프론트엔드 스케줄 관리 UI | 🔜 예정 |
 | 7 | 이메일 발송 서비스 | 🔜 예정 |
 | 8 | 고객별 데이터 격리 | 🔜 예정 |
