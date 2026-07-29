@@ -64,9 +64,14 @@ public class SearchService {
             String siteName = entry.getKey();
             try {
                 List<Map<String, String>> jobs = entry.getValue().get(10, TimeUnit.SECONDS);
-                jobs.forEach(job -> job.put("site", siteName));
-                allJobs.addAll(jobs);
-                siteCounts.put(siteName, jobs.size());
+                List<Map<String, String>> tagged = new ArrayList<>();
+                for (Map<String, String> job : jobs) {
+                    Map<String, String> mutable = new HashMap<>(job);
+                    mutable.put("site", siteName);
+                    tagged.add(mutable);
+                }
+                allJobs.addAll(tagged);
+                siteCounts.put(siteName, tagged.size());
                 log.info("Site {} returned {} jobs", siteName, jobs.size());
             } catch (Exception e) {
                 log.error("Failed to get results from site: {}", siteName, e);
