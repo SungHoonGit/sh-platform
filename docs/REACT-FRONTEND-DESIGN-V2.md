@@ -1,11 +1,3 @@
-﻿---
-title: React Frontend Design v2
-description: React Frontend Design v2 - general module documentation
-category: front
-created: 2026-07-16
-updated: 2026-07-21
----
-
 # React 프론트엔드 설계 V2
 
 ## 페이지 구성 (3페이지)

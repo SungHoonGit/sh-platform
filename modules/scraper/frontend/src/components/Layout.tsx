@@ -1,6 +1,4 @@
-import { Outlet, useLocation, Link } from "react-router-dom";
-import CommonHeader from "./CommonHeader";
-import { AuthGuard } from "@common";
+import { Outlet, useLocation } from "react-router-dom";
 
 export default function Layout() {
   const location = useLocation();
@@ -8,33 +6,33 @@ export default function Layout() {
     location.pathname === path || (path === "/" && location.pathname === "/search");
 
   return (
-    <AuthGuard>
-      <div className="h-screen flex flex-col bg-slate-100">
-        <CommonHeader />
-        <div className="bg-slate-800 border-b border-slate-700 px-5 flex items-center h-10 gap-4 shrink-0">
-          <Link
-            to="/"
-            className={`text-sm font-medium ${isActive("/") ? "text-white" : "text-slate-400 hover:text-white"}`}
+    <div className="h-screen flex flex-col">
+      <header className="bg-slate-800 text-white px-5 py-3 flex items-center gap-6 shrink-0">
+        <span className="text-lg font-semibold">🤖 SH Platform</span>
+        <nav className="flex gap-4 text-sm">
+          <a
+            href="/"
+            className={`px-3 py-1 rounded ${isActive("/") ? "bg-slate-600" : "text-slate-300 hover:text-white"}`}
           >
             🔍 통합검색
-          </Link>
-          <Link
-            to="/schedule"
-            className={`text-sm font-medium ${isActive("/schedule") ? "text-white" : "text-slate-400 hover:text-white"}`}
+          </a>
+          <a
+            href="/schedule"
+            className={`px-3 py-1 rounded ${isActive("/schedule") ? "bg-slate-600" : "text-slate-300 hover:text-white"}`}
           >
             📅 스케줄등록
-          </Link>
-          <Link
-            to="/viewer"
-            className={`text-sm font-medium ${isActive("/viewer") ? "text-white" : "text-slate-400 hover:text-white"}`}
+          </a>
+          <a
+            href="/viewer"
+            className={`px-3 py-1 rounded ${isActive("/viewer") ? "bg-slate-600" : "text-slate-300 hover:text-white"}`}
           >
             📄 뷰어
-          </Link>
-        </div>
-        <main className="flex-1 overflow-hidden">
-          <Outlet />
-        </main>
-      </div>
-    </AuthGuard>
+          </a>
+        </nav>
+      </header>
+      <main className="flex-1 overflow-hidden">
+        <Outlet />
+      </main>
+    </div>
   );
 }

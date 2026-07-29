@@ -1,11 +1,3 @@
-﻿---
-title: Grafana Practical Guide
-description: Grafana Practical Guide - general module documentation
-category: guides
-created: 2026-07-14
-updated: 2026-07-21
----
-
 # Grafana 모니터링 실습 가이드
 
 > 이 문서는 Grafana에서 실제로 대시보드를 만들고 모니터링을 설정하는 과정을

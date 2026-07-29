@@ -4,10 +4,6 @@ plugins {
 
 group = "com.resume"
 
-tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
-    archiveBaseName.set("sh-platform-resume")
-}
-
 dependencies {
     implementation(project(":common"))
     

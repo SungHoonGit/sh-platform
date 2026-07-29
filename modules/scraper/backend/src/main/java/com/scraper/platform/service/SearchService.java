@@ -19,6 +19,45 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SearchService {
 
+    private static final Map<String, List<String>> KEYWORD_ALIASES = Map.ofEntries(
+        Map.entry("리액트", List.of("react")),
+        Map.entry("자바", List.of("java")),
+        Map.entry("스프링", List.of("spring")),
+        Map.entry("스프링부트", List.of("springboot", "spring boot")),
+        Map.entry("파이썬", List.of("python")),
+        Map.entry("타입스크립트", List.of("typescript", "ts")),
+        Map.entry("노드", List.of("node", "nodejs", "node.js")),
+        Map.entry("앵귤러", List.of("angular", "angularjs", "angular.js")),
+        Map.entry("뷰", List.of("vue", "vuejs", "vue.js")),
+        Map.entry("리액트네이티브", List.of("reactnative", "react native")),
+        Map.entry("넥스트", List.of("next", "nextjs", "next.js")),
+        Map.entry("넥스트js", List.of("nextjs", "next.js", "next")),
+        Map.entry("고", List.of("golang")),
+        Map.entry("고랭", List.of("golang")),
+        Map.entry("쿠버네티스", List.of("kubernetes", "k8s")),
+        Map.entry("도커", List.of("docker")),
+        Map.entry("장고", List.of("django")),
+        Map.entry("레일즈", List.of("rails")),
+        Map.entry("플러터", List.of("flutter")),
+        Map.entry("스벨트", List.of("svelte")),
+        Map.entry("젠킨스", List.of("jenkins")),
+        Map.entry("깃", List.of("git")),
+        Map.entry("마리아디비", List.of("mariadb")),
+        Map.entry("몽고", List.of("mongo", "mongodb")),
+        Map.entry("레디스", List.of("redis")),
+        Map.entry("엘라스틱서치", List.of("elasticsearch", "es")),
+        Map.entry("카프카", List.of("kafka")),
+        Map.entry("하둡", List.of("hadoop")),
+        Map.entry("스파크", List.of("spark")),
+        Map.entry("제이쿼리", List.of("jquery")),
+        Map.entry("마이바티스", List.of("mybatis")),
+        Map.entry("하이버네이트", List.of("hibernate")),
+        Map.entry("제이피에이", List.of("jpa")),
+        Map.entry("에이더블유에스", List.of("aws")),
+        Map.entry("제이에스피", List.of("jsp")),
+        Map.entry("서블릿", List.of("servlet"))
+    );
+
     private final CrawlerFactory crawlerFactory;
     private final SiteDefinitionRepository siteDefinitionRepository;
 
@@ -101,13 +140,20 @@ public class SearchService {
         boolean filterCareer = career != null && !career.isEmpty() && !career.equals("전체") && !career.equals("경력무관");
         boolean filterLocation = location != null && !location.isEmpty() && !location.equals("전체");
         if (!filterKeyword && !filterCareer && !filterLocation) return new ArrayList<>(jobs);
-        String kw = keyword != null ? keyword.toLowerCase().trim() : "";
+        List<String> keywords = filterKeyword ? expandKeywords(keyword) : List.of();
         return jobs.stream().filter(job -> {
             if (filterKeyword) {
                 String title = (job.getOrDefault("title", "") + " " + job.getOrDefault("position", "")).toLowerCase();
                 String company = job.getOrDefault("company", "").toLowerCase();
                 String tech = job.getOrDefault("tech", "").toLowerCase();
-                if (!title.contains(kw) && !company.contains(kw) && !tech.contains(kw)) return false;
+                boolean matched = false;
+                for (String kw : keywords) {
+                    if (title.contains(kw) || company.contains(kw) || tech.contains(kw)) {
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) return false;
             }
             if (filterCareer) {
                 String jobCareer = job.getOrDefault("career", "");
@@ -131,6 +177,27 @@ public class SearchService {
     private boolean matchesLocation(String jobLocation, String targetLocation) {
         if (jobLocation.isEmpty()) return false;
         return jobLocation.contains(targetLocation);
+    }
+
+    private List<String> expandKeywords(String raw) {
+        String kw = raw.toLowerCase(Locale.ROOT).trim();
+        Set<String> expanded = new LinkedHashSet<>();
+        expanded.add(kw);
+        for (var entry : KEYWORD_ALIASES.entrySet()) {
+            String korean = entry.getKey().toLowerCase(Locale.ROOT);
+            if (kw.contains(korean)) {
+                for (String alias : entry.getValue()) {
+                    expanded.add(alias.toLowerCase(Locale.ROOT));
+                }
+            }
+            for (String alias : entry.getValue()) {
+                if (kw.contains(alias.toLowerCase(Locale.ROOT))) {
+                    expanded.add(korean);
+                    break;
+                }
+            }
+        }
+        return new ArrayList<>(expanded);
     }
 
     private List<Map<String, String>> executeSiteSearch(String siteName, Map<String, String> standardParams) throws Exception {

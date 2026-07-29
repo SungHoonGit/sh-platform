@@ -1,11 +1,3 @@
-﻿---
-title: Readme
-description: Readme - front module documentation
-category: front
-created: 2026-07-13
-updated: 2026-07-21
----
-
 # Frontend Integration Docs
 
 | 문서 | 설명 |

@@ -1,11 +1,3 @@
-﻿---
-title: Partitioning Guide
-description: Partitioning Guide - database module documentation
-category: database
-created: 2026-07-15
-updated: 2026-07-21
----
-
 # MariaDB 파티셔닝 가이드
 
 ## 개요

@@ -23,5 +23,3 @@ Thumbs.db
 # Logs
 logs/
 *.log
-modules/scraper/frontend/src/common/
-platform/frontend/src/common/

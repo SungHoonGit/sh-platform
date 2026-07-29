@@ -1,11 +1,3 @@
-﻿---
-title: Grafana Guide
-description: Grafana Guide - guide module documentation
-category: guide
-created: 2026-07-13
-updated: 2026-07-21
----
-
 # Grafana 사용 가이드
 
 ## 1. 접속

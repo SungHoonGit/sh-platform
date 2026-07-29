@@ -6,7 +6,7 @@ const modules = [
     name: "스크래퍼",
     description: "채용공고 수집 및 검색",
     icon: Search,
-    path: "/scraper-ui",
+    path: "/platform/scraper",
     color: "bg-blue-500",
   },
   {
@@ -39,11 +39,7 @@ export default function Dashboard() {
         {modules.map((module) => (
           <div
             key={module.name}
-            onClick={() =>
-              module.path.startsWith("/platform")
-                ? navigate(module.path)
-                : (window.location.href = module.path)
-            }
+            onClick={() => navigate(module.path)}
             className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group"
           >
             <div className={`w-12 h-12 ${module.color} rounded-xl flex items-center justify-center mb-4`}>

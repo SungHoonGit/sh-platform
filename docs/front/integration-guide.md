@@ -1,11 +1,3 @@
-﻿---
-title: Integration Guide
-description: Integration Guide - front module documentation
-category: front
-created: 2026-07-13
-updated: 2026-07-21
----
-
 # SH Platform Frontend Integration Guide
 
 ## API Base URL

@@ -1,11 +1,3 @@
-﻿---
-title: Monorepo Restructuring
-description: Monorepo Restructuring - general module documentation
-category: architecture
-created: 2026-07-16
-updated: 2026-07-21
----
-
 # Monorepo 리팩토링 계획
 
 ## 1. 현재 구조 (문제점)

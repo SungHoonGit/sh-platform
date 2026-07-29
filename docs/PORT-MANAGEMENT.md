@@ -1,11 +1,3 @@
-﻿---
-title: Port Management
-description: Port Management - general module documentation
-category: infra
-created: 2026-07-17
-updated: 2026-07-21
----
-
 # 포트 관리 가이드
 
 ## 포트 매핑 전체표

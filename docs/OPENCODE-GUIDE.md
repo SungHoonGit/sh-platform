@@ -1,11 +1,3 @@
-﻿---
-title: Opencode Guide
-description: Opencode Guide - general module documentation
-category: guides
-created: 2026-07-15
-updated: 2026-07-21
----
-
 # opencode 설정 가이드 (회사용)
 
 ## opencode란?

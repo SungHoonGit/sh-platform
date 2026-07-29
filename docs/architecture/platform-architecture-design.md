@@ -1,11 +1,3 @@
-﻿---
-title: Platform Architecture Design
-description: Platform Architecture Design - architecture module documentation
-category: architecture
-created: 2026-07-13
-updated: 2026-07-21
----
-
 # SH Platform 아키텍처 설계
 
 ## 1. 비전

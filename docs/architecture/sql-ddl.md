@@ -1,11 +1,3 @@
-﻿---
-title: SQL DDL
-description: SQL DDL - architecture module documentation
-category: architecture
-created: 2026-07-13
-updated: 2026-07-21
----
-
 # SH Pass — SQL DDL
 
 **데이터베이스:** `sh_pass`
