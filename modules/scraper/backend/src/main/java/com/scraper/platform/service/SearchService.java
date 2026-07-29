@@ -82,7 +82,7 @@ public class SearchService {
         }
 
         // 서버사이드 필터링 (크롤러가 사이트 URL 파라미터로 필터링 못 한 경우 보완)
-        List<Map<String, String>> filtered = filterJobs(allJobs, request.career(), request.location());
+        List<Map<String, String>> filtered = filterJobs(allJobs, request.keyword(), request.career(), request.location());
         Map<String, Integer> filteredCounts = new LinkedHashMap<>();
         for (Map.Entry<String, Integer> entry : siteCounts.entrySet()) {
             String sn = entry.getKey();
@@ -96,11 +96,19 @@ public class SearchService {
         return SearchResponse.of(filtered.size(), filtered, filteredCounts, searchTime, failedSites);
     }
 
-    private List<Map<String, String>> filterJobs(List<Map<String, String>> jobs, String career, String location) {
+    private List<Map<String, String>> filterJobs(List<Map<String, String>> jobs, String keyword, String career, String location) {
+        boolean filterKeyword = keyword != null && !keyword.isEmpty();
         boolean filterCareer = career != null && !career.isEmpty() && !career.equals("전체") && !career.equals("경력무관");
         boolean filterLocation = location != null && !location.isEmpty() && !location.equals("전체");
-        if (!filterCareer && !filterLocation) return new ArrayList<>(jobs);
+        if (!filterKeyword && !filterCareer && !filterLocation) return new ArrayList<>(jobs);
+        String kw = keyword != null ? keyword.toLowerCase().trim() : "";
         return jobs.stream().filter(job -> {
+            if (filterKeyword) {
+                String title = (job.getOrDefault("title", "") + " " + job.getOrDefault("position", "")).toLowerCase();
+                String company = job.getOrDefault("company", "").toLowerCase();
+                String tech = job.getOrDefault("tech", "").toLowerCase();
+                if (!title.contains(kw) && !company.contains(kw) && !tech.contains(kw)) return false;
+            }
             if (filterCareer) {
                 String jobCareer = job.getOrDefault("career", "");
                 if (!matchesCareer(jobCareer, career)) return false;

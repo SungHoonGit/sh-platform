@@ -98,7 +98,7 @@ class SearchServiceTest {
             @Override
             public List<Map<String, String>> search(com.scraper.platform.model.CrawlSiteConfig siteConfig) {
                 return List.of(
-                    Map.of("company", "원티드 회사", "position", "React 개발자")
+                    Map.of("company", "원티드 회사", "position", "Java 개발자")
                 );
             }
         };
