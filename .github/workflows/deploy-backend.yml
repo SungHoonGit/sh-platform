@@ -1,4 +1,4 @@
-name: Deploy Backend (Spring Boot)
+name: Deploy Backend & Scraper Frontend
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
     paths:
       - "common/**"
       - "modules/**"
+      - "platform/**"
       - "build.gradle.kts"
       - "settings.gradle.kts"
   workflow_dispatch:
@@ -53,6 +54,7 @@ jobs:
             cd /home/ubuntu/sh-platform
             git pull origin master
 
+            # Backend builds
             ./gradlew :common:clean :common:build -q
             ./gradlew :modules:auth:backend:clean :modules:auth:backend:build -q
             ./gradlew :modules:scraper:backend:clean :modules:scraper:backend:build -q
@@ -64,9 +66,30 @@ jobs:
             cp modules/resume/backend/build/libs/sh-platform-resume-*.jar builds/sh-platform-resume.jar
             cp modules/portfolio/backend/build/libs/sh-platform-portfolio-*.jar builds/sh-platform-portfolio.jar
 
+            # Scraper Frontend build
+            cd modules/scraper/frontend
+            npm ci
+            npm run build
+            cd /home/ubuntu/sh-platform
+
+            # Platform Frontend build
+            cd platform/frontend
+            npm ci
+            npm run build
+            cd /home/ubuntu/sh-platform
+
+            # Auth Frontend build
+            cd modules/auth/frontend
+            npm ci
+            npm run build
+            cd /home/ubuntu/sh-platform
+
             sudo systemctl stop sh-platform-auth sh-platform-scraper sh-platform-resume sh-platform-portfolio 2>/dev/null || true
             sleep 2
 
             sudo systemctl start sh-platform-auth && sleep 10
             sudo systemctl start sh-platform-scraper sh-platform-resume sh-platform-portfolio
+
+            sudo systemctl reload nginx
+
             echo "Deploy complete!"
