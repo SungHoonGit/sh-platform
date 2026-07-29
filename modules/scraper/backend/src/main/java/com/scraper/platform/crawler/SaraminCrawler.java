@@ -51,10 +51,9 @@ public class SaraminCrawler implements SiteCrawler {
             log.info("Fetched HTML size: {}", html.length());
             
             Document doc = Jsoup.parse(html);
-            log.info("Page {}: list_item={}", page, doc.select("div.list_item").size());
+            log.info("Page {}: HTML size={}", page, html.length());
             
-            String keyword = siteParams.getOrDefault("stext", "");
-            List<Map<String, String>> pageJobs = parseJobs(doc, keyword);
+            List<Map<String, String>> pageJobs = parseJobs(doc);
             if (pageJobs.isEmpty()) {
                 log.info("No more jobs at page {}, stopping", page);
                 break;
@@ -106,9 +105,8 @@ public class SaraminCrawler implements SiteCrawler {
 
     private String buildUrl(Map<String, String> siteParams, int page) {
         StringBuilder sb = new StringBuilder(BASE_URL);
-        sb.append("?search_area=main");
+        sb.append("?search_area=main&cat_kewd=235");
 
-        // SiteSearchMapper에서 변환된 파라미터를 URL에 추가
         for (Map.Entry<String, String> entry : siteParams.entrySet()) {
             sb.append("&").append(entry.getKey()).append("=")
               .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
@@ -121,61 +119,16 @@ public class SaraminCrawler implements SiteCrawler {
         return sb.toString();
     }
 
-    /**
-     * 경력 한글명을 사람인 career_level 코드로 변환한다.
-     *
-     * @param career 경력 한글명 (신입, 경력, 1~3년, 3~5년, 5~10년, 10년이상)
-     * @return 사람인 career_level 코드 (1, 2, 3, 5, 8, 12)
-     */
-    String mapCareerCode(String career) {
-        return switch (career) {
-            case "신입" -> "1";
-            case "경력" -> "2";
-            case "1~3년" -> "3";
-            case "3~5년" -> "5";
-            case "5~10년" -> "8";
-            case "10년이상" -> "12";
-            default -> "";
-        };
-    }
-
-    /**
-     * 지역 한글명을 사람인 법정동코드(loc_cd)로 변환한다.
-     *
-     * @param location 지역 한글명 (서울, 경기, 인천, 부산, 대구, 대전, 광주, 세종, 강원, 제주, 충남, 충북, 전남, 전북, 경남, 경북)
-     * @return 법정동코드 (101000, 102000, 230000, ...)
-     */
-    String mapLocationCode(String location) {
-        return switch (location) {
-            case "서울" -> "101000";
-            case "경기" -> "102000";
-            case "인천" -> "230000";
-            case "부산" -> "260000";
-            case "대구" -> "270000";
-            case "대전" -> "300000";
-            case "광주" -> "290000";
-            case "세종" -> "360000";
-            case "강원" -> "420000";
-            case "제주" -> "500000";
-            case "충남" -> "440000";
-            case "충북" -> "430000";
-            case "전남" -> "460000";
-            case "전북" -> "450000";
-            case "경남" -> "480000";
-            case "경북" -> "470000";
-            default -> "";
-        };
-    }
-
-    private List<Map<String, String>> parseJobs(Document doc, String keyword) {
+    private List<Map<String, String>> parseJobs(Document doc) {
         List<Map<String, String>> jobs = new ArrayList<>();
-        
-        Elements items = doc.select("div.list_item");
+
+        Elements items = doc.select("div.area_job");
         log.info("Found {} items on page", items.size());
-        
+
         for (Element item : items) {
             try {
-                Map<String, String> job = parseItem(item);
+                Element corp = item.nextElementSibling();
+                Map<String, String> job = parseItem(item, corp);
                 if (job != null && !job.isEmpty()) {
                     jobs.add(job);
                 }
@@ -183,70 +136,75 @@ public class SaraminCrawler implements SiteCrawler {
                 log.debug("Failed to parse job item", e);
             }
         }
-        
+
         return jobs;
     }
 
-    private Map<String, String> parseItem(Element item) {
+    private Map<String, String> parseItem(Element item, Element corp) {
         Map<String, String> job = new HashMap<>();
-        
-        // 회사명
-        Element companyEl = item.selectFirst("div.col.company_nm a.str_tit");
-        if (companyEl == null) companyEl = item.selectFirst("a.str_tit");
-        if (companyEl != null) {
-            job.put("company", companyEl.text().trim());
+
+        // 회사명 (div.area_corp strong.corp_name a)
+        if (corp != null) {
+            Element companyEl = corp.selectFirst("strong.corp_name a");
+            if (companyEl != null) {
+                job.put("company", companyEl.text().trim());
+            }
         }
-        
-        // 제목 + 링크
-        Element titleEl = item.selectFirst("div.job_tit a.str_tit");
-        if (titleEl == null) titleEl = item.selectFirst("a.str_tit");
+
+        // 제목 + 링크 (h2.job_tit a)
+        Element titleEl = item.selectFirst("h2.job_tit a");
         if (titleEl != null) {
-            job.put("title", titleEl.text().trim());
-            job.put("position", titleEl.text().trim());
+            String title = titleEl.attr("title");
+            if (title.isEmpty()) title = titleEl.text().trim();
+            job.put("title", title);
+            job.put("position", title);
             String href = titleEl.attr("href");
             if (!href.startsWith("http")) {
                 href = "https://www.saramin.co.kr" + href;
             }
             job.put("url", href);
         }
-        
-        // 경력
-        Element careerEl = item.selectFirst("p.career");
-        if (careerEl != null) {
-            job.put("career", careerEl.text().trim());
-        }
-        
-        // 학력
-        Element eduEl = item.selectFirst("p.education");
-        if (eduEl != null) {
-            job.put("education", eduEl.text().trim());
-        }
-        
-        // 기술스택
-        Elements techEls = item.select("div.job_meta span.job_sector span");
-        if (techEls.isEmpty()) techEls = item.select("span.job_sector");
-        StringBuilder tech = new StringBuilder();
-        for (Element t : techEls) {
-            String text = t.text().trim();
-            if (!text.isEmpty() && !text.equals(",")) {
-                if (tech.length() > 0) tech.append(", ");
-                tech.append(text);
+
+        // 경력/지역 (div.job_condition spans)
+        Element cond = item.selectFirst("div.job_condition");
+        if (cond != null) {
+            Elements spans = cond.select("> span");
+            // 첫번째 span: 지역 (a 태그들)
+            if (spans.size() > 0) {
+                Element locSpan = spans.get(0);
+                StringBuilder loc = new StringBuilder();
+                for (Element a : locSpan.select("a")) {
+                    if (loc.length() > 0) loc.append(" ");
+                    loc.append(a.text().trim());
+                }
+                job.put("location", loc.toString());
+            }
+            // 두번째 span: 경력
+            if (spans.size() > 1) {
+                job.put("career", spans.get(1).text().trim());
             }
         }
-        job.put("tech", tech.toString());
-        
-        // 지역
-        Element locEl = item.selectFirst("p.work_place");
-        if (locEl != null) {
-            job.put("location", locEl.text().trim());
+
+        // 기술스택 (div.job_sector a)
+        Element sector = item.selectFirst("div.job_sector");
+        if (sector != null) {
+            StringBuilder tech = new StringBuilder();
+            for (Element a : sector.select("a")) {
+                String text = a.text().trim();
+                if (!text.isEmpty()) {
+                    if (tech.length() > 0) tech.append(", ");
+                    tech.append(text);
+                }
+            }
+            job.put("tech", tech.toString());
         }
-        
-        // 마감일
-        Element deadlineEl = item.selectFirst("span.date");
+
+        // 마감일 (div.job_date span.date)
+        Element deadlineEl = item.selectFirst("div.job_date span.date");
         if (deadlineEl != null) {
             job.put("deadline", deadlineEl.text().trim());
         }
-        
+
         return job;
     }
 
