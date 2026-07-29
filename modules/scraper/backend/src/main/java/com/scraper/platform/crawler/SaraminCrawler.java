@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class SaraminCrawler implements SiteCrawler {
 
-    private static final String BASE_URL = "https://www.saramin.co.kr/zf_user/jobs/list/job-category";
+    private static final String BASE_URL = "https://www.saramin.co.kr/zf_user/search";
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final SiteSearchMapper siteSearchMapper;
@@ -106,7 +106,7 @@ public class SaraminCrawler implements SiteCrawler {
 
     private String buildUrl(Map<String, String> siteParams, int page) {
         StringBuilder sb = new StringBuilder(BASE_URL);
-        sb.append("?cat_kewd=235"); // IT 개발 카테고리
+        sb.append("?search_area=main");
 
         // SiteSearchMapper에서 변환된 파라미터를 URL에 추가
         for (Map.Entry<String, String> entry : siteParams.entrySet()) {

@@ -64,6 +64,7 @@ public class SearchService {
             String siteName = entry.getKey();
             try {
                 List<Map<String, String>> jobs = entry.getValue().get(10, TimeUnit.SECONDS);
+                jobs.forEach(job -> job.put("site", siteName));
                 allJobs.addAll(jobs);
                 siteCounts.put(siteName, jobs.size());
                 log.info("Site {} returned {} jobs", siteName, jobs.size());
