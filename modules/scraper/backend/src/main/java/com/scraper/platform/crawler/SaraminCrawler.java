@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class SaraminCrawler implements SiteCrawler {
 
-    private static final String BASE_URL = "https://www.saramin.co.kr/zf_user/jobs/list/job-category";
+    private static final String BASE_URL = "https://www.saramin.co.kr/zf_user/search";
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final SiteSearchMapper siteSearchMapper;
@@ -42,22 +42,32 @@ public class SaraminCrawler implements SiteCrawler {
         String location = params.getOrDefault("location", "");
 
         List<Map<String, String>> allJobs = new ArrayList<>();
+        int emptyPageCount = 0;
 
-        for (int page = 1; page <= 3; page++) {
-            String url = buildUrl(keyword, career, page);
+        for (int page = 1; page <= 10; page++) {
+            String url = buildUrl(keyword, career, location, page);
             log.info("Saramin crawl URL (page {}): {}", page, url);
 
             String html = fetchWithCurl(url);
             log.info("Fetched HTML size: {}", html.length());
 
             Document doc = Jsoup.parse(html);
-            log.info("Page {}: list_item={}", page, doc.select("div.list_item").size());
+
+            if (isBlockedPage(doc)) {
+                log.warn("Blocked or empty page at page {}, stopping", page);
+                break;
+            }
 
             List<Map<String, String>> pageJobs = parseJobs(doc);
             if (pageJobs.isEmpty()) {
-                log.info("No more jobs at page {}, stopping", page);
-                break;
+                emptyPageCount++;
+                if (emptyPageCount >= 2) {
+                    log.info("No more jobs at page {}, stopping", page);
+                    break;
+                }
+                continue;
             }
+            emptyPageCount = 0;
             allJobs.addAll(pageJobs);
 
             Thread.sleep(1000);
@@ -65,6 +75,11 @@ public class SaraminCrawler implements SiteCrawler {
 
         log.info("Total Saramin jobs: {}", allJobs.size());
         return allJobs;
+    }
+
+    private boolean isBlockedPage(Document doc) {
+        String title = doc.title();
+        return title.contains("사람인") && doc.select("div.area_job").isEmpty() && doc.text().contains("페이지를 찾을 수 없습니다");
     }
 
     private String fetchWithCurl(String url) throws IOException, InterruptedException {
@@ -97,29 +112,45 @@ public class SaraminCrawler implements SiteCrawler {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private String buildUrl(String keyword, String career, int page) {
+    private String buildUrl(String keyword, String career, String location, int page) {
         StringBuilder sb = new StringBuilder(BASE_URL);
-        sb.append("?cat_kewd=235");
-
-        String careerCode = mapCareerCode(career);
-        if (!careerCode.isEmpty()) {
-            sb.append("&career_level=").append(careerCode);
-        }
+        sb.append("?searchType=search&search_done=y&search_optional_item=y&panel_count=y");
 
         if (!keyword.isEmpty()) {
-            sb.append("&stext=").append(URLEncoder.encode(keyword, StandardCharsets.UTF_8));
+            sb.append("&searchword=").append(URLEncoder.encode(keyword, StandardCharsets.UTF_8));
         }
 
         if (page > 1) {
             sb.append("&page=").append(page);
         }
 
+        String locCode = mapLocationCode(location);
+        if (!locCode.isEmpty()) {
+            sb.append("&loc_mcd=").append(locCode);
+        }
+
+        appendCareerParams(sb, career);
+
         return sb.toString();
+    }
+
+    private void appendCareerParams(StringBuilder sb, String career) {
+        if (career == null || career.isEmpty() || career.equals("전체") || career.equals("경력무관")) {
+            return;
+        }
+        switch (career) {
+            case "신입" -> sb.append("&exp_cd=1");
+            case "경력" -> sb.append("&exp_cd=2");
+            case "1~3년" -> sb.append("&exp_cd=2&exp_min=1&exp_max=3");
+            case "3~5년" -> sb.append("&exp_cd=2&exp_min=3&exp_max=5");
+            case "5~10년" -> sb.append("&exp_cd=2&exp_min=5&exp_max=10");
+            case "10년이상" -> sb.append("&exp_cd=2&exp_min=10");
+        }
     }
 
     private List<Map<String, String>> parseJobs(Document doc) {
         List<Map<String, String>> jobs = new ArrayList<>();
-        Elements items = doc.select("div.list_item");
+        Elements items = doc.select("div.area_job");
 
         for (Element item : items) {
             try {
@@ -128,7 +159,7 @@ public class SaraminCrawler implements SiteCrawler {
                     jobs.add(job);
                 }
             } catch (Exception e) {
-                log.debug("Failed to parse job item", e);
+                log.debug("Failed to parse search result item", e);
             }
         }
 
@@ -138,12 +169,12 @@ public class SaraminCrawler implements SiteCrawler {
     private Map<String, String> parseItem(Element item) {
         Map<String, String> job = new HashMap<>();
 
-        Element companyEl = item.selectFirst("div.col.company_nm a.str_tit");
+        Element companyEl = item.selectFirst("div.area_corp strong.corp_name a");
         if (companyEl != null) {
             job.put("company", companyEl.text().trim());
         }
 
-        Element titleEl = item.selectFirst("div.job_tit a.str_tit");
+        Element titleEl = item.selectFirst("h2.job_tit a");
         if (titleEl != null) {
             String title = titleEl.text().trim();
             job.put("title", title);
@@ -155,29 +186,23 @@ public class SaraminCrawler implements SiteCrawler {
             job.put("url", href);
         }
 
-        Element careerEl = item.selectFirst("p.career");
-        if (careerEl != null) {
-            job.put("career", careerEl.text().trim());
-        }
-
-        Element locEl = item.selectFirst("p.work_place");
+        Element locEl = item.selectFirst("div.job_condition span");
         if (locEl != null) {
             job.put("location", locEl.text().trim());
         }
 
-        Elements techEls = item.select("div.job_meta span.job_sector span");
-        if (techEls.isEmpty()) techEls = item.select("span.job_sector");
+        Elements techEls = item.select("div.job_sector a");
         StringBuilder tech = new StringBuilder();
         for (Element t : techEls) {
             String text = t.text().trim();
-            if (!text.isEmpty() && !text.equals(",")) {
+            if (!text.isEmpty()) {
                 if (tech.length() > 0) tech.append(", ");
                 tech.append(text);
             }
         }
         job.put("tech", tech.toString());
 
-        Element deadlineEl = item.selectFirst("span.date");
+        Element deadlineEl = item.selectFirst("div.job_date span.date");
         if (deadlineEl != null) {
             job.put("deadline", deadlineEl.text().trim());
         }
