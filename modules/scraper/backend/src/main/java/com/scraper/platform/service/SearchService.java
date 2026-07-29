@@ -141,6 +141,7 @@ public class SearchService {
         boolean filterLocation = location != null && !location.isEmpty() && !location.equals("전체");
         if (!filterKeyword && !filterCareer && !filterLocation) return new ArrayList<>(jobs);
         List<String> keywords = filterKeyword ? expandKeywords(keyword) : List.of();
+        log.debug("filterJobs: keyword={}, expanded={}, jobs={}", keyword, keywords, jobs.size());
         return jobs.stream().filter(job -> {
             if (filterKeyword) {
                 String title = (job.getOrDefault("title", "") + " " + job.getOrDefault("position", "")).toLowerCase();
