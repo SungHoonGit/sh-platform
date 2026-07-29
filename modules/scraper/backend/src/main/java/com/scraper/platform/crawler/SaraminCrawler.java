@@ -42,9 +42,8 @@ public class SaraminCrawler implements SiteCrawler {
         String location = params.getOrDefault("location", "");
 
         List<Map<String, String>> allJobs = new ArrayList<>();
-        int emptyPageCount = 0;
 
-        for (int page = 1; page <= 10; page++) {
+        for (int page = 1; page <= 5; page++) {
             String url = buildUrl(keyword, career, location, page);
             log.info("Saramin crawl URL (page {}): {}", page, url);
 
@@ -60,17 +59,12 @@ public class SaraminCrawler implements SiteCrawler {
 
             List<Map<String, String>> pageJobs = parseJobs(doc);
             if (pageJobs.isEmpty()) {
-                emptyPageCount++;
-                if (emptyPageCount >= 2) {
-                    log.info("No more jobs at page {}, stopping", page);
-                    break;
-                }
-                continue;
+                log.info("No more jobs at page {}, stopping", page);
+                break;
             }
-            emptyPageCount = 0;
             allJobs.addAll(pageJobs);
 
-            Thread.sleep(1000);
+            Thread.sleep(500);
         }
 
         log.info("Total Saramin jobs: {}", allJobs.size());

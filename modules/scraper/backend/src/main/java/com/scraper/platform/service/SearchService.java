@@ -103,7 +103,7 @@ public class SearchService {
         for (Map.Entry<String, CompletableFuture<List<Map<String, String>>>> entry : futures.entrySet()) {
             String siteName = entry.getKey();
             try {
-                List<Map<String, String>> jobs = entry.getValue().get(10, TimeUnit.SECONDS);
+                List<Map<String, String>> jobs = entry.getValue().get(15, TimeUnit.SECONDS);
                 List<Map<String, String>> tagged = new ArrayList<>();
                 for (Map<String, String> job : jobs) {
                     Map<String, String> mutable = new HashMap<>(job);
