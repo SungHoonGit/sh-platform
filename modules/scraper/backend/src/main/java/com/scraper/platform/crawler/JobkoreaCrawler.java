@@ -27,6 +27,8 @@ import java.util.concurrent.TimeUnit;
 public class JobkoreaCrawler implements SiteCrawler {
 
     private static final String BASE_URL = "https://www.jobkorea.co.kr/Search/";
+    private static final int MAX_PAGES = 5;
+    private static final int PAGE_DELAY_MS = 500;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final SiteSearchMapper siteSearchMapper;
@@ -39,23 +41,32 @@ public class JobkoreaCrawler implements SiteCrawler {
     @Override
     public List<Map<String, String>> search(CrawlSiteConfig siteConfig) throws Exception {
         String paramValues = siteConfig.getParamValues();
-
-        // 표준 파라미터를 파싱하여 career range 추출
         Map<String, String> standardParams = parseParams(paramValues);
         Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
 
-        String url = buildUrl(siteParams, standardParams);
-        log.info("Jobkorea crawl URL: {}", url);
+        String baseUrl = buildUrl(siteParams, standardParams);
+        List<Map<String, String>> allJobs = new ArrayList<>();
 
-        // curl로 HTML을 가져옴
-        String html = fetchWithCurl(url);
-        log.info("Fetched HTML size: {}", html.length());
+        for (int page = 1; page <= MAX_PAGES; page++) {
+            String url = page == 1 ? baseUrl : baseUrl + "&Page=" + page;
+            log.info("Jobkorea crawl URL (page {}): {}", page, url);
 
-        Document doc = Jsoup.parse(html);
-        log.info("Page title: {}", doc.title());
+            String html = fetchWithCurl(url);
+            Document doc = Jsoup.parse(html);
 
-        String keyword = siteParams.getOrDefault("stext", "");
-        return parseJobs(doc, keyword);
+            List<Map<String, String>> pageJobs = parseJobs(doc);
+            allJobs.addAll(pageJobs);
+            log.info("Page {}: {} jobs (total so far: {})", page, pageJobs.size(), allJobs.size());
+
+            if (pageJobs.size() < 20) break;
+
+            if (page < MAX_PAGES) {
+                Thread.sleep(PAGE_DELAY_MS);
+            }
+        }
+
+        log.info("Total Jobkorea jobs: {}", allJobs.size());
+        return allJobs;
     }
 
     private String fetchWithCurl(String url) throws IOException, InterruptedException {
@@ -164,7 +175,7 @@ public class JobkoreaCrawler implements SiteCrawler {
         };
     }
 
-    private List<Map<String, String>> parseJobs(Document doc, String keyword) {
+    private List<Map<String, String>> parseJobs(Document doc) {
         List<Map<String, String>> jobs = new ArrayList<>();
 
         Elements cards = doc.select("div[data-sentry-component=CardJob]");
