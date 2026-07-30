@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class JobkoreaCrawler implements SiteCrawler {
 
-    private static final String BASE_URL = "https://www.jobkorea.co.kr/recruit/joblist";
+    private static final String BASE_URL = "https://www.jobkorea.co.kr/Search/";
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final SiteSearchMapper siteSearchMapper;
@@ -40,13 +40,14 @@ public class JobkoreaCrawler implements SiteCrawler {
     public List<Map<String, String>> search(CrawlSiteConfig siteConfig) throws Exception {
         String paramValues = siteConfig.getParamValues();
 
-        // SiteSearchMapper를 사용하여 표준 파라미터를 사이트별 URL 파라미터로 변환
+        // 표준 파라미터를 파싱하여 career range 추출
+        Map<String, String> standardParams = parseParams(paramValues);
         Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
 
-        String url = buildUrl(siteParams);
+        String url = buildUrl(siteParams, standardParams);
         log.info("Jobkorea crawl URL: {}", url);
 
-        // curl로 HTML을 가져옴 (Java HttpClient도 anti-bot에 차단될 수 있음)
+        // curl로 HTML을 가져옴
         String html = fetchWithCurl(url);
         log.info("Fetched HTML size: {}", html.length());
 
@@ -86,17 +87,35 @@ public class JobkoreaCrawler implements SiteCrawler {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private String buildUrl(Map<String, String> siteParams) {
+    private String buildUrl(Map<String, String> siteParams, Map<String, String> standardParams) {
         StringBuilder sb = new StringBuilder(BASE_URL);
-        sb.append("?menucode=duty&dutyCtgr=1003101"); // IT 개발 직무
+        sb.append("?tabType=recruit");
 
-        // SiteSearchMapper에서 변환된 파라미터를 URL에 추가
+        // SiteSearchMapper에서 변환된 파라미터 추가 (careerType은 제외 — 직접 처리)
         for (Map.Entry<String, String> entry : siteParams.entrySet()) {
+            if ("careerType".equals(entry.getKey())) continue;
             sb.append("&").append(entry.getKey()).append("=")
               .append(java.net.URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
         }
 
+        // careerType + careerMin/careerMax — SiteSearchMapper는 단순 매핑만 하므로 range는 직접 처리
+        appendCareerParams(sb, standardParams.getOrDefault("career", ""));
+
         return sb.toString();
+    }
+
+    private void appendCareerParams(StringBuilder sb, String career) {
+        if (career == null || career.isEmpty() || career.equals("전체") || career.equals("경력무관")) {
+            return;
+        }
+        switch (career) {
+            case "신입" -> sb.append("&careerType=0");
+            case "경력" -> sb.append("&careerType=2");
+            case "1~3년" -> sb.append("&careerType=2&careerMin=1&careerMax=3");
+            case "3~5년" -> sb.append("&careerType=2&careerMin=3&careerMax=5");
+            case "5~10년" -> sb.append("&careerType=2&careerMin=5&careerMax=10");
+            case "10년이상" -> sb.append("&careerType=2&careerMin=10");
+        }
     }
 
     /**
