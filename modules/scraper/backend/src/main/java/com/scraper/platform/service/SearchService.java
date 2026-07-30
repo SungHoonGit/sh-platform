@@ -114,10 +114,27 @@ public class SearchService {
     }
 
     private boolean matchesCareer(String jobCareer, String targetCareer) {
-        if (jobCareer.isEmpty()) return true;
-        String t = targetCareer.replaceAll("[~\\s]", "");
-        String j = jobCareer.replaceAll("[~\\s]", "");
-        return j.contains(t) || t.contains(j);
+        if (jobCareer.isEmpty() || jobCareer.contains("무관") || targetCareer.isEmpty()) return true;
+        int[] jr = parseCareerRange(jobCareer);
+        int[] tr = parseCareerRange(targetCareer);
+        if (jr == null || tr == null) return true;
+        return jr[0] <= tr[1] && jr[1] >= tr[0];
+    }
+
+    private int[] parseCareerRange(String career) {
+        String c = career.replaceAll("[\\s~]", "");
+        if (c.contains("신입")) return new int[]{0, 0};
+        var m = java.util.regex.Pattern.compile("(\\d+)~(\\d+)").matcher(c);
+        if (m.find()) return new int[]{Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))};
+        m = java.util.regex.Pattern.compile("(\\d+)년↑").matcher(c);
+        if (m.find()) return new int[]{Integer.parseInt(m.group(1)), Integer.MAX_VALUE};
+        m = java.util.regex.Pattern.compile("경력(\\d+)년").matcher(c);
+        if (m.find()) return new int[]{Integer.parseInt(m.group(1)), Integer.MAX_VALUE};
+        m = java.util.regex.Pattern.compile("(\\d+)년이상").matcher(c);
+        if (m.find()) return new int[]{Integer.parseInt(m.group(1)), Integer.MAX_VALUE};
+        m = java.util.regex.Pattern.compile("(\\d+)(년|年)").matcher(c);
+        if (m.find()) { int v = Integer.parseInt(m.group(1)); return new int[]{v, v}; }
+        return null;
     }
 
     private boolean matchesLocation(String jobLocation, String targetLocation) {
