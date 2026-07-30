@@ -139,7 +139,7 @@ public class SearchService {
     }
 
     private boolean matchesLocation(String jobLocation, String targetLocation) {
-        if (jobLocation.isEmpty()) return false;
+        if (jobLocation.isEmpty()) return true;
         return jobLocation.contains(targetLocation);
     }
 
