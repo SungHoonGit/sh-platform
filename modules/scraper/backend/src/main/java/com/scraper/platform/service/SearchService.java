@@ -122,10 +122,11 @@ public class SearchService {
     }
 
     private int[] parseCareerRange(String career) {
+        var m = java.util.regex.Pattern.compile("(\\d+)~(\\d+)").matcher(career);
+        if (m.find()) return new int[]{Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))};
+        // ~ 제거 후 나머지 패턴 매칭
         String c = career.replaceAll("[\\s~]", "");
         if (c.contains("신입")) return new int[]{0, 0};
-        var m = java.util.regex.Pattern.compile("(\\d+)~(\\d+)").matcher(c);
-        if (m.find()) return new int[]{Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))};
         m = java.util.regex.Pattern.compile("(\\d+)년↑").matcher(c);
         if (m.find()) return new int[]{Integer.parseInt(m.group(1)), Integer.MAX_VALUE};
         m = java.util.regex.Pattern.compile("경력(\\d+)년").matcher(c);
