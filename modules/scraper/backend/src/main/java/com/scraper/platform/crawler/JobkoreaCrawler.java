@@ -167,84 +167,65 @@ public class JobkoreaCrawler implements SiteCrawler {
     private List<Map<String, String>> parseJobs(Document doc, String keyword) {
         List<Map<String, String>> jobs = new ArrayList<>();
 
-        Elements rows = doc.select("tr.devloopArea");
-        log.info("Found {} job rows", rows.size());
+        Elements cards = doc.select("div[data-sentry-component=CardJob]");
+        log.info("Found {} job cards", cards.size());
 
-        for (Element row : rows) {
+        for (Element card : cards) {
             try {
-                Map<String, String> job = parseRow(row);
+                Map<String, String> job = parseCard(card);
                 if (job != null && !job.isEmpty()) {
                     jobs.add(job);
                 }
             } catch (Exception e) {
-                log.debug("Failed to parse job row", e);
+                log.debug("Failed to parse job card", e);
             }
         }
 
         return jobs;
     }
 
-    private Map<String, String> parseRow(Element row) {
+    private Map<String, String> parseCard(Element card) {
         Map<String, String> job = new HashMap<>();
 
+        // 제목
+        Element titleEl = card.selectFirst("a[data-sentry-component=Title] span");
+        if (titleEl != null) {
+            String title = titleEl.text().trim();
+            job.put("title", title);
+            job.put("position", title);
+        }
+
+        // 링크
+        Element linkEl = card.selectFirst("a[data-sentry-component=Title]");
+        if (linkEl != null) {
+            String href = linkEl.attr("href");
+            if (!href.startsWith("http")) {
+                href = "https://www.jobkorea.co.kr" + href;
+            }
+            job.put("url", href);
+        }
+
         // 회사명
-        Element coTd = row.selectFirst("td.tplCo");
-        if (coTd != null) {
-            Element companyA = coTd.selectFirst("a");
-            if (companyA != null) {
-                job.put("company", companyA.text().trim().replace("관심기업", "").trim());
-            } else {
-                job.put("company", coTd.text().trim().replace("관심기업", "").trim());
+        Element companyEl = card.selectFirst("span.mb-5 a span");
+        if (companyEl != null) {
+            job.put("company", companyEl.text().trim());
+        }
+
+        // GrayChip 칩들에서 위치, 기술 분야 추출
+        Elements chips = card.select("div[data-sentry-component=GrayChip] span.text-gray900");
+        for (int i = 0; i < chips.size(); i++) {
+            String text = chips.get(i).text().trim();
+            if (i == 0) {
+                job.put("location", text);
+            } else if (i == 1) {
+                job.put("tech", text);
             }
         }
 
-        // 제목 + 링크
-        Element titTd = row.selectFirst("td.tplTit");
-        if (titTd != null) {
-            Element titleA = titTd.selectFirst("div.titBx a");
-            if (titleA != null) {
-                job.put("title", titleA.text().trim());
-                job.put("position", titleA.text().trim());
-                String href = titleA.attr("href");
-                if (!href.startsWith("http")) {
-                    href = "https://www.jobkorea.co.kr" + href;
-                }
-                job.put("url", href);
-            }
-
-            // 경력, 학력, 지역, 고용형태, 연봉
-            Elements cells = titTd.select("p.etc span.cell");
-            for (Element cell : cells) {
-                String text = cell.text().trim();
-                if (text.isEmpty()) continue;
-                if (text.contains("신입") || text.contains("경력")) {
-                    job.put("career", text);
-                } else if (text.contains("대학") || text.contains("고졸") || text.contains("학력무관") || text.contains("석사") || text.contains("박사")) {
-                    job.put("education", text);
-                } else if (text.contains("서울") || text.contains("경기") || text.contains("부산") || text.contains("대전") || text.contains("대구") || text.contains("광주") || text.contains("인천") || text.contains("울산") || text.contains("세종") || text.contains("강원") || text.contains("충청") || text.contains("전라") || text.contains("경상") || text.contains("제주")) {
-                    job.put("location", text);
-                } else if (text.contains("정규직") || text.contains("계약직") || text.contains("인턴") || text.contains("파견") || text.contains("무기계약")) {
-                    job.put("employmentType", text);
-                } else if (text.contains("만원")) {
-                    job.put("salary", text);
-                }
-            }
-
-            // 기술스택
-            Element dsc = titTd.selectFirst("p.dsc");
-            if (dsc != null) {
-                job.put("tech", dsc.text().trim());
-            }
-        }
-
-        // 마감일
-        Element dateTd = row.selectFirst("td.odd");
-        if (dateTd != null) {
-            String text = dateTd.text().trim();
-            if (text.contains("~")) {
-                String deadline = text.substring(text.lastIndexOf("~")).trim();
-                job.put("deadline", deadline);
-            }
+        // 경력
+        Element careerEl = card.selectFirst("span.text-gray700.text-typo-c1-13");
+        if (careerEl != null) {
+            job.put("career", careerEl.text().trim());
         }
 
         return job;
