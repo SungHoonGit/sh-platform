@@ -180,9 +180,12 @@ public class SaraminCrawler implements SiteCrawler {
             job.put("url", href);
         }
 
-        Element locEl = item.selectFirst("div.job_condition span");
-        if (locEl != null) {
-            job.put("location", locEl.text().trim());
+        Elements condSpans = item.select("div.job_condition span");
+        if (!condSpans.isEmpty()) {
+            job.put("location", condSpans.get(0).text().trim());
+            if (condSpans.size() >= 2) {
+                job.put("career", condSpans.get(1).text().trim());
+            }
         }
 
         Elements techEls = item.select("div.job_sector a");
