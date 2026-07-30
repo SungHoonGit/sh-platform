@@ -21,7 +21,6 @@ public class SearchService {
 
     private final SiteDefinitionRepository siteDefinitionRepository;
     private final CrawlerFactory crawlerFactory;
-    private final SiteDefinitionRepository siteDefinitionRepository;
 
     private ExecutorService executorService = Executors.newFixedThreadPool(4);
 
