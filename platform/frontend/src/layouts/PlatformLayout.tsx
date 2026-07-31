@@ -3,7 +3,7 @@ import { LayoutDashboard, Search, FileText, Briefcase, Shield, Users, Building2,
 
 const navItems = [
   { to: "/platform", icon: LayoutDashboard, label: "대시보드", end: true },
-  { to: "/platform/scraper", icon: Search, label: "스크래퍼" },
+  { to: "/scraper/", icon: Search, label: "스크래퍼", external: true },
   { to: "/platform/resume", icon: FileText, label: "이력서" },
   { to: "/platform/portfolio", icon: Briefcase, label: "포트폴리오" },
 ];
@@ -32,21 +32,35 @@ export default function PlatformLayout() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                  isActive ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800"
-                }`
-              }
-            >
-              <item.icon size={18} />
-              {item.label}
-            </NavLink>
-          ))}
+          {navItems.map((item) =>
+            item.external ? (
+              <a
+                key={item.to}
+                href={item.to}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+              >
+                <item.icon size={18} />
+                {item.label}
+                <span className="ml-auto text-slate-500 text-xs">↗</span>
+              </a>
+            ) : (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    isActive ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800"
+                  }`
+                }
+              >
+                <item.icon size={18} />
+                {item.label}
+              </NavLink>
+            )
+          )}
 
           <div className="pt-4 mt-4 border-t border-slate-700">
             <p className="px-3 text-xs font-medium text-slate-500 uppercase mb-2">관리</p>

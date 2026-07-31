@@ -21,7 +21,7 @@ function App() {
         <Routes>
           <Route element={<PlatformLayout />}>
             <Route path="/platform" element={<Dashboard />} />
-            <Route path="/platform/scraper/*" element={<div>스크래퍼 모듈 (임베딩 예정)</div>} />
+            <Route path="/platform/scraper/*" element={<Navigate to="/scraper/" replace />} />
             <Route path="/platform/resume/*" element={<div>이력서 모듈 (추후)</div>} />
             <Route path="/platform/portfolio/*" element={<div>포트폴리오 모듈 (추후)</div>} />
             <Route path="/platform/admin" element={<AdminDashboard />} />

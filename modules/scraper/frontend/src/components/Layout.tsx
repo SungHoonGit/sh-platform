@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, Link } from "react-router-dom";
 
 export default function Layout() {
   const location = useLocation();
@@ -10,24 +10,24 @@ export default function Layout() {
       <header className="bg-slate-800 text-white px-5 py-3 flex items-center gap-6 shrink-0">
         <span className="text-lg font-semibold">🤖 SH Platform</span>
         <nav className="flex gap-4 text-sm">
-          <a
-            href="/"
+          <Link
+            to="/"
             className={`px-3 py-1 rounded ${isActive("/") ? "bg-slate-600" : "text-slate-300 hover:text-white"}`}
           >
             🔍 통합검색
-          </a>
-          <a
-            href="/schedule"
+          </Link>
+          <Link
+            to="/schedule"
             className={`px-3 py-1 rounded ${isActive("/schedule") ? "bg-slate-600" : "text-slate-300 hover:text-white"}`}
           >
             📅 스케줄등록
-          </a>
-          <a
-            href="/viewer"
+          </Link>
+          <Link
+            to="/viewer"
             className={`px-3 py-1 rounded ${isActive("/viewer") ? "bg-slate-600" : "text-slate-300 hover:text-white"}`}
           >
             📄 뷰어
-          </a>
+          </Link>
         </nav>
       </header>
       <main className="flex-1 overflow-hidden">

@@ -55,6 +55,12 @@ jobs:
             cd /home/ubuntu/sh-platform
             git pull origin master
 
+            # Scraper Frontend build (backend JAR에 정적 리소스 포함을 위해 backend 빌드보다 먼저)
+            cd modules/scraper/frontend
+            npm ci
+            npm run build
+            cd /home/ubuntu/sh-platform
+
             # Backend builds
             ./gradlew :common:clean :common:build -q
             ./gradlew :modules:auth:backend:clean :modules:auth:backend:build -q
@@ -66,12 +72,6 @@ jobs:
             cp modules/scraper/backend/build/libs/sh-platform-scraper-*.jar builds/sh-platform-scraper.jar
             cp modules/resume/backend/build/libs/sh-platform-resume-*.jar builds/sh-platform-resume.jar
             cp modules/portfolio/backend/build/libs/sh-platform-portfolio-*.jar builds/sh-platform-portfolio.jar
-
-            # Scraper Frontend build
-            cd modules/scraper/frontend
-            npm ci
-            npm run build
-            cd /home/ubuntu/sh-platform
 
             # Platform Frontend build
             cd platform/frontend
