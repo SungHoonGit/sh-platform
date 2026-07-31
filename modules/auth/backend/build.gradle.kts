@@ -2,6 +2,14 @@ plugins {
     id("org.springframework.boot")
 }
 
+base {
+    archivesName.set("sh-platform-auth")
+}
+
+tasks.jar {
+    enabled = false
+}
+
 dependencies {
     implementation(project(":common"))
 

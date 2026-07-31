@@ -2,6 +2,14 @@ plugins {
     id("org.springframework.boot")
 }
 
+base {
+    archivesName.set("sh-platform-resume")
+}
+
+tasks.jar {
+    enabled = false
+}
+
 group = "com.resume"
 
 dependencies {

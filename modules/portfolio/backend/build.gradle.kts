@@ -2,6 +2,14 @@ plugins {
     id("org.springframework.boot")
 }
 
+base {
+    archivesName.set("sh-platform-portfolio")
+}
+
+tasks.jar {
+    enabled = false
+}
+
 group = "com.portfolio"
 
 dependencies {
