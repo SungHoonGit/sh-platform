@@ -13,10 +13,6 @@ import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -27,7 +23,6 @@ import java.util.concurrent.TimeUnit;
 public class JobkoreaCrawler implements SiteCrawler {
 
     private static final String BASE_URL = "https://www.jobkorea.co.kr/Search/";
-    private static final int MAX_PAGES = 5;
     private static final int PAGE_DELAY_MS = 500;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -44,34 +39,13 @@ public class JobkoreaCrawler implements SiteCrawler {
         Map<String, String> standardParams = parseParams(paramValues);
         Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
 
-        String baseUrl = buildUrl(siteParams, standardParams);
-        Set<String> seenUrls = new HashSet<>();
-        List<Map<String, String>> allJobs = new ArrayList<>();
+        String url = buildUrl(siteParams, standardParams);
+        log.info("Jobkorea crawl URL: {}", url);
 
-        for (int page = 1; page <= MAX_PAGES; page++) {
-            String url = page == 1 ? baseUrl : baseUrl + "&Page=" + page;
-            log.info("Jobkorea crawl URL (page {}): {}", page, url);
+        String html = fetchWithCurl(url);
+        Document doc = Jsoup.parse(html);
 
-            String html = fetchWithCurl(url);
-            Document doc = Jsoup.parse(html);
-
-            List<Map<String, String>> pageJobs = parseJobs(doc);
-            for (Map<String, String> job : pageJobs) {
-                String jobUrl = job.get("url");
-                if (jobUrl != null && !seenUrls.add(jobUrl)) continue;
-                allJobs.add(job);
-            }
-            log.info("Page {}: {} new jobs (total so far: {})", page, pageJobs.size(), allJobs.size());
-
-            if (pageJobs.size() < 20) break;
-
-            if (page < MAX_PAGES) {
-                Thread.sleep(PAGE_DELAY_MS);
-            }
-        }
-
-        log.info("Total Jobkorea jobs after dedup: {}", allJobs.size());
-        return allJobs;
+        return parseJobs(doc);
     }
 
     private String fetchWithCurl(String url) throws IOException, InterruptedException {
