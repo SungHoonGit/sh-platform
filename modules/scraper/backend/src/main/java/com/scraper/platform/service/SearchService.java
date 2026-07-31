@@ -101,16 +101,21 @@ public class SearchService {
         boolean filterLocation = location != null && !location.isEmpty() && !location.equals("전체");
         if (!filterCareer && !filterLocation) return new ArrayList<>(jobs);
         return jobs.stream().filter(job -> {
-            if (filterCareer) {
+            if (filterCareer && !"true".equals(job.get("careerFiltered"))) {
                 String jobCareer = job.getOrDefault("career", "");
                 if (!matchesCareer(jobCareer, career)) return false;
             }
-            if (filterLocation) {
+            if (filterLocation && !"true".equals(job.get("locationFiltered"))) {
                 String jobLoc = job.getOrDefault("location", "");
                 if (!matchesLocation(jobLoc, location)) return false;
             }
             return true;
-        }).<Map<String, String>>map(HashMap::new).collect(Collectors.toList());
+        }).<Map<String, String>>map(job -> {
+            Map<String, String> clean = new HashMap<>(job);
+            clean.remove("careerFiltered");
+            clean.remove("locationFiltered");
+            return clean;
+        }).collect(Collectors.toList());
     }
 
     private boolean matchesCareer(String jobCareer, String targetCareer) {
@@ -126,7 +131,9 @@ public class SearchService {
         if (m.find()) return new int[]{Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))};
         // ~ 제거 후 나머지 패턴 매칭
         String c = career.replaceAll("[\\s~]", "");
+        if (c.contains("신입·경력") || c.contains("신입경력")) return new int[]{0, Integer.MAX_VALUE};
         if (c.contains("신입")) return new int[]{0, 0};
+        if (c.equals("경력")) return new int[]{1, Integer.MAX_VALUE};
         m = java.util.regex.Pattern.compile("(\\d+)년↑").matcher(c);
         if (m.find()) return new int[]{Integer.parseInt(m.group(1)), Integer.MAX_VALUE};
         m = java.util.regex.Pattern.compile("경력(\\d+)년").matcher(c);

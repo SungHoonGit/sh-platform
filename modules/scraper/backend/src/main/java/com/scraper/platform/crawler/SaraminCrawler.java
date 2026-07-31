@@ -23,7 +23,9 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class SaraminCrawler implements SiteCrawler {
 
-    private static final String BASE_URL = "https://www.saramin.co.kr/zf_user/search";
+    private static final String BASE_URL = "https://www.saramin.co.kr/zf_user/search/get-recruit-list";
+    private static final int MAX_PAGES = 10;
+    private static final int PAGE_SIZE = 40;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final SiteSearchMapper siteSearchMapper;
@@ -41,44 +43,70 @@ public class SaraminCrawler implements SiteCrawler {
         String career = params.getOrDefault("career", "");
         String location = params.getOrDefault("location", "");
 
-        Set<String> seenUrls = new HashSet<>();
+        Set<String> seenRecIdx = new HashSet<>();
         List<Map<String, String>> allJobs = new ArrayList<>();
+        int totalCount = -1;
 
-        for (int page = 1; page <= 5; page++) {
+        for (int page = 1; page <= MAX_PAGES; page++) {
             String url = buildUrl(keyword, career, location, page);
             log.info("Saramin crawl URL (page {}): {}", page, url);
 
-            String html = fetchWithCurl(url);
-            log.info("Fetched HTML size: {}", html.length());
-
-            Document doc = Jsoup.parse(html);
-
-            if (isBlockedPage(doc)) {
-                log.warn("Blocked or empty page at page {}, stopping", page);
+            String json = fetchWithCurl(url);
+            if (json == null || json.isBlank()) {
+                log.warn("Empty response at page {}, stopping", page);
                 break;
             }
 
+            JsonNode root = objectMapper.readTree(json);
+            if (root.has("count")) {
+                totalCount = Integer.parseInt(root.get("count").asText().replace(",", ""));
+            }
+            String innerHtml = root.has("innerHTML") ? root.get("innerHTML").asText() : "";
+            if (innerHtml.isBlank()) {
+                log.info("No job list in response at page {}, stopping", page);
+                break;
+            }
+
+            Document doc = Jsoup.parse(innerHtml);
             List<Map<String, String>> pageJobs = parseJobs(doc);
             if (pageJobs.isEmpty()) {
                 log.info("No more jobs at page {}, stopping", page);
                 break;
             }
+            boolean careerFiltered = career != null && !career.isEmpty()
+                    && !career.equals("전체") && !career.equals("경력무관");
+            boolean locationFiltered = location != null && !location.isEmpty() && !location.equals("전체");
             for (Map<String, String> job : pageJobs) {
+                if (careerFiltered) {
+                    job.put("careerFiltered", "true");
+                }
+                if (locationFiltered) {
+                    job.put("locationFiltered", "true");
+                }
                 String jobUrl = job.get("url");
-                if (jobUrl != null && !seenUrls.add(jobUrl)) continue;
+                String recIdx = null;
+                if (jobUrl != null) {
+                    int idx = jobUrl.indexOf("rec_idx=");
+                    if (idx >= 0) {
+                        int end = jobUrl.indexOf('&', idx + 8);
+                        recIdx = end < 0 ? jobUrl.substring(idx + 8) : jobUrl.substring(idx + 8, end);
+                    }
+                }
+                if (recIdx != null && !seenRecIdx.add(recIdx)) continue;
                 allJobs.add(job);
+            }
+
+            int totalPages = totalCount > 0 ? (int) Math.ceil((double) totalCount / PAGE_SIZE) : MAX_PAGES;
+            if (page >= totalPages) {
+                log.info("Reached last page {} of {} total pages, stopping", page, totalPages);
+                break;
             }
 
             Thread.sleep(500);
         }
 
-        log.info("Total Saramin jobs after dedup: {}", allJobs.size());
+        log.info("Total Saramin jobs after rec_idx dedup: {} (unique, totalCount={})", allJobs.size(), totalCount);
         return allJobs;
-    }
-
-    private boolean isBlockedPage(Document doc) {
-        String title = doc.title();
-        return title.contains("사람인") && doc.select("div.area_job").isEmpty() && doc.text().contains("페이지를 찾을 수 없습니다");
     }
 
     private String fetchWithCurl(String url) throws IOException, InterruptedException {
@@ -119,9 +147,7 @@ public class SaraminCrawler implements SiteCrawler {
             sb.append("&searchword=").append(URLEncoder.encode(keyword, StandardCharsets.UTF_8));
         }
 
-        if (page > 1) {
-            sb.append("&page=").append(page);
-        }
+        sb.append("&recruitPage=").append(page);
 
         String locCode = mapLocationCode(location);
         if (!locCode.isEmpty()) {

@@ -6,27 +6,39 @@ import com.scraper.platform.model.CrawlSiteConfig;
 import com.scraper.platform.service.SiteSearchMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 잡코리아 공식 검색 API를 호출해 채용공고를 수집한다.
+ * <p>
+ * 프론트(Next.js App Router)가 실제 사용하는 {@code POST /Search/api/display/v2/jobs} 엔드포인트를 사용한다.
+ * 기존 HTML({@code /Search/}) 파싱 방식과 달리 locationList/careerList/careerMin/careerMax 필터가
+ * 서버사이드에서 정상 동작하며, 페이지당 최대 100건을 JSON으로 반환한다.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JobkoreaCrawler implements SiteCrawler {
 
-    private static final String BASE_URL = "https://www.jobkorea.co.kr/Search/";
-    private static final int PAGE_DELAY_MS = 500;
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final String API_URL = "https://www.jobkorea.co.kr/Search/api/display/v2/jobs";
+    private static final int MAX_PAGES = 10;
+    private static final int PAGE_SIZE = 100;
+    private static final int PAGE_DELAY_MS = 1500;
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final SiteSearchMapper siteSearchMapper;
+    private final JobkoreaAreaMapper areaMapper;
 
     @Override
     public String getSiteName() {
@@ -35,28 +47,123 @@ public class JobkoreaCrawler implements SiteCrawler {
 
     @Override
     public List<Map<String, String>> search(CrawlSiteConfig siteConfig) throws Exception {
-        String paramValues = siteConfig.getParamValues();
-        Map<String, String> standardParams = parseParams(paramValues);
-        Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
+        Map<String, String> params = parseParams(siteConfig.getParamValues());
+        String keyword = params.getOrDefault("keyword", "");
+        String career = params.getOrDefault("career", "");
+        String location = params.getOrDefault("location", "");
+        Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), params);
 
-        String url = buildUrl(siteParams, standardParams);
-        log.info("Jobkorea crawl URL: {}", url);
+        Set<String> seenIds = new HashSet<>();
+        List<Map<String, String>> allJobs = new ArrayList<>();
+        int totalCount = -1;
 
-        String html = fetchWithCurl(url);
-        Document doc = Jsoup.parse(html);
+        for (int page = 1; page <= MAX_PAGES; page++) {
+            String body = buildBody(keyword, career, location, siteParams, page);
+            log.info("Jobkorea crawl API (page {}): {}", page, API_URL);
 
-        return parseJobs(doc);
+            String json = fetchWithCurl(body);
+            if (json == null || json.isBlank()) {
+                log.warn("Empty response at page {}, stopping", page);
+                break;
+            }
+
+            JsonNode root = OBJECT_MAPPER.readTree(json);
+            totalCount = root.path("totalElements").asInt(-1);
+            JsonNode content = root.path("content");
+            if (!content.isArray() || content.isEmpty()) {
+                log.info("No more jobs at page {}, stopping", page);
+                break;
+            }
+
+            List<Map<String, String>> pageJobs = parseJobs(content, career, location);
+            for (Map<String, String> job : pageJobs) {
+                String id = job.get("id");
+                if (id != null && !seenIds.add(id)) {
+                    continue;
+                }
+                allJobs.add(job);
+            }
+
+            int totalPages = root.path("totalPages").asInt(0);
+            if (page >= totalPages) {
+                log.info("Reached last page {} of {} total pages, stopping", page, totalPages);
+                break;
+            }
+
+            Thread.sleep(PAGE_DELAY_MS);
+        }
+
+        log.info("Total Jobkorea jobs after id dedup: {} (unique, totalCount={})", allJobs.size(), totalCount);
+        return allJobs;
     }
 
-    private String fetchWithCurl(String url) throws IOException, InterruptedException {
+    private String buildBody(String keyword, String career, String location,
+                             Map<String, String> siteParams, int page) throws Exception {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("pageSize", PAGE_SIZE);
+        body.put("page", page - 1);
+        body.put("sortProperty", "1");
+        body.put("sortDirection", "DESC");
+        body.put("keyword", keyword == null ? "" : keyword);
+
+        String locCode = locationCode(location, siteParams);
+        body.put("locationList", locCode.isEmpty() ? List.of() : List.of(locCode.split(",")));
+
+        appendCareerParams(body, career);
+
+        body.put("jobClassificationCodeList", List.of());
+        body.put("jobClassificationSubCodeList", List.of());
+        body.put("industryCodeList", List.of());
+        body.put("industrySubCodeList", List.of());
+        body.put("companyTypeList", List.of());
+        body.put("educationCodeList", List.of());
+        body.put("employmentTypeList", List.of());
+        body.put("excludeKeywordList", List.of());
+        body.put("designationCodeList", List.of());
+        body.put("filterList", List.of());
+        body.put("benefitCodeList", List.of());
+        body.put("payType", "");
+        body.put("payMin", 0);
+        body.put("payMax", 0);
+        body.put("onePick", "");
+        body.put("period", "");
+        body.put("featureType", "");
+        body.put("deviceType", "PC");
+
+        return OBJECT_MAPPER.writeValueAsString(body);
+    }
+
+    /**
+     * 경력 조건을 API 요청 본문의 careerList/careerMin/careerMax로 변환한다.
+     */
+    private void appendCareerParams(Map<String, Object> body, String career) {
+        if (career == null || career.isEmpty() || career.equals("전체") || career.equals("경력무관")) {
+            body.put("careerList", List.of());
+            body.put("careerMin", "");
+            body.put("careerMax", "");
+            return;
+        }
+        String type = mapCareerType(career);
+        body.put("careerList", type.isEmpty() ? List.of() : List.of(type));
+
+        int[] range = careerRange(career);
+        body.put("careerMin", range[0] < 0 ? "" : String.valueOf(range[0]));
+        body.put("careerMax", range[1] < 0 ? "" : String.valueOf(range[1]));
+    }
+
+    private String fetchWithCurl(String body) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(
             "curl", "-s", "-L",
             "--max-time", "30",
             "--compressed",
+            "-X", "POST",
+            "-H", "Content-Type: application/json",
             "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "-H", "Accept-Language: ko-KR,ko;q=0.9",
-            "-H", "Accept: text/html,application/xhtml+xml",
-            url
+            "-H", "Accept: application/json",
+            "-H", "Referer: https://www.jobkorea.co.kr/Search/",
+            "-d", body,
+            API_URL
         );
         pb.redirectErrorStream(true);
 
@@ -66,159 +173,148 @@ public class JobkoreaCrawler implements SiteCrawler {
 
         if (!finished) {
             process.destroyForcibly();
-            throw new IOException("curl timed out for URL: " + url);
+            throw new IOException("curl timed out for API: " + API_URL);
         }
 
         int exitCode = process.exitValue();
         if (exitCode != 0) {
-            throw new IOException("curl failed with exit code " + exitCode);
+            throw new IOException("curl failed with exit code " + exitCode + " for API: " + API_URL);
         }
 
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private String buildUrl(Map<String, String> siteParams, Map<String, String> standardParams) {
-        StringBuilder sb = new StringBuilder(BASE_URL);
-        sb.append("?tabType=recruit");
-
-        // SiteSearchMapper에서 변환된 파라미터 추가 (careerType은 제외 — 직접 처리)
-        for (Map.Entry<String, String> entry : siteParams.entrySet()) {
-            if ("careerType".equals(entry.getKey())) continue;
-            sb.append("&").append(entry.getKey()).append("=")
-              .append(java.net.URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
-        }
-
-        // careerType + careerMin/careerMax — SiteSearchMapper는 단순 매핑만 하므로 range는 직접 처리
-        appendCareerParams(sb, standardParams.getOrDefault("career", ""));
-
-        return sb.toString();
-    }
-
-    private void appendCareerParams(StringBuilder sb, String career) {
-        if (career == null || career.isEmpty() || career.equals("전체") || career.equals("경력무관")) {
-            return;
-        }
-        switch (career) {
-            case "신입" -> sb.append("&careerType=0");
-            case "경력" -> sb.append("&careerType=2");
-            case "1~3년" -> sb.append("&careerType=2&careerMin=1&careerMax=3");
-            case "3~5년" -> sb.append("&careerType=2&careerMin=3&careerMax=5");
-            case "5~10년" -> sb.append("&careerType=2&careerMin=5&careerMax=10");
-            case "10년이상" -> sb.append("&careerType=2&careerMin=10");
-        }
-    }
-
-    /**
-     * 경력 한글명을 잡코리아 careerType 코드로 변환한다.
-     *
-     * @param career 경력 한글명 (신입, 경력, 1~3년, 3~5년, 5~10년, 10년이상)
-     * @return 잡코리아 careerType 코드 (new, career)
-     */
-    String mapCareerType(String career) {
-        return switch (career) {
-            case "신입" -> "new";
-            case "경력" -> "career";
-            case "1~3년" -> "career";
-            case "3~5년" -> "career";
-            case "5~10년" -> "career";
-            case "10년이상" -> "career";
-            default -> "";
-        };
-    }
-
-    /**
-     * 지역 한글명을 잡코리아 local 코드로 변환한다.
-     *
-     * @param location 지역 한글명 (서울, 경기, 인천, 부산, 대구, 대전, 광주, 세종, 강원, 제주, 충남, 충북, 전남, 전북, 경남, 경북)
-     * @return 잡코리아 local 코드 (I000, I100, I200, ...)
-     */
-    String mapLocationCode(String location) {
-        return switch (location) {
-            case "서울" -> "I000";
-            case "경기" -> "I100";
-            case "인천" -> "I200";
-            case "부산" -> "I300";
-            case "대구" -> "I400";
-            case "대전" -> "I500";
-            case "광주" -> "I600";
-            case "세종" -> "I700";
-            case "강원" -> "I800";
-            case "제주" -> "I900";
-            case "충남" -> "I110";
-            case "충북" -> "I120";
-            case "전남" -> "I130";
-            case "전북" -> "I140";
-            case "경남" -> "I150";
-            case "경북" -> "I160";
-            default -> "";
-        };
-    }
-
-    private List<Map<String, String>> parseJobs(Document doc) {
+    private List<Map<String, String>> parseJobs(JsonNode content, String career, String location) {
         List<Map<String, String>> jobs = new ArrayList<>();
-
-        Elements cards = doc.select("div[data-sentry-component=CardJob]");
-        log.info("Found {} job cards", cards.size());
-
-        for (Element card : cards) {
+        for (JsonNode node : content) {
             try {
-                Map<String, String> job = parseCard(card);
+                Map<String, String> job = parseJob(node, career, location);
                 if (job != null && !job.isEmpty()) {
                     jobs.add(job);
                 }
             } catch (Exception e) {
-                log.debug("Failed to parse job card", e);
+                log.debug("Failed to parse job item", e);
             }
         }
-
         return jobs;
     }
 
-    private Map<String, String> parseCard(Element card) {
+    private Map<String, String> parseJob(JsonNode node, String career, String location) {
+        String id = node.path("id").asText("");
+        if (id.isEmpty()) {
+            return null;
+        }
         Map<String, String> job = new HashMap<>();
+        job.put("id", id);
 
-        // 제목
-        Element titleEl = card.selectFirst("a[data-sentry-component=Title] span");
-        if (titleEl != null) {
-            String title = titleEl.text().trim();
-            job.put("title", title);
-            job.put("position", title);
+        if (career != null && !career.isEmpty() && !career.equals("전체") && !career.equals("경력무관")) {
+            job.put("careerFiltered", "true");
+        }
+        if (location != null && !location.isEmpty() && !location.equals("전체")) {
+            job.put("locationFiltered", "true");
         }
 
-        // 링크
-        Element linkEl = card.selectFirst("a[data-sentry-component=Title]");
-        if (linkEl != null) {
-            String href = linkEl.attr("href");
-            if (!href.startsWith("http")) {
-                href = "https://www.jobkorea.co.kr" + href;
-            }
-            job.put("url", href);
+        String title = node.path("title").asText("");
+        job.put("title", title);
+        job.put("position", title);
+
+        String company = node.path("postingCompanyName").asText("");
+        if (company.isEmpty()) {
+            company = node.path("companyName").asText("");
+        }
+        job.put("company", company);
+
+        job.put("career", careerText(node.path("careerType").asText(""), node.path("careerRange").asInt(0)));
+
+        List<String> areaCodes = new ArrayList<>();
+        node.path("areaCodeList").forEach(c -> areaCodes.add(c.asText()));
+        job.put("location", areaMapper.toAreaText(areaCodes, location));
+
+        String end = node.path("applicationPeriod").path("end").asText("");
+        if (!end.isEmpty()) {
+            job.put("deadline", end.length() >= 10 ? end.substring(0, 10) : end);
         }
 
-        // 회사명
-        Element companyEl = card.selectFirst("span.mb-5 a span");
-        if (companyEl != null) {
-            job.put("company", companyEl.text().trim());
-        }
-
-        // GrayChip 칩들에서 위치, 기술 분야 추출
-        Elements chips = card.select("div[data-sentry-component=GrayChip] span.text-gray900");
-        for (int i = 0; i < chips.size(); i++) {
-            String text = chips.get(i).text().trim();
-            if (i == 0) {
-                job.put("location", text);
-            } else if (i == 1) {
-                job.put("tech", text);
-            }
-        }
-
-        // 경력
-        Element careerEl = card.selectFirst("span.text-gray700.text-typo-c1-13");
-        if (careerEl != null) {
-            job.put("career", careerEl.text().trim());
-        }
-
+        job.put("url", "https://www.jobkorea.co.kr/Recruit/GI_Read/" + id);
         return job;
+    }
+
+    /**
+     * 잡코리아 careerType/careerRange를 한글 경력 텍스트로 변환한다.
+     * (프론트 eL 함수와 동일한 형식)
+     *
+     * @param careerType  잡코리아 경력 타입 코드 (1:신입, 2:경력, 3:신입·경력, 그 외:경력무관)
+     * @param careerRange 최소 경력 연수 (0 또는 100은 연수 미지정)
+     * @return 한글 경력 텍스트 (예: 신입, 경력, 경력3년↑)
+     */
+    static String careerText(String careerType, int careerRange) {
+        return switch (careerType) {
+            case "1" -> "신입";
+            case "2" -> (careerRange > 0 && careerRange < 100) ? "경력" + careerRange + "년↑" : "경력";
+            case "3" -> (careerRange > 0 && careerRange < 100) ? "신입·경력" + careerRange + "년↑" : "신입·경력";
+            default -> "경력무관";
+        };
+    }
+
+    /**
+     * 경력 한글명을 잡코리아 v2 API careerList 코드로 변환한다.
+     *
+     * @param career 경력 한글명 (신입, 경력, 1~3년, 3~5년, 5~10년, 10년이상)
+     * @return 잡코리아 careerList 코드 (1:신입, 2:경력)
+     */
+    String mapCareerType(String career) {
+        return switch (career) {
+            case "신입" -> "1";
+            case "경력", "1~3년", "3~5년", "5~10년", "10년이상" -> "2";
+            default -> "";
+        };
+    }
+
+    private int[] careerRange(String career) {
+        return switch (career) {
+            case "1~3년" -> new int[]{1, 3};
+            case "3~5년" -> new int[]{3, 5};
+            case "5~10년" -> new int[]{5, 10};
+            case "10년이상" -> new int[]{10, -1};
+            default -> new int[]{-1, -1};
+        };
+    }
+
+    /**
+     * 지역 한글명을 잡코리아 v2 API 지역 매핑코드로 변환한다.
+     * (site_search_mapping DB 값이 우선이며, DB에 없을 때만 사용)
+     *
+     * @param location 지역 한글명 (서울, 경기, 인천, 부산, ...)
+     * @return 잡코리아 지역 매핑코드 (서울:I000, 경기:B000, ...)
+     */
+    String mapLocationCode(String location) {
+        return switch (location) {
+            case "서울" -> "I000";
+            case "경기" -> "B000";
+            case "인천" -> "K000";
+            case "부산" -> "H000";
+            case "대구" -> "F000";
+            case "대전" -> "G000";
+            case "광주", "전남" -> "L000";
+            case "세종" -> "1000";
+            case "강원" -> "A000";
+            case "제주" -> "N000";
+            case "충남" -> "O000";
+            case "충북" -> "P000";
+            case "전북" -> "M000";
+            case "경남" -> "C000";
+            case "경북" -> "D000";
+            case "울산" -> "J000";
+            default -> "";
+        };
+    }
+
+    private String locationCode(String location, Map<String, String> siteParams) {
+        String code = siteParams.getOrDefault("local", "");
+        if (!code.isEmpty()) {
+            return code;
+        }
+        return mapLocationCode(location);
     }
 
     private Map<String, String> parseParams(String paramValues) {
@@ -226,7 +322,7 @@ public class JobkoreaCrawler implements SiteCrawler {
             return new HashMap<>();
         }
         try {
-            JsonNode node = objectMapper.readTree(paramValues);
+            JsonNode node = OBJECT_MAPPER.readTree(paramValues);
             Map<String, String> params = new HashMap<>();
             node.fields().forEachRemaining(entry -> params.put(entry.getKey(), entry.getValue().asText()));
             return params;

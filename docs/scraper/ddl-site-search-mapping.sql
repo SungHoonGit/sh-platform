@@ -33,7 +33,7 @@ INSERT INTO site_search_mapping (site_definition_id, standard_key, url_param_nam
 INSERT INTO site_search_mapping (site_definition_id, standard_key, url_param_name, value_type, value_mapping, display_order) VALUES
 (2, 'keyword',   'stext',          'direct',  NULL, 1),
 (2, 'career',    'careerType',     'mapped',  '{"신입":"new","경력":"career","1~3년":"career","3~5년":"career","5~10년":"career","10년이상":"career"}', 2),
-(2, 'location',  'local',          'mapped',  '{"서울":"I000","경기":"I100","인천":"I200","부산":"I300","대구":"I400","대전":"I500","광주":"I600","세종":"I700","강원":"I800","제주":"I900","충남":"I110","충북":"I120","전남":"I130","전북":"I140","경남":"I150","경북":"I160"}', 3),
+(2, 'location',  'local',          'mapped',  '{"서울":"I000","경기":"B000","인천":"K000","부산":"H000","대구":"F000","대전":"G000","광주":"L000","전남":"L000","세종":"1000","강원":"A000","제주":"N000","충남":"O000","충북":"P000","전북":"M000","경남":"C000","경북":"D000","울산":"J000"}', 3),
 (2, 'job_type',  'dutyCtgr',       'mapped',  '{"서버/백엔드":"1003101","프론트엔드":"1003102","풀스택":"1003103","모바일":"1003104","인프라/DBA":"1003105","데이터/AI":"1003106","보안":"1003107","게임":"1003108","기타":"1003199"}', 4);
 
 -- ============================================================
