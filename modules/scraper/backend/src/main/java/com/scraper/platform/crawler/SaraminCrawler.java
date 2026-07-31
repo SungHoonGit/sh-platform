@@ -41,6 +41,7 @@ public class SaraminCrawler implements SiteCrawler {
         String career = params.getOrDefault("career", "");
         String location = params.getOrDefault("location", "");
 
+        Set<String> seenUrls = new HashSet<>();
         List<Map<String, String>> allJobs = new ArrayList<>();
 
         for (int page = 1; page <= 5; page++) {
@@ -62,12 +63,16 @@ public class SaraminCrawler implements SiteCrawler {
                 log.info("No more jobs at page {}, stopping", page);
                 break;
             }
-            allJobs.addAll(pageJobs);
+            for (Map<String, String> job : pageJobs) {
+                String jobUrl = job.get("url");
+                if (jobUrl != null && !seenUrls.add(jobUrl)) continue;
+                allJobs.add(job);
+            }
 
             Thread.sleep(500);
         }
 
-        log.info("Total Saramin jobs: {}", allJobs.size());
+        log.info("Total Saramin jobs after dedup: {}", allJobs.size());
         return allJobs;
     }
 

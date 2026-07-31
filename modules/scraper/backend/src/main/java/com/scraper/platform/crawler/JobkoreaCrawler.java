@@ -45,6 +45,7 @@ public class JobkoreaCrawler implements SiteCrawler {
         Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
 
         String baseUrl = buildUrl(siteParams, standardParams);
+        Set<String> seenUrls = new HashSet<>();
         List<Map<String, String>> allJobs = new ArrayList<>();
 
         for (int page = 1; page <= MAX_PAGES; page++) {
@@ -55,8 +56,12 @@ public class JobkoreaCrawler implements SiteCrawler {
             Document doc = Jsoup.parse(html);
 
             List<Map<String, String>> pageJobs = parseJobs(doc);
-            allJobs.addAll(pageJobs);
-            log.info("Page {}: {} jobs (total so far: {})", page, pageJobs.size(), allJobs.size());
+            for (Map<String, String> job : pageJobs) {
+                String jobUrl = job.get("url");
+                if (jobUrl != null && !seenUrls.add(jobUrl)) continue;
+                allJobs.add(job);
+            }
+            log.info("Page {}: {} new jobs (total so far: {})", page, pageJobs.size(), allJobs.size());
 
             if (pageJobs.size() < 20) break;
 
@@ -65,7 +70,7 @@ public class JobkoreaCrawler implements SiteCrawler {
             }
         }
 
-        log.info("Total Jobkorea jobs: {}", allJobs.size());
+        log.info("Total Jobkorea jobs after dedup: {}", allJobs.size());
         return allJobs;
     }
 
