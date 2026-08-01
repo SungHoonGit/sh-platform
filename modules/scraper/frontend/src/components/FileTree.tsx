@@ -13,7 +13,10 @@ export default function FileTree({ rootPath, onSelectFile, selectedFile }: FileT
     queryKey: ["files", rootPath],
     queryFn: async () => {
       const params = new URLSearchParams({ rootPath });
-      const res = await fetch(`/scraper/docs/list?${params}`);
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(`/scraper/docs/list?${params}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error("Failed to fetch files");
       return res.json();
     },

@@ -1,7 +1,9 @@
 package com.scraper.platform.controller;
 
 import com.scraper.platform.model.CrawlLog;
+import com.scraper.platform.service.CrawlConfigService;
 import com.scraper.platform.service.CrawlLogService;
+import com.shplatform.common.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import java.util.List;
 public class CrawlLogController {
 
     private final CrawlLogService crawlLogService;
+    private final CrawlConfigService crawlConfigService;
 
     @GetMapping("/config/{configId}")
     @Operation(summary = "설정별 로그 조회", description = "특정 설정의 크롤링 로그를 페이징하여 조회합니다")
@@ -27,7 +30,7 @@ public class CrawlLogController {
             @PathVariable Long configId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        
+        checkOwnership(configId);
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by("startedAt").descending());
         return ResponseEntity.ok(crawlLogService.getLogsByConfigId(configId, pageRequest));
     }
@@ -35,6 +38,7 @@ public class CrawlLogController {
     @GetMapping("/config/{configId}/recent")
     @Operation(summary = "최근 로그 조회", description = "최근 10개의 크롤링 로그를 조회합니다")
     public ResponseEntity<List<CrawlLog>> getRecentLogs(@PathVariable Long configId) {
+        checkOwnership(configId);
         return ResponseEntity.ok(crawlLogService.getRecentLogsByConfigId(configId));
     }
 
@@ -44,8 +48,11 @@ public class CrawlLogController {
             @PathVariable CrawlLog.CrawlStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by("startedAt").descending());
         return ResponseEntity.ok(crawlLogService.getLogsByStatus(status, pageRequest));
+    }
+
+    private void checkOwnership(Long configId) {
+        crawlConfigService.getConfigById(configId, SecurityUtils.currentAccountId());
     }
 }

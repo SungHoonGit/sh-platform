@@ -2,6 +2,7 @@ package com.scraper.platform.controller;
 
 import com.scraper.platform.model.CrawlConfig;
 import com.scraper.platform.repository.CrawlConfigRepository;
+import com.shplatform.common.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
@@ -25,9 +26,10 @@ public class CrawlerListController {
     }
 
     @GetMapping
-    @Operation(summary = "활성 크롤러 목록 조회", description = "활성화된 크롤러 설정 목록을 조회합니다. 문서 뷰어에서 크롤러 선택에 사용됩니다.")
+    @Operation(summary = "활성 크롤러 목록 조회", description = "현재 사용자의 활성화된 크롤러 설정 목록을 조회합니다. 문서 뷰어에서 크롤러 선택에 사용됩니다.")
     public ResponseEntity<List<Map<String, Object>>> getCrawlers() {
-        List<CrawlConfig> configs = crawlConfigRepository.findByIsActiveTrue();
+        List<CrawlConfig> configs = crawlConfigRepository
+                .findByAccountIdAndIsActiveTrue(SecurityUtils.currentAccountId());
         
         List<Map<String, Object>> result = configs.stream()
             .map(config -> {

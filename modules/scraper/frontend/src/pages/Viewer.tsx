@@ -63,7 +63,10 @@ export default function Viewer() {
         page: String(page),
         size: String(SIZE),
       });
-      const res = await fetch(`/scraper/docs/jobs?${params}`);
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(`/scraper/docs/jobs?${params}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       return res.json();
     },
     enabled: !!selectedCrawler && !!selectedSite,

@@ -47,11 +47,11 @@ class CrawlConfigServiceTest {
     class GetConfigById {
 
         @Test
-        @DisplayName("ID로 설정을 조회한다")
+        @DisplayName("ID와 계정으로 설정을 조회한다")
         void getConfigById_shouldReturnConfig_whenExists() {
-            given(crawlConfigRepository.findById(1L)).willReturn(Optional.of(testConfig));
+            given(crawlConfigRepository.findByIdAndAccountId(1L, 1L)).willReturn(Optional.of(testConfig));
 
-            var result = crawlConfigService.getConfigById(1L);
+            var result = crawlConfigService.getConfigById(1L, 1L);
 
             assertNotNull(result);
             assertEquals("Java 시니어 개발자", result.getName());
@@ -60,10 +60,19 @@ class CrawlConfigServiceTest {
         @Test
         @DisplayName("존재하지 않는 ID 조회 시 예외 발생")
         void getConfigById_shouldThrow_whenNotExists() {
-            given(crawlConfigRepository.findById(999L)).willReturn(Optional.empty());
+            given(crawlConfigRepository.findByIdAndAccountId(999L, 1L)).willReturn(Optional.empty());
 
             assertThrows(RuntimeException.class,
-                    () -> crawlConfigService.getConfigById(999L));
+                    () -> crawlConfigService.getConfigById(999L, 1L));
+        }
+
+        @Test
+        @DisplayName("다른 계정의 설정 조회 시 예외 발생")
+        void getConfigById_shouldThrow_whenNotOwned() {
+            given(crawlConfigRepository.findByIdAndAccountId(1L, 2L)).willReturn(Optional.empty());
+
+            assertThrows(RuntimeException.class,
+                    () -> crawlConfigService.getConfigById(1L, 2L));
         }
     }
 
@@ -77,23 +86,25 @@ class CrawlConfigServiceTest {
             CrawlConfig newConfig = CrawlConfig.builder()
                     .name("React 프론트엔드")
                     .build();
-            
-            given(crawlConfigRepository.existsByName("React 프론트엔드")).willReturn(false);
+
+            given(crawlConfigRepository.existsByAccountIdAndName(1L, "React 프론트엔드")).willReturn(false);
             when(crawlConfigRepository.save(any(CrawlConfig.class))).thenReturn(newConfig);
 
-            var result = crawlConfigService.createConfig(newConfig);
+            var result = crawlConfigService.createConfig(1L, newConfig);
 
             assertNotNull(result);
+            assertEquals(1L, result.getAccountId());
+            assertTrue(result.getLocalPath().startsWith("/home/ubuntu/data/scraper/1/"));
             verify(crawlConfigRepository).save(any(CrawlConfig.class));
         }
 
         @Test
         @DisplayName("중복 이름으로 생성 시 예외 발생")
         void createConfig_shouldThrow_whenDuplicateName() {
-            given(crawlConfigRepository.existsByName("Java 시니어 개발자")).willReturn(true);
+            given(crawlConfigRepository.existsByAccountIdAndName(1L, "Java 시니어 개발자")).willReturn(true);
 
             assertThrows(RuntimeException.class,
-                    () -> crawlConfigService.createConfig(testConfig));
+                    () -> crawlConfigService.createConfig(1L, testConfig));
         }
     }
 
@@ -104,7 +115,7 @@ class CrawlConfigServiceTest {
         @Test
         @DisplayName("정상적으로 설정을 수정한다")
         void updateConfig_shouldUpdate_whenExists() {
-            given(crawlConfigRepository.findById(1L)).willReturn(Optional.of(testConfig));
+            given(crawlConfigRepository.findByIdAndAccountId(1L, 1L)).willReturn(Optional.of(testConfig));
             when(crawlConfigRepository.save(any(CrawlConfig.class))).thenReturn(testConfig);
 
             CrawlConfig updatedConfig = CrawlConfig.builder()
@@ -112,7 +123,7 @@ class CrawlConfigServiceTest {
                     .schedule("0 10 * * *")
                     .build();
 
-            var result = crawlConfigService.updateConfig(1L, updatedConfig);
+            var result = crawlConfigService.updateConfig(1L, 1L, updatedConfig);
 
             assertNotNull(result);
             verify(crawlConfigRepository).save(any(CrawlConfig.class));

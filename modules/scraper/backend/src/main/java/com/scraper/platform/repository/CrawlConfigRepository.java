@@ -11,13 +11,20 @@ import java.util.Optional;
 
 @Repository
 public interface CrawlConfigRepository extends JpaRepository<CrawlConfig, Long> {
-    Optional<CrawlConfig> findByName(String name);
-    List<CrawlConfig> findByIsActiveTrue();
-    boolean existsByName(String name);
-    
-    @Query("SELECT c FROM CrawlConfig c LEFT JOIN FETCH c.siteConfigs WHERE c.id = :id")
-    Optional<CrawlConfig> findByIdWithSiteConfigs(@Param("id") Long id);
-    
+    Optional<CrawlConfig> findByIdAndAccountId(Long id, Long accountId);
+    Optional<CrawlConfig> findByNameAndAccountId(String name, Long accountId);
+    List<CrawlConfig> findByAccountId(Long accountId);
+    List<CrawlConfig> findByAccountIdAndIsActiveTrue(Long accountId);
+    boolean existsByAccountIdAndName(Long accountId, String name);
+
+    @Query("SELECT c FROM CrawlConfig c LEFT JOIN FETCH c.siteConfigs WHERE c.id = :id AND c.accountId = :accountId")
+    Optional<CrawlConfig> findByIdWithSiteConfigs(@Param("id") Long id, @Param("accountId") Long accountId);
+
+    @Query("SELECT c FROM CrawlConfig c LEFT JOIN FETCH c.siteConfigs WHERE c.isActive = true AND c.accountId = :accountId")
+    List<CrawlConfig> findAllActiveWithSiteConfigs(@Param("accountId") Long accountId);
+
     @Query("SELECT c FROM CrawlConfig c LEFT JOIN FETCH c.siteConfigs WHERE c.isActive = true")
     List<CrawlConfig> findAllActiveWithSiteConfigs();
+
+    List<CrawlConfig> findByIsActiveTrue();
 }

@@ -1,7 +1,9 @@
 package com.scraper.platform.controller;
 
 import com.scraper.platform.model.CrawlSiteConfig;
+import com.scraper.platform.service.CrawlConfigService;
 import com.scraper.platform.service.CrawlSiteConfigService;
+import com.shplatform.common.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -17,16 +19,19 @@ import java.util.List;
 public class CrawlSiteConfigController {
 
     private final CrawlSiteConfigService crawlSiteConfigService;
+    private final CrawlConfigService crawlConfigService;
 
     @GetMapping
     @Operation(summary = "사이트 설정 목록 조회", description = "특정 설정의 사이트별 설정 목록을 조회합니다")
     public ResponseEntity<List<CrawlSiteConfig>> getSiteConfigs(@PathVariable Long configId) {
+        checkOwnership(configId);
         return ResponseEntity.ok(crawlSiteConfigService.getConfigSiteConfigs(configId));
     }
 
     @GetMapping("/enabled")
     @Operation(summary = "활성 사이트 설정 조회", description = "활성화된 사이트 설정만 조회합니다")
     public ResponseEntity<List<CrawlSiteConfig>> getEnabledSiteConfigs(@PathVariable Long configId) {
+        checkOwnership(configId);
         return ResponseEntity.ok(crawlSiteConfigService.getEnabledSiteConfigs(configId));
     }
 
@@ -35,6 +40,7 @@ public class CrawlSiteConfigController {
     public ResponseEntity<CrawlSiteConfig> getSiteConfig(
             @PathVariable Long configId,
             @PathVariable Long siteDefinitionId) {
+        checkOwnership(configId);
         return ResponseEntity.ok(crawlSiteConfigService.getSiteConfig(configId, siteDefinitionId));
     }
 
@@ -44,6 +50,7 @@ public class CrawlSiteConfigController {
             @PathVariable Long configId,
             @PathVariable Long siteDefinitionId,
             @RequestBody CrawlSiteConfig siteConfig) {
+        checkOwnership(configId);
         return ResponseEntity.ok(crawlSiteConfigService.createOrUpdateSiteConfig(configId, siteDefinitionId, siteConfig));
     }
 
@@ -52,7 +59,12 @@ public class CrawlSiteConfigController {
     public ResponseEntity<Void> deleteSiteConfig(
             @PathVariable Long configId,
             @PathVariable Long siteDefinitionId) {
+        checkOwnership(configId);
         crawlSiteConfigService.deleteSiteConfig(configId, siteDefinitionId);
         return ResponseEntity.ok().build();
+    }
+
+    private void checkOwnership(Long configId) {
+        crawlConfigService.getConfigById(configId, SecurityUtils.currentAccountId());
     }
 }

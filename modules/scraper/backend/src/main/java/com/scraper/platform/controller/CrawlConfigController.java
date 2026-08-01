@@ -2,6 +2,7 @@ package com.scraper.platform.controller;
 
 import com.scraper.platform.model.CrawlConfig;
 import com.scraper.platform.service.CrawlConfigService;
+import com.shplatform.common.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -19,27 +20,27 @@ public class CrawlConfigController {
     private final CrawlConfigService crawlConfigService;
 
     @GetMapping
-    @Operation(summary = "전체 설정 조회", description = "크롤링 설정 목록을 조회합니다")
+    @Operation(summary = "전체 설정 조회", description = "현재 로그인한 사용자의 크롤링 설정 목록을 조회합니다")
     public ResponseEntity<List<CrawlConfig>> getAllConfigs() {
-        return ResponseEntity.ok(crawlConfigService.getAllConfigs());
+        return ResponseEntity.ok(crawlConfigService.getAllConfigs(SecurityUtils.currentAccountId()));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "설정 상세 조회", description = "ID로 크롤링 설정을 조회합니다")
     public ResponseEntity<CrawlConfig> getConfigById(@PathVariable Long id) {
-        return ResponseEntity.ok(crawlConfigService.getConfigById(id));
+        return ResponseEntity.ok(crawlConfigService.getConfigById(id, SecurityUtils.currentAccountId()));
     }
 
     @GetMapping("/active")
     @Operation(summary = "활성 설정 조회", description = "활성화된 크롤링 설정만 조회합니다")
     public ResponseEntity<List<CrawlConfig>> getActiveConfigs() {
-        return ResponseEntity.ok(crawlConfigService.getActiveConfigs());
+        return ResponseEntity.ok(crawlConfigService.getActiveConfigs(SecurityUtils.currentAccountId()));
     }
 
     @PostMapping
     @Operation(summary = "설정 생성", description = "새로운 크롤링 설정을 생성합니다")
     public ResponseEntity<CrawlConfig> createConfig(@RequestBody CrawlConfig config) {
-        return ResponseEntity.ok(crawlConfigService.createConfig(config));
+        return ResponseEntity.ok(crawlConfigService.createConfig(SecurityUtils.currentAccountId(), config));
     }
 
     @PutMapping("/{id}")
@@ -47,13 +48,13 @@ public class CrawlConfigController {
     public ResponseEntity<CrawlConfig> updateConfig(
             @PathVariable Long id,
             @RequestBody CrawlConfig config) {
-        return ResponseEntity.ok(crawlConfigService.updateConfig(id, config));
+        return ResponseEntity.ok(crawlConfigService.updateConfig(id, SecurityUtils.currentAccountId(), config));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "설정 삭제", description = "크롤링 설정을 삭제합니다")
     public ResponseEntity<Void> deleteConfig(@PathVariable Long id) {
-        crawlConfigService.deleteConfig(id);
+        crawlConfigService.deleteConfig(id, SecurityUtils.currentAccountId());
         return ResponseEntity.ok().build();
     }
 }
