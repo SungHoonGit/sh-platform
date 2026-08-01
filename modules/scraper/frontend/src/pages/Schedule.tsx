@@ -1,14 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCrawlers, executeCrawler } from "../api/scraper";
+import {
+  fetchCrawlers,
+  executeCrawler,
+  fetchSites,
+  saveCrawler,
+  updateCrawler,
+  deleteCrawler,
+  saveSiteConfig,
+} from "../api/scraper";
 import {
   REGIONS,
   DEFAULT_LOCATIONS,
   CAREER_TOTAL,
+  isCareerActive,
   CareerRangeSlider,
   LocationMultiSelect,
 } from "../components/SearchFilters";
+
+const DEFAULT_SITES = ["saramin", "jobkorea", "wanted", "remember"];
 
 const SITES = [
   { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700" },
@@ -51,6 +62,19 @@ function parseCronToHuman(cron: string): string {
   return `${hour}시 ${min}분 (${days})`;
 }
 
+function parseCronToSchedule(cron: string): { hour: number; minute: number; days: number[] } {
+  const parts = cron.split(" ");
+  if (parts.length < 5) return { hour: 9, minute: 0, days: [1, 2, 3, 4, 5] };
+  const minute = parseInt(parts[0], 10) || 0;
+  const hour = parseInt(parts[1], 10) || 9;
+  const dow = parts[4] || "*";
+  let days: number[];
+  if (dow === "*") days = [0, 1, 2, 3, 4, 5, 6];
+  else if (dow.includes("-")) days = [1, 2, 3, 4, 5];
+  else days = dow.split(",").map((d) => parseInt(d, 10)).filter((n) => !isNaN(n));
+  return { hour, minute, days };
+}
+
 export default function Schedule() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -62,11 +86,11 @@ export default function Schedule() {
   const [careerMin, setCareerMin] = useState(0);
   const [careerMax, setCareerMax] = useState(CAREER_TOTAL);
   const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
-  const [selectedSites, setSelectedSites] = useState<string[]>(["saramin", "jobkorea", "wanted", "remember"]);
+  const [selectedSites, setSelectedSites] = useState<string[]>(DEFAULT_SITES);
   const [hour, setHour] = useState(9);
   const [minute, setMinute] = useState(0);
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
@@ -85,15 +109,27 @@ export default function Schedule() {
       } else {
         setLocations(state.locations?.length ? state.locations : DEFAULT_LOCATIONS);
       }
-      setSelectedSites(state.sites || ["saramin", "jobkorea", "wanted", "remember"]);
+      setSelectedSites(state.sites || DEFAULT_SITES);
+      setEditingId(null);
       setShowForm(true);
     }
   }, [state]);
 
-  const { data: crawlers } = useQuery({
+  const { data: crawlers, error: crawlersError } = useQuery({
     queryKey: ["crawlers"],
     queryFn: fetchCrawlers,
   });
+
+  const { data: sites } = useQuery({
+    queryKey: ["sites"],
+    queryFn: fetchSites,
+  });
+
+  const siteMap = useMemo(() => {
+    const m = new Map<string, number>();
+    (sites ?? []).forEach((s) => m.set(s.siteName, s.id));
+    return m;
+  }, [sites]);
 
   const executeMutation = useMutation({
     mutationFn: executeCrawler,
@@ -101,7 +137,82 @@ export default function Schedule() {
       queryClient.invalidateQueries({ queryKey: ["crawlers"] });
       alert("크롤러 실행이 시작되었습니다");
     },
+    onError: (e: Error) => alert(`실행 실패: ${e.message}`),
   });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const body = {
+        name: name.trim(),
+        description: keyword.trim(),
+        schedule: cronStr,
+        isActive: true,
+        retentionDays: 30,
+      };
+      let configId: number;
+      if (editingId != null) {
+        const updated = await updateCrawler(editingId, body);
+        configId = updated.id;
+      } else {
+        const created = await saveCrawler(body);
+        configId = created.id;
+      }
+
+      const paramValues = JSON.stringify({
+        keyword: keyword.trim(),
+        ...(isCareerActive(careerMin, careerMax)
+          ? {
+              ...(careerMin > 0 ? { careerMin: String(careerMin) } : {}),
+              ...(careerMax < CAREER_TOTAL ? { careerMax: String(careerMax) } : {}),
+            }
+          : {}),
+        ...(locations.length > 0 && locations.length < REGIONS.length
+          ? { location: locations.join(",") }
+          : {}),
+      });
+
+      const existing = crawlers?.find((c) => c.id === configId);
+      const existingSites = existing?.siteConfigs ?? [];
+      const allSites = new Set([...selectedSites, ...existingSites.map((sc) => sc.siteName)]);
+      for (const siteName of allSites) {
+        const siteDefId = siteMap.get(siteName);
+        if (siteDefId == null) continue;
+        const enabled = selectedSites.includes(siteName);
+        const prev = existingSites.find((sc) => sc.siteName === siteName)?.paramValues;
+        await saveSiteConfig(configId, siteDefId, {
+          paramValues: enabled ? paramValues : prev || paramValues,
+          isEnabled: enabled,
+        });
+      }
+      return configId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crawlers"] });
+      alert("스케줄이 저장되었습니다");
+      setShowForm(false);
+      setEditingId(null);
+      setName("");
+      setKeyword("");
+    },
+    onError: (e: Error) => alert(`저장 실패: ${e.message}`),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCrawler,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crawlers"] });
+      alert("스케줄이 삭제되었습니다");
+    },
+    onError: (e: Error) => alert(`삭제 실패: ${e.message}`),
+  });
+
+  const handleSave = () => {
+    if (!name.trim() || !keyword.trim()) {
+      alert("이름과 키워드를 입력하세요");
+      return;
+    }
+    saveMutation.mutate();
+  };
 
   const toggleSite = (siteId: string) => {
     setSelectedSites((prev) =>
@@ -117,58 +228,38 @@ export default function Schedule() {
 
   const cronStr = toCron(hour, minute, selectedDays);
 
-  const handleSave = () => {
-    if (!name || !keyword) {
-      alert("이름과 키워드를 입력하세요");
-      return;
+  const handleEdit = (c: any) => {
+    setName(c.name);
+    setEditingId(c.id);
+    const scs = c.siteConfigs || [];
+    const enabled = scs.filter((sc: any) => sc.isEnabled);
+    const first = enabled[0] || scs[0];
+    let params: any = {};
+    try {
+      params = first?.paramValues ? JSON.parse(first.paramValues) : {};
+    } catch {
+      params = {};
     }
-    const config = {
-      name, keyword, careerMin, careerMax, locations,
-      sites: selectedSites,
-      schedule: cronStr,
-      hour, minute, days: selectedDays,
-      createdAt: new Date().toISOString(),
-    };
-    localStorage.setItem(`schedule_${name}`, JSON.stringify(config));
-    setShowForm(false);
-    setEditingId(null);
-    setName("");
-    setKeyword("");
-  };
-
-  const handleEdit = (schedule: any) => {
-    setName(schedule.name);
-    setKeyword(schedule.keyword);
-    if (schedule.careerMin != null) {
-      setCareerMin(schedule.careerMin);
-      setCareerMax(schedule.careerMax ?? CAREER_TOTAL);
-    } else if (typeof schedule.career === "string") {
-      const [min, max] = legacyCareerRange(schedule.career);
-      setCareerMin(min);
-      setCareerMax(max);
-    } else {
-      setCareerMin(0);
-      setCareerMax(CAREER_TOTAL);
-    }
-    if (Array.isArray(schedule.locations) && schedule.locations.length > 0) {
-      setLocations(schedule.locations);
-    } else if (typeof schedule.location === "string") {
-      setLocations([schedule.location]);
-    } else {
-      setLocations(DEFAULT_LOCATIONS);
-    }
-    setSelectedSites(schedule.sites);
-    setHour(schedule.hour);
-    setMinute(schedule.minute);
-    setSelectedDays(schedule.days);
-    setEditingId(schedule.name);
+    setKeyword(params.keyword || "");
+    const cMin = params.careerMin != null ? parseInt(params.careerMin, 10) : null;
+    const cMax = params.careerMax != null ? parseInt(params.careerMax, 10) : null;
+    setCareerMin(cMin ?? 0);
+    setCareerMax(cMax ?? CAREER_TOTAL);
+    const locs = params.location
+      ? params.location.split(",").map((s: string) => s.trim()).filter(Boolean)
+      : [];
+    setLocations(locs.length ? locs : DEFAULT_LOCATIONS);
+    setSelectedSites(enabled.length ? enabled.map((sc: any) => sc.siteName) : DEFAULT_SITES);
+    const parsed = parseCronToSchedule(c.schedule);
+    setHour(parsed.hour);
+    setMinute(parsed.minute);
+    setSelectedDays(parsed.days);
     setShowForm(true);
   };
 
-  const handleDelete = (name: string) => {
-    if (confirm(`"${name}" 스케줄을 삭제하시겠습니까?`)) {
-      localStorage.removeItem(`schedule_${name}`);
-    }
+  const handleDelete = (c: any) => {
+    if (!confirm(`"${c.name}" 스케줄을 삭제하시겠습니까?`)) return;
+    deleteMutation.mutate(c.id);
   };
 
   return (
@@ -339,8 +430,12 @@ export default function Schedule() {
 
       <div>
         <h2 className="text-lg font-bold mb-4">등록된 스케줄</h2>
-        
-        {crawlers && crawlers.length > 0 ? (
+
+        {crawlersError ? (
+          <div className="text-center py-12 text-red-500">
+            스케줄 목록을 불러오지 못했습니다: {(crawlersError as Error).message}
+          </div>
+        ) : crawlers && crawlers.length > 0 ? (
           <div className="space-y-4">
             {crawlers.map((c) => (
               <div
@@ -381,7 +476,7 @@ export default function Schedule() {
                       ✏️
                     </button>
                     <button
-                      onClick={() => handleDelete(c.name)}
+                      onClick={() => handleDelete(c)}
                       className="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm hover:bg-red-100"
                     >
                       🗑️

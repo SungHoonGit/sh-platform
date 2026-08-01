@@ -81,3 +81,76 @@ export async function fetchCrawlLogs(configId: number): Promise<any[]> {
   if (!res.ok) return [];
   return res.json();
 }
+
+export interface SiteDefinitionInfo {
+  id: number;
+  siteName: string;
+  displayName: string;
+  baseUrl: string;
+  isEnabled: boolean;
+}
+
+async function errorMessage(res: Response): Promise<string> {
+  try {
+    const json = await res.json();
+    return json?.message || `요청 실패 (${res.status})`;
+  } catch {
+    return `요청 실패 (${res.status})`;
+  }
+}
+
+export async function fetchSites(): Promise<SiteDefinitionInfo[]> {
+  const res = await fetch(`${BASE}/sites`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(await errorMessage(res));
+  return res.json();
+}
+
+export interface CrawlerSaveBody {
+  name: string;
+  description?: string;
+  schedule: string;
+  isActive?: boolean;
+  retentionDays?: number;
+}
+
+export async function saveCrawler(body: CrawlerSaveBody): Promise<Crawler> {
+  const res = await fetch(`${BASE}/crawl-config`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await errorMessage(res));
+  return res.json();
+}
+
+export async function updateCrawler(id: number, body: CrawlerSaveBody): Promise<Crawler> {
+  const res = await fetch(`${BASE}/crawl-config/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await errorMessage(res));
+  return res.json();
+}
+
+export async function deleteCrawler(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/crawl-config/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(await errorMessage(res));
+}
+
+export async function saveSiteConfig(
+  configId: number,
+  siteDefinitionId: number,
+  body: { paramValues: string; isEnabled: boolean }
+): Promise<unknown> {
+  const res = await fetch(`${BASE}/crawl-config/${configId}/site-configs/${siteDefinitionId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await errorMessage(res));
+  return res.json();
+}
