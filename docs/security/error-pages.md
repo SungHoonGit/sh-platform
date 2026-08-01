@@ -118,12 +118,12 @@
 
 ## 5. 구현 계획 (체크리스트)
 
-- [ ] auth 프론트: `NotFound` + `*` catch-all, ErrorBoundary
-- [ ] scraper 프론트: `NotFound` + `*` catch-all, ErrorBoundary
-- [ ] platform 프론트: `NotFound` + `*` catch-all (빈 화면 해소), ErrorBoundary
+- [x] auth 프론트: `NotFound` + `*` catch-all, ErrorBoundary
+- [x] scraper 프론트: `NotFound` + `*` catch-all, ErrorBoundary
+- [x] platform 프론트: `NotFound` + `*` catch-all (빈 화면 해소), ErrorBoundary
 - [ ] auth 프론트: `/auth/error` 페이지 (OAuth2 실패 콜백)
-- [ ] common 백엔드: GlobalExceptionHandler 확장 (404/405/400)
-- [ ] 4개 모듈 application.yml: `server.error.whitelabel.enabled: false`
+- [x] common 백엔드: GlobalExceptionHandler 확장 (404/405/400)
+- [x] 4개 모듈 application.yml: `server.error.whitelabel.enabled: false`
 - [ ] scraper 백엔드: SPA 딥링크 fallback (API 예외 경로)
 - [ ] nginx: `error_page` 502/503/504 + 브랜딩 HTML
 - [ ] nginx 설정 저장소 버전 관리 + 배포 워크플로 반영

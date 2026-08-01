@@ -1,10 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AuthGuard from "./components/AuthGuard";
 import Layout from "./components/Layout";
 import Search from "./pages/Search";
 import Schedule from "./pages/Schedule";
 import Viewer from "./pages/Viewer";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,7 +24,7 @@ export default function App() {
               <Route path="/search" element={<Search />} />
               <Route path="/schedule" element={<Schedule />} />
               <Route path="/viewer" element={<Viewer />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
         </BrowserRouter>
