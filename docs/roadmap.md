@@ -72,6 +72,19 @@
 - [x] ErrorCode + messages_ko/en.properties 업데이트
 - [x] SSL/TLS 설정 (Let's Encrypt) — Phase 3
 
+### 보안 강화 (OWASP / 에러 페이지) — [설계 문서](./security/error-pages.md) · [OWASP 대응](./security/owasp-hardening.md)
+- [ ] 각 SPA 404 페이지 + catch-all (platform은 빈 화면 해소)
+- [ ] 각 SPA ErrorBoundary (런타임 에러 시 흰 화면 방지)
+- [ ] auth `/auth/error` 페이지 (OAuth2 실패 콜백)
+- [ ] 백엔드 GlobalExceptionHandler 확장 (404/405/400)
+- [ ] Spring `server.error.whitelabel.enabled: false` (4개 모듈)
+- [ ] scraper SPA 딥링크 fallback (`/scraper/schedule` 등)
+- [ ] nginx `server_tokens off` + 보안 헤더 (`X-Frame-Options`, CSP, HSTS 등)
+- [ ] nginx `error_page` 502/503/504 브랜딩 페이지
+- [ ] nginx 설정 파일 저장소 버전 관리 (`infra/nginx/`) + 배포 반영
+- [ ] scraper 프로덕션 설정 정리 (`show_sql: false`, 로그 INFO, health when-authorized)
+- [ ] 에러 응답 헤더/본문 검증 (`curl -I`, Whitelabel 미노출)
+
 ### 프론트엔드 연동 (예정)
 - [ ] React 프론트엔드 프로젝트 생성
 - [ ] 로그인/회원가입 화면

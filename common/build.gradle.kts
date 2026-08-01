@@ -22,6 +22,8 @@ dependencies {
     
     compileOnly("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
 
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+
     // File viewer module
     implementation("com.vladsch.flexmark:flexmark-all:0.64.8")
     implementation("com.github.librepdf:openpdf:1.3.30")

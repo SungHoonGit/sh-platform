@@ -24,6 +24,9 @@ spring:
 server:
   shutdown: graceful
   forward-headers-strategy: framework
+  error:
+    whitelabel:
+      enabled: false
 
 oauth2:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}

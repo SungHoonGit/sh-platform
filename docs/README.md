@@ -25,6 +25,12 @@
 | [OAuth2 가이드](./auth/oauth2-registration-guide.md) | auth/ | OAuth2 제공자 등록 |
 | [Gmail SMTP 설정](./auth/gmail-smtp-setup.md) | auth/ | 이메일 발송 설정 |
 
+### 보안
+| 문서 | 위치 | 설명 |
+|------|------|------|
+| [에러 페이지 전략](./security/error-pages.md) | security/ | 404/500/OAuth2/인프라 오류 페이지 설계 |
+| [OWASP 웹 취약점 대응](./security/owasp-hardening.md) | security/ | 버전 숨김, 보안 헤더, 프로덕션 설정 |
+
 ### 가이드
 | 문서 | 위치 | 설명 |
 |------|------|------|

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PlatformLayout from "./layouts/PlatformLayout";
 import Dashboard from "./pages/Dashboard";
+import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminTenants from "./pages/admin/AdminTenants";
@@ -35,6 +36,7 @@ function App() {
               <Route path="/platform/admin/users" element={<AdminUsers />} />
               <Route path="/platform/admin/tenants" element={<AdminTenants />} />
             </Route>
+            <Route path="*" element={<NotFound />} />
           </Routes>
         )}
       </BrowserRouter>

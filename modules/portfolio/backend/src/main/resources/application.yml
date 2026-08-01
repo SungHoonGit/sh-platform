@@ -1,5 +1,8 @@
 server:
   port: 8083
+  error:
+    whitelabel:
+      enabled: false
 
 spring:
   application:
@@ -12,10 +15,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
   jackson:
     default-property-inclusion: non_null
 
@@ -33,9 +36,9 @@ management:
         include: health,info,prometheus
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
 
 logging:
   level:
     root: INFO
-    com.portfolio.platform: DEBUG
+    com.portfolio.platform: INFO
