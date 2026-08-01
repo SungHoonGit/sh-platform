@@ -125,8 +125,8 @@
 - [x] common 백엔드: GlobalExceptionHandler 확장 (404/405/400)
 - [x] 4개 모듈 application.yml: `server.error.whitelabel.enabled: false`
 - [ ] scraper 백엔드: SPA 딥링크 fallback (API 예외 경로)
-- [ ] nginx: `error_page` 502/503/504 + 브랜딩 HTML
-- [ ] nginx 설정 저장소 버전 관리 + 배포 워크플로 반영
+- [x] nginx: `error_page` 502/503/504 + 브랜딩 HTML
+- [x] nginx 설정 저장소 버전 관리 + 배포 워크플로 반영
 - [ ] 각 앱: 실제 404/500/502 시나리오 수동 검증
 
 ---

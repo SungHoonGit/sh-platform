@@ -148,10 +148,10 @@ add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" alway
 
 ## 5. 구현 계획 (체크리스트)
 
-- [ ] nginx `server_tokens off` + 보안 헤더 `add_header` 적용
-- [ ] nginx 설정 파일 `infra/nginx/sh-platform.conf` 로 저장소에 추가 + 배포 워크플로 반영
-- [ ] 4개 모듈 `application.yml`: `server.server-header`, `server.error.whitelabel.enabled` 설정
-- [ ] scraper `application.yml`: `show_sql: false`, 로그 INFO, `health.show-details: when-authorized`
+- [x] nginx `server_tokens off` + 보안 헤더 `add_header` 적용
+- [x] nginx 설정 파일 `infra/nginx/sh-platform.conf` 로 저장소에 추가 + 배포 워크플로 반영
+- [x] 4개 모듈 `application.yml`: `server.error.whitelabel.enabled` 설정
+- [x] scraper `application.yml`: `show_sql: false`, 로그 INFO, `health.show-details: when-authorized`
 - [ ] auth `management.endpoints` 노출 범위 재검토 (info 제외 검토)
 - [ ] CSP 적용 전 각 SPA 콘솔 위반 경고 점검
 - [ ] `curl -I`로 응답 헤더 검증 (아래 검증 시나리오)
