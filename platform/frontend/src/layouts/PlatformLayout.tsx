@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink } from "react-router-dom";
 import { LayoutDashboard, Search, FileText, Briefcase, Shield, Users, Building2, LogOut } from "lucide-react";
 
 const navItems = [
@@ -15,12 +15,10 @@ const adminItems = [
 ];
 
 export default function PlatformLayout() {
-  const navigate = useNavigate();
-
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
-    navigate("/");
+    window.location.replace("/");
   };
 
   return (
