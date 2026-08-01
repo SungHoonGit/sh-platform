@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/platform";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,7 +19,7 @@ export default function Login() {
         const data = await res.json();
         localStorage.setItem("accessToken", data.data?.accessToken);
         localStorage.setItem("refreshToken", data.data?.refreshToken);
-        window.location.href = "/platform";
+        window.location.href = redirect;
       } else {
         alert("로그인 실패");
       }

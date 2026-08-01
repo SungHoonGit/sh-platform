@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import AuthGuard from "./components/AuthGuard";
 import Layout from "./components/Layout";
 import Search from "./pages/Search";
 import Schedule from "./pages/Schedule";
@@ -14,17 +15,19 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter basename="/scraper">
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Search />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/schedule" element={<Schedule />} />
-            <Route path="/viewer" element={<Viewer />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <AuthGuard>
+        <BrowserRouter basename="/scraper">
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Search />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/schedule" element={<Schedule />} />
+              <Route path="/viewer" element={<Viewer />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AuthGuard>
     </QueryClientProvider>
   );
 }
