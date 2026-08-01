@@ -128,6 +128,12 @@ class CrawlerMappingTest {
             void 알수없는지역_빈문자열() {
                 assertEquals("", crawler.mapLocationCode("알수없는지역"));
             }
+
+            @Test
+            @DisplayName("복수 지역은 빈 문자열을 반환한다 (단일 loc_mcd만 지원)")
+            void 복수지역_빈문자열() {
+                assertEquals("", crawler.mapLocationCode("서울,경기"));
+            }
         }
     }
 

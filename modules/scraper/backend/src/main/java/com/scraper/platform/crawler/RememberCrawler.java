@@ -40,6 +40,22 @@ public class RememberCrawler implements SiteCrawler {
         // SiteSearchMapper를 사용하여 표준 파라미터를 사이트별 URL 파라미터로 변환
         Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
 
+        Map<String, String> params = parseParams(paramValues);
+
+        // 경력 범위(최소 연수)는 리멤버 min_experience로 직접 변환
+        String careerMin = params.get("careerMin");
+        if (careerMin != null && !careerMin.isEmpty() && !careerMin.equals("0")
+                && !siteParams.containsKey("min_experience")) {
+            siteParams.put("min_experience", careerMin);
+        }
+
+        // 다중 지역(콤마 구분)은 리멤버 sido가 단일 텍스트만 지원하므로
+        // 지역 파라미터를 보내지 않고 서버사이드 필터로 걸러낸다.
+        String location = params.getOrDefault("location", "");
+        if (location.contains(",")) {
+            siteParams.remove("sido");
+        }
+
         int maxPages = 5;
         int perPage = 30;
         List<Map<String, String>> allJobs = new ArrayList<>();

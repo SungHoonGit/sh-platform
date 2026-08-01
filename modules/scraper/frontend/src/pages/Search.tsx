@@ -1,6 +1,14 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { realTimeSearch, type SearchResponse } from "../api/scraper";
+import { realTimeSearch, type SearchRequest, type SearchResponse } from "../api/scraper";
+import {
+  REGIONS,
+  DEFAULT_LOCATIONS,
+  CAREER_TOTAL,
+  isCareerActive,
+  CareerRangeSlider,
+  LocationMultiSelect,
+} from "../components/SearchFilters";
 
 const SITES = [
   { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700 border-blue-200" },
@@ -9,8 +17,6 @@ const SITES = [
   { id: "remember", name: "리멤버", color: "bg-purple-100 text-purple-700 border-purple-200" },
 ];
 
-const CAREERS = ["전체", "경력무관", "1~3년", "3~5년", "5~10년", "10년 이상"];
-const LOCATIONS = ["전체", "서울", "경기", "인천", "부산", "대구", "기타"];
 const PAGE_SIZE = 20;
 
 type SortKey = "site" | "company" | "position" | "career" | "location" | "tech" | "deadline";
@@ -28,8 +34,9 @@ const COLUMNS: { key: SortKey; label: string; w: string }[] = [
 export default function Search() {
   const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
-  const [career, setCareer] = useState("전체");
-  const [location, setLocation] = useState("전체");
+  const [careerMin, setCareerMin] = useState(0);
+  const [careerMax, setCareerMax] = useState(CAREER_TOTAL);
+  const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
   const [selectedSites, setSelectedSites] = useState<string[]>(["saramin", "jobkorea", "wanted", "remember"]);
   const [data, setData] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,13 +96,20 @@ export default function Search() {
     setActiveSite("all");
     setPage(1);
 
+    const payload: SearchRequest = {
+      keyword: keyword.trim(),
+      sites: selectedSites,
+    };
+    if (isCareerActive(careerMin, careerMax)) {
+      if (careerMin > 0) payload.careerMin = careerMin;
+      if (careerMax < CAREER_TOTAL) payload.careerMax = careerMax;
+    }
+    if (locations.length > 0 && locations.length < REGIONS.length) {
+      payload.locations = locations;
+    }
+
     try {
-      const result = await realTimeSearch({
-        keyword: keyword.trim(),
-        career: career !== "전체" ? career : undefined,
-        location: location !== "전체" ? location : undefined,
-        sites: selectedSites,
-      });
+      const result = await realTimeSearch(payload);
       setData(result);
     } catch (e) {
       setError((e as Error).message);
@@ -110,8 +124,16 @@ export default function Search() {
     );
   };
 
+  const toggleLocation = (loc: string) => {
+    setLocations((prev) =>
+      prev.includes(loc) ? prev.filter((l) => l !== loc) : [...prev, loc]
+    );
+  };
+
   const goToSchedule = () => {
-    navigate("/schedule", { state: { keyword, career, location, sites: selectedSites } });
+    navigate("/schedule", {
+      state: { keyword, careerMin, careerMax, locations, sites: selectedSites },
+    });
   };
 
   return (
@@ -134,28 +156,31 @@ export default function Search() {
 
         <div className="mb-4">
           <label className="block text-[11px] font-medium text-slate-600 mb-1.5">경력</label>
-          <div className="space-y-1">
-            {CAREERS.map((c) => (
-              <label key={c} className="flex items-center gap-1.5 cursor-pointer">
-                <input type="radio" name="career" value={c} checked={career === c}
-                  onChange={(e) => setCareer(e.target.value)} className="w-3.5 h-3.5 text-blue-600" />
-                <span className="text-xs text-slate-700">{c}</span>
-              </label>
-            ))}
+          <CareerRangeSlider
+            min={careerMin}
+            max={careerMax}
+            onMinChange={setCareerMin}
+            onMaxChange={setCareerMax}
+          />
+          <div className="mt-1.5 text-[10px] text-slate-400">
+            {isCareerActive(careerMin, careerMax) ? (
+              <span className="text-blue-600">선택됨: {careerMin > 0 ? `${careerMin}년` : "신입"} ~ {careerMax >= CAREER_TOTAL ? "15년+" : `${careerMax}년`}</span>
+            ) : (
+              <span>전체 경력</span>
+            )}
           </div>
         </div>
 
         <div className="mb-4">
-          <label className="block text-[11px] font-medium text-slate-600 mb-1.5">지역</label>
-          <div className="space-y-1">
-            {LOCATIONS.map((l) => (
-              <label key={l} className="flex items-center gap-1.5 cursor-pointer">
-                <input type="radio" name="location" value={l} checked={location === l}
-                  onChange={(e) => setLocation(e.target.value)} className="w-3.5 h-3.5 text-blue-600" />
-                <span className="text-xs text-slate-700">{l}</span>
-              </label>
-            ))}
-          </div>
+          <LocationMultiSelect
+            selected={locations}
+            onToggle={toggleLocation}
+            onSelectAll={() => setLocations([...REGIONS])}
+            onClear={() => setLocations([])}
+          />
+          {locations.length === 0 && (
+            <div className="mt-1 text-[10px] text-slate-400">전체 지역 검색</div>
+          )}
         </div>
 
         <div className="mb-4">

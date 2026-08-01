@@ -27,7 +27,7 @@ public class SearchService {
     /**
      * 실시간 검색을 수행한다.
      *
-     * @param request 검색 요청 (키워드, 경력, 지역, 사이트 목록)
+     * @param request 검색 요청 (키워드, 경력 범위, 지역 목록, 사이트 목록)
      * @return 검색 결과
      */
     public SearchResponse search(SearchRequest request) {
@@ -35,8 +35,8 @@ public class SearchService {
         List<String> sites = request.sites();
         Map<String, String> standardParams = buildStandardParams(request);
 
-        log.info("Real-time search started: keyword={}, career={}, location={}, sites={}",
-                request.keyword(), request.career(), request.location(), sites);
+        log.info("Real-time search started: keyword={}, careerMin={}, careerMax={}, locations={}, sites={}",
+                request.keyword(), request.careerMin(), request.careerMax(), request.locations(), sites);
 
         // 병렬 크롤링
         Map<String, CompletableFuture<List<Map<String, String>>>> futures = new LinkedHashMap<>();
@@ -82,7 +82,26 @@ public class SearchService {
         }
 
         // 서버사이드 필터링 (크롤러가 사이트 URL 파라미터로 필터링 못 한 경우 보완)
-        List<Map<String, String>> filtered = filterJobs(allJobs, request.career(), request.location());
+        Integer careerMin = request.careerMin();
+        Integer careerMax = request.careerMax();
+        List<String> locations = request.locations();
+        if (careerMin == null && careerMax == null && request.career() != null
+                && !request.career().isEmpty() && !request.career().equals("전체") && !request.career().equals("경력무관")) {
+            int[] legacyRange = parseCareerRange(request.career());
+            if (legacyRange != null) {
+                careerMin = legacyRange[0];
+                careerMax = legacyRange[1] == Integer.MAX_VALUE ? null : legacyRange[1];
+            }
+        }
+        if (locations == null || locations.isEmpty()) {
+            if (request.location() != null && !request.location().isEmpty() && !request.location().equals("전체")) {
+                locations = List.of(request.location());
+            } else {
+                locations = List.of();
+            }
+        }
+
+        List<Map<String, String>> filtered = filterJobs(allJobs, careerMin, careerMax, locations);
         Map<String, Integer> filteredCounts = new LinkedHashMap<>();
         for (Map.Entry<String, Integer> entry : siteCounts.entrySet()) {
             String sn = entry.getKey();
@@ -96,18 +115,18 @@ public class SearchService {
         return SearchResponse.of(filtered.size(), filtered, filteredCounts, searchTime, failedSites);
     }
 
-    private List<Map<String, String>> filterJobs(List<Map<String, String>> jobs, String career, String location) {
-        boolean filterCareer = career != null && !career.isEmpty() && !career.equals("전체") && !career.equals("경력무관");
-        boolean filterLocation = location != null && !location.isEmpty() && !location.equals("전체");
+    private List<Map<String, String>> filterJobs(List<Map<String, String>> jobs, Integer careerMin, Integer careerMax, List<String> locations) {
+        boolean filterCareer = careerMin != null || careerMax != null;
+        boolean filterLocation = locations != null && !locations.isEmpty();
         if (!filterCareer && !filterLocation) return new ArrayList<>(jobs);
         return jobs.stream().filter(job -> {
             if (filterCareer && !"true".equals(job.get("careerFiltered"))) {
                 String jobCareer = job.getOrDefault("career", "");
-                if (!matchesCareer(jobCareer, career)) return false;
+                if (!matchesCareerRange(jobCareer, careerMin, careerMax)) return false;
             }
             if (filterLocation && !"true".equals(job.get("locationFiltered"))) {
                 String jobLoc = job.getOrDefault("location", "");
-                if (!matchesLocation(jobLoc, location)) return false;
+                if (!matchesLocationAny(jobLoc, locations)) return false;
             }
             return true;
         }).<Map<String, String>>map(job -> {
@@ -118,12 +137,16 @@ public class SearchService {
         }).collect(Collectors.toList());
     }
 
-    private boolean matchesCareer(String jobCareer, String targetCareer) {
-        if (jobCareer.isEmpty() || jobCareer.contains("무관") || targetCareer.isEmpty()) return true;
+    /**
+     * 잡 경력 텍스트가 [min, max] 연수 범위와 겹치는지 확인한다.
+     */
+    private boolean matchesCareerRange(String jobCareer, Integer careerMin, Integer careerMax) {
+        if (jobCareer.isEmpty() || jobCareer.contains("무관")) return true;
         int[] jr = parseCareerRange(jobCareer);
-        int[] tr = parseCareerRange(targetCareer);
-        if (jr == null || tr == null) return true;
-        return jr[0] <= tr[1] && jr[1] >= tr[0];
+        if (jr == null) return true;
+        int lo = careerMin != null ? careerMin : 0;
+        int hi = careerMax != null ? careerMax : Integer.MAX_VALUE;
+        return jr[0] <= hi && jr[1] >= lo;
     }
 
     private int[] parseCareerRange(String career) {
@@ -145,9 +168,12 @@ public class SearchService {
         return null;
     }
 
-    private boolean matchesLocation(String jobLocation, String targetLocation) {
+    private boolean matchesLocationAny(String jobLocation, List<String> locations) {
         if (jobLocation.isEmpty()) return true;
-        return jobLocation.contains(targetLocation);
+        for (String loc : locations) {
+            if (loc != null && !loc.isEmpty() && jobLocation.contains(loc)) return true;
+        }
+        return false;
     }
 
     private List<Map<String, String>> executeSiteSearch(String siteName, Map<String, String> standardParams) throws Exception {
@@ -172,11 +198,20 @@ public class SearchService {
         if (request.keyword() != null && !request.keyword().isEmpty()) {
             params.put("keyword", request.keyword());
         }
-        if (request.career() != null && !request.career().isEmpty()) {
-            params.put("career", request.career());
+        if (request.careerMin() != null) {
+            params.put("careerMin", String.valueOf(request.careerMin()));
         }
-        if (request.location() != null && !request.location().isEmpty()) {
+        if (request.careerMax() != null) {
+            params.put("careerMax", String.valueOf(request.careerMax()));
+        }
+        if (request.locations() != null && !request.locations().isEmpty()) {
+            params.put("location", String.join(",", request.locations()));
+        } else if (request.location() != null && !request.location().isEmpty() && !request.location().equals("전체")) {
             params.put("location", request.location());
+        }
+        if (request.careerMin() == null && request.career() != null
+                && !request.career().isEmpty() && !request.career().equals("전체") && !request.career().equals("경력무관")) {
+            params.put("career", request.career());
         }
         return params;
     }

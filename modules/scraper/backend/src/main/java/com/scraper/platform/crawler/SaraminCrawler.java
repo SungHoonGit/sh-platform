@@ -40,7 +40,6 @@ public class SaraminCrawler implements SiteCrawler {
         String paramValues = siteConfig.getParamValues();
         Map<String, String> params = parseParams(paramValues);
         String keyword = params.getOrDefault("keyword", "");
-        String career = params.getOrDefault("career", "");
         String location = params.getOrDefault("location", "");
 
         Set<String> seenRecIdx = new HashSet<>();
@@ -48,7 +47,7 @@ public class SaraminCrawler implements SiteCrawler {
         int totalCount = -1;
 
         for (int page = 1; page <= MAX_PAGES; page++) {
-            String url = buildUrl(keyword, career, location, page);
+            String url = buildUrl(params, page);
             log.info("Saramin crawl URL (page {}): {}", page, url);
 
             String json = fetchWithCurl(url);
@@ -73,9 +72,8 @@ public class SaraminCrawler implements SiteCrawler {
                 log.info("No more jobs at page {}, stopping", page);
                 break;
             }
-            boolean careerFiltered = career != null && !career.isEmpty()
-                    && !career.equals("전체") && !career.equals("경력무관");
-            boolean locationFiltered = location != null && !location.isEmpty() && !location.equals("전체");
+            boolean careerFiltered = isCareerFilterActive(params);
+            boolean locationFiltered = !mapLocationCode(location).isEmpty();
             for (Map<String, String> job : pageJobs) {
                 if (careerFiltered) {
                     job.put("careerFiltered", "true");
@@ -139,28 +137,51 @@ public class SaraminCrawler implements SiteCrawler {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private String buildUrl(String keyword, String career, String location, int page) {
+    private String buildUrl(Map<String, String> params, int page) {
         StringBuilder sb = new StringBuilder(BASE_URL);
         sb.append("?searchType=search&search_done=y&search_optional_item=y&panel_count=y");
 
+        String keyword = params.getOrDefault("keyword", "");
         if (!keyword.isEmpty()) {
             sb.append("&searchword=").append(URLEncoder.encode(keyword, StandardCharsets.UTF_8));
         }
 
         sb.append("&recruitPage=").append(page);
 
-        String locCode = mapLocationCode(location);
-        if (!locCode.isEmpty()) {
-            sb.append("&loc_mcd=").append(locCode);
-        }
+        appendLocationParams(sb, params.getOrDefault("location", ""));
 
-        appendCareerParams(sb, career);
+        appendCareerParams(sb, params);
 
         return sb.toString();
     }
 
-    private void appendCareerParams(StringBuilder sb, String career) {
-        if (career == null || career.isEmpty() || career.equals("전체") || career.equals("경력무관")) {
+    /**
+     * 지역 파라미터를 loc_mcd로 변환한다.
+     * 다중 지역(콤마 구분)은 사람인이 단일 loc_mcd만 지원하므로 빈 값을 반환하고,
+     * 이후 서버사이드 필터로 다중 지역을 걸러낸다.
+     */
+    private void appendLocationParams(StringBuilder sb, String location) {
+        String locCode = mapLocationCode(location);
+        if (!locCode.isEmpty()) {
+            sb.append("&loc_mcd=").append(locCode);
+        }
+    }
+
+    private void appendCareerParams(StringBuilder sb, Map<String, String> params) {
+        String careerMin = params.get("careerMin");
+        String careerMax = params.get("careerMax");
+        if (careerMin != null || careerMax != null) {
+            if (careerMin != null && !careerMin.equals("0")) {
+                sb.append("&exp_cd=2");
+                sb.append("&exp_min=").append(careerMin);
+                if (careerMax != null) {
+                    sb.append("&exp_max=").append(careerMax);
+                }
+            }
+            return;
+        }
+        String career = params.getOrDefault("career", "");
+        if (career.isEmpty() || career.equals("전체") || career.equals("경력무관")) {
             return;
         }
         switch (career) {
@@ -171,6 +192,15 @@ public class SaraminCrawler implements SiteCrawler {
             case "5~10년" -> sb.append("&exp_cd=2&exp_min=5&exp_max=10");
             case "10년이상" -> sb.append("&exp_cd=2&exp_min=10");
         }
+    }
+
+    private boolean isCareerFilterActive(Map<String, String> params) {
+        if (params.get("careerMin") != null || params.get("careerMax") != null) {
+            String careerMin = params.get("careerMin");
+            return careerMin == null || !careerMin.equals("0");
+        }
+        String career = params.getOrDefault("career", "");
+        return !career.isEmpty() && !career.equals("전체") && !career.equals("경력무관");
     }
 
     private List<Map<String, String>> parseJobs(Document doc) {
@@ -270,6 +300,9 @@ public class SaraminCrawler implements SiteCrawler {
     }
 
     String mapLocationCode(String location) {
+        if (location == null || location.isEmpty() || location.contains(",")) {
+            return "";
+        }
         return switch (location) {
             case "서울" -> "101000";
             case "경기" -> "102000";

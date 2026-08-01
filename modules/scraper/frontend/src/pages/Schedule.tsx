@@ -2,6 +2,13 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchCrawlers, executeCrawler } from "../api/scraper";
+import {
+  REGIONS,
+  DEFAULT_LOCATIONS,
+  CAREER_TOTAL,
+  CareerRangeSlider,
+  LocationMultiSelect,
+} from "../components/SearchFilters";
 
 const SITES = [
   { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700" },
@@ -10,12 +17,20 @@ const SITES = [
   { id: "remember", name: "리멤버", color: "bg-purple-100 text-purple-700" },
 ];
 
-const CAREERS = ["경력무관", "1~3년", "3~5년", "5~10년", "10년 이상"];
-const LOCATIONS = ["서울", "경기", "인천", "부산", "대구", "기타"];
 const DAYS = [
   { id: 1, name: "월" }, { id: 2, name: "화" }, { id: 3, name: "수" },
   { id: 4, name: "목" }, { id: 5, name: "금" }, { id: 6, name: "토" }, { id: 0, name: "일" },
 ];
+
+function legacyCareerRange(career: string): [number, number] {
+  switch (career) {
+    case "1~3년": return [1, 3];
+    case "3~5년": return [3, 5];
+    case "5~10년": return [5, 10];
+    case "10년이상": case "10년 이상": return [10, CAREER_TOTAL];
+    default: return [0, CAREER_TOTAL];
+  }
+}
 
 function toCron(hour: number, minute: number, days: number[]): string {
   if (days.length === 7) return `${minute} ${hour} * * *`;
@@ -44,8 +59,9 @@ export default function Schedule() {
 
   const [name, setName] = useState("");
   const [keyword, setKeyword] = useState("");
-  const [career, setCareer] = useState("3~5년");
-  const [loc, setLoc] = useState("서울");
+  const [careerMin, setCareerMin] = useState(0);
+  const [careerMax, setCareerMax] = useState(CAREER_TOTAL);
+  const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
   const [selectedSites, setSelectedSites] = useState<string[]>(["saramin", "jobkorea", "wanted", "remember"]);
   const [hour, setHour] = useState(9);
   const [minute, setMinute] = useState(0);
@@ -56,8 +72,19 @@ export default function Schedule() {
   useEffect(() => {
     if (state) {
       setKeyword(state.keyword || "");
-      setCareer(state.career || "3~5년");
-      setLoc(state.location || "서울");
+      if (typeof state.career === "string") {
+        const [min, max] = legacyCareerRange(state.career);
+        setCareerMin(min);
+        setCareerMax(max);
+      } else {
+        setCareerMin(state.careerMin ?? 0);
+        setCareerMax(state.careerMax ?? CAREER_TOTAL);
+      }
+      if (typeof state.location === "string") {
+        setLocations(state.location === "전체" ? DEFAULT_LOCATIONS : [state.location]);
+      } else {
+        setLocations(state.locations?.length ? state.locations : DEFAULT_LOCATIONS);
+      }
       setSelectedSites(state.sites || ["saramin", "jobkorea", "wanted", "remember"]);
       setShowForm(true);
     }
@@ -96,7 +123,7 @@ export default function Schedule() {
       return;
     }
     const config = {
-      name, keyword, career, location: loc,
+      name, keyword, careerMin, careerMax, locations,
       sites: selectedSites,
       schedule: cronStr,
       hour, minute, days: selectedDays,
@@ -112,8 +139,24 @@ export default function Schedule() {
   const handleEdit = (schedule: any) => {
     setName(schedule.name);
     setKeyword(schedule.keyword);
-    setCareer(schedule.career);
-    setLoc(schedule.location);
+    if (schedule.careerMin != null) {
+      setCareerMin(schedule.careerMin);
+      setCareerMax(schedule.careerMax ?? CAREER_TOTAL);
+    } else if (typeof schedule.career === "string") {
+      const [min, max] = legacyCareerRange(schedule.career);
+      setCareerMin(min);
+      setCareerMax(max);
+    } else {
+      setCareerMin(0);
+      setCareerMax(CAREER_TOTAL);
+    }
+    if (Array.isArray(schedule.locations) && schedule.locations.length > 0) {
+      setLocations(schedule.locations);
+    } else if (typeof schedule.location === "string") {
+      setLocations([schedule.location]);
+    } else {
+      setLocations(DEFAULT_LOCATIONS);
+    }
     setSelectedSites(schedule.sites);
     setHour(schedule.hour);
     setMinute(schedule.minute);
@@ -181,23 +224,24 @@ export default function Schedule() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">경력</label>
-                  <select
-                    value={career}
-                    onChange={(e) => setCareer(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    {CAREERS.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <CareerRangeSlider
+                    min={careerMin}
+                    max={careerMax}
+                    onMinChange={setCareerMin}
+                    onMaxChange={setCareerMax}
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">지역</label>
-                  <select
-                    value={loc}
-                    onChange={(e) => setLoc(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
-                  </select>
+                  <LocationMultiSelect
+                    selected={locations}
+                    onToggle={(loc) =>
+                      setLocations((prev) =>
+                        prev.includes(loc) ? prev.filter((l) => l !== loc) : [...prev, loc]
+                      )
+                    }
+                    onSelectAll={() => setLocations([...REGIONS])}
+                    onClear={() => setLocations([])}
+                  />
                 </div>
               </div>
 

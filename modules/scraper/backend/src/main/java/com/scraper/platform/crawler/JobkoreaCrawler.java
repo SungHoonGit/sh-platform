@@ -51,14 +51,21 @@ public class JobkoreaCrawler implements SiteCrawler {
         String keyword = params.getOrDefault("keyword", "");
         String career = params.getOrDefault("career", "");
         String location = params.getOrDefault("location", "");
+        String careerMinStr = params.get("careerMin");
+        String careerMaxStr = params.get("careerMax");
+        Integer careerMin = careerMinStr != null ? Integer.parseInt(careerMinStr) : null;
+        Integer careerMax = careerMaxStr != null ? Integer.parseInt(careerMaxStr) : null;
         Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), params);
+
+        boolean careerFiltered = isCareerFilterActive(career, careerMin, careerMax);
+        boolean locationFiltered = !locationCodes(location, siteParams).isEmpty();
 
         Set<String> seenIds = new HashSet<>();
         List<Map<String, String>> allJobs = new ArrayList<>();
         int totalCount = -1;
 
         for (int page = 1; page <= MAX_PAGES; page++) {
-            String body = buildBody(keyword, career, location, siteParams, page);
+            String body = buildBody(keyword, career, careerMin, careerMax, location, siteParams, page);
             log.info("Jobkorea crawl API (page {}): {}", page, API_URL);
 
             String json = fetchWithCurl(body);
@@ -75,7 +82,7 @@ public class JobkoreaCrawler implements SiteCrawler {
                 break;
             }
 
-            List<Map<String, String>> pageJobs = parseJobs(content, career, location);
+            List<Map<String, String>> pageJobs = parseJobs(content, careerFiltered, locationFiltered, location);
             for (Map<String, String> job : pageJobs) {
                 String id = job.get("id");
                 if (id != null && !seenIds.add(id)) {
@@ -97,8 +104,8 @@ public class JobkoreaCrawler implements SiteCrawler {
         return allJobs;
     }
 
-    private String buildBody(String keyword, String career, String location,
-                             Map<String, String> siteParams, int page) throws Exception {
+    private String buildBody(String keyword, String career, Integer careerMin, Integer careerMax,
+                             String location, Map<String, String> siteParams, int page) throws Exception {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("pageSize", PAGE_SIZE);
         body.put("page", page - 1);
@@ -106,10 +113,9 @@ public class JobkoreaCrawler implements SiteCrawler {
         body.put("sortDirection", "DESC");
         body.put("keyword", keyword == null ? "" : keyword);
 
-        String locCode = locationCode(location, siteParams);
-        body.put("locationList", locCode.isEmpty() ? List.of() : List.of(locCode.split(",")));
+        body.put("locationList", locationCodes(location, siteParams));
 
-        appendCareerParams(body, career);
+        appendCareerParams(body, career, careerMin, careerMax);
 
         body.put("jobClassificationCodeList", List.of());
         body.put("jobClassificationSubCodeList", List.of());
@@ -136,7 +142,14 @@ public class JobkoreaCrawler implements SiteCrawler {
     /**
      * 경력 조건을 API 요청 본문의 careerList/careerMin/careerMax로 변환한다.
      */
-    private void appendCareerParams(Map<String, Object> body, String career) {
+    private void appendCareerParams(Map<String, Object> body, String career, Integer careerMin, Integer careerMax) {
+        if (careerMin != null || careerMax != null) {
+            boolean active = careerMin != null && careerMin > 0;
+            body.put("careerList", active ? List.of("2") : List.of());
+            body.put("careerMin", careerMin != null ? String.valueOf(careerMin) : "");
+            body.put("careerMax", careerMax != null ? String.valueOf(careerMax) : "");
+            return;
+        }
         if (career == null || career.isEmpty() || career.equals("전체") || career.equals("경력무관")) {
             body.put("careerList", List.of());
             body.put("careerMin", "");
@@ -149,6 +162,13 @@ public class JobkoreaCrawler implements SiteCrawler {
         int[] range = careerRange(career);
         body.put("careerMin", range[0] < 0 ? "" : String.valueOf(range[0]));
         body.put("careerMax", range[1] < 0 ? "" : String.valueOf(range[1]));
+    }
+
+    private boolean isCareerFilterActive(String career, Integer careerMin, Integer careerMax) {
+        if (careerMin != null || careerMax != null) {
+            return careerMin != null && careerMin > 0;
+        }
+        return career != null && !career.isEmpty() && !career.equals("전체") && !career.equals("경력무관");
     }
 
     private String fetchWithCurl(String body) throws IOException, InterruptedException {
@@ -184,11 +204,11 @@ public class JobkoreaCrawler implements SiteCrawler {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private List<Map<String, String>> parseJobs(JsonNode content, String career, String location) {
+    private List<Map<String, String>> parseJobs(JsonNode content, boolean careerFiltered, boolean locationFiltered, String location) {
         List<Map<String, String>> jobs = new ArrayList<>();
         for (JsonNode node : content) {
             try {
-                Map<String, String> job = parseJob(node, career, location);
+                Map<String, String> job = parseJob(node, careerFiltered, locationFiltered, location);
                 if (job != null && !job.isEmpty()) {
                     jobs.add(job);
                 }
@@ -199,7 +219,7 @@ public class JobkoreaCrawler implements SiteCrawler {
         return jobs;
     }
 
-    private Map<String, String> parseJob(JsonNode node, String career, String location) {
+    private Map<String, String> parseJob(JsonNode node, boolean careerFiltered, boolean locationFiltered, String location) {
         String id = node.path("id").asText("");
         if (id.isEmpty()) {
             return null;
@@ -207,10 +227,10 @@ public class JobkoreaCrawler implements SiteCrawler {
         Map<String, String> job = new HashMap<>();
         job.put("id", id);
 
-        if (career != null && !career.isEmpty() && !career.equals("전체") && !career.equals("경력무관")) {
+        if (careerFiltered) {
             job.put("careerFiltered", "true");
         }
-        if (location != null && !location.isEmpty() && !location.equals("전체")) {
+        if (locationFiltered) {
             job.put("locationFiltered", "true");
         }
 
@@ -309,12 +329,33 @@ public class JobkoreaCrawler implements SiteCrawler {
         };
     }
 
-    private String locationCode(String location, Map<String, String> siteParams) {
+    /**
+     * 지역 파라미터를 잡코리아 locationList 코드 목록으로 변환한다.
+     * 다중 지역("서울,경기")은 각각 코드로 변환하여 목록으로 반환한다.
+     * (site_search_mapping DB 값이 우선이며, DB에 없을 때만 하드코딩 매핑 사용)
+     */
+    private List<String> locationCodes(String location, Map<String, String> siteParams) {
         String code = siteParams.getOrDefault("local", "");
         if (!code.isEmpty()) {
-            return code;
+            List<String> codes = new ArrayList<>();
+            for (String part : code.split(",")) {
+                if (!part.isBlank()) {
+                    codes.add(part.trim());
+                }
+            }
+            return codes;
         }
-        return mapLocationCode(location);
+        if (location == null || location.isBlank()) {
+            return List.of();
+        }
+        List<String> codes = new ArrayList<>();
+        for (String part : location.split(",")) {
+            String c = mapLocationCode(part.trim());
+            if (!c.isEmpty()) {
+                codes.add(c);
+            }
+        }
+        return codes;
     }
 
     private Map<String, String> parseParams(String paramValues) {

@@ -109,6 +109,42 @@ class SiteSearchMapperTest {
         }
 
         @Test
+        @DisplayName("복수 지역을 콤마 구분 코드로 변환한다")
+        void 복수지역_변환() {
+            // given
+            List<SiteSearchMapping> mappings = List.of(
+                mapping("location", "loc_cd", SiteSearchMapping.ValueType.mapped,
+                        "{\"서울\":\"101000\",\"경기\":\"102000\",\"인천\":\"230000\"}")
+            );
+            given(mappingRepository.findBySiteDefinition_SiteNameAndIsEnabledTrueOrderByDisplayOrder("saramin"))
+                    .willReturn(mappings);
+
+            // when
+            Map<String, String> result = siteSearchMapper.toSiteParams("saramin", "{\"location\":\"서울,경기\"}");
+
+            // then
+            assertEquals("101000,102000", result.get("loc_cd"));
+        }
+
+        @Test
+        @DisplayName("매핑에 없는 지역이 포함되면 결과에서 제외된다")
+        void 복수지역_부분미매핑_제외() {
+            // given
+            List<SiteSearchMapping> mappings = List.of(
+                mapping("location", "loc_cd", SiteSearchMapping.ValueType.mapped,
+                        "{\"서울\":\"101000\"}")
+            );
+            given(mappingRepository.findBySiteDefinition_SiteNameAndIsEnabledTrueOrderByDisplayOrder("saramin"))
+                    .willReturn(mappings);
+
+            // when
+            Map<String, String> result = siteSearchMapper.toSiteParams("saramin", "{\"location\":\"서울,경기\"}");
+
+            // then
+            assertNull(result.get("loc_cd"));
+        }
+
+        @Test
         @DisplayName("복수 파라미터를 한번에 변환한다")
         void 복수_파라미터_변환() {
             // given

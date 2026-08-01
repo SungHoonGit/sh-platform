@@ -439,13 +439,13 @@ const displayLocation = (option: string) => option.replace(/\(\d+\)/, '').trim()
 
 | 단계 | 내용 | 상태 |
 |------|------|------|
-| 1 | `site_search_mapping` DDL + 초기 데이터 | 🔜 예정 |
-| 2 | `SiteSearchMapping` 엔티티 + Repository | 🔜 예정 |
-| 3 | `SiteSearchMapper` 서비스 구현 | 🔜 예정 |
+| 1 | `site_search_mapping` DDL + 초기 데이터 | ✅ 완료 |
+| 2 | `SiteSearchMapping` 엔티티 + Repository | ✅ 완료 |
+| 3 | `SiteSearchMapper` 서비스 구현 | ✅ 완료 |
 | 4 | 크롤러별 `buildUrl()` 수정 (매핑 적용) | ✅ 완료 (하드코딩 매핑) |
 | 5 | Wanted/Remember 키워드 적용 | ✅ 완료 |
-| 6 | 프론트엔드 동적 드롭다운 | 🔜 예정 |
-| 7 | 테스트 + 통합 검증 | 🔜 예정 |
+| 6 | 프론트엔드 동적 드롭다운 | ✅ 완료 (경력 범위 바 + 지역 멀티셀렉트) |
+| 7 | 테스트 + 통합 검증 | ✅ 완료 (2026-08-01, §12 참고) |
 
 ---
 
@@ -470,3 +470,73 @@ const displayLocation = (option: string) => option.replace(/\(\d+\)/, '').trim()
 - [잡코리아 API](https://www.jobkorea.co.kr/service/api)
 - [DB 설계 표준](../architecture/db-standards/db-design-standard.md)
 - [스크래퍼 아키텍처](./architecture.md)
+
+---
+
+## 12. 2026-08-01 확장: 경력 범위(슬라이더) + 복수 지역
+
+### 12.1 개요
+
+검색 조건을 기존 단일 값(경력 문자열, 지역 1개)에서 **경력 연수 범위 + 복수 지역**으로 확장했다.
+
+| 항목 | 기존 | 변경 |
+|------|------|------|
+| 경력 | `career` 문자열 (`"3~5년"`) | `careerMin`/`careerMax` int (0~15년) |
+| 지역 | `location` 단일 문자열 (`"서울"`) | `locations` 배열 (`["서울","경기"]`) |
+| 프론트 UI | 라디오 6개 / 라디오 7개 | 듀얼 레인지 바 / 멀티셀렉트 17개 시/도 |
+
+### 12.2 API 계약
+
+`SearchRequest` (레거시 `career`/`location`은 하위호환 유지):
+
+```json
+{
+  "keyword": "Java",
+  "careerMin": 2,
+  "careerMax": 7,
+  "locations": ["서울", "경기"],
+  "sites": ["saramin", "jobkorea", "wanted", "remember"]
+}
+```
+
+- `careerMin`/`careerMax`가 모두 null → 경력 필터 없음.
+- `locations` 비어있음 → 지역 필터 없음(전체 검색).
+- 표준 파라미터 직렬화: `careerMin`/`careerMax`는 별도 키, `location`은 콤마 결합(`"서울,경기"`).
+
+### 12.3 사이트별 적용 (베스트 에포트)
+
+| 사이트 | 경력 범위 | 복수 지역 |
+|--------|-----------|-----------|
+| saramin | `exp_cd=2&exp_min={min}&exp_max={max}` | 단일만 `loc_mcd` 전송, 복수는 미전송(서버 필터) |
+| jobkorea | `careerList=["2"]&careerMin&careerMax` | `locationList` 배열 (각 지역 코드 변환) |
+| wanted | `years={min}` (min>0일 때만) | `locations` 콤마 값 전송(미동작 시 서버 필터) |
+| remember | `min_experience={min}` (min>0일 때만) | 단일만 `sido` 전송, 복수는 미전송(서버 필터) |
+
+**서버사이드 필터가 최종 안전망**: `SearchService.matchesCareerRange`(잡 경력 범위와 겹침) + `matchesLocationAny`(잡 지역이 선택 지역 중 하나 포함). 크롤러가 사이트 레벨 필터를 적용한 경우 `careerFiltered`/`locationFiltered` 플래그로 이중 필터링을 방지한다.
+
+### 12.4 SiteSearchMapper 다중 값
+
+`mapValue()`가 콤마 구분 값을 각각 매핑 후 콤마로 재결합한다.
+예: `{"location":"서울,경기"}` → `loc_cd=101000,102000`. 매핑에 없는 값이 하나라도 있으면 해당 파라미터 생략.
+
+### 12.5 프론트
+
+- `modules/scraper/frontend/src/components/SearchFilters.tsx`: `REGIONS`(17개 시/도), `DEFAULT_LOCATIONS`(주요 도시 9개 기본), `CareerRangeSlider`(0~15년 듀얼), `LocationMultiSelect`.
+- 전체 범위(0~15)거나 전체 17개 지역 선택이면 필터 미전송.
+- Schedule도 동일 컴포넌트 재사용, 기존 localStorage 레거시 값(문자열) 자동 변환.
+
+### 12.6 테스트
+
+- `SearchServiceTest`: 경력 범위(2~7년) 필터, 복수 지역(서울,부산) 필터 추가.
+- `SiteSearchMapperTest`: 복수 지역 코드 변환, 부분 미매핑 시 제외.
+- `CrawlerMappingTest`: Saramin 복수 지역 → 빈 값.
+
+| 단계 | 내용 | 상태 |
+|------|------|------|
+| 1 | `site_search_mapping` DDL + 초기 데이터 | ✅ 완료 |
+| 2 | `SiteSearchMapping` 엔티티 + Repository | ✅ 완료 |
+| 3 | `SiteSearchMapper` 서비스 구현 | ✅ 완료 (다중 값 지원 추가) |
+| 4 | 크롤러별 `buildUrl()` 수정 (매핑 적용) | ✅ 완료 (하드코딩 매핑) |
+| 5 | Wanted/Remember 키워드 적용 | ✅ 완료 |
+| 6 | 프론트엔드 동적 드롭다운 | ✅ 완료 (경력 범위 바 + 지역 멀티셀렉트) |
+| 7 | 테스트 + 통합 검증 | ✅ 완료 (백엔드 테스트, 프론트 빌드) |

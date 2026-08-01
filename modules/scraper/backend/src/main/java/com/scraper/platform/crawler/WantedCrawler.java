@@ -42,6 +42,14 @@ public class WantedCrawler implements SiteCrawler {
         // SiteSearchMapper를 사용하여 표준 파라미터를 사이트별 URL 파라미터로 변환
         Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
 
+        // 경력 범위(최소 연수)는 원티드 years 파라미터로 직접 변환
+        Map<String, String> params = parseParams(paramValues);
+        String careerMin = params.get("careerMin");
+        if (careerMin != null && !careerMin.isEmpty() && !careerMin.equals("0")
+                && !siteParams.containsKey("years")) {
+            siteParams.put("years", careerMin);
+        }
+
         int perPage = 20;
         List<Map<String, String>> allJobs = new ArrayList<>();
 

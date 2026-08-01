@@ -4,6 +4,9 @@ const BASE = "/scraper";
 
 export interface SearchRequest {
   keyword?: string;
+  careerMin?: number;
+  careerMax?: number;
+  locations?: string[];
   career?: string;
   location?: string;
   sites?: string[];

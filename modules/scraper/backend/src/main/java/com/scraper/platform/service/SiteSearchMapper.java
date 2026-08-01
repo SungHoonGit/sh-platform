@@ -102,14 +102,23 @@ public class SiteSearchMapper {
 
     /**
      * value_mapping JSON에서 값을 찾아 코드로 변환한다.
-     * 매핑에 없으면 null을 반환한다.
+     * 콤마로 구분된 다중 값("서울,경기")은 각각 변환 후 콤마로 다시 연결한다.
+     * 매핑에 없는 값이 하나라도 있으면 null을 반환한다.
      */
     private String mapValue(String value, String valueMappingJson) {
         if (valueMappingJson == null) return value;
         try {
             JsonNode node = objectMapper.readTree(valueMappingJson);
-            JsonNode mapped = node.get(value);
-            return mapped != null ? mapped.asText() : null;
+            String[] parts = value.split(",");
+            StringBuilder sb = new StringBuilder();
+            for (String part : parts) {
+                String trimmed = part.trim();
+                JsonNode mapped = node.get(trimmed);
+                if (mapped == null) return null;
+                if (sb.length() > 0) sb.append(",");
+                sb.append(mapped.asText());
+            }
+            return sb.length() == 0 ? null : sb.toString();
         } catch (Exception e) {
             log.warn("Failed to parse value_mapping: {}", valueMappingJson, e);
             return null;
