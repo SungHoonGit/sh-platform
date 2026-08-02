@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
+interface FileNode {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  size?: number;
+  childCount?: number;
+}
 
 interface FileTreeProps {
   rootPath: string;
@@ -9,16 +16,19 @@ interface FileTreeProps {
 }
 
 export default function FileTree({ rootPath, onSelectFile, selectedFile }: FileTreeProps) {
-  const { data: files, isLoading } = useQuery({
-    queryKey: ["files", rootPath],
+  const [dir, setDir] = useState("");
+
+  const { data: files, isLoading, isError, error } = useQuery({
+    queryKey: ["files", rootPath, dir],
     queryFn: async () => {
       const params = new URLSearchParams({ rootPath });
+      if (dir) params.set("path", dir);
       const token = localStorage.getItem("accessToken");
-      const res = await fetch(`/scraper/docs/list?${params}`, {
+      const res = await fetch(`/scraper/docs/tree?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error("Failed to fetch files");
-      return res.json();
+      if (!res.ok) throw new Error("파일 목록 조회 실패");
+      return res.json() as Promise<FileNode[]>;
     },
   });
 
@@ -26,87 +36,50 @@ export default function FileTree({ rootPath, onSelectFile, selectedFile }: FileT
     return <div className="p-4 text-sm text-slate-500">로딩 중...</div>;
   }
 
-  if (!files || files.length === 0) {
-    return <div className="p-4 text-sm text-slate-400">파일이 없습니다</div>;
+  if (isError) {
+    return <div className="p-4 text-sm text-red-500">파일 목록 오류: {(error as Error).message}</div>;
   }
 
-  return (
-    <div className="font-mono text-sm">
-      {files.map((item: any) => (
-        <TreeItem
-          key={item.name}
-          item={item}
-          rootPath={rootPath}
-          onSelectFile={onSelectFile}
-          selectedFile={selectedFile}
-          depth={0}
-        />
-      ))}
-    </div>
-  );
-}
+  const list = files ?? [];
 
-function TreeItem({
-  item,
-  rootPath,
-  onSelectFile,
-  selectedFile,
-  depth,
-}: {
-  item: any;
-  rootPath: string;
-  onSelectFile: (path: string) => void;
-  selectedFile: string | null;
-  depth: number;
-}) {
-  const [expanded, setExpanded] = useState(depth < 1);
-  const isFile = item.type === "file";
-  const isSelected = selectedFile === item.path;
-
-  const handleClick = () => {
-    if (isFile) {
-      onSelectFile(item.path);
-    } else {
-      setExpanded(!expanded);
-    }
+  const goParent = () => {
+    const idx = dir.lastIndexOf("/");
+    setDir(idx > 0 ? dir.slice(0, idx) : "");
   };
 
   return (
-    <div>
-      <div
-        onClick={handleClick}
-        className={`flex items-center gap-1.5 py-1 px-2 cursor-pointer hover:bg-slate-100 rounded ${
-          isSelected ? "bg-blue-50 text-blue-700" : ""
-        }`}
-        style={{ paddingLeft: `${depth * 16 + 8}px` }}
-      >
-        {!isFile && (
-          <span className="text-slate-400 text-xs w-4">
-            {expanded ? "▼" : "▶"}
-          </span>
-        )}
-        <span className="text-base">
-          {isFile ? "📄" : expanded ? "📂" : "📁"}
-        </span>
-        <span className="truncate">{item.name}</span>
-        {item.count && (
-          <span className="ml-auto text-xs text-slate-400">{item.count}건</span>
-        )}
-      </div>
-      {!isFile && expanded && item.children && (
-        <div>
-          {item.children.map((child: any) => (
-            <TreeItem
-              key={child.name}
-              item={child}
-              rootPath={rootPath}
-              onSelectFile={onSelectFile}
-              selectedFile={selectedFile}
-              depth={depth + 1}
-            />
-          ))}
+    <div className="font-mono text-sm">
+      {dir !== "" && (
+        <div
+          onClick={goParent}
+          className="flex items-center gap-1.5 py-1 px-2 cursor-pointer hover:bg-slate-100 rounded text-slate-500"
+        >
+          <span className="text-base">📁</span>
+          <span>..</span>
         </div>
       )}
+      {list.length === 0 && (
+        <div className="p-4 text-sm text-slate-400">파일이 없습니다</div>
+      )}
+      {list.map((item) => {
+        const isFile = item.type === "file";
+        const isSelected = selectedFile === item.path;
+        return (
+          <div
+            key={item.path}
+            onClick={() => (isFile ? onSelectFile(item.path) : setDir(item.path))}
+            className={`flex items-center gap-1.5 py-1 px-2 cursor-pointer hover:bg-slate-100 rounded ${
+              isSelected ? "bg-blue-50 text-blue-700" : ""
+            }`}
+          >
+            <span className="text-base">{isFile ? "📄" : "📁"}</span>
+            <span className="truncate">{item.name}</span>
+            {!isFile && item.childCount != null && item.childCount > 0 && (
+              <span className="ml-auto text-xs text-slate-400">{item.childCount}</span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

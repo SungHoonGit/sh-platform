@@ -63,7 +63,18 @@ public class FileController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        List<JobItem> allJobs = fileReadService.parseJobs(rootPath, path);
+        List<JobItem> allJobs;
+        try {
+            allJobs = fileReadService.parseJobs(rootPath, path);
+        } catch (IllegalArgumentException | SecurityException e) {
+            allJobs = Collections.emptyList();
+        }
+
+        // 전체 사이트 목록
+        List<String> sites = allJobs.stream()
+                .map(JobItem::getSite)
+                .distinct()
+                .collect(Collectors.toList());
 
         // 사이트 필터
         if (site != null && !site.isEmpty() && !"all".equals(site)) {
@@ -72,18 +83,12 @@ public class FileController {
                     .collect(Collectors.toList());
         }
 
-        // 전체 사이트 목록
-        List<String> sites = fileReadService.parseJobs(rootPath, path).stream()
-                .map(JobItem::getSite)
-                .distinct()
-                .collect(Collectors.toList());
-
         // 페이징
         int total = allJobs.size();
         int totalPages = (int) Math.ceil((double) total / size);
         int from = Math.min(page * size, total);
         int to = Math.min(from + size, total);
-        List<JobItem> paged = allJobs.subList(from, to);
+        List<JobItem> paged = total > 0 ? allJobs.subList(from, to) : allJobs;
 
         Map<String, Object> result = new HashMap<>();
         result.put("jobs", paged);

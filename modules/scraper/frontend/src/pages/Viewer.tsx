@@ -67,6 +67,7 @@ export default function Viewer() {
       const res = await fetch(`/scraper/docs/jobs?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
+      if (!res.ok) return { jobs: [], total: 0 };
       return res.json();
     },
     enabled: !!selectedCrawler && !!selectedSite,

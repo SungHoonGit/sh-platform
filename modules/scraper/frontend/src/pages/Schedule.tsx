@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -92,6 +92,7 @@ export default function Schedule() {
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     if (state) {
@@ -174,16 +175,18 @@ export default function Schedule() {
       const existing = crawlers?.find((c) => c.id === configId);
       const existingSites = existing?.siteConfigs ?? [];
       const allSites = new Set([...selectedSites, ...existingSites.map((sc) => sc.siteName)]);
-      for (const siteName of allSites) {
-        const siteDefId = siteMap.get(siteName);
-        if (siteDefId == null) continue;
-        const enabled = selectedSites.includes(siteName);
-        const prev = existingSites.find((sc) => sc.siteName === siteName)?.paramValues;
-        await saveSiteConfig(configId, siteDefId, {
-          paramValues: enabled ? paramValues : prev || paramValues,
-          isEnabled: enabled,
-        });
-      }
+      await Promise.all(
+        [...allSites].map(async (siteName) => {
+          const siteDefId = siteMap.get(siteName);
+          if (siteDefId == null) return;
+          const enabled = selectedSites.includes(siteName);
+          const prev = existingSites.find((sc) => sc.siteName === siteName)?.paramValues;
+          await saveSiteConfig(configId, siteDefId, {
+            paramValues: enabled ? paramValues : prev || paramValues,
+            isEnabled: enabled,
+          });
+        })
+      );
       return configId;
     },
     onSuccess: () => {
@@ -195,6 +198,9 @@ export default function Schedule() {
       setKeyword("");
     },
     onError: (e: Error) => alert(`저장 실패: ${e.message}`),
+    onSettled: () => {
+      savingRef.current = false;
+    },
   });
 
   const deleteMutation = useMutation({
@@ -207,10 +213,12 @@ export default function Schedule() {
   });
 
   const handleSave = () => {
+    if (savingRef.current || saveMutation.isPending) return;
     if (!name.trim() || !keyword.trim()) {
       alert("이름과 키워드를 입력하세요");
       return;
     }
+    savingRef.current = true;
     saveMutation.mutate();
   };
 
@@ -412,9 +420,10 @@ export default function Schedule() {
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={handleSave}
-                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
+                  disabled={saveMutation.isPending || savingRef.current}
+                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingId ? "수정" : "저장"}
+                  {saveMutation.isPending || savingRef.current ? "저장 중..." : editingId ? "수정" : "저장"}
                 </button>
                 <button
                   onClick={() => { setShowForm(false); setEditingId(null); }}
