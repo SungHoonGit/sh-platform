@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { fetchCrawlers } from "../api/scraper";
+import { fetchCrawlers, fetchJobs } from "../api/scraper";
 import FileTree from "../components/FileTree";
 
 const SITE_TAB_COLORS: Record<string, string> = {
@@ -55,20 +55,18 @@ export default function Viewer() {
       const pathParts = filePath.split("/");
       const fileName = pathParts[pathParts.length - 1];
       const dirPath = pathParts.length > 1 ? pathParts.slice(0, -1).join("/") : "";
-      
-      const params = new URLSearchParams({
-        rootPath: selectedCrawler.localPath,
-        path: dirPath ? `${dirPath}/${fileName}` : fileName,
-        site: siteNames[selectedSite] || selectedSite,
-        page: String(page),
-        size: String(SIZE),
-      });
-      const token = localStorage.getItem("accessToken");
-      const res = await fetch(`/scraper/docs/jobs?${params}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) return { jobs: [], total: 0 };
-      return res.json();
+      const relPath = dirPath ? `${dirPath}/${fileName}` : fileName;
+      try {
+        return await fetchJobs(
+          selectedCrawler.localPath,
+          relPath,
+          siteNames[selectedSite] || selectedSite,
+          page,
+          SIZE
+        );
+      } catch {
+        return { jobs: [], total: 0 };
+      }
     },
     enabled: !!selectedCrawler && !!selectedSite,
   });

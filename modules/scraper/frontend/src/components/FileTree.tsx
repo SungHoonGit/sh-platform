@@ -1,13 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-
-interface FileNode {
-  name: string;
-  path: string;
-  type: "file" | "directory";
-  size?: number;
-  childCount?: number;
-}
+import { fetchFiles } from "../api/scraper";
 
 interface FileTreeProps {
   rootPath: string;
@@ -20,16 +13,7 @@ export default function FileTree({ rootPath, onSelectFile, selectedFile }: FileT
 
   const { data: files, isLoading, isError, error } = useQuery({
     queryKey: ["files", rootPath, dir],
-    queryFn: async () => {
-      const params = new URLSearchParams({ rootPath });
-      if (dir) params.set("path", dir);
-      const token = localStorage.getItem("accessToken");
-      const res = await fetch(`/scraper/docs/tree?${params}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error("파일 목록 조회 실패");
-      return res.json() as Promise<FileNode[]>;
-    },
+    queryFn: () => fetchFiles(rootPath, dir || undefined),
   });
 
   if (isLoading) {

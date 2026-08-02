@@ -7,6 +7,12 @@ function authHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+export function redirectToLogin() {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  window.location.replace("/?redirect=" + encodeURIComponent("/scraper/"));
+}
+
 export interface SearchRequest {
   keyword?: string;
   careerMin?: number;
@@ -25,21 +31,16 @@ export interface SearchResponse {
   failedSites: string[];
 }
 
-export async function realTimeSearch(request: SearchRequest): Promise<SearchResponse> {
-  const res = await fetch(`${BASE}/search`, {
+export async function realTimeSearch(search: SearchRequest): Promise<SearchResponse> {
+  const json = await request<{ data: SearchResponse }>("/search", {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(request),
+    body: JSON.stringify(search),
   });
-  if (!res.ok) throw new Error("실시간 검색 실패");
-  const json = await res.json();
   return json.data;
 }
 
 export async function fetchCrawlers(): Promise<Crawler[]> {
-  const res = await fetch(`${BASE}/docs/crawlers`, { headers: authHeaders() });
-  if (!res.ok) throw new Error("크롤러 목록 조회 실패");
-  return res.json();
+  return request<Crawler[]>("/docs/crawlers");
 }
 
 export async function fetchJobs(
@@ -58,28 +59,33 @@ export async function fetchJobs(
   if (site && site !== "all") {
     params.set("site", site);
   }
-  const res = await fetch(`${BASE}/docs/jobs?${params}`, { headers: authHeaders() });
-  if (!res.ok) throw new Error("채용공고 조회 실패");
-  return res.json();
+  return request<JobsResponse>(`/docs/jobs?${params}`);
+}
+
+export interface FileNode {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  size?: number;
+  childCount?: number;
+}
+
+export async function fetchFiles(rootPath: string, dir?: string): Promise<FileNode[]> {
+  const params = new URLSearchParams({ rootPath });
+  if (dir) params.set("path", dir);
+  return request<FileNode[]>(`/docs/tree?${params}`);
 }
 
 export async function executeCrawler(
   configId: number
 ): Promise<{ status: string }> {
-  const res = await fetch(`${BASE}/crawl-config/${configId}/execute`, {
+  return request<{ status: string }>(`/crawl-config/${configId}/execute`, {
     method: "POST",
-    headers: authHeaders(),
   });
-  if (!res.ok) throw new Error("크롤러 실행 실패");
-  return res.json();
 }
 
 export async function fetchCrawlLogs(configId: number): Promise<any[]> {
-  const res = await fetch(`${BASE}/crawl-logs/config/${configId}/recent`, {
-    headers: authHeaders(),
-  });
-  if (!res.ok) return [];
-  return res.json();
+  return request<any[]>(`/crawl-logs/config/${configId}/recent`);
 }
 
 export interface SiteDefinitionInfo {
@@ -99,10 +105,22 @@ async function errorMessage(res: Response): Promise<string> {
   }
 }
 
-export async function fetchSites(): Promise<SiteDefinitionInfo[]> {
-  const res = await fetch(`${BASE}/sites`, { headers: authHeaders() });
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers: { ...authHeaders(), ...options.headers },
+  });
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("인증이 만료되었습니다. 다시 로그인해 주세요");
+  }
   if (!res.ok) throw new Error(await errorMessage(res));
+  if (res.status === 204) return undefined as T;
   return res.json();
+}
+
+export async function fetchSites(): Promise<SiteDefinitionInfo[]> {
+  return request<SiteDefinitionInfo[]>("/sites");
 }
 
 export interface CrawlerSaveBody {
@@ -114,31 +132,23 @@ export interface CrawlerSaveBody {
 }
 
 export async function saveCrawler(body: CrawlerSaveBody): Promise<Crawler> {
-  const res = await fetch(`${BASE}/crawl-config`, {
+  return request<Crawler>("/crawl-config", {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(await errorMessage(res));
-  return res.json();
 }
 
 export async function updateCrawler(id: number, body: CrawlerSaveBody): Promise<Crawler> {
-  const res = await fetch(`${BASE}/crawl-config/${id}`, {
+  return request<Crawler>(`/crawl-config/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(await errorMessage(res));
-  return res.json();
 }
 
 export async function deleteCrawler(id: number): Promise<void> {
-  const res = await fetch(`${BASE}/crawl-config/${id}`, {
+  return request<void>(`/crawl-config/${id}`, {
     method: "DELETE",
-    headers: authHeaders(),
   });
-  if (!res.ok) throw new Error(await errorMessage(res));
 }
 
 export async function saveSiteConfig(
@@ -146,11 +156,8 @@ export async function saveSiteConfig(
   siteDefinitionId: number,
   body: { paramValues: string; isEnabled: boolean }
 ): Promise<unknown> {
-  const res = await fetch(`${BASE}/crawl-config/${configId}/site-configs/${siteDefinitionId}`, {
+  return request<unknown>(`/crawl-config/${configId}/site-configs/${siteDefinitionId}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(await errorMessage(res));
-  return res.json();
 }
