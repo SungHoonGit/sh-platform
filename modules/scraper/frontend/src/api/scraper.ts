@@ -48,7 +48,9 @@ export async function fetchJobs(
   path: string,
   site: string,
   page: number,
-  size: number = 20
+  size: number = 20,
+  sort?: string,
+  order?: "asc" | "desc"
 ): Promise<JobsResponse> {
   const params = new URLSearchParams({
     rootPath,
@@ -59,6 +61,10 @@ export async function fetchJobs(
   if (site && site !== "all") {
     params.set("site", site);
   }
+  if (sort) {
+    params.set("sort", sort);
+    params.set("order", order ?? "asc");
+  }
   return request<JobsResponse>(`/docs/jobs?${params}`);
 }
 
@@ -68,6 +74,7 @@ export interface FileNode {
   type: "file" | "directory";
   size?: number;
   childCount?: number;
+  modifiedAt?: string;
 }
 
 export async function fetchFiles(rootPath: string, dir?: string): Promise<FileNode[]> {

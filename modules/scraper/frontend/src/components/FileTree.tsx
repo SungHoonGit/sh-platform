@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchFiles } from "../api/scraper";
+import { fetchFiles, type FileNode } from "../api/scraper";
 
 interface FileTreeProps {
   rootPath: string;
-  onSelectFile: (path: string) => void;
+  onSelectFile: (node: FileNode) => void;
   selectedFile: string | null;
 }
 
@@ -51,13 +51,18 @@ export default function FileTree({ rootPath, onSelectFile, selectedFile }: FileT
         return (
           <div
             key={item.path}
-            onClick={() => (isFile ? onSelectFile(item.path) : setDir(item.path))}
+            onClick={() => (isFile ? onSelectFile(item) : setDir(item.path))}
             className={`flex items-center gap-1.5 py-1 px-2 cursor-pointer hover:bg-slate-100 rounded ${
               isSelected ? "bg-blue-50 text-blue-700" : ""
             }`}
           >
             <span className="text-base">{isFile ? "📄" : "📁"}</span>
             <span className="truncate">{item.name}</span>
+            {isFile && item.modifiedAt && (
+              <span className="ml-auto text-[10px] text-slate-400 shrink-0">
+                {formatDate(item.modifiedAt)}
+              </span>
+            )}
             {!isFile && item.childCount != null && item.childCount > 0 && (
               <span className="ml-auto text-xs text-slate-400">{item.childCount}</span>
             )}
@@ -66,4 +71,8 @@ export default function FileTree({ rootPath, onSelectFile, selectedFile }: FileT
       })}
     </div>
   );
+}
+
+function formatDate(iso: string): string {
+  return iso.slice(0, 10);
 }

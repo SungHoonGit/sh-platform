@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { fetchCrawlers, fetchJobs } from "../api/scraper";
+import { fetchCrawlers, fetchJobs, type FileNode } from "../api/scraper";
 import FileTree from "../components/FileTree";
 
 const SITE_TAB_COLORS: Record<string, string> = {
@@ -11,6 +11,16 @@ const SITE_TAB_COLORS: Record<string, string> = {
   "리멤버": "bg-purple-600 text-white",
 };
 
+const COLUMNS: { key: string; label: string }[] = [
+  { key: "company", label: "회사명" },
+  { key: "position", label: "포지션" },
+  { key: "career", label: "경력" },
+  { key: "tech", label: "기술" },
+  { key: "location", label: "지역" },
+  { key: "deadline", label: "마감" },
+  { key: "site", label: "사이트" },
+];
+
 export default function Viewer() {
   const [searchParams] = useSearchParams();
   const crawlerId = searchParams.get("crawler");
@@ -19,7 +29,9 @@ export default function Viewer() {
     crawlerId ? parseInt(crawlerId) : null
   );
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [selectedFileInfo, setSelectedFileInfo] = useState<FileNode | null>(null);
   const [selectedSite, setSelectedSite] = useState<string>("");
+  const [sort, setSort] = useState<{ key: string; order: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(0);
   const SIZE = 20;
 
@@ -46,7 +58,7 @@ export default function Viewer() {
   const filePath = selectedFile || `${today}.md`;
 
   const { data: jobsData, isLoading } = useQuery({
-    queryKey: ["jobs", selectedCrawlerId, selectedSite, filePath, page],
+    queryKey: ["jobs", selectedCrawlerId, selectedSite, filePath, page, sort],
     queryFn: async () => {
       if (!selectedCrawler || !selectedSite) return { jobs: [], total: 0 };
       const siteNames: Record<string, string> = {
@@ -60,9 +72,11 @@ export default function Viewer() {
         return await fetchJobs(
           selectedCrawler.localPath,
           relPath,
-          siteNames[selectedSite] || selectedSite,
+          selectedSite === "all" ? "all" : siteNames[selectedSite] || selectedSite,
           page,
-          SIZE
+          SIZE,
+          sort?.key,
+          sort?.order
         );
       } catch {
         return { jobs: [], total: 0 };
@@ -74,6 +88,21 @@ export default function Viewer() {
   const jobs = jobsData?.jobs || [];
   const total = jobsData?.total || 0;
   const totalPages = Math.ceil(total / SIZE);
+
+  const toggleSort = (key: string) => {
+    setPage(0);
+    setSort((prev) =>
+      prev?.key === key
+        ? { key, order: prev.order === "asc" ? "desc" : "asc" }
+        : { key, order: "asc" }
+    );
+  };
+
+  const selectFile = (node: FileNode) => {
+    setSelectedFile(node.path);
+    setSelectedFileInfo(node);
+    setPage(0);
+  };
 
   return (
     <div className="flex h-full">
@@ -90,6 +119,7 @@ export default function Viewer() {
               onClick={() => {
                 setSelectedCrawlerId(c.id);
                 setSelectedFile(null);
+                setSelectedFileInfo(null);
                 setPage(0);
               }}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm mb-1 transition-colors ${
@@ -111,7 +141,7 @@ export default function Viewer() {
             <div className="flex-1 overflow-auto p-2">
               <FileTree
                 rootPath={selectedCrawler.localPath}
-                onSelectFile={setSelectedFile}
+                onSelectFile={selectFile}
                 selectedFile={selectedFile}
               />
             </div>
@@ -124,6 +154,16 @@ export default function Viewer() {
         {/* 사이트 탭 */}
         {selectedCrawler && (
           <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-2">
+            <button
+              onClick={() => { setSelectedSite("all"); setPage(0); }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedSite === "all"
+                  ? "bg-slate-800 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              전체
+            </button>
             {selectedCrawler.siteConfigs?.map((sc: any) => (
               <button
                 key={sc.siteName}
@@ -155,17 +195,33 @@ export default function Viewer() {
             </div>
           ) : (
             <div className="p-4">
-              <div className="mb-3 text-sm text-slate-500">
-                📄 {filePath}
+              <div className="mb-3 text-sm text-slate-500 flex items-center gap-2">
+                <span>📄 {filePath}</span>
+                {selectedFileInfo?.modifiedAt && (
+                  <span className="text-xs bg-slate-100 rounded px-2 py-0.5">
+                    수집일시 {formatDateTime(selectedFileInfo.modifiedAt)}
+                  </span>
+                )}
               </div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="text-left p-3 font-medium text-slate-600">회사명</th>
-                    <th className="text-left p-3 font-medium text-slate-600">포지션</th>
-                    <th className="text-left p-3 font-medium text-slate-600">경력</th>
-                    <th className="text-left p-3 font-medium text-slate-600">기술</th>
-                    <th className="text-left p-3 font-medium text-slate-600">지역</th>
+                    {COLUMNS.filter(
+                      (c) => c.key !== "site" || selectedSite === "all"
+                    ).map((c) => (
+                      <th
+                        key={c.key}
+                        onClick={() => toggleSort(c.key)}
+                        className="text-left p-3 font-medium text-slate-600 cursor-pointer select-none hover:bg-slate-100 whitespace-nowrap"
+                      >
+                        {c.label}
+                        {sort?.key === c.key && (
+                          <span className="ml-1 text-blue-600">
+                            {sort.order === "asc" ? "▲" : "▼"}
+                          </span>
+                        )}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -179,6 +235,10 @@ export default function Viewer() {
                       <td className="p-3 text-slate-600">{job.career || "-"}</td>
                       <td className="p-3 text-slate-600">{job.tech || "-"}</td>
                       <td className="p-3 text-slate-600">{job.location || "-"}</td>
+                      <td className="p-3 text-slate-600">{job.deadline || "-"}</td>
+                      {selectedSite === "all" && (
+                        <td className="p-3 text-slate-600">{job.site || "-"}</td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -220,4 +280,8 @@ export default function Viewer() {
       </div>
     </div>
   );
+}
+
+function formatDateTime(iso: string): string {
+  return iso.slice(0, 10) + " " + iso.slice(11, 16);
 }

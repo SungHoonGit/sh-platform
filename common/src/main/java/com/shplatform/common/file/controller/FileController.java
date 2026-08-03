@@ -61,7 +61,9 @@ public class FileController {
             @RequestParam String path,
             @RequestParam(required = false) String site,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sort,
+            @RequestParam(defaultValue = "asc") String order) {
 
         List<JobItem> allJobs;
         try {
@@ -81,6 +83,24 @@ public class FileController {
             allJobs = allJobs.stream()
                     .filter(j -> site.equals(j.getSite()))
                     .collect(Collectors.toList());
+        }
+
+        // 정렬 (client 칼럼 정렬)
+        if (sort != null && !sort.isEmpty()) {
+            Comparator<JobItem> comparator;
+            comparator = switch (sort) {
+                case "position" -> Comparator.comparing(JobItem::getPosition, Comparator.nullsLast(Comparator.naturalOrder()));
+                case "career" -> Comparator.comparing(JobItem::getCareer, Comparator.nullsLast(Comparator.naturalOrder()));
+                case "tech" -> Comparator.comparing(JobItem::getTech, Comparator.nullsLast(Comparator.naturalOrder()));
+                case "location" -> Comparator.comparing(JobItem::getLocation, Comparator.nullsLast(Comparator.naturalOrder()));
+                case "deadline" -> Comparator.comparing(JobItem::getDeadline, Comparator.nullsLast(Comparator.naturalOrder()));
+                case "site" -> Comparator.comparing(JobItem::getSite, Comparator.nullsLast(Comparator.naturalOrder()));
+                default -> Comparator.comparing(JobItem::getCompany, Comparator.nullsLast(Comparator.naturalOrder()));
+            };
+            if ("desc".equalsIgnoreCase(order)) {
+                comparator = comparator.reversed();
+            }
+            allJobs = allJobs.stream().sorted(comparator).collect(Collectors.toList());
         }
 
         // 페이징
