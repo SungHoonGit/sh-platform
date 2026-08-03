@@ -1,14 +1,18 @@
 import { Outlet, useLocation, Link } from "react-router-dom";
 import CommonHeader from "./CommonHeader";
+import CrawlProgressToast from "./CrawlProgressToast";
+import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 
 export default function Layout() {
   const location = useLocation();
+  const { progress, dismiss } = useCrawlProgress();
   const isActive = (path: string) =>
     location.pathname === path || (path === "/" && location.pathname === "/search");
 
   return (
     <div className="h-screen flex flex-col">
       <CommonHeader />
+      {progress && <CrawlProgressToast progress={progress} onDismiss={dismiss} />}
       <div className="bg-slate-800 border-b border-slate-700 px-5 flex items-center h-10 gap-4 shrink-0">
         <Link
           to="/"

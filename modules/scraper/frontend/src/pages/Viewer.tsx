@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { fetchCrawlers, fetchJobs, type FileNode } from "../api/scraper";
+import { fetchCrawlers, fetchJobs, executeCrawler, type FileNode } from "../api/scraper";
 import FileTree from "../components/FileTree";
+import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 
 const SITE_TAB_COLORS: Record<string, string> = {
   "사람인": "bg-blue-600 text-white",
@@ -24,6 +25,8 @@ const COLUMNS: { key: string; label: string }[] = [
 export default function Viewer() {
   const [searchParams] = useSearchParams();
   const crawlerId = searchParams.get("crawler");
+  const queryClient = useQueryClient();
+  const { startProgress } = useCrawlProgress();
   
   const [selectedCrawlerId, setSelectedCrawlerId] = useState<number | null>(
     crawlerId ? parseInt(crawlerId) : null
@@ -34,6 +37,16 @@ export default function Viewer() {
   const [sort, setSort] = useState<{ key: string; order: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(0);
   const SIZE = 20;
+
+  const executeMutation = useMutation({
+    mutationFn: executeCrawler,
+    onSuccess: (_, configId) => {
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      const crawler = crawlers?.find((c) => c.id === configId);
+      startProgress(configId, crawler?.name || "크롤링");
+    },
+    onError: (e: Error) => alert(`실행 실패: ${e.message}`),
+  });
 
   const { data: crawlers } = useQuery({
     queryKey: ["crawlers"],
@@ -114,22 +127,31 @@ export default function Viewer() {
         
         <div className="p-2">
           {crawlers?.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => {
-                setSelectedCrawlerId(c.id);
-                setSelectedFile(null);
-                setSelectedFileInfo(null);
-                setPage(0);
-              }}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm mb-1 transition-colors ${
-                selectedCrawlerId === c.id
-                  ? "bg-blue-50 text-blue-700 font-medium"
-                  : "hover:bg-slate-50 text-slate-600"
-              }`}
-            >
-              🤖 {c.name}
-            </button>
+            <div key={c.id} className="flex items-center gap-1 mb-1">
+              <button
+                onClick={() => {
+                  setSelectedCrawlerId(c.id);
+                  setSelectedFile(null);
+                  setSelectedFileInfo(null);
+                  setPage(0);
+                }}
+                className={`flex-1 text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                  selectedCrawlerId === c.id
+                    ? "bg-blue-50 text-blue-700 font-medium"
+                    : "hover:bg-slate-50 text-slate-600"
+                }`}
+              >
+                🤖 {c.name}
+              </button>
+              <button
+                onClick={() => executeMutation.mutate(c.id)}
+                disabled={executeMutation.isPending}
+                className="px-2 py-1.5 text-xs rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                title="수동 실행"
+              >
+                ▶
+              </button>
+            </div>
           ))}
         </div>
 

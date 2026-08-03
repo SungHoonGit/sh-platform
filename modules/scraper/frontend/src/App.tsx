@@ -6,6 +6,7 @@ import Search from "./pages/Search";
 import Schedule from "./pages/Schedule";
 import Viewer from "./pages/Viewer";
 import NotFound from "./pages/NotFound";
+import { CrawlProgressProvider } from "./contexts/CrawlProgressContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,19 +17,21 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthGuard>
-        <BrowserRouter basename="/scraper">
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Search />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/schedule" element={<Schedule />} />
-              <Route path="/viewer" element={<Viewer />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </AuthGuard>
+      <CrawlProgressProvider>
+        <AuthGuard>
+          <BrowserRouter basename="/scraper">
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/" element={<Search />} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/schedule" element={<Schedule />} />
+                <Route path="/viewer" element={<Viewer />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </AuthGuard>
+      </CrawlProgressProvider>
     </QueryClientProvider>
   );
 }
