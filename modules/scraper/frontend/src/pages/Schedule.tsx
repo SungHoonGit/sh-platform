@@ -18,6 +18,7 @@ import {
   CareerRangeSlider,
   LocationMultiSelect,
 } from "../components/SearchFilters";
+import CrawlProgressToast, { useCrawlProgress } from "../components/CrawlProgressToast";
 
 const DEFAULT_SITES = ["saramin", "jobkorea", "wanted", "remember"];
 
@@ -80,6 +81,7 @@ export default function Schedule() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const state = location.state as any;
+  const { progress, startProgress, dismiss } = useCrawlProgress();
 
   const [name, setName] = useState("");
   const [keyword, setKeyword] = useState("");
@@ -134,9 +136,10 @@ export default function Schedule() {
 
   const executeMutation = useMutation({
     mutationFn: executeCrawler,
-    onSuccess: () => {
+    onSuccess: (_, configId) => {
       queryClient.invalidateQueries({ queryKey: ["crawlers"] });
-      alert("크롤러 실행이 시작되었습니다");
+      const crawler = crawlers?.find((c) => c.id === configId);
+      startProgress(configId, crawler?.name || "크롤링");
     },
     onError: (e: Error) => alert(`실행 실패: ${e.message}`),
   });
@@ -285,6 +288,7 @@ export default function Schedule() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto overflow-auto h-full">
+      {progress && <CrawlProgressToast progress={progress} onDismiss={dismiss} />}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold">📅 스케줄 관리</h1>
         {!showForm && (

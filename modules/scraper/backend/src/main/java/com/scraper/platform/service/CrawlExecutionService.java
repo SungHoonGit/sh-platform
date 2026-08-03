@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,6 +31,7 @@ import java.util.stream.Stream;
 public class CrawlExecutionService {
 
     private static final int DEDUP_LOOKBACK_DAYS = 3;
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final CrawlConfigRepository crawlConfigRepository;
     private final CrawlSiteConfigRepository crawlSiteConfigRepository;
@@ -36,19 +39,48 @@ public class CrawlExecutionService {
     private final CrawlLogRepository crawlLogRepository;
     private final NotificationService notificationService;
     private final CrawlerFactory crawlerFactory;
+    private final CrawlProgressBroadcaster progressBroadcaster;
 
-    @Scheduled(cron = "${scraper.schedule.cron:0 9 * * *}")
-    public void executeScheduledCrawls() {
-        log.info("Starting scheduled crawls at {}", LocalDateTime.now());
+    private final Map<Long, LocalDateTime> lastScheduledRun = new HashMap<>();
+
+    @Scheduled(fixedDelay = 60_000)
+    public void checkAndExecuteScheduledCrawls() {
+        LocalDateTime now = LocalDateTime.now();
         List<CrawlConfig> activeConfigs = crawlConfigRepository.findByIsActiveTrue();
+
         for (CrawlConfig config : activeConfigs) {
-            try {
-                executeCrawl(config);
-            } catch (Exception e) {
-                log.error("Failed to execute crawl for config: {}", config.getName(), e);
+            if (!config.getIsActive()) continue;
+
+            String schedule = config.getSchedule();
+            if (schedule == null || schedule.isBlank()) continue;
+
+            if (shouldRun(schedule, now, config.getId())) {
+                log.info("Scheduled crawl triggered for config: {} (id: {})", config.getName(), config.getId());
+                try {
+                    executeCrawl(config);
+                } catch (Exception e) {
+                    log.error("Failed to execute scheduled crawl for config: {}", config.getName(), e);
+                }
             }
         }
-        log.info("Completed scheduled crawls");
+    }
+
+    private boolean shouldRun(String cron5Field, LocalDateTime now, Long configId) {
+        try {
+            String cron6 = "0 " + cron5Field;
+            CronExpression expr = CronExpression.parse(cron6);
+            LocalDateTime lastRun = lastScheduledRun.get(configId);
+            LocalDateTime nextRun = expr.next(lastRun != null ? lastRun : now.minusMinutes(2));
+            if (nextRun == null) return false;
+            boolean should = !now.isBefore(nextRun) && (lastRun == null || nextRun.isAfter(lastRun));
+            if (should) {
+                lastScheduledRun.put(configId, now);
+            }
+            return should;
+        } catch (Exception e) {
+            log.warn("Invalid cron expression '{}' for config id {}: {}", cron5Field, configId, e.getMessage());
+            return false;
+        }
     }
 
     public void executeCrawl(CrawlConfig config) {
@@ -70,7 +102,13 @@ public class CrawlExecutionService {
         List<CrawlSiteConfig> siteConfigs = crawlSiteConfigRepository
                 .findEnabledWithSite(config.getId());
 
-        for (CrawlSiteConfig siteConfig : siteConfigs) {
+        progressBroadcaster.sendStart(config.getId(), config.getName(), siteConfigs.size());
+
+        for (int i = 0; i < siteConfigs.size(); i++) {
+            CrawlSiteConfig siteConfig = siteConfigs.get(i);
+            String siteName = siteConfig.getSiteDefinition().getSiteName();
+            progressBroadcaster.sendSiteStart(config.getId(), siteName, i + 1, siteConfigs.size());
+
             try {
                 keyword = extractKeyword(siteConfig.getParamValues());
                 List<Map<String, String>> allJobs = executeSiteCrawlJobs(siteConfig);
@@ -95,10 +133,12 @@ public class CrawlExecutionService {
                         .buildMdSection(newJobList, siteConfig.getSiteDefinition().getDisplayName()));
 
                 saveCrawlData(siteConfig, config, newJobList.size());
+                progressBroadcaster.sendSiteComplete(config.getId(), siteName, newJobList.size(), true, null);
                 success++;
                 total++;
             } catch (Exception e) {
-                log.error("Failed to crawl site: {}", siteConfig.getSiteDefinition().getSiteName(), e);
+                log.error("Failed to crawl site: {}", siteName, e);
+                progressBroadcaster.sendSiteComplete(config.getId(), siteName, 0, false, e.getMessage());
                 error++;
                 total++;
             }
@@ -134,6 +174,8 @@ public class CrawlExecutionService {
             notificationService.sendNotification("scraper", "crawl_failed",
                     String.format("Config '%s': %d/%d sites failed", config.getName(), error, total));
         }
+
+        progressBroadcaster.sendCrawlComplete(config.getId(), total, success, totalJobs, newJobs, dupJobs);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

@@ -28,9 +28,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        String token = null;
+
         var header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
-            var token = header.substring(7);
+            token = header.substring(7);
+        }
+
+        if (token == null) {
+            var queryToken = request.getParameter("token");
+            if (queryToken != null && !queryToken.isBlank()) {
+                token = queryToken;
+            }
+        }
+
+        if (token != null) {
             try {
                 JwtClaims claims = jwtTokenValidator.validate(token);
                 var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + claims.role()));

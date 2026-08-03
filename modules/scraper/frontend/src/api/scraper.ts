@@ -91,6 +91,45 @@ export async function executeCrawler(
   });
 }
 
+export function connectCrawlProgress(
+  configId: number,
+  handlers: {
+    onStart?: (data: { configId: number; configName: string; totalSites: number }) => void;
+    onSiteStart?: (data: { siteName: string; index: number; total: number }) => void;
+    onSiteComplete?: (data: { siteName: string; jobCount: number; success: boolean; error?: string }) => void;
+    onComplete?: (data: { totalSites: number; successSites: number; totalJobs: number; newJobs: number; dupJobs: number }) => void;
+    onError?: (error: Event) => void;
+  }
+): EventSource {
+  const token = localStorage.getItem("accessToken");
+  const url = `/scraper/crawl-config/${configId}/progress?token=${token}`;
+  const es = new EventSource(url);
+
+  es.addEventListener("crawl-start", ((e: MessageEvent) => {
+    handlers.onStart?.(JSON.parse(e.data));
+  }) as EventListener);
+
+  es.addEventListener("site-start", ((e: MessageEvent) => {
+    handlers.onSiteStart?.(JSON.parse(e.data));
+  }) as EventListener);
+
+  es.addEventListener("site-complete", ((e: MessageEvent) => {
+    handlers.onSiteComplete?.(JSON.parse(e.data));
+  }) as EventListener);
+
+  es.addEventListener("crawl-complete", ((e: MessageEvent) => {
+    handlers.onComplete?.(JSON.parse(e.data));
+    es.close();
+  }) as EventListener);
+
+  es.onerror = (e) => {
+    handlers.onError?.(e);
+    es.close();
+  };
+
+  return es;
+}
+
 export async function fetchCrawlLogs(configId: number): Promise<any[]> {
   return request<any[]>(`/crawl-logs/config/${configId}/recent`);
 }

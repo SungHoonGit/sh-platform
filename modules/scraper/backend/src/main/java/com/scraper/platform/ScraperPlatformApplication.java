@@ -7,6 +7,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @ComponentScan(basePackages = {
@@ -24,6 +25,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
     "com.shplatform.common.notification"
 })
 @EnableAsync
+@EnableScheduling
 public class ScraperPlatformApplication {
 
     public static void main(String[] args) {
