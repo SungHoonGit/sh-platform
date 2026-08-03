@@ -102,4 +102,9 @@ jobs:
             sudo nginx -t
             sudo systemctl reload nginx
 
+            # Log dump (diagnostics): 스크래퍼 최근 오류 로그
+            echo "===== SCRAPER LOGS (last 6h) ====="
+            sudo journalctl -u sh-platform-scraper --no-pager --since "6 hours ago" | grep -B2 -A40 "Unhandled exception\|ERROR" | tail -n 200 || true
+            echo "===== END SCRAPER LOGS ====="
+
             echo "Deploy complete!"
