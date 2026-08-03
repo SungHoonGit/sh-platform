@@ -9,6 +9,7 @@ public enum ErrorCode {
     FORBIDDEN(HttpStatus.FORBIDDEN),
     NOT_FOUND(HttpStatus.NOT_FOUND),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT),
+    DUPLICATE_NAME(HttpStatus.CONFLICT),
     TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED),
     TOKEN_INVALID(HttpStatus.UNAUTHORIZED),
     CODE_EXPIRED(HttpStatus.BAD_REQUEST),

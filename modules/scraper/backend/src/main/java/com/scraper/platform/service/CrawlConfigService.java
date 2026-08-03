@@ -2,6 +2,8 @@ package com.scraper.platform.service;
 
 import com.scraper.platform.model.CrawlConfig;
 import com.scraper.platform.repository.CrawlConfigRepository;
+import com.shplatform.common.exception.BusinessException;
+import com.shplatform.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,12 +25,12 @@ public class CrawlConfigService {
 
     public CrawlConfig getConfigById(Long id, Long accountId) {
         return crawlConfigRepository.findByIdAndAccountId(id, accountId)
-                .orElseThrow(() -> new RuntimeException("Config not found: " + id));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
 
     public CrawlConfig getConfigByName(String name, Long accountId) {
         return crawlConfigRepository.findByNameAndAccountId(name, accountId)
-                .orElseThrow(() -> new RuntimeException("Config not found: " + name));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
 
     public List<CrawlConfig> getActiveConfigs(Long accountId) {
@@ -42,7 +44,7 @@ public class CrawlConfigService {
     @Transactional
     public CrawlConfig createConfig(Long accountId, CrawlConfig config) {
         if (crawlConfigRepository.existsByAccountIdAndName(accountId, config.getName())) {
-            throw new RuntimeException("Duplicate config name: " + config.getName());
+            throw new BusinessException(ErrorCode.DUPLICATE_NAME);
         }
         config.setAccountId(accountId);
         if (config.getLocalPath() == null || config.getLocalPath().isBlank()) {
@@ -54,7 +56,7 @@ public class CrawlConfigService {
     @Transactional
     public CrawlConfig updateConfig(Long id, Long accountId, CrawlConfig updatedConfig) {
         CrawlConfig existing = crawlConfigRepository.findByIdAndAccountId(id, accountId)
-                .orElseThrow(() -> new RuntimeException("Config not found: " + id));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         existing.setName(updatedConfig.getName());
         existing.setDescription(updatedConfig.getDescription());
@@ -71,7 +73,7 @@ public class CrawlConfigService {
     @Transactional
     public void deleteConfig(Long id, Long accountId) {
         CrawlConfig config = crawlConfigRepository.findByIdAndAccountId(id, accountId)
-                .orElseThrow(() -> new RuntimeException("Config not found: " + id));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         crawlConfigRepository.delete(config);
     }
 

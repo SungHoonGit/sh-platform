@@ -6,6 +6,8 @@ import com.scraper.platform.model.SiteDefinition;
 import com.scraper.platform.repository.CrawlConfigRepository;
 import com.scraper.platform.repository.CrawlSiteConfigRepository;
 import com.scraper.platform.repository.SiteDefinitionRepository;
+import com.shplatform.common.exception.BusinessException;
+import com.shplatform.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,16 +33,16 @@ public class CrawlSiteConfigService {
 
     public CrawlSiteConfig getSiteConfig(Long configId, Long siteDefinitionId) {
         return crawlSiteConfigRepository.findByConfigIdAndSiteDefinitionId(configId, siteDefinitionId)
-                .orElseThrow(() -> new RuntimeException("Site config not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
 
     @Transactional
     public CrawlSiteConfig createOrUpdateSiteConfig(Long configId, Long siteDefinitionId, CrawlSiteConfig siteConfig) {
         CrawlConfig config = crawlConfigRepository.findById(configId)
-                .orElseThrow(() -> new RuntimeException("Config not found: " + configId));
-        
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
         SiteDefinition site = siteDefinitionRepository.findById(siteDefinitionId)
-                .orElseThrow(() -> new RuntimeException("Site not found: " + siteDefinitionId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         CrawlSiteConfig existing = crawlSiteConfigRepository
                 .findByConfigIdAndSiteDefinitionId(configId, siteDefinitionId)
@@ -61,7 +63,7 @@ public class CrawlSiteConfigService {
     public void deleteSiteConfig(Long configId, Long siteDefinitionId) {
         CrawlSiteConfig siteConfig = crawlSiteConfigRepository
                 .findByConfigIdAndSiteDefinitionId(configId, siteDefinitionId)
-                .orElseThrow(() -> new RuntimeException("Site config not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         crawlSiteConfigRepository.delete(siteConfig);
     }
 }

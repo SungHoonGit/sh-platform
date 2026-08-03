@@ -7,6 +7,9 @@ server:
 spring:
   application:
     name: scraper-platform
+  messages:
+    basename: messages/messages
+    encoding: UTF-8
   datasource:
     url: jdbc:mariadb://10.0.0.39:3306/scraper_platform?useSSL=false&allowPublicKeyRetrieval=true
     username: sh_user

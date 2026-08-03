@@ -203,7 +203,16 @@ export default function Viewer() {
                   </span>
                 )}
               </div>
-              <table className="w-full text-sm">
+              <table className="w-full text-xs table-fixed">
+                <colgroup>
+                  <col className={selectedSite === "all" ? "w-[14%]" : "w-[16%]"} />
+                  <col className={selectedSite === "all" ? "w-[24%]" : "w-[26%]"} />
+                  <col className={selectedSite === "all" ? "w-[10%]" : "w-[12%]"} />
+                  <col className={selectedSite === "all" ? "w-[24%]" : "w-[26%]"} />
+                  <col className={selectedSite === "all" ? "w-[12%]" : "w-[12%]"} />
+                  <col className={selectedSite === "all" ? "w-[8%]" : "w-[8%]"} />
+                  {selectedSite === "all" && <col className="w-[8%]" />}
+                </colgroup>
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
                     {COLUMNS.filter(
@@ -212,7 +221,7 @@ export default function Viewer() {
                       <th
                         key={c.key}
                         onClick={() => toggleSort(c.key)}
-                        className="text-left p-3 font-medium text-slate-600 cursor-pointer select-none hover:bg-slate-100 whitespace-nowrap"
+                        className="text-left p-2 font-medium text-slate-600 cursor-pointer select-none hover:bg-slate-100 whitespace-nowrap overflow-hidden"
                       >
                         {c.label}
                         {sort?.key === c.key && (
@@ -227,17 +236,31 @@ export default function Viewer() {
                 <tbody>
                   {jobs.map((job: any, i: number) => (
                     <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="p-3 font-medium">{job.company}</td>
-                      <td className="p-3">
-                        <a href={job.url} target="_blank" rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline">{job.position}</a>
+                      <td className="p-2 font-medium">
+                        <div className="truncate" title={job.company}>{job.company}</div>
                       </td>
-                      <td className="p-3 text-slate-600">{job.career || "-"}</td>
-                      <td className="p-3 text-slate-600">{job.tech || "-"}</td>
-                      <td className="p-3 text-slate-600">{job.location || "-"}</td>
-                      <td className="p-3 text-slate-600">{job.deadline || "-"}</td>
+                      <td className="p-2">
+                        <a href={job.url} target="_blank" rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline block truncate" title={job.position}>
+                          {job.position}
+                        </a>
+                      </td>
+                      <td className="p-2 text-slate-600">
+                        <div className="truncate" title={job.career || ""}>{job.career || "-"}</div>
+                      </td>
+                      <td className="p-2 text-slate-600">
+                        <div className="truncate" title={job.tech || ""}>{job.tech || "-"}</div>
+                      </td>
+                      <td className="p-2 text-slate-600">
+                        <div className="truncate" title={job.location || ""}>{job.location || "-"}</div>
+                      </td>
+                      <td className="p-2 text-slate-600">
+                        <div className="truncate" title={job.deadline || ""}>{job.deadline || "-"}</div>
+                      </td>
                       {selectedSite === "all" && (
-                        <td className="p-3 text-slate-600">{job.site || "-"}</td>
+                        <td className="p-2 text-slate-600">
+                          <div className="truncate" title={job.site || ""}>{job.site || "-"}</div>
+                        </td>
                       )}
                     </tr>
                   ))}

@@ -175,7 +175,7 @@ export default function Schedule() {
       const existing = crawlers?.find((c) => c.id === configId);
       const existingSites = existing?.siteConfigs ?? [];
       const allSites = new Set([...selectedSites, ...existingSites.map((sc) => sc.siteName)]);
-      await Promise.all(
+      const results = await Promise.allSettled(
         [...allSites].map(async (siteName) => {
           const siteDefId = siteMap.get(siteName);
           if (siteDefId == null) return;
@@ -187,6 +187,12 @@ export default function Schedule() {
           });
         })
       );
+      const failed = results.find((r) => r.status === "rejected") as
+        | PromiseRejectedResult
+        | undefined;
+      if (failed) {
+        throw new Error(`사이트 설정 저장 실패: ${(failed.reason as Error)?.message || "INTERNAL_ERROR"}`);
+      }
       return configId;
     },
     onSuccess: () => {
@@ -216,6 +222,13 @@ export default function Schedule() {
     if (savingRef.current || saveMutation.isPending) return;
     if (!name.trim() || !keyword.trim()) {
       alert("이름과 키워드를 입력하세요");
+      return;
+    }
+    const dup = (crawlers ?? []).some(
+      (c) => c.id !== editingId && c.name.trim() === name.trim()
+    );
+    if (dup) {
+      alert(`이미 같은 이름("${name.trim()}")의 스케줄이 있습니다`);
       return;
     }
     savingRef.current = true;
