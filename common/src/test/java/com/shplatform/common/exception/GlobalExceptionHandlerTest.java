@@ -18,6 +18,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -113,6 +114,19 @@ class GlobalExceptionHandlerTest {
         var response = handler.handle(new HttpMessageNotReadableException("bad json"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().code()).isEqualTo("INVALID_INPUT");
+    }
+
+    @Test
+    void mediaTypeNotSupported_returns415Json() {
+        when(messageSource.getMessage("INVALID_INPUT", null, Locale.KOREAN))
+                .thenReturn("INVALID_INPUT_MSG");
+
+        var response = handler.handle(
+                new HttpMediaTypeNotSupportedException("text/plain"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().code()).isEqualTo("INVALID_INPUT");
     }

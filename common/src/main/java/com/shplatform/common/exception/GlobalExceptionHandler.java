@@ -9,6 +9,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -73,6 +74,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handle(HttpMessageNotReadableException e) {
         return errorResponse(HttpStatus.BAD_REQUEST, "INVALID_INPUT");
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handle(HttpMediaTypeNotSupportedException e) {
+        log.warn("Unsupported media type", e);
+        return errorResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "INVALID_INPUT");
     }
 
     @ExceptionHandler(Exception.class)

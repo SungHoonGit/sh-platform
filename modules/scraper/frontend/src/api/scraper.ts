@@ -113,10 +113,12 @@ async function errorMessage(res: Response): Promise<string> {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    headers: { ...authHeaders(), ...options.headers },
-  });
+  const headers: HeadersInit = {
+    ...authHeaders(),
+    ...(typeof options.body === "string" ? { "Content-Type": "application/json" } : {}),
+    ...options.headers,
+  };
+  const res = await fetch(`${BASE}${path}`, { ...options, headers });
   if (res.status === 401) {
     redirectToLogin();
     throw new Error("인증이 만료되었습니다. 다시 로그인해 주세요");
