@@ -18,25 +18,24 @@ export default function CommonHeader() {
       </a>
 
       <div className="flex items-center gap-3">
-        {/* 알림 버튼 - 항상 표시 (진행 중이거나 최근 완료된 알림이 있을 때) */}
-        {progressList.length > 0 && (
-          <div className="relative">
-            <button
-              onClick={() => setShowNoti(!showNoti)}
-              className="relative p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-            >
-              <Bell size={18} />
-              {activeCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-blue-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse">
-                  {activeCount}
-                </span>
-              )}
-              {activeCount === 0 && completedCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-green-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                  ✓
-                </span>
-              )}
-            </button>
+        {/* 알림 버튼 - 항상 표시 */}
+        <div className="relative">
+          <button
+            onClick={() => setShowNoti(!showNoti)}
+            className="relative p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <Bell size={18} />
+            {activeCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-blue-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                {activeCount}
+              </span>
+            )}
+            {activeCount === 0 && completedCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-green-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                ✓
+              </span>
+            )}
+          </button>
 
             {/* 알림 드롭다운 */}
             {showNoti && (
@@ -126,7 +125,6 @@ export default function CommonHeader() {
               </div>
             )}
           </div>
-        )}
 
         {loading ? (
           <div className="text-sm text-slate-400">로딩 중...</div>

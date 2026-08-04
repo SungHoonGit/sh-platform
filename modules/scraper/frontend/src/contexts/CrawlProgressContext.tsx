@@ -42,6 +42,15 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
   progressListRef.current = progressList;
 
   const startProgress = useCallback((configId: number, configName: string) => {
+    // 같은 configId의 진행 중인 알림이 있으면 무시
+    const existingProgress = progressListRef.current.find(
+      (p) => p.configId === configId && (p.phase === "starting" || p.phase === "running")
+    );
+    if (existingProgress) {
+      console.log("[CrawlProgress] skip duplicate, existing id:", existingProgress.id);
+      return;
+    }
+
     progressId++;
     const currentId = progressId;
     console.log("[CrawlProgress] startProgress called, new id:", currentId, "configId:", configId, "configName:", configName);
@@ -129,29 +138,23 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
       },
       onError: () => {
         console.log("[CrawlProgress] onError for id:", currentId);
-        // 네트워크 오류 또는 서버 연결 끊김 시
-        // "disconnected" 상태로 설정 (에러보다 관대한 표시)
         setProgressList((prev) =>
           prev.map((p) => {
             if (p.id !== currentId) return p;
             // 이미 완료된 상태라면 무시
             if (p.phase === "complete") return p;
-            // 시작 단계라면 아직 진행 중일 수 있음
-            if (p.phase === "starting") return p;
+            // 시작 단계에서 에러 발생 시 연결 실패로 표시
+            if (p.phase === "starting") {
+              return { ...p, phase: "error", error: "서버 연결 실패" };
+            }
             return { ...p, phase: "disconnected" };
           })
         );
-        // 10초 후 자동 제거 (완료되지 않은 경우)
+        // 5초 후 자동 제거
         setTimeout(() => {
           console.log("[CrawlProgress] onError timeout, removing id:", currentId);
-          setProgressList((prev) => {
-            const target = prev.find((p) => p.id === currentId);
-            if (target && target.phase !== "complete") {
-              return prev.filter((p) => p.id !== currentId);
-            }
-            return prev;
-          });
-        }, 10000);
+          setProgressList((prev) => prev.filter((p) => p.id !== currentId));
+        }, 5000);
         esMapRef.current.delete(currentId);
       },
     });

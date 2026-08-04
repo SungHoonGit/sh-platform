@@ -169,7 +169,7 @@ export default function CrawlProgressToast({
             {progress.phase === "running" && `공고 수집 중 ${completedSites.length}/${progress.totalSites}`}
             {progress.phase === "complete" && "공고 수집 완료"}
             {progress.phase === "disconnected" && "연결 끊김 (수집 계속 진행 중)"}
-            {progress.phase === "error" && "공고 수집 실패"}
+            {progress.phase === "error" && (progress.error || "공고 수집 실패")}
           </span>
         </div>
         <button onClick={onDismiss} className="text-slate-400 hover:text-white text-xs">
