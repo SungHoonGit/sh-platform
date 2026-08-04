@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +20,7 @@ import java.util.List;
  * DB 기반 데이터 조회.
  */
 @RestController
-@RequestMapping("/scraper/api/v1/job-postings")
+@RequestMapping("/job-postings")
 @RequiredArgsConstructor
 @Tag(name = "JobPostings", description = "채용공고 조회 API")
 public class JobPostingController {
@@ -33,28 +32,32 @@ public class JobPostingController {
     public ResponseEntity<JobPostingResponse> getJobs(
             @RequestParam Long configId,
             @RequestParam(required = false) String siteName,
-            @RequestParam(required = false) LocalDate crawledAt,
+            @RequestParam(required = false) String crawledAt,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "crawledAt").and(Sort.by(Sort.Direction.DESC, "createdAt")));
+        PageRequest pageRequest = PageRequest.of(page, size, 
+            Sort.by(Sort.Direction.DESC, "crawledAt").and(Sort.by(Sort.Direction.DESC, "createdAt")));
 
-        // 동적 조건构建
-        Specification<JobPosting> spec = (root, query, cb) -> {
-            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
-            predicates.add(cb.equal(root.get("config").get("id"), configId));
-
-            if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
-                predicates.add(cb.equal(root.get("siteName"), siteName));
+        LocalDate date = null;
+        if (crawledAt != null && !crawledAt.isEmpty()) {
+            try {
+                date = LocalDate.parse(crawledAt);
+            } catch (Exception e) {
+                // invalid date, ignore
             }
-            if (crawledAt != null) {
-                predicates.add(cb.equal(root.get("crawledAt"), crawledAt));
-            }
+        }
 
-            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
-        };
-
-        Page<JobPosting> postings = jobPostingRepository.findAll(spec, pageRequest);
+        Page<JobPosting> postings;
+        if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+            postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawledAt(configId, siteName, date, pageRequest);
+        } else if (date != null) {
+            postings = jobPostingRepository.findByConfigIdAndCrawledAt(configId, date, pageRequest);
+        } else if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+            postings = jobPostingRepository.findByConfigIdAndSiteName(configId, siteName, pageRequest);
+        } else {
+            postings = jobPostingRepository.findByConfigId(configId, pageRequest);
+        }
 
         List<JobPostingResponse.JobItem> items = postings.getContent().stream()
                 .map(p -> JobPostingResponse.JobItem.builder()
@@ -84,12 +87,7 @@ public class JobPostingController {
     @GetMapping("/dates")
     @Operation(summary = "수집된 날짜 목록 조회")
     public ResponseEntity<List<LocalDate>> getCrawledDates(@RequestParam Long configId) {
-        List<LocalDate> dates = jobPostingRepository.findByConfigIdOrderByCrawledAtDescCreatedAtDesc(configId)
-                .stream()
-                .map(JobPosting::getCrawledAt)
-                .distinct()
-                .sorted(java.util.Comparator.reverseOrder())
-                .toList();
+        List<LocalDate> dates = jobPostingRepository.findDistinctDatesByConfigId(configId);
         return ResponseEntity.ok(dates);
     }
 
