@@ -16,7 +16,7 @@ export interface CrawlProgress {
   configName: string;
   totalSites: number;
   sites: SiteProgress[];
-  phase: "starting" | "running" | "complete" | "error";
+  phase: "starting" | "running" | "complete" | "error" | "disconnected";
   newJobs?: number;
   dupJobs?: number;
 }
@@ -117,12 +117,28 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
         esMapRef.current.delete(currentId);
       },
       onError: () => {
+        // 네트워크 오류 또는 서버 연결 끊김 시
+        // "disconnected" 상태로 설정 (에러보다 관대한 표시)
         setProgressList((prev) =>
-          prev.map((p) => (p.id === currentId ? { ...p, phase: "error" } : p))
+          prev.map((p) => {
+            if (p.id !== currentId) return p;
+            // 이미 완료된 상태라면 무시
+            if (p.phase === "complete") return p;
+            // 시작 단계라면 아직 진행 중일 수 있음
+            if (p.phase === "starting") return p;
+            return { ...p, phase: "disconnected" };
+          })
         );
+        // 10초 후 자동 제거 (완료되지 않은 경우)
         setTimeout(() => {
-          setProgressList((prev) => prev.filter((p) => p.id !== currentId));
-        }, 5000);
+          setProgressList((prev) => {
+            const target = prev.find((p) => p.id === currentId);
+            if (target && target.phase !== "complete") {
+              return prev.filter((p) => p.id !== currentId);
+            }
+            return prev;
+          });
+        }, 10000);
         esMapRef.current.delete(currentId);
       },
     });

@@ -237,7 +237,7 @@ export default function Search() {
         ) : loading ? (
           <div className="flex-1 flex flex-col items-center justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 border-t-blue-600 mb-4" />
-            <div className="text-slate-500 text-lg mb-2">크롤링 중...</div>
+            <div className="text-slate-500 text-lg mb-2">공고 수집 중...</div>
             <div className="text-sm text-slate-400">{selectedSites.length}개 사이트 실시간 수집 중</div>
           </div>
         ) : error ? (

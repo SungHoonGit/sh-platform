@@ -14,7 +14,7 @@ export interface CrawlProgress {
   configName: string;
   totalSites: number;
   sites: SiteProgress[];
-  phase: "starting" | "running" | "complete" | "error";
+  phase: "starting" | "running" | "complete" | "error" | "disconnected";
   newJobs?: number;
   dupJobs?: number;
 }
@@ -168,6 +168,7 @@ export default function CrawlProgressToast({
             {progress.phase === "starting" && "공고 수집 준비 중..."}
             {progress.phase === "running" && `공고 수집 중 ${completedSites.length}/${progress.totalSites}`}
             {progress.phase === "complete" && "공고 수집 완료"}
+            {progress.phase === "disconnected" && "연결 끊김 (수집 계속 진행 중)"}
             {progress.phase === "error" && "공고 수집 실패"}
           </span>
         </div>
@@ -219,6 +220,12 @@ export default function CrawlProgressToast({
           {progress.dupJobs ? (
             <span className="ml-2 text-green-500">(중복 {progress.dupJobs}건 제외)</span>
           ) : null}
+        </div>
+      )}
+
+      {progress.phase === "disconnected" && (
+        <div className="px-4 py-2.5 bg-yellow-50 border-t border-yellow-100 text-xs text-yellow-700">
+          연결이 끊어졌습니다. 서버에서 수집이 계속 진행 중일 수 있습니다.
         </div>
       )}
 
