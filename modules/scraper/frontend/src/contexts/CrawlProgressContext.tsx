@@ -40,6 +40,7 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
   const startProgress = useCallback((configId: number, configName: string) => {
     progressId++;
     const currentId = progressId;
+    console.log("[CrawlProgress] startProgress called, new id:", currentId, "configId:", configId, "configName:", configName);
 
     const newProgress: CrawlProgress = {
       id: currentId,
@@ -50,7 +51,10 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
       phase: "starting",
     };
 
-    setProgressList((prev) => [...prev, newProgress]);
+    setProgressList((prev) => {
+      console.log("[CrawlProgress] adding notification, prev length:", prev.length);
+      return [...prev, newProgress];
+    });
 
     const es = connectCrawlProgress(configId, {
       onStart: (data) => {
@@ -101,6 +105,7 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
         );
       },
       onComplete: (data) => {
+        console.log("[CrawlProgress] onComplete for id:", currentId, "newJobs:", data.newJobs);
         setProgressList((prev) =>
           prev.map((p) =>
             p.id === currentId
@@ -112,11 +117,13 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
         queryClient.invalidateQueries({ queryKey: ["jobDates"] });
         queryClient.invalidateQueries({ queryKey: ["crawlers"] });
         setTimeout(() => {
+          console.log("[CrawlProgress] onComplete timeout, removing id:", currentId);
           setProgressList((prev) => prev.filter((p) => p.id !== currentId));
         }, 8000);
         esMapRef.current.delete(currentId);
       },
       onError: () => {
+        console.log("[CrawlProgress] onError for id:", currentId);
         // 네트워크 오류 또는 서버 연결 끊김 시
         // "disconnected" 상태로 설정 (에러보다 관대한 표시)
         setProgressList((prev) =>
@@ -131,6 +138,7 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
         );
         // 10초 후 자동 제거 (완료되지 않은 경우)
         setTimeout(() => {
+          console.log("[CrawlProgress] onError timeout, removing id:", currentId);
           setProgressList((prev) => {
             const target = prev.find((p) => p.id === currentId);
             if (target && target.phase !== "complete") {
@@ -147,10 +155,17 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const dismiss = useCallback((id: number) => {
+    console.log("[CrawlProgress] dismiss called with id:", id, "progressList length:", progressList.length);
     const es = esMapRef.current.get(id);
-    es?.close();
-    esMapRef.current.delete(id);
-    setProgressList((prev) => prev.filter((p) => p.id !== id));
+    if (es) {
+      es.close();
+      esMapRef.current.delete(id);
+    }
+    setProgressList((prev) => {
+      const filtered = prev.filter((p) => p.id !== id);
+      console.log("[CrawlProgress] after dismiss, remaining:", filtered.length);
+      return filtered;
+    });
   }, []);
 
   const dismissAll = useCallback(() => {
