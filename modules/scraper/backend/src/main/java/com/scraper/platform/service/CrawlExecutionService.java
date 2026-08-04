@@ -30,13 +30,14 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class CrawlExecutionService {
 
-    private static final int DEDUP_LOOKBACK_DAYS = 3;
+    private static final int DEDUP_LOOKBACK_DAYS = 7;
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final CrawlConfigRepository crawlConfigRepository;
     private final CrawlSiteConfigRepository crawlSiteConfigRepository;
     private final CrawlDataRepository crawlDataRepository;
     private final CrawlLogRepository crawlLogRepository;
+    private final JobPostingRepository jobPostingRepository;
     private final NotificationService notificationService;
     private final CrawlerFactory crawlerFactory;
     private final CrawlProgressBroadcaster progressBroadcaster;
@@ -95,6 +96,7 @@ public class CrawlExecutionService {
         }
     }
 
+    @Transactional
     public void executeCrawl(CrawlConfig config) {
         log.info("Executing crawl for config: {} (id: {})", config.getName(), config.getId());
 
@@ -107,9 +109,10 @@ public class CrawlExecutionService {
         String keyword = "전체";
         StringBuilder combinedMd = new StringBuilder();
 
-        // Dedup: 이전 MD 파일에서 URL 수집
-        Set<String> existingUrls = collectExistingUrls(config.getLocalPath());
-        log.info("Dedup: found {} existing URLs from previous {} days", existingUrls.size(), DEDUP_LOOKBACK_DAYS);
+        // DB 기반 중복 체크: 최근 N일간의 dedup_key 수집
+        LocalDate dedupSince = LocalDate.now().minusDays(DEDUP_LOOKBACK_DAYS);
+        Set<String> existingDedupKeys = jobPostingRepository.findDedupKeysSince(config.getId(), dedupSince);
+        log.info("Dedup: found {} existing dedup keys since {}", existingDedupKeys.size(), dedupSince);
 
         List<CrawlSiteConfig> siteConfigs = crawlSiteConfigRepository
                 .findEnabledWithSite(config.getId());
@@ -126,21 +129,55 @@ public class CrawlExecutionService {
                 List<Map<String, String>> allJobs = executeSiteCrawlJobs(siteConfig);
                 totalJobs += allJobs.size();
 
-                // Dedup 필터링
+                // 중복 체크 + DB 저장
                 List<Map<String, String>> newJobList = new ArrayList<>();
                 for (Map<String, String> job : allJobs) {
+                    String company = job.getOrDefault("company", "");
+                    String position = job.getOrDefault("position", job.getOrDefault("title", ""));
+                    String location = job.getOrDefault("location", "");
                     String url = job.getOrDefault("url", "");
-                    if (!url.isEmpty() && existingUrls.contains(normalizeUrl(url))) {
+
+                    String dedupKey = JobPosting.generateDedupKey(company, position, location, siteName);
+
+                    if (existingDedupKeys.contains(dedupKey)) {
                         dupJobs++;
-                    } else {
+                        continue;
+                    }
+
+                    // 새 공고 -> DB 저장
+                    JobPosting posting = JobPosting.builder()
+                            .config(config)
+                            .siteName(siteName)
+                            .url(url)
+                            .company(company)
+                            .position(position)
+                            .career(job.getOrDefault("career", ""))
+                            .tech(job.getOrDefault("tech", ""))
+                            .location(location)
+                            .deadline(job.getOrDefault("deadline", ""))
+                            .dedupKey(dedupKey)
+                            .crawledAt(LocalDate.now())
+                            .build();
+
+                    try {
+                        jobPostingRepository.save(posting);
+                        existingDedupKeys.add(dedupKey);
                         newJobList.add(job);
-                        if (!url.isEmpty()) {
-                            existingUrls.add(normalizeUrl(url));
+                    } catch (Exception e) {
+                        // UK 제약 조건 위반 = 동시 크롤링 중복
+                        if (e.getMessage() != null && e.getMessage().contains("uk_job_postings_dedup")) {
+                            dupJobs++;
+                            log.debug("Duplicate job detected by DB constraint: {}", dedupKey);
+                        } else {
+                            log.error("Failed to save job posting: {}", company + " " + position, e);
+                            dupJobs++;
                         }
                     }
                 }
+
                 newJobs += newJobList.size();
 
+                // MD 파일 생성 (부가 출력)
                 combinedMd.append(crawlerFactory.getCrawler(siteConfig.getSiteDefinition().getSiteName())
                         .buildMdSection(newJobList, siteConfig.getSiteDefinition().getDisplayName()));
 
@@ -156,7 +193,7 @@ public class CrawlExecutionService {
             }
         }
 
-        // 일별 통합 MD 파일 저장
+        // 일별 통합 MD 파일 저장 (부가 출력)
         try {
             String fileName = LocalDate.now() + ".md";
             String dirPath = config.getLocalPath();
@@ -202,40 +239,6 @@ public class CrawlExecutionService {
         List<Map<String, String>> jobs = crawler.search(siteConfig);
         log.info("Found {} jobs from {}", jobs.size(), siteName);
         return jobs;
-    }
-
-    private Set<String> collectExistingUrls(String dirPath) {
-        Set<String> urls = new HashSet<>();
-        Path dir = Paths.get(dirPath);
-        if (!Files.exists(dir)) return urls;
-
-        LocalDate today = LocalDate.now();
-        Pattern urlPattern = Pattern.compile("\\(https?://[^)]+\\)");
-
-        for (int i = 1; i <= DEDUP_LOOKBACK_DAYS; i++) {
-            Path file = dir.resolve(today.minusDays(i) + ".md");
-            if (!Files.exists(file)) continue;
-            try (Stream<String> lines = Files.lines(file)) {
-                lines.forEach(line -> {
-                    Matcher m = urlPattern.matcher(line);
-                    while (m.find()) {
-                        String url = m.group(1).substring(1, m.group(1).length() - 1);
-                        urls.add(normalizeUrl(url));
-                    }
-                });
-            } catch (IOException e) {
-                log.warn("Failed to read dedup file: {}", file, e);
-            }
-        }
-        return urls;
-    }
-
-    private String normalizeUrl(String url) {
-        if (url == null) return "";
-        return url.trim()
-                .replaceAll("&+$", "")
-                .replaceAll("\\?$", "")
-                .toLowerCase();
     }
 
     private void saveCrawlData(CrawlSiteConfig siteConfig, CrawlConfig config, int jobCount) {

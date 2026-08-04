@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { fetchCrawlers, fetchJobs, executeCrawler, type FileNode } from "../api/scraper";
-import FileTree from "../components/FileTree";
+import { fetchCrawlers, executeCrawler, fetchJobPostings, fetchJobPostingDates, type JobPostingItem } from "../api/scraper";
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 
 const SITES = [
@@ -38,9 +37,8 @@ export default function Viewer() {
   const [selectedCrawlerId, setSelectedCrawlerId] = useState<number | null>(
     crawlerId ? parseInt(crawlerId) : null
   );
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [selectedFileInfo, setSelectedFileInfo] = useState<FileNode | null>(null);
-  const [selectedSite, setSelectedSite] = useState<string>("");
+  const [selectedSite, setSelectedSite] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [sort, setSort] = useState<{ key: string; order: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(0);
   const SIZE = 20;
@@ -49,6 +47,7 @@ export default function Viewer() {
     mutationFn: executeCrawler,
     onSuccess: (_, configId) => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["jobDates"] });
       const crawler = crawlers?.find((c) => c.id === configId);
       startProgress(configId, crawler?.name || "크롤링");
     },
@@ -66,43 +65,30 @@ export default function Viewer() {
     }
   }, [crawlers]);
 
-  const selectedCrawler = crawlers?.find((c) => c.id === selectedCrawlerId);
+  const { data: dates } = useQuery({
+    queryKey: ["jobDates", selectedCrawlerId],
+    queryFn: () => fetchJobPostingDates(selectedCrawlerId!),
+    enabled: !!selectedCrawlerId,
+  });
 
   useEffect(() => {
-    if (selectedCrawler?.siteConfigs && selectedCrawler.siteConfigs.length > 0) {
-      setSelectedSite(selectedCrawler!.siteConfigs![0].siteName);
+    if (dates && dates.length > 0 && !selectedDate) {
+      setSelectedDate(dates[0]);
     }
-  }, [selectedCrawler]);
-
-  const today = new Date().toISOString().split("T")[0];
-  const filePath = selectedFile || `${today}.md`;
+  }, [dates]);
 
   const { data: jobsData, isLoading } = useQuery({
-    queryKey: ["jobs", selectedCrawlerId, selectedSite, filePath, page, sort],
+    queryKey: ["jobs", selectedCrawlerId, selectedSite, selectedDate, page, sort],
     queryFn: async () => {
-      if (!selectedCrawler || !selectedSite) return { jobs: [], total: 0 };
-      const siteNames: Record<string, string> = {
-        saramin: "사람인", jobkorea: "잡코리아", wanted: "원티드", remember: "리멤버",
-      };
-      const pathParts = filePath.split("/");
-      const fileName = pathParts[pathParts.length - 1];
-      const dirPath = pathParts.length > 1 ? pathParts.slice(0, -1).join("/") : "";
-      const relPath = dirPath ? `${dirPath}/${fileName}` : fileName;
-      try {
-        return await fetchJobs(
-          selectedCrawler.localPath,
-          relPath,
-          selectedSite === "all" ? "all" : siteNames[selectedSite] || selectedSite,
-          page,
-          SIZE,
-          sort?.key,
-          sort?.order
-        );
-      } catch {
-        return { jobs: [], total: 0 };
-      }
+      if (!selectedCrawlerId) return { jobs: [], total: 0, page: 0, size: SIZE };
+      return fetchJobPostings(selectedCrawlerId, {
+        siteName: selectedSite === "all" ? undefined : selectedSite,
+        crawledAt: selectedDate || undefined,
+        page,
+        size: SIZE,
+      });
     },
-    enabled: !!selectedCrawler && !!selectedSite,
+    enabled: !!selectedCrawlerId,
   });
 
   const jobs = jobsData?.jobs || [];
@@ -118,15 +104,9 @@ export default function Viewer() {
     );
   };
 
-  const selectFile = (node: FileNode) => {
-    setSelectedFile(node.path);
-    setSelectedFileInfo(node);
-    setPage(0);
-  };
-
   return (
     <div className="flex h-full">
-      {/* 왼쪽 사이드바 - 스케줄 목록 + 파일 트리 */}
+      {/* 왼쪽 사이드바 - 스케줄 목록 */}
       <div className="w-72 bg-white border-r border-slate-200 shrink-0 overflow-auto flex flex-col">
         <div className="p-4 border-b border-slate-200">
           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">스케줄</h3>
@@ -138,8 +118,8 @@ export default function Viewer() {
               <button
                 onClick={() => {
                   setSelectedCrawlerId(c.id);
-                  setSelectedFile(null);
-                  setSelectedFileInfo(null);
+                  setSelectedSite("all");
+                  setSelectedDate("");
                   setPage(0);
                 }}
                 className={`flex-1 text-left px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -162,55 +142,60 @@ export default function Viewer() {
           ))}
         </div>
 
-        {selectedCrawler && (
-          <>
-            <div className="p-4 border-t border-slate-200">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">파일</h3>
+        {/* 날짜 선택 */}
+        {dates && dates.length > 0 && (
+          <div className="p-4 border-t border-slate-200">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-2">수집일</h3>
+            <div className="space-y-1">
+              {dates.map((d) => (
+                <button
+                  key={d}
+                  onClick={() => { setSelectedDate(d); setPage(0); }}
+                  className={`w-full text-left px-3 py-1.5 rounded text-sm transition-colors ${
+                    selectedDate === d
+                      ? "bg-blue-50 text-blue-700 font-medium"
+                      : "hover:bg-slate-50 text-slate-600"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
             </div>
-            <div className="flex-1 overflow-auto p-2">
-              <FileTree
-                rootPath={selectedCrawler.localPath}
-                onSelectFile={selectFile}
-                selectedFile={selectedFile}
-              />
-            </div>
-          </>
+          </div>
         )}
       </div>
 
       {/* 메인 영역 */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* 사이트 탭 */}
-        {selectedCrawler && (
-          <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-2">
+        <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-2">
+          <button
+            onClick={() => { setSelectedSite("all"); setPage(0); }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              selectedSite === "all"
+                ? "bg-slate-800 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            전체
+          </button>
+          {SITES.map((site) => (
             <button
-              onClick={() => { setSelectedSite("all"); setPage(0); }}
+              key={site.id}
+              onClick={() => { setSelectedSite(site.id); setPage(0); }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedSite === "all"
-                  ? "bg-slate-800 text-white"
+                selectedSite === site.id
+                  ? SITE_TAB_COLORS[site.name] || "bg-blue-600 text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              전체
+              {site.name}
             </button>
-            {selectedCrawler.siteConfigs?.map((sc: any) => (
-              <button
-                key={sc.siteName}
-                onClick={() => { setSelectedSite(sc.siteName); setPage(0); }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedSite === sc.siteName
-                    ? SITE_TAB_COLORS[sc.displayName] || "bg-blue-600 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {sc.displayName}
-              </button>
-            ))}
-            <div className="ml-auto text-sm text-slate-500">
-              {total}건
-            </div>
+          ))}
+          <div className="ml-auto text-sm text-slate-500">
+            {total}건
           </div>
-        )}
+        </div>
 
         {/* 결과 테이블 */}
         <div className="flex-1 overflow-auto">
@@ -220,25 +205,18 @@ export default function Viewer() {
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
               <div className="text-5xl mb-3">📋</div>
               <div>데이터가 없습니다</div>
-              <div className="text-sm mt-1">파일을 선택하거나 수동 수집을 실행해 보세요</div>
+              <div className="text-sm mt-1">수동 수집을 실행해 보세요</div>
             </div>
           ) : (
             <div className="p-4">
               <div className="mb-3 text-sm text-slate-500 flex items-center gap-2">
-                <span>📄 {filePath}</span>
-                {selectedFileInfo?.modifiedAt && (
-                  <span className="text-xs bg-slate-100 rounded px-2 py-0.5">
-                    수집일시 {formatDateTime(selectedFileInfo.modifiedAt)}
-                  </span>
-                )}
+                <span>📅 {selectedDate || "전체"}</span>
               </div>
               <table className="w-full text-xs table-fixed">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
                     <th className="px-2 py-2 text-left font-semibold text-slate-500 w-[40px]">#</th>
-                    {COLUMNS.filter(
-                      (c) => c.key !== "site" || selectedSite === "all"
-                    ).map((c) => (
+                    {COLUMNS.map((c) => (
                       <th
                         key={c.key}
                         onClick={() => toggleSort(c.key)}
@@ -257,20 +235,19 @@ export default function Viewer() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {jobs.map((job: any, i: number) => {
+                  {jobs.map((job: JobPostingItem, i: number) => {
                     const no = page * SIZE + i + 1;
-                    const siteId = job.site || "";
-                    const siteDef = SITES.find((s) => s.id === siteId || s.name === siteId);
+                    const siteDef = SITES.find((s) => s.id === job.site || s.name === job.site);
                     return (
                       <tr
-                        key={i}
+                        key={job.id}
                         onClick={() => job.url && window.open(job.url, "_blank")}
                         className="hover:bg-blue-50/50 cursor-pointer transition-colors"
                       >
                         <td className="px-2 py-1.5 text-slate-400">{no}</td>
                         <td className="px-2 py-1.5">
                           <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${siteDef?.color || "bg-slate-100 text-slate-600"}`}>
-                            {siteDef?.name || siteId}
+                            {siteDef?.name || job.site}
                           </span>
                         </td>
                         <td className="px-2 py-1.5 font-medium text-slate-800 truncate">
@@ -285,11 +262,6 @@ export default function Viewer() {
                           ) : <span className="text-slate-300">-</span>}
                         </td>
                         <td className="px-2 py-1.5 text-slate-400 truncate">{job.deadline || "-"}</td>
-                        {selectedSite === "all" && (
-                          <td className="px-2 py-1.5 text-slate-600">
-                            <div className="truncate" title={job.site || ""}>{job.site || "-"}</div>
-                          </td>
-                        )}
                       </tr>
                     );
                   })}
@@ -334,8 +306,4 @@ export default function Viewer() {
       </div>
     </div>
   );
-}
-
-function formatDateTime(iso: string): string {
-  return iso.slice(0, 10) + " " + iso.slice(11, 16);
 }

@@ -209,3 +209,53 @@ export async function saveSiteConfig(
     body: JSON.stringify(body),
   });
 }
+
+// Job Postings API (DB 기반)
+export interface JobPostingItem {
+  id: number;
+  site: string;
+  company: string;
+  position: string;
+  career: string;
+  tech: string;
+  location: string;
+  deadline: string;
+  url: string;
+  crawledAt: string;
+}
+
+export interface JobPostingResponse {
+  jobs: JobPostingItem[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export async function fetchJobPostings(
+  configId: number,
+  options: {
+    siteName?: string;
+    crawledAt?: string;
+    page?: number;
+    size?: number;
+  } = {}
+): Promise<JobPostingResponse> {
+  const params = new URLSearchParams({ configId: String(configId) });
+  if (options.siteName) params.set("siteName", options.siteName);
+  if (options.crawledAt) params.set("crawledAt", options.crawledAt);
+  if (options.page !== undefined) params.set("page", String(options.page));
+  if (options.size !== undefined) params.set("size", String(options.size));
+  return request<JobPostingResponse>(`/job-postings?${params}`);
+}
+
+export async function fetchJobPostingDates(configId: number): Promise<string[]> {
+  return request<string[]>(`/job-postings/dates?configId=${configId}`);
+}
+
+export async function fetchJobPostingStats(configId: number): Promise<{
+  total: number;
+  todayCount: number;
+  lastCrawledAt: string | null;
+}> {
+  return request(`/job-postings/stats?configId=${configId}`);
+}
