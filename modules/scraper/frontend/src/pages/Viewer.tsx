@@ -5,6 +5,13 @@ import { fetchCrawlers, fetchJobs, executeCrawler, type FileNode } from "../api/
 import FileTree from "../components/FileTree";
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 
+const SITES = [
+  { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700 border-blue-200" },
+  { id: "jobkorea", name: "잡코리아", color: "bg-green-100 text-green-700 border-green-200" },
+  { id: "wanted", name: "원티드", color: "bg-red-100 text-red-700 border-red-200" },
+  { id: "remember", name: "리멤버", color: "bg-purple-100 text-purple-700 border-purple-200" },
+];
+
 const SITE_TAB_COLORS: Record<string, string> = {
   "사람인": "bg-blue-600 text-white",
   "잡코리아": "bg-green-600 text-white",
@@ -12,14 +19,14 @@ const SITE_TAB_COLORS: Record<string, string> = {
   "리멤버": "bg-purple-600 text-white",
 };
 
-const COLUMNS: { key: string; label: string }[] = [
-  { key: "company", label: "회사명" },
-  { key: "position", label: "포지션" },
-  { key: "career", label: "경력" },
-  { key: "tech", label: "기술" },
-  { key: "location", label: "지역" },
-  { key: "deadline", label: "마감" },
-  { key: "site", label: "사이트" },
+const COLUMNS: { key: string; label: string; w: string }[] = [
+  { key: "site", label: "사이트", w: "w-[70px]" },
+  { key: "position", label: "포지션", w: "w-auto" },
+  { key: "company", label: "회사명", w: "w-[140px]" },
+  { key: "career", label: "경력", w: "w-[80px]" },
+  { key: "location", label: "지역", w: "w-[80px]" },
+  { key: "tech", label: "기술", w: "w-[160px]" },
+  { key: "deadline", label: "마감", w: "w-[80px]" },
 ];
 
 export default function Viewer() {
@@ -226,97 +233,99 @@ export default function Viewer() {
                 )}
               </div>
               <table className="w-full text-xs table-fixed">
-                <colgroup>
-                  <col className={selectedSite === "all" ? "w-[14%]" : "w-[16%]"} />
-                  <col className={selectedSite === "all" ? "w-[24%]" : "w-[26%]"} />
-                  <col className={selectedSite === "all" ? "w-[10%]" : "w-[12%]"} />
-                  <col className={selectedSite === "all" ? "w-[24%]" : "w-[26%]"} />
-                  <col className={selectedSite === "all" ? "w-[12%]" : "w-[12%]"} />
-                  <col className={selectedSite === "all" ? "w-[8%]" : "w-[8%]"} />
-                  {selectedSite === "all" && <col className="w-[8%]" />}
-                </colgroup>
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-2 py-2 text-left font-semibold text-slate-500 w-[40px]">#</th>
                     {COLUMNS.filter(
                       (c) => c.key !== "site" || selectedSite === "all"
                     ).map((c) => (
                       <th
                         key={c.key}
                         onClick={() => toggleSort(c.key)}
-                        className="text-left p-2 font-medium text-slate-600 cursor-pointer select-none hover:bg-slate-100 whitespace-nowrap overflow-hidden"
+                        className={`px-2 py-2 text-left font-semibold text-slate-500 cursor-pointer hover:text-blue-600 select-none ${c.w}`}
                       >
-                        {c.label}
-                        {sort?.key === c.key && (
-                          <span className="ml-1 text-blue-600">
-                            {sort.order === "asc" ? "▲" : "▼"}
-                          </span>
-                        )}
+                        <span className="inline-flex items-center gap-1">
+                          {c.label}
+                          {sort?.key === c.key && (
+                            <span className="text-blue-600">
+                              {sort.order === "asc" ? "▲" : "▼"}
+                            </span>
+                          )}
+                        </span>
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
-                  {jobs.map((job: any, i: number) => (
-                    <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="p-2 font-medium">
-                        <div className="truncate" title={job.company}>{job.company}</div>
-                      </td>
-                      <td className="p-2">
-                        <a href={job.url} target="_blank" rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline block truncate" title={job.position}>
-                          {job.position}
-                        </a>
-                      </td>
-                      <td className="p-2 text-slate-600">
-                        <div className="truncate" title={job.career || ""}>{job.career || "-"}</div>
-                      </td>
-                      <td className="p-2 text-slate-600">
-                        <div className="truncate" title={job.tech || ""}>{job.tech || "-"}</div>
-                      </td>
-                      <td className="p-2 text-slate-600">
-                        <div className="truncate" title={job.location || ""}>{job.location || "-"}</div>
-                      </td>
-                      <td className="p-2 text-slate-600">
-                        <div className="truncate" title={job.deadline || ""}>{job.deadline || "-"}</div>
-                      </td>
-                      {selectedSite === "all" && (
-                        <td className="p-2 text-slate-600">
-                          <div className="truncate" title={job.site || ""}>{job.site || "-"}</div>
+                <tbody className="divide-y divide-slate-100">
+                  {jobs.map((job: any, i: number) => {
+                    const no = page * SIZE + i + 1;
+                    const siteId = job.site || "";
+                    const siteDef = SITES.find((s) => s.id === siteId || s.name === siteId);
+                    return (
+                      <tr
+                        key={i}
+                        onClick={() => job.url && window.open(job.url, "_blank")}
+                        className="hover:bg-blue-50/50 cursor-pointer transition-colors"
+                      >
+                        <td className="px-2 py-1.5 text-slate-400">{no}</td>
+                        <td className="px-2 py-1.5">
+                          <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${siteDef?.color || "bg-slate-100 text-slate-600"}`}>
+                            {siteDef?.name || siteId}
+                          </span>
                         </td>
-                      )}
-                    </tr>
-                  ))}
+                        <td className="px-2 py-1.5 font-medium text-slate-800 truncate">
+                          {job.position || "-"}
+                        </td>
+                        <td className="px-2 py-1.5 text-slate-600 truncate">{job.company || "-"}</td>
+                        <td className="px-2 py-1.5 text-slate-500 truncate">{job.career || "-"}</td>
+                        <td className="px-2 py-1.5 text-slate-500 truncate">{job.location || "-"}</td>
+                        <td className="px-2 py-1.5">
+                          {job.tech ? (
+                            <span className="text-[10px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded truncate block">{job.tech}</span>
+                          ) : <span className="text-slate-300">-</span>}
+                        </td>
+                        <td className="px-2 py-1.5 text-slate-400 truncate">{job.deadline || "-"}</td>
+                        {selectedSite === "all" && (
+                          <td className="px-2 py-1.5 text-slate-600">
+                            <div className="truncate" title={job.site || ""}>{job.site || "-"}</div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
 
               {/* 페이지네이션 */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-6">
-                  <button
-                    onClick={() => setPage((p) => Math.max(0, p - 1))}
-                    disabled={page === 0}
-                    className="px-3 py-1.5 rounded border text-sm disabled:opacity-40 hover:bg-slate-50"
-                  >
-                    이전
-                  </button>
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setPage(i)}
-                      className={`w-9 h-9 rounded text-sm ${
-                        page === i ? "bg-blue-600 text-white" : "hover:bg-slate-100"
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                    disabled={page >= totalPages - 1}
-                    className="px-3 py-1.5 rounded border text-sm disabled:opacity-40 hover:bg-slate-50"
-                  >
-                    다음
-                  </button>
+                <div className="px-5 py-2 bg-white border-t border-slate-200 flex items-center justify-center gap-0.5 mt-4">
+                  <button onClick={() => setPage(0)} disabled={page === 0}
+                    className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">«</button>
+                  <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}
+                    className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">‹</button>
+                  {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalPages <= 7) {
+                      pageNum = i;
+                    } else if (page <= 3) {
+                      pageNum = i;
+                    } else if (page >= totalPages - 4) {
+                      pageNum = totalPages - 7 + i;
+                    } else {
+                      pageNum = page - 3 + i;
+                    }
+                    return (
+                      <button key={pageNum} onClick={() => setPage(pageNum)}
+                        className={`w-6 h-6 text-xs rounded ${
+                          page === pageNum ? "bg-blue-600 text-white font-medium" : "text-slate-600 hover:bg-slate-100"
+                        }`}>{pageNum + 1}</button>
+                    );
+                  })}
+                  <button onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+                    className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">›</button>
+                  <button onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}
+                    className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">»</button>
+                  <span className="ml-2 text-[10px] text-slate-400">{page + 1}/{totalPages}</span>
                 </div>
               )}
             </div>

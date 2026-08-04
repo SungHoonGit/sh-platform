@@ -44,36 +44,38 @@ function legacyCareerRange(career: string): [number, number] {
   }
 }
 
-function toCron(hour: number, minute: number, days: number[]): string {
-  if (days.length === 7) return `${minute} ${hour} * * *`;
+function toCron(hours: number[], minute: number, days: number[]): string {
+  const hourStr = hours.length === 1 ? String(hours[0]) : hours.sort((a, b) => a - b).join(",");
+  if (days.length === 7) return `${minute} ${hourStr} * * *`;
   if (days.length === 5 && days.includes(1) && days.includes(5)) {
-    return `${minute} ${hour} * * 1-5`;
+    return `${minute} ${hourStr} * * 1-5`;
   }
-  return `${minute} ${hour} * * ${days.join(",")}`;
+  return `${minute} ${hourStr} * * ${days.join(",")}`;
 }
 
 function parseCronToHuman(cron: string): string {
   const parts = cron.split(" ");
   if (parts.length < 5) return cron;
   const [min, hour, , , dayOfWeek] = parts;
+  const hours = hour.split(",").map(h => `${parseInt(h, 10)}시`).join(", ");
   const days = dayOfWeek.split(",").map(d => {
     if (d === "1-5") return "평일";
     return DAYS.find(day => day.id === parseInt(d))?.name || d;
   }).join(", ");
-  return `${hour}시 ${min}분 (${days})`;
+  return `${hours} ${min}분 (${days})`;
 }
 
-function parseCronToSchedule(cron: string): { hour: number; minute: number; days: number[] } {
+function parseCronToSchedule(cron: string): { hours: number[]; minute: number; days: number[] } {
   const parts = cron.split(" ");
-  if (parts.length < 5) return { hour: 9, minute: 0, days: [1, 2, 3, 4, 5] };
+  if (parts.length < 5) return { hours: [9], minute: 0, days: [1, 2, 3, 4, 5] };
   const minute = parseInt(parts[0], 10) || 0;
-  const hour = parseInt(parts[1], 10) || 9;
+  const hours = parts[1].split(",").map(h => parseInt(h, 10)).filter(h => !isNaN(h));
   const dow = parts[4] || "*";
   let days: number[];
   if (dow === "*") days = [0, 1, 2, 3, 4, 5, 6];
   else if (dow.includes("-")) days = [1, 2, 3, 4, 5];
   else days = dow.split(",").map((d) => parseInt(d, 10)).filter((n) => !isNaN(n));
-  return { hour, minute, days };
+  return { hours: hours.length ? hours : [9], minute, days };
 }
 
 export default function Schedule() {
@@ -89,7 +91,7 @@ export default function Schedule() {
   const [careerMax, setCareerMax] = useState(CAREER_TOTAL);
   const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
   const [selectedSites, setSelectedSites] = useState<string[]>(DEFAULT_SITES);
-  const [hour, setHour] = useState(9);
+  const [selectedHours, setSelectedHours] = useState<number[]>([9]);
   const [minute, setMinute] = useState(0);
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -250,7 +252,7 @@ export default function Schedule() {
     );
   };
 
-  const cronStr = toCron(hour, minute, selectedDays);
+  const cronStr = toCron(selectedHours, minute, selectedDays);
 
   const handleEdit = (c: any) => {
     setName(c.name);
@@ -275,7 +277,7 @@ export default function Schedule() {
     setLocations(locs.length ? locs : DEFAULT_LOCATIONS);
     setSelectedSites(enabled.length ? enabled.map((sc: any) => sc.siteName) : DEFAULT_SITES);
     const parsed = parseCronToSchedule(c.schedule);
-    setHour(parsed.hour);
+    setSelectedHours(parsed.hours);
     setMinute(parsed.minute);
     setSelectedDays(parsed.days);
     setShowForm(true);
@@ -387,22 +389,32 @@ export default function Schedule() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-slate-500 mb-2">실행 시간</label>
-                <div className="flex items-center gap-3">
-                  <select
-                    value={hour}
-                    onChange={(e) => setHour(Number(e.target.value))}
-                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <option key={i} value={i}>{String(i).padStart(2, "0")}시</option>
-                    ))}
-                  </select>
-                  <span className="text-slate-400">:</span>
+                <label className="block text-xs text-slate-500 mb-2">실행 시간 (복수 선택 가능)</label>
+                <div className="flex flex-wrap gap-2">
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((h) => (
+                    <button
+                      key={h}
+                      onClick={() => {
+                        setSelectedHours((prev) =>
+                          prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h].sort((a, b) => a - b)
+                        );
+                      }}
+                      className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
+                        selectedHours.includes(h)
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {h}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="text-xs text-slate-500">분:</label>
                   <select
                     value={minute}
                     onChange={(e) => setMinute(Number(e.target.value))}
-                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="px-2 py-1 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
                     {[0, 10, 15, 30, 45].map((m) => (
                       <option key={m} value={m}>{String(m).padStart(2, "0")}분</option>
@@ -429,7 +441,7 @@ export default function Schedule() {
                   ))}
                 </div>
                 <div className="mt-2 text-xs text-slate-500">
-                  미리보기: {cronStr}
+                  미리보기: {selectedHours.length > 0 ? selectedHours.map(h => `${h}시`).join(", ") : "시간 미선택"} {String(minute).padStart(2, "0")}분
                 </div>
               </div>
 
