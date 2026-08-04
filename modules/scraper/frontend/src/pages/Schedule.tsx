@@ -36,6 +36,8 @@ const DAYS = [
 
 const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
+const ICON_OPTIONS = ["🤖", "💼", "🚀", "📋", "🔍", "📊", "🎯", "💻", "🔧", "📱"];
+
 interface TimePair {
   hour: number;
   minute: number;
@@ -136,6 +138,7 @@ export default function Schedule() {
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [scheduleIcon, setScheduleIcon] = useState("🤖");
   const savingRef = useRef(false);
 
   useEffect(() => {
@@ -181,7 +184,7 @@ export default function Schedule() {
     onSuccess: (_, configId) => {
       queryClient.invalidateQueries({ queryKey: ["crawlers"] });
       const crawler = crawlers?.find((c) => c.id === configId);
-      startProgress(configId, crawler?.name || "크롤링");
+      startProgress(configId, crawler?.name || "공고 수집");
     },
     onError: (e: Error) => alert(`실행 실패: ${e.message}`),
   });
@@ -243,10 +246,7 @@ export default function Schedule() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crawlers"] });
       alert("스케줄이 저장되었습니다");
-      setShowForm(false);
-      setEditingId(null);
-      setName("");
-      setKeyword("");
+      resetForm();
     },
     onError: (e: Error) => alert(`저장 실패: ${e.message}`),
     onSettled: () => {
@@ -262,6 +262,20 @@ export default function Schedule() {
     },
     onError: (e: Error) => alert(`삭제 실패: ${e.message}`),
   });
+
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setName("");
+    setKeyword("");
+    setCareerMin(0);
+    setCareerMax(CAREER_TOTAL);
+    setLocations(DEFAULT_LOCATIONS);
+    setSelectedSites(DEFAULT_SITES);
+    setTimePairs([{ hour: 9, minute: 0 }]);
+    setSelectedDays([1, 2, 3, 4, 5]);
+    setScheduleIcon("🤖");
+  };
 
   const handleSave = () => {
     if (savingRef.current || saveMutation.isPending) return;
@@ -349,10 +363,8 @@ export default function Schedule() {
         {!showForm && (
           <button
             onClick={() => {
+              resetForm();
               setShowForm(true);
-              setEditingId(null);
-              setName("");
-              setKeyword("");
             }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
           >
@@ -361,11 +373,15 @@ export default function Schedule() {
         )}
       </div>
 
+      {/* 스케줄 폼 - 하단에 별도 영역으로 표시 */}
       {showForm && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">
-            {editingId ? "스케줄 수정" : "신규 스케줄 등록"}
-          </h3>
+        <div className="bg-white border-2 border-blue-200 rounded-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-slate-700">
+              {editingId ? "스케줄 수정" : "신규 스케줄 등록"}
+            </h3>
+            <button onClick={resetForm} className="text-slate-400 hover:text-slate-600">✕</button>
+          </div>
           
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -390,6 +406,26 @@ export default function Schedule() {
                   placeholder="React, Java..."
                   className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">아이콘</label>
+                <div className="flex gap-2">
+                  {ICON_OPTIONS.map((icon) => (
+                    <button
+                      key={icon}
+                      type="button"
+                      onClick={() => setScheduleIcon(icon)}
+                      className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-colors ${
+                        scheduleIcon === icon
+                          ? "bg-blue-100 border-2 border-blue-500"
+                          : "bg-slate-50 border border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -515,10 +551,10 @@ export default function Schedule() {
                   disabled={saveMutation.isPending || savingRef.current}
                   className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {saveMutation.isPending || savingRef.current ? "저장 중..." : editingId ? "수정" : "저장"}
+                  {saveMutation.isPending || savingRef.current ? "저장 중..." : editingId ? "수정 완료" : "저장"}
                 </button>
                 <button
-                  onClick={() => { setShowForm(false); setEditingId(null); }}
+                  onClick={resetForm}
                   className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200"
                 >
                   취소
@@ -529,6 +565,7 @@ export default function Schedule() {
         </div>
       )}
 
+      {/* 등록된 스케줄 목록 */}
       <div>
         <h2 className="text-lg font-bold mb-4">등록된 스케줄</h2>
 
@@ -550,9 +587,6 @@ export default function Schedule() {
                       <div className="font-bold text-lg">{c.name}</div>
                       <div className="text-sm text-slate-500 mt-0.5">
                         스케줄: {parseCronToHuman(c.schedule)}
-                      </div>
-                      <div className="text-sm text-slate-500">
-                        경로: {c.localPath}
                       </div>
                     </div>
                   </div>
@@ -585,6 +619,7 @@ export default function Schedule() {
                   </div>
                 </div>
 
+                {/* 사이트 정보 - 구분자 제거 */}
                 <div className="mt-4 flex flex-wrap gap-2">
                   {c.siteConfigs?.map((sc: any) => {
                     const siteInfo = SITES.find((s) => s.id === sc.siteName);
@@ -593,9 +628,9 @@ export default function Schedule() {
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${siteInfo?.color || "bg-slate-100"}`}>
                           {sc.displayName}
                         </span>
-                        <span className="ml-2 text-slate-600">
-                          {sc.paramValues?.keyword || "-"} | {sc.paramValues?.career || "-"} | {sc.paramValues?.location || "-"}
-                        </span>
+                        {sc.paramValues?.keyword && (
+                          <span className="ml-2 text-slate-600">{sc.paramValues.keyword}</span>
+                        )}
                       </div>
                     );
                   })}
