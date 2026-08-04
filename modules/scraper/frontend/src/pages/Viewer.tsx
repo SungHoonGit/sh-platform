@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { fetchCrawlers, executeCrawler, fetchJobPostings, fetchJobPostingDates, downloadJobPostingsExcel, type JobPostingItem } from "../api/scraper";
@@ -19,13 +19,13 @@ const SITE_TAB_COLORS: Record<string, string> = {
 };
 
 const COLUMNS: { key: string; label: string; w: string }[] = [
-  { key: "site", label: "사이트", w: "w-[70px]" },
+  { key: "site", label: "사이트", w: "w-[60px]" },
   { key: "position", label: "포지션", w: "w-auto" },
-  { key: "company", label: "회사명", w: "w-[140px]" },
-  { key: "career", label: "경력", w: "w-[80px]" },
-  { key: "location", label: "지역", w: "w-[80px]" },
-  { key: "tech", label: "기술", w: "w-[160px]" },
-  { key: "deadline", label: "마감", w: "w-[80px]" },
+  { key: "company", label: "회사명", w: "w-[120px]" },
+  { key: "career", label: "경력", w: "w-[70px]" },
+  { key: "location", label: "지역", w: "w-[70px]" },
+  { key: "tech", label: "기술", w: "w-[140px]" },
+  { key: "deadline", label: "마감", w: "w-[70px]" },
 ];
 
 export default function Viewer() {
@@ -64,6 +64,11 @@ export default function Viewer() {
       setSelectedCrawlerId(crawlers[0].id);
     }
   }, [crawlers]);
+
+  const selectedCrawler = useMemo(
+    () => crawlers?.find((c) => c.id === selectedCrawlerId) ?? null,
+    [crawlers, selectedCrawlerId]
+  );
 
   const { data: dates } = useQuery({
     queryKey: ["jobDates", selectedCrawlerId],
@@ -105,16 +110,16 @@ export default function Viewer() {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full text-[13px]">
       {/* 왼쪽 사이드바 - 스케줄 목록 */}
-      <div className="w-72 bg-white border-r border-slate-200 shrink-0 overflow-auto flex flex-col">
-        <div className="p-4 border-b border-slate-200">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">스케줄</h3>
+      <div className="w-60 bg-white border-r border-slate-200 shrink-0 overflow-auto flex flex-col">
+        <div className="px-3 py-2.5 border-b border-slate-200">
+          <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide">스케줄</h3>
         </div>
         
-        <div className="p-2">
+        <div className="p-1.5">
           {crawlers?.map((c) => (
-            <div key={c.id} className="flex items-center gap-1 mb-1">
+            <div key={c.id} className="flex items-center gap-1 mb-0.5">
               <button
                 onClick={() => {
                   setSelectedCrawlerId(c.id);
@@ -122,18 +127,18 @@ export default function Viewer() {
                   setSelectedDate("");
                   setPage(0);
                 }}
-                className={`flex-1 text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                className={`flex-1 text-left px-2.5 py-1.5 rounded text-[12px] transition-colors ${
                   selectedCrawlerId === c.id
                     ? "bg-blue-50 text-blue-700 font-medium"
                     : "hover:bg-slate-50 text-slate-600"
                 }`}
               >
-                🤖 {c.name}
+                {c.name}
               </button>
               <button
                 onClick={() => executeMutation.mutate(c.id)}
                 disabled={executeMutation.isPending}
-                className="px-2 py-1.5 text-xs rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                className="px-1.5 py-1 text-[10px] rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors disabled:opacity-50"
                 title="수동 실행"
               >
                 ▶
@@ -144,14 +149,14 @@ export default function Viewer() {
 
         {/* 날짜 선택 */}
         {dates && dates.length > 0 && (
-          <div className="p-4 border-t border-slate-200">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-2">수집일</h3>
-            <div className="space-y-1">
+          <div className="px-3 py-2.5 border-t border-slate-200">
+            <h3 className="text-[11px] font-bold text-slate-500 mb-1.5">수집일</h3>
+            <div className="space-y-0.5">
               {dates.map((d) => (
                 <button
                   key={d}
                   onClick={() => { setSelectedDate(d); setPage(0); }}
-                  className={`w-full text-left px-3 py-1.5 rounded text-sm transition-colors ${
+                  className={`w-full text-left px-2.5 py-1 rounded text-[12px] transition-colors ${
                     selectedDate === d
                       ? "bg-blue-50 text-blue-700 font-medium"
                       : "hover:bg-slate-50 text-slate-600"
@@ -167,11 +172,22 @@ export default function Viewer() {
 
       {/* 메인 영역 */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* 사이트 탭 */}
+        {/* 헤더 */}
         <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-2">
+          {/* 스케줄 이름 */}
+          <div className="flex items-center gap-2 mr-4">
+            <span className="text-[13px] font-semibold text-slate-800">
+              {selectedCrawler?.name || "전체"}
+            </span>
+            {selectedDate && (
+              <span className="text-[11px] text-slate-400">| {selectedDate}</span>
+            )}
+          </div>
+
+          {/* 사이트 탭 */}
           <button
             onClick={() => { setSelectedSite("all"); setPage(0); }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-2.5 py-1 rounded text-[12px] font-medium transition-colors ${
               selectedSite === "all"
                 ? "bg-slate-800 text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -183,7 +199,7 @@ export default function Viewer() {
             <button
               key={site.id}
               onClick={() => { setSelectedSite(site.id); setPage(0); }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-2.5 py-1 rounded text-[12px] font-medium transition-colors ${
                 selectedSite === site.id
                   ? SITE_TAB_COLORS[site.name] || "bg-blue-600 text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -192,8 +208,10 @@ export default function Viewer() {
               {site.name}
             </button>
           ))}
+
+          {/* 우측 정보 + 다운로드 */}
           <div className="ml-auto flex items-center gap-3">
-            <span className="text-sm text-slate-500">{total}건</span>
+            <span className="text-[12px] text-slate-500">{total}건</span>
             <button
               onClick={() => {
                 if (!selectedCrawlerId) return;
@@ -203,9 +221,9 @@ export default function Viewer() {
                 }).catch((e) => alert(`다운로드 실패: ${(e as Error).message}`));
               }}
               disabled={!selectedCrawlerId || total === 0}
-              className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-2.5 py-1 bg-green-600 text-white rounded text-[12px] font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              📥 Excel 다운로드
+              📥 Excel
             </button>
           </div>
         </div>
@@ -213,32 +231,29 @@ export default function Viewer() {
         {/* 결과 테이블 */}
         <div className="flex-1 overflow-auto">
           {isLoading ? (
-            <div className="flex items-center justify-center h-full text-slate-500">로딩 중...</div>
+            <div className="flex items-center justify-center h-full text-slate-500 text-[13px]">로딩 중...</div>
           ) : jobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
-              <div className="text-5xl mb-3">📋</div>
-              <div>데이터가 없습니다</div>
-              <div className="text-sm mt-1">수동 수집을 실행해 보세요</div>
+              <div className="text-4xl mb-2">📋</div>
+              <div className="text-[13px]">데이터가 없습니다</div>
+              <div className="text-[11px] mt-1">수동 수집을 실행해 보세요</div>
             </div>
           ) : (
-            <div className="p-4">
-              <div className="mb-3 text-sm text-slate-500 flex items-center gap-2">
-                <span>📅 {selectedDate || "전체"}</span>
-              </div>
-              <table className="w-full text-xs table-fixed">
+            <div className="p-3">
+              <table className="w-full text-[12px] table-fixed">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
-                    <th className="px-2 py-2 text-left font-semibold text-slate-500 w-[40px]">#</th>
+                    <th className="px-2 py-1.5 text-left font-semibold text-slate-500 w-[32px]">#</th>
                     {COLUMNS.map((c) => (
                       <th
                         key={c.key}
                         onClick={() => toggleSort(c.key)}
-                        className={`px-2 py-2 text-left font-semibold text-slate-500 cursor-pointer hover:text-blue-600 select-none ${c.w}`}
+                        className={`px-2 py-1.5 text-left font-semibold text-slate-500 cursor-pointer hover:text-blue-600 select-none ${c.w}`}
                       >
-                        <span className="inline-flex items-center gap-1">
+                        <span className="inline-flex items-center gap-0.5">
                           {c.label}
                           {sort?.key === c.key && (
-                            <span className="text-blue-600">
+                            <span className="text-blue-600 text-[9px]">
                               {sort.order === "asc" ? "▲" : "▼"}
                             </span>
                           )}
@@ -257,24 +272,24 @@ export default function Viewer() {
                         onClick={() => job.url && window.open(job.url, "_blank")}
                         className="hover:bg-blue-50/50 cursor-pointer transition-colors"
                       >
-                        <td className="px-2 py-1.5 text-slate-400">{no}</td>
-                        <td className="px-2 py-1.5">
+                        <td className="px-2 py-1 text-slate-400">{no}</td>
+                        <td className="px-2 py-1">
                           <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${siteDef?.color || "bg-slate-100 text-slate-600"}`}>
                             {siteDef?.name || job.site}
                           </span>
                         </td>
-                        <td className="px-2 py-1.5 font-medium text-slate-800 truncate">
+                        <td className="px-2 py-1 font-medium text-slate-800 truncate">
                           {job.position || "-"}
                         </td>
-                        <td className="px-2 py-1.5 text-slate-600 truncate">{job.company || "-"}</td>
-                        <td className="px-2 py-1.5 text-slate-500 truncate">{job.career || "-"}</td>
-                        <td className="px-2 py-1.5 text-slate-500 truncate">{job.location || "-"}</td>
-                        <td className="px-2 py-1.5">
+                        <td className="px-2 py-1 text-slate-600 truncate">{job.company || "-"}</td>
+                        <td className="px-2 py-1 text-slate-500 truncate">{job.career || "-"}</td>
+                        <td className="px-2 py-1 text-slate-500 truncate">{job.location || "-"}</td>
+                        <td className="px-2 py-1">
                           {job.tech ? (
                             <span className="text-[10px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded truncate block">{job.tech}</span>
                           ) : <span className="text-slate-300">-</span>}
                         </td>
-                        <td className="px-2 py-1.5 text-slate-400 truncate">{job.deadline || "-"}</td>
+                        <td className="px-2 py-1 text-slate-400 truncate">{job.deadline || "-"}</td>
                       </tr>
                     );
                   })}
@@ -283,11 +298,11 @@ export default function Viewer() {
 
               {/* 페이지네이션 */}
               {totalPages > 1 && (
-                <div className="px-5 py-2 bg-white border-t border-slate-200 flex items-center justify-center gap-0.5 mt-4">
+                <div className="py-2 flex items-center justify-center gap-0.5 mt-3">
                   <button onClick={() => setPage(0)} disabled={page === 0}
-                    className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">«</button>
+                    className="px-1.5 py-0.5 text-[11px] rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">«</button>
                   <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}
-                    className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">‹</button>
+                    className="px-1.5 py-0.5 text-[11px] rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">‹</button>
                   {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
                     let pageNum: number;
                     if (totalPages <= 7) {
@@ -301,15 +316,15 @@ export default function Viewer() {
                     }
                     return (
                       <button key={pageNum} onClick={() => setPage(pageNum)}
-                        className={`w-6 h-6 text-xs rounded ${
+                        className={`w-5 h-5 text-[11px] rounded ${
                           page === pageNum ? "bg-blue-600 text-white font-medium" : "text-slate-600 hover:bg-slate-100"
                         }`}>{pageNum + 1}</button>
                     );
                   })}
                   <button onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-                    className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">›</button>
+                    className="px-1.5 py-0.5 text-[11px] rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">›</button>
                   <button onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}
-                    className="px-1.5 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">»</button>
+                    className="px-1.5 py-0.5 text-[11px] rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">»</button>
                   <span className="ml-2 text-[10px] text-slate-400">{page + 1}/{totalPages}</span>
                 </div>
               )}

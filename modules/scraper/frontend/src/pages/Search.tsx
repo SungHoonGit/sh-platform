@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx";
 import { realTimeSearch, type SearchRequest, type SearchResponse } from "../api/scraper";
 import {
   REGIONS,
@@ -281,9 +282,17 @@ export default function Search() {
                 <button
                   onClick={() => {
                     if (filteredJobs.length === 0) return;
+
+                    const SITE_NAME_MAP: Record<string, string> = {
+                      saramin: "사람인",
+                      jobkorea: "잡코리아",
+                      wanted: "원티드",
+                      remember: "리멤버",
+                    };
+
                     const headers = ["사이트", "회사명", "포지션", "경력", "지역", "기술", "마감", "URL"];
-                    const rows = filteredJobs.map((j) => [
-                      j.site || "",
+                    const toRow = (j: Record<string, string>) => [
+                      SITE_NAME_MAP[j.site] || j.site || "",
                       j.company || "",
                       j.position || j.title || "",
                       j.career || "",
@@ -291,24 +300,38 @@ export default function Search() {
                       j.tech || "",
                       j.deadline || "",
                       j.url || "",
-                    ]);
-                    const csv = [headers, ...rows]
-                      .map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
-                      .join("\n");
-                    const bom = "\uFEFF";
-                    const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8" });
-                    const a = document.createElement("a");
-                    a.href = URL.createObjectURL(blob);
-                    a.download = `검색결과_${keyword}_${new Date().toISOString().slice(0, 10)}.csv`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(a.href);
+                    ];
+
+                    const wb = XLSX.utils.book_new();
+
+                    // 사이트별 시트 분리
+                    const bySite = new Map<string, Record<string, string>[]>();
+                    for (const job of filteredJobs) {
+                      const site = job.site || "기타";
+                      if (!bySite.has(site)) bySite.set(site, []);
+                      bySite.get(site)!.push(job);
+                    }
+
+                    // 전체 시트
+                    const allData = [headers, ...filteredJobs.map(toRow)];
+                    const allSheet = XLSX.utils.aoa_to_sheet(allData);
+                    XLSX.utils.book_append_sheet(wb, allSheet, "전체");
+
+                    // 사이트별 시트
+                    for (const [site, jobs] of bySite) {
+                      const sheetName = SITE_NAME_MAP[site] || site;
+                      const siteData = [headers, ...jobs.map(toRow)];
+                      const sheet = XLSX.utils.aoa_to_sheet(siteData);
+                      XLSX.utils.book_append_sheet(wb, sheet, sheetName);
+                    }
+
+                    const today = new Date().toISOString().slice(0, 10);
+                    XLSX.writeFile(wb, `검색결과_${keyword}_${today}.xlsx`);
                   }}
                   disabled={filteredJobs.length === 0}
                   className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  📥 Excel 다운로드
+                  📥 Excel
                 </button>
               </div>
             </div>

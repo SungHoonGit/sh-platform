@@ -1,6 +1,8 @@
 package com.scraper.platform.controller;
 
 import cn.idev.excel.EasyExcel;
+import cn.idev.excel.ExcelWriter;
+import cn.idev.excel.write.metadata.WriteSheet;
 import com.scraper.platform.api.dto.JobPostingResponse;
 import com.scraper.platform.api.dto.JobPostingVO;
 import com.scraper.platform.model.JobPosting;
@@ -19,7 +21,9 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 채용공고 Viewer API.
@@ -113,7 +117,7 @@ public class JobPostingController {
     }
 
     @GetMapping("/export")
-    @Operation(summary = "채용공고 엑셀 내보내기")
+    @Operation(summary = "채용공고 엑셀 내보내기 (사이트별 시트 분리)")
     public void exportExcel(
             @RequestParam Long configId,
             @RequestParam(required = false) String siteName,
@@ -141,27 +145,52 @@ public class JobPostingController {
             postings = jobPostingRepository.findByConfigId(configId, sort);
         }
 
-        List<JobPostingVO> voList = postings.stream()
-                .map(p -> JobPostingVO.builder()
-                        .siteName(p.getSiteName())
-                        .company(p.getCompany())
-                        .position(p.getPosition())
-                        .career(p.getCareer())
-                        .tech(p.getTech())
-                        .location(p.getLocation())
-                        .deadline(p.getDeadline())
-                        .url(p.getUrl())
-                        .crawledAt(p.getCrawledAt() != null ? p.getCrawledAt().toString() : "")
-                        .build())
-                .toList();
+        // 사이트별로 그룹핑 (사이트 순서 유지)
+        Map<String, List<JobPosting>> bySite = new LinkedHashMap<>();
+        for (JobPosting p : postings) {
+            String site = p.getSiteName() != null ? p.getSiteName() : "기타";
+            bySite.computeIfAbsent(site, k -> new java.util.ArrayList<>()).add(p);
+        }
+
+        // 사이트 이름 → 한글 변환
+        Map<String, String> siteNameMap = Map.of(
+            "saramin", "사람인",
+            "jobkorea", "잡코리아",
+            "wanted", "원티드",
+            "remember", "리멤버"
+        );
 
         String fileName = URLEncoder.encode("채용공고_" + LocalDate.now(), StandardCharsets.UTF_8)
                 .replaceAll("\\+", "%20");
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
 
-        EasyExcel.write(response.getOutputStream(), JobPostingVO.class)
-                .sheet("채용공고")
-                .doWrite(voList);
+        // ExcelWriter로 시트별 분리 내보내기
+        try (ExcelWriter excelWriter = EasyExcel.write(response.getOutputStream(), JobPostingVO.class).build()) {
+            int sheetIndex = 0;
+            for (Map.Entry<String, List<JobPosting>> entry : bySite.entrySet()) {
+                String siteKey = entry.getKey();
+                List<JobPosting> sitePostings = entry.getValue();
+                String sheetName = siteNameMap.getOrDefault(siteKey, siteKey);
+
+                List<JobPostingVO> voList = sitePostings.stream()
+                        .map(p -> JobPostingVO.builder()
+                                .siteName(p.getSiteName())
+                                .company(p.getCompany())
+                                .position(p.getPosition())
+                                .career(p.getCareer())
+                                .tech(p.getTech())
+                                .location(p.getLocation())
+                                .deadline(p.getDeadline())
+                                .url(p.getUrl())
+                                .crawledAt(p.getCrawledAt() != null ? p.getCrawledAt().toString() : "")
+                                .build())
+                        .toList();
+
+                WriteSheet sheet = EasyExcel.writerSheet(sheetIndex, sheetName).build();
+                excelWriter.write(voList, sheet);
+                sheetIndex++;
+            }
+        }
     }
 }
