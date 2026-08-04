@@ -86,7 +86,7 @@ jobs:
             cd /home/ubuntu/sh-platform
 
             # DDL 먼저 실행 (scraper가 ddl-auto:validate 이므로 재시작 전 필수)
-            mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-account-isolation.sql
+            mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-v2.sql
 
             sudo systemctl stop sh-platform-auth sh-platform-scraper sh-platform-resume sh-platform-portfolio 2>/dev/null || true
             sleep 2
