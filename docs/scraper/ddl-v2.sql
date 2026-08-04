@@ -1,7 +1,7 @@
 -- ============================================================
--- Scraper Platform DDL v2 (표준 적용)
+-- Scraper Platform DDL v2 (통합 버전)
 -- Database: scraper_platform
--- 표준: docs/architecture/db-standards/db-design-standard.md
+-- 실행: mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-v2.sql
 -- ============================================================
 
 -- ============================================================
@@ -43,15 +43,19 @@ CREATE TABLE IF NOT EXISTS site_parameter_definition (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS crawl_config (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    account_id BIGINT NOT NULL DEFAULT 1 COMMENT '소유 계정 ID (auth users.id)',
     name VARCHAR(100) NOT NULL COMMENT '설정명 (예: Java 시니어 개발자)',
     description TEXT COMMENT '설정 설명',
     schedule VARCHAR(100) DEFAULT '0 9 * * *' COMMENT '크론 스케줄',
+    schedule_icon VARCHAR(50) DEFAULT 'calendar' COMMENT '스케줄 아이콘 (calendar, clock, bell, rocket, star)',
     retention_days INT DEFAULT 30 COMMENT '데이터 보존 기간 (일)',
     is_active BOOLEAN DEFAULT TRUE COMMENT '활성화 여부',
+    local_path VARCHAR(500) COMMENT '로컬 저장 경로',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_crawl_config_name (name),
-    INDEX idx_crawl_config_active (is_active)
+    UNIQUE KEY uk_crawl_config_account_name (account_id, name),
+    INDEX idx_crawl_config_active (is_active),
+    INDEX idx_crawl_config_account (account_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
@@ -72,12 +76,46 @@ CREATE TABLE IF NOT EXISTS crawl_site_config (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
--- 5. crawl_data (크롤링 데이터)
+-- 5. job_postings (채용공고 - 중복 제거용)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS job_postings (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    config_id BIGINT NOT NULL,
+    site_name VARCHAR(50) NOT NULL COMMENT 'saramin, jobkorea, wanted, remember',
+    
+    -- 공고 정보
+    url VARCHAR(500) NOT NULL COMMENT '원본 URL',
+    company VARCHAR(200) NOT NULL COMMENT '회사명',
+    position VARCHAR(300) NOT NULL COMMENT '포지션명',
+    career VARCHAR(100) NULL COMMENT '경력 요구사항',
+    tech VARCHAR(500) NULL COMMENT '기술 스택',
+    location VARCHAR(200) NULL COMMENT '근무지역',
+    deadline VARCHAR(100) NULL COMMENT '마감일',
+    
+    -- 중복 체크용 해시
+    dedup_key VARCHAR(64) NOT NULL COMMENT 'SHA256(company + position + location + site_name)',
+    
+    -- 메타데이터
+    crawled_at DATE NOT NULL COMMENT '수집 일자',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- 인덱스
+    INDEX idx_job_postings_config (config_id),
+    INDEX idx_job_postings_site (site_name),
+    INDEX idx_job_postings_crawled_at (crawled_at),
+    INDEX idx_job_postings_dedup_key (dedup_key),
+    INDEX idx_job_postings_url (url(191)),
+    UNIQUE INDEX uk_job_postings_dedup (dedup_key, crawled_at) COMMENT '같은 공고는 같은 날에만 중복 허용'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='채용공고 저장 + 중복 제거';
+
+-- ============================================================
+-- 6. crawl_data (크롤링 메타데이터 - MD 파일 기반旧 방식, deprecated)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS crawl_data (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     config_id BIGINT COMMENT '크롤링 설정 ID',
-    category VARCHAR(100) COMMENT '카테고리명 (deprecated: config_id 사용)',
+    category VARCHAR(100) COMMENT '카테고리명 (deprecated)',
     file_path VARCHAR(500) NOT NULL COMMENT 'MD 파일 경로',
     file_name VARCHAR(255) NOT NULL COMMENT '파일명',
     title VARCHAR(255) COMMENT '제목',
@@ -91,15 +129,13 @@ CREATE TABLE IF NOT EXISTS crawl_data (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (config_id) REFERENCES crawl_config(id) ON DELETE SET NULL,
     INDEX idx_crawl_data_config (config_id),
-    INDEX idx_crawl_data_category (category),
     INDEX idx_crawl_data_source_url (source_url(191)),
     INDEX idx_crawl_data_crawled_at (crawled_at),
-    INDEX idx_crawl_data_file_name (file_name),
     FULLTEXT INDEX ft_crawl_data_title (title)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='크롤링 메타데이터 (deprecated: job_postings 사용)';
 
 -- ============================================================
--- 6. crawl_log (크롤링 로그)
+-- 7. crawl_log (크롤링 로그)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS crawl_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -121,6 +157,25 @@ CREATE TABLE IF NOT EXISTS crawl_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
+-- 8. site_search_mapping (사이트별 검색 파라미터 매핑)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS site_search_mapping (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    site_definition_id BIGINT NOT NULL,
+    standard_key VARCHAR(50) NOT NULL COMMENT '공통 표준 키 (keyword, career, location, job_type)',
+    url_param_name VARCHAR(100) NOT NULL COMMENT '사이트 URL 파라미터명 (stext, loc_cd, career_level 등)',
+    value_type ENUM('direct', 'mapped', 'range') DEFAULT 'direct' COMMENT '값 변환 방식',
+    value_mapping JSON COMMENT '값 매핑 {"3~5년":"5","5~10년":"8"} 또는 범위 설정',
+    is_enabled BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_site_mapping (site_definition_id, standard_key),
+    FOREIGN KEY (site_definition_id) REFERENCES site_definition(id) ON DELETE CASCADE,
+    INDEX idx_site_mapping_standard_key (standard_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
 -- 초기 데이터: site_definition
 -- ============================================================
 INSERT INTO site_definition (site_name, display_name, base_url) VALUES
@@ -129,7 +184,8 @@ INSERT INTO site_definition (site_name, display_name, base_url) VALUES
 ('wanted', '원티드', 'https://www.wanted.co.kr'),
 ('jumpit', '점핏', 'https://www.jumpit.co.kr'),
 ('incruit', '인크루트', 'https://www.incruit.com'),
-('remember', '리멤버', 'https://rememberapp.co.kr');
+('remember', '리멤버', 'https://rememberapp.co.kr')
+ON DUPLICATE KEY UPDATE site_name = site_name;
 
 -- ============================================================
 -- 초기 데이터: site_parameter_definition (사람인)
@@ -141,7 +197,8 @@ INSERT INTO site_parameter_definition (site_definition_id, param_key, param_name
 (1, 'job_type', '직무', 'select', TRUE, '["개발","기획","디자인","마케팅","영업","경영지원","연구개발"]', 4),
 (1, 'location', '지역', 'select', TRUE, '["서울","경기","인천","부산","대구","대전","광주","세종","강원","제주","전남","전북","경남","경북","충남","충북","기타"]', 5),
 (1, 'employment', '고용형태', 'select', FALSE, '["정규직","계약직","인턴","프리랜서","파견직"]', 6),
-(1, 'salary', '연봉', 'select', FALSE, '["2,000만원이하","2,000~3,000만원","3,000~4,000만원","4,000~5,000만원","5,000만원이상"]', 7);
+(1, 'salary', '연봉', 'select', FALSE, '["2,000만원이하","2,000~3,000만원","3,000~4,000만원","4,000~5,000만원","5,000만원이상"]', 7)
+ON DUPLICATE KEY UPDATE param_name = param_name;
 
 -- ============================================================
 -- 초기 데이터: site_parameter_definition (잡코리아)
@@ -154,7 +211,8 @@ INSERT INTO site_parameter_definition (site_definition_id, param_key, param_name
 (2, 'employment_type', '고용형태', 'select', TRUE, '["정규직","계약직","인턴","프리랜서","파견직"]', 5),
 (2, 'job_function', '직무', 'select', TRUE, '["서버/백엔드","프론트엔드","풀스택","모바일","인프라/DBA","데이터/AI","보안","게임","기타"]', 6),
 (2, 'location', '지역', 'select', TRUE, '["서울","경기","인천","부산","대구","대전","광주","세종","강원","제주","전남","전북","경남","경북","충남","충북","기타"]', 7),
-(2, 'salary', '연봉', 'select', FALSE, '["2,000만원이하","2,000~3,000만원","3,000~4,000만원","4,000~5,000만원","5,000만원이상"]', 8);
+(2, 'salary', '연봉', 'select', FALSE, '["2,000만원이하","2,000~3,000만원","3,000~4,000만원","4,000~5,000만원","5,000만원이상"]', 8)
+ON DUPLICATE KEY UPDATE param_name = param_name;
 
 -- ============================================================
 -- 초기 데이터: site_parameter_definition (원티드)
@@ -166,14 +224,45 @@ INSERT INTO site_parameter_definition (site_definition_id, param_key, param_name
 (3, 'tech_stack', '기술 스택', 'tags', TRUE, NULL, 4),
 (3, 'job_type', '직무', 'select', TRUE, '["개발","기획","디자인","마케팅","영업","경영지원"]', 5),
 (3, 'location', '지역', 'select', TRUE, '["서울","경기","인천","부산","대구","대전","광주","세종","강원","제주","전남","전북","경남","경북","충남","충북","기타"]', 6),
-(3, 'employment_type', '고용형태', 'select', FALSE, '["정규직","계약직","인턴","프리랜서"]', 7);
+(3, 'employment_type', '고용형태', 'select', FALSE, '["정규직","계약직","인턴","프리랜서"]', 7)
+ON DUPLICATE KEY UPDATE param_name = param_name;
 
 -- ============================================================
--- 기존 카테고리 데이터 마이그레이션
+-- 초기 데이터: site_search_mapping (사람인 - site_definition_id=1)
 -- ============================================================
-INSERT INTO category (name, slug, description) VALUES
-('Java', 'java', 'Java 관련 기술 문서'),
-('React', 'react', 'React 관련 기술 문서'),
-('Spring', 'spring', 'Spring Framework 관련 기술 문서'),
-('DevOps', 'devops', 'DevOps 관련 기술 문서')
-ON DUPLICATE KEY UPDATE name = name;
+INSERT INTO site_search_mapping (site_definition_id, standard_key, url_param_name, value_type, value_mapping, display_order) VALUES
+(1, 'keyword',   'stext',         'direct',  NULL, 1),
+(1, 'career',    'career_level',  'mapped',  '{"신입":"1","경력":"2","1~3년":"3","3~5년":"5","5~10년":"8","10년이상":"12"}', 2),
+(1, 'location',  'loc_cd',        'mapped',  '{"서울":"101000","경기":"102000","인천":"230000","부산":"260000","대구":"270000","대전":"300000","광주":"290000","세종":"360000","강원":"420000","제주":"500000","충남":"440000","충북":"430000","전남":"460000","전북":"450000","경남":"480000","경북":"470000"}', 3),
+(1, 'job_type',  'cat_kewd',      'mapped',  '{"개발":"235","기획":"200","디자인":"260","마케팅":"300","영업":"400","연구개발":"350"}', 4),
+(1, 'employment','job_type',      'mapped',  '{"정규직":"1","계약직":"2","인턴":"3","프리랜서":"4","파견직":"5"}', 5)
+ON DUPLICATE KEY UPDATE url_param_name = url_param_name;
+
+-- ============================================================
+-- 초기 데이터: site_search_mapping (잡코리아 - site_definition_id=2)
+-- ============================================================
+INSERT INTO site_search_mapping (site_definition_id, standard_key, url_param_name, value_type, value_mapping, display_order) VALUES
+(2, 'keyword',   'stext',          'direct',  NULL, 1),
+(2, 'career',    'careerType',     'mapped',  '{"신입":"new","경력":"career","1~3년":"career","3~5년":"career","5~10년":"career","10년이상":"career"}', 2),
+(2, 'location',  'local',          'mapped',  '{"서울":"I000","경기":"B000","인천":"K000","부산":"H000","대구":"F000","대전":"G000","광주":"L000","전남":"L000","세종":"1000","강원":"A000","제주":"N000","충남":"O000","충북":"P000","전북":"M000","경남":"C000","경북":"D000","울산":"J000"}', 3),
+(2, 'job_type',  'dutyCtgr',       'mapped',  '{"서버/백엔드":"1003101","프론트엔드":"1003102","풀스택":"1003103","모바일":"1003104","인프라/DBA":"1003105","데이터/AI":"1003106","보안":"1003107","게임":"1003108","기타":"1003199"}', 4)
+ON DUPLICATE KEY UPDATE url_param_name = url_param_name;
+
+-- ============================================================
+-- 초기 데이터: site_search_mapping (원티드 - site_definition_id=3)
+-- ============================================================
+INSERT INTO site_search_mapping (site_definition_id, standard_key, url_param_name, value_type, value_mapping, display_order) VALUES
+(3, 'keyword',   'query',          'direct',  NULL, 1),
+(3, 'career',    'years',          'mapped',  '{"신입":"0","1~3년":"1","3~5년":"3","5~10년":"5","10년이상":"10"}', 2),
+(3, 'location',  'locations',      'mapped',  '{"서울":"seoul","경기":"gyeonggi","인천":"incheon","부산":"busan","대구":"daegu","대전":"daejeon","광주":"gwangju","세종":"sejong","강원":"gangwon","제주":"jeju"}', 3),
+(3, 'job_type',  'job_group_ids',  'mapped',  '{"백엔드":"518","프론트엔드":"660","모바일":"519","데이터":"777","인프라":"669"}', 4)
+ON DUPLICATE KEY UPDATE url_param_name = url_param_name;
+
+-- ============================================================
+-- 초기 데이터: site_search_mapping (리멤버 - site_definition_id=6)
+-- ============================================================
+INSERT INTO site_search_mapping (site_definition_id, standard_key, url_param_name, value_type, value_mapping, display_order) VALUES
+(6, 'keyword',   'query',          'direct',  NULL, 1),
+(6, 'career',    'min_experience', 'mapped',  '{"신입":"0","1~3년":"1","3~5년":"3","5~10년":"5","10년이상":"10"}', 2),
+(6, 'location',  'sido',           'direct',  NULL, 3)
+ON DUPLICATE KEY UPDATE url_param_name = url_param_name;

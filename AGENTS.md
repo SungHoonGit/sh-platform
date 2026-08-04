@@ -243,3 +243,60 @@ mysql -h 10.0.0.39 -u sh_user -p sh_pass
 # Swagger 확인
 curl -s http://localhost:8080/v3/api-docs | python3 -m json.tool | head -20
 ```
+
+---
+
+## 문서 규칙
+
+### 파일 저장 위치
+
+| 구분 | 경로 |
+|------|------|
+| 프로젝트 내부 문서 | `docs/` (DDL, 설계서 등) |
+| **작업 일지/분석 문서** | `~/git/sh-platform-docs/docs/` |
+| **일반 MD 파일** | `~/git/sh-platform-docs/docs/` |
+
+**중요**: sh-platform의 MD 파일은 반드시 `~/git/sh-platform-docs/docs/`에 저장한다.
+프로젝트 git 저장소 내부에 MD 파일을 생성하지 않는다.
+
+### 작업 일지 작성 규칙
+
+작업 완료 시 `YYYY-MM-DD-work-log.md` 파일을 생성한다:
+
+```markdown
+# YYYY-MM-DD 작업 일지
+
+## 작업 환경
+- 날짜: YYYY-MM-DD (요일)
+- 시간: HH:MM 기준
+- 브랜치: branch-name
+
+## 오늘 완료된 작업
+1. [작업1]: 간략한 설명
+2. [작업2]: 간략한 설명
+
+## 변경된 파일 목록
+- `파일경로`: 변경 내용
+
+## 이슈 및 해결
+- [이슈1]: 원인 + 해결 방법
+
+## 커밋 내역
+| 시간 | 커밋 | 내용 |
+|------|------|------|
+| HH:MM | abc1234 | 커밋 메시지 |
+
+## 향후 작업
+1. [작업1]
+2. [작업2]
+```
+
+### 문서 분류
+
+| 문서 유형 | 예시 | 위치 |
+|-----------|------|------|
+| DDL | `ddl-job-postings.sql` | `docs/scraper/` |
+| 설계서 | `erd.md`, `sql-ddl.md` | `docs/architecture/` |
+| API 문서 | Swagger 자동 생성 | 서버에서 자동 |
+| **작업 일지** | `2026-08-04-work-log.md` | `~/git/sh-platform-docs/docs/` |
+| **분석 문서** | `fastexcel-analysis.md` | `~/git/sh-platform-docs/docs/` |
