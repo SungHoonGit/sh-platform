@@ -19,6 +19,7 @@ export interface CrawlProgress {
   phase: "starting" | "running" | "complete" | "error" | "disconnected";
   newJobs?: number;
   dupJobs?: number;
+  error?: string;
 }
 
 interface CrawlProgressContextType {
