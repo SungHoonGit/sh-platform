@@ -1,10 +1,13 @@
 package com.scraper.platform.controller;
 
+import cn.idev.excel.EasyExcel;
 import com.scraper.platform.api.dto.JobPostingResponse;
+import com.scraper.platform.api.dto.JobPostingVO;
 import com.scraper.platform.model.JobPosting;
 import com.scraper.platform.repository.JobPostingRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,6 +15,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -104,5 +110,58 @@ public class JobPostingController {
                 "todayCount", todayCount,
                 "lastCrawledAt", lastCrawled != null ? lastCrawled.toString() : null
         ));
+    }
+
+    @GetMapping("/export")
+    @Operation(summary = "채용공고 엑셀 내보내기")
+    public void exportExcel(
+            @RequestParam Long configId,
+            @RequestParam(required = false) String siteName,
+            @RequestParam(required = false) String crawledAt,
+            HttpServletResponse response
+    ) throws IOException {
+        LocalDate date = null;
+        if (crawledAt != null && !crawledAt.isEmpty()) {
+            try {
+                date = LocalDate.parse(crawledAt);
+            } catch (Exception e) {
+                // invalid date, ignore
+            }
+        }
+
+        Sort sort = Sort.by(Sort.Direction.DESC, "crawledAt").and(Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<JobPosting> postings;
+        if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+            postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawledAt(configId, siteName, date, sort);
+        } else if (date != null) {
+            postings = jobPostingRepository.findByConfigIdAndCrawledAt(configId, date, sort);
+        } else if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+            postings = jobPostingRepository.findByConfigIdAndSiteName(configId, siteName, sort);
+        } else {
+            postings = jobPostingRepository.findByConfigId(configId, sort);
+        }
+
+        List<JobPostingVO> voList = postings.stream()
+                .map(p -> JobPostingVO.builder()
+                        .siteName(p.getSiteName())
+                        .company(p.getCompany())
+                        .position(p.getPosition())
+                        .career(p.getCareer())
+                        .tech(p.getTech())
+                        .location(p.getLocation())
+                        .deadline(p.getDeadline())
+                        .url(p.getUrl())
+                        .crawledAt(p.getCrawledAt() != null ? p.getCrawledAt().toString() : "")
+                        .build())
+                .toList();
+
+        String fileName = URLEncoder.encode("채용공고_" + LocalDate.now(), StandardCharsets.UTF_8)
+                .replaceAll("\\+", "%20");
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
+
+        EasyExcel.write(response.getOutputStream(), JobPostingVO.class)
+                .sheet("채용공고")
+                .doWrite(voList);
     }
 }

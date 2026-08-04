@@ -34,6 +34,7 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jsoup:jsoup:1.18.1")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("cn.idev.excel:fastexcel:1.2.0")
     
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client")
     

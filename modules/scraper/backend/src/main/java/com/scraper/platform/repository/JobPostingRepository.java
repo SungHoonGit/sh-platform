@@ -3,6 +3,7 @@ package com.scraper.platform.repository;
 import com.scraper.platform.model.JobPosting;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -66,4 +67,24 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
      */
     @Query("SELECT DISTINCT j.crawledAt FROM JobPosting j WHERE j.config.id = :configId ORDER BY j.crawledAt DESC")
     List<LocalDate> findDistinctDatesByConfigId(@Param("configId") Long configId);
+
+    /**
+     * 특정 설정의 전체 공고 조회 (엑셀 내보내기용, 페이징 없음)
+     */
+    List<JobPosting> findByConfigId(Long configId, Sort sort);
+
+    /**
+     * 특정 설정 + 사이트의 전체 공고 조회 (엑셀 내보내기용)
+     */
+    List<JobPosting> findByConfigIdAndSiteName(Long configId, String siteName, Sort sort);
+
+    /**
+     * 특정 설정 + 날짜의 전체 공고 조회 (엑셀 내보내기용)
+     */
+    List<JobPosting> findByConfigIdAndCrawledAt(Long configId, LocalDate crawledAt, Sort sort);
+
+    /**
+     * 특정 설정 + 사이트 + 날짜의 전체 공고 조회 (엑셀 내보내기용)
+     */
+    List<JobPosting> findByConfigIdAndSiteNameAndCrawledAt(Long configId, String siteName, LocalDate crawledAt, Sort sort);
 }

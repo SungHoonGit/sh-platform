@@ -259,3 +259,41 @@ export async function fetchJobPostingStats(configId: number): Promise<{
 }> {
   return request(`/job-postings/stats?configId=${configId}`);
 }
+
+export async function downloadJobPostingsExcel(
+  configId: number,
+  options: { siteName?: string; crawledAt?: string } = {}
+): Promise<void> {
+  const params = new URLSearchParams({ configId: String(configId) });
+  if (options.siteName) params.set("siteName", options.siteName);
+  if (options.crawledAt) params.set("crawledAt", options.crawledAt);
+
+  const token = localStorage.getItem("accessToken");
+  const url = `/scraper/job-postings/export?${params}`;
+
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) {
+    throw new Error(`다운로드 실패 (${res.status})`);
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition");
+  let fileName = "채용공고.xlsx";
+  if (disposition) {
+    const match = disposition.match(/filename\*=utf-8''(.+)/);
+    if (match) {
+      fileName = decodeURIComponent(match[1]);
+    }
+  }
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { fetchCrawlers, executeCrawler, fetchJobPostings, fetchJobPostingDates, type JobPostingItem } from "../api/scraper";
+import { fetchCrawlers, executeCrawler, fetchJobPostings, fetchJobPostingDates, downloadJobPostingsExcel, type JobPostingItem } from "../api/scraper";
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 
 const SITES = [
@@ -192,8 +192,21 @@ export default function Viewer() {
               {site.name}
             </button>
           ))}
-          <div className="ml-auto text-sm text-slate-500">
-            {total}건
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-sm text-slate-500">{total}건</span>
+            <button
+              onClick={() => {
+                if (!selectedCrawlerId) return;
+                downloadJobPostingsExcel(selectedCrawlerId, {
+                  siteName: selectedSite === "all" ? undefined : selectedSite,
+                  crawledAt: selectedDate || undefined,
+                }).catch((e) => alert(`다운로드 실패: ${(e as Error).message}`));
+              }}
+              disabled={!selectedCrawlerId || total === 0}
+              className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              📥 Excel 다운로드
+            </button>
           </div>
         </div>
 

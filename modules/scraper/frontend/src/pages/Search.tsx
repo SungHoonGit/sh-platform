@@ -274,8 +274,42 @@ export default function Search() {
                 총 <span className="font-semibold text-slate-800">{filteredJobs.length}</span>건
                 {keyword && <span className="ml-2">키워드: <span className="font-medium text-slate-700">{keyword}</span></span>}
               </div>
-              <div className="text-slate-400">
-                {data?.searchTime ? `${(data.searchTime / 1000).toFixed(1)}초 소요` : ""}
+              <div className="flex items-center gap-3">
+                <span className="text-slate-400">
+                  {data?.searchTime ? `${(data.searchTime / 1000).toFixed(1)}초 소요` : ""}
+                </span>
+                <button
+                  onClick={() => {
+                    if (filteredJobs.length === 0) return;
+                    const headers = ["사이트", "회사명", "포지션", "경력", "지역", "기술", "마감", "URL"];
+                    const rows = filteredJobs.map((j) => [
+                      j.site || "",
+                      j.company || "",
+                      j.position || j.title || "",
+                      j.career || "",
+                      j.location || "",
+                      j.tech || "",
+                      j.deadline || "",
+                      j.url || "",
+                    ]);
+                    const csv = [headers, ...rows]
+                      .map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
+                      .join("\n");
+                    const bom = "\uFEFF";
+                    const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8" });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `검색결과_${keyword}_${new Date().toISOString().slice(0, 10)}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                  }}
+                  disabled={filteredJobs.length === 0}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  📥 Excel 다운로드
+                </button>
               </div>
             </div>
 
