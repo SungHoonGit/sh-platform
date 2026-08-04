@@ -10,7 +10,8 @@ interface SiteProgress {
   error?: string;
 }
 
-interface CrawlProgress {
+export interface CrawlProgress {
+  id: number;
   configId: number;
   configName: string;
   totalSites: number;
@@ -21,9 +22,10 @@ interface CrawlProgress {
 }
 
 interface CrawlProgressContextType {
-  progress: CrawlProgress | null;
+  progressList: CrawlProgress[];
   startProgress: (configId: number, configName: string) => void;
-  dismiss: () => void;
+  dismiss: (id: number) => void;
+  dismissAll: () => void;
 }
 
 const CrawlProgressContext = createContext<CrawlProgressContextType | null>(null);
@@ -31,93 +33,118 @@ const CrawlProgressContext = createContext<CrawlProgressContextType | null>(null
 let progressId = 0;
 
 export function CrawlProgressProvider({ children }: { children: ReactNode }) {
-  const [progress, setProgress] = useState<CrawlProgress | null>(null);
-  const esRef = useRef<EventSource | null>(null);
+  const [progressList, setProgressList] = useState<CrawlProgress[]>([]);
+  const esMapRef = useRef<Map<number, EventSource>>(new Map());
   const queryClient = useQueryClient();
 
   const startProgress = useCallback((configId: number, configName: string) => {
     progressId++;
     const currentId = progressId;
 
-    setProgress({
+    const newProgress: CrawlProgress = {
+      id: currentId,
       configId,
       configName,
       totalSites: 0,
       sites: [],
       phase: "starting",
-    });
+    };
+
+    setProgressList((prev) => [...prev, newProgress]);
 
     const es = connectCrawlProgress(configId, {
       onStart: (data) => {
-        if (currentId !== progressId) return;
-        setProgress((prev) => prev ? {
-          ...prev,
-          totalSites: data.totalSites,
-          phase: "running",
-          sites: Array.from({ length: data.totalSites }, () => ({
-            siteName: "",
-            status: "running" as const,
-          })),
-        } : null);
+        setProgressList((prev) =>
+          prev.map((p) =>
+            p.id === currentId
+              ? {
+                  ...p,
+                  totalSites: data.totalSites,
+                  phase: "running",
+                  sites: Array.from({ length: data.totalSites }, () => ({
+                    siteName: "",
+                    status: "running" as const,
+                  })),
+                }
+              : p
+          )
+        );
       },
       onSiteStart: (data) => {
-        if (currentId !== progressId) return;
-        setProgress((prev) => prev ? {
-          ...prev,
-          sites: prev.sites.map((s, i) =>
-            i === data.index - 1 ? { ...s, siteName: data.siteName, status: "running" as const } : s
-          ),
-        } : null);
+        setProgressList((prev) =>
+          prev.map((p) =>
+            p.id === currentId
+              ? {
+                  ...p,
+                  sites: p.sites.map((s, i) =>
+                    i === data.index - 1 ? { ...s, siteName: data.siteName, status: "running" as const } : s
+                  ),
+                }
+              : p
+          )
+        );
       },
       onSiteComplete: (data) => {
-        if (currentId !== progressId) return;
-        setProgress((prev) => prev ? {
-          ...prev,
-          sites: prev.sites.map((s) =>
-            s.siteName === data.siteName ? {
-              ...s,
-              status: data.success ? "done" as const : "error" as const,
-              jobCount: data.jobCount,
-              error: data.error,
-            } : s
-          ),
-        } : null);
+        setProgressList((prev) =>
+          prev.map((p) =>
+            p.id === currentId
+              ? {
+                  ...p,
+                  sites: p.sites.map((s) =>
+                    s.siteName === data.siteName
+                      ? { ...s, status: data.success ? "done" as const : "error" as const, jobCount: data.jobCount, error: data.error }
+                      : s
+                  ),
+                }
+              : p
+          )
+        );
       },
       onComplete: (data) => {
-        if (currentId !== progressId) return;
-        setProgress((prev) => prev ? {
-          ...prev,
-          phase: "complete",
-          newJobs: data.newJobs,
-          dupJobs: data.dupJobs,
-        } : null);
+        setProgressList((prev) =>
+          prev.map((p) =>
+            p.id === currentId
+              ? { ...p, phase: "complete", newJobs: data.newJobs, dupJobs: data.dupJobs }
+              : p
+          )
+        );
         queryClient.invalidateQueries({ queryKey: ["jobs"] });
+        queryClient.invalidateQueries({ queryKey: ["jobDates"] });
         queryClient.invalidateQueries({ queryKey: ["crawlers"] });
-        queryClient.invalidateQueries({ queryKey: ["crawlLogs"] });
         setTimeout(() => {
-          if (currentId === progressId) setProgress(null);
-        }, 5000);
+          setProgressList((prev) => prev.filter((p) => p.id !== currentId));
+        }, 8000);
+        esMapRef.current.delete(currentId);
       },
       onError: () => {
-        if (currentId !== progressId) return;
-        setProgress((prev) => prev ? { ...prev, phase: "error" } : null);
+        setProgressList((prev) =>
+          prev.map((p) => (p.id === currentId ? { ...p, phase: "error" } : p))
+        );
         setTimeout(() => {
-          if (currentId === progressId) setProgress(null);
-        }, 3000);
+          setProgressList((prev) => prev.filter((p) => p.id !== currentId));
+        }, 5000);
+        esMapRef.current.delete(currentId);
       },
     });
 
-    esRef.current = es;
+    esMapRef.current.set(currentId, es);
   }, [queryClient]);
 
-  const dismiss = useCallback(() => {
-    progressId++;
-    esRef.current?.close();
-    setProgress(null);
+  const dismiss = useCallback((id: number) => {
+    const es = esMapRef.current.get(id);
+    es?.close();
+    esMapRef.current.delete(id);
+    setProgressList((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const dismissAll = useCallback(() => {
+    esMapRef.current.forEach((es) => es.close());
+    esMapRef.current.clear();
+    setProgressList([]);
   }, []);
 
   return (
-    <CrawlProgressContext.Provider value={{ progress, startProgress, dismiss }}>
+    <CrawlProgressContext.Provider value={{ progressList, startProgress, dismiss, dismissAll }}>
       {children}
     </CrawlProgressContext.Provider>
   );
