@@ -34,8 +34,12 @@ let progressId = 0;
 
 export function CrawlProgressProvider({ children }: { children: ReactNode }) {
   const [progressList, setProgressList] = useState<CrawlProgress[]>([]);
+  const progressListRef = useRef<CrawlProgress[]>([]);
   const esMapRef = useRef<Map<number, EventSource>>(new Map());
   const queryClient = useQueryClient();
+
+  // ref를 최신 상태로 동기화
+  progressListRef.current = progressList;
 
   const startProgress = useCallback((configId: number, configName: string) => {
     progressId++;
@@ -116,10 +120,11 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
         queryClient.invalidateQueries({ queryKey: ["jobs"] });
         queryClient.invalidateQueries({ queryKey: ["jobDates"] });
         queryClient.invalidateQueries({ queryKey: ["crawlers"] });
+        // 완료 알림은 30초간 유지 (사용자가 확인할 수 있도록)
         setTimeout(() => {
           console.log("[CrawlProgress] onComplete timeout, removing id:", currentId);
           setProgressList((prev) => prev.filter((p) => p.id !== currentId));
-        }, 8000);
+        }, 30000);
         esMapRef.current.delete(currentId);
       },
       onError: () => {
@@ -155,7 +160,7 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const dismiss = useCallback((id: number) => {
-    console.log("[CrawlProgress] dismiss called with id:", id, "progressList length:", progressList.length);
+    console.log("[CrawlProgress] dismiss called with id:", id, "current list length:", progressListRef.current.length, "items:", progressListRef.current.map(p => p.id));
     const es = esMapRef.current.get(id);
     if (es) {
       es.close();

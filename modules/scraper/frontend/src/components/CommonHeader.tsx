@@ -18,7 +18,7 @@ export default function CommonHeader() {
       </a>
 
       <div className="flex items-center gap-3">
-        {/* 알림 버튼 */}
+        {/* 알림 버튼 - 항상 표시 (진행 중이거나 최근 완료된 알림이 있을 때) */}
         {progressList.length > 0 && (
           <div className="relative">
             <button
@@ -33,7 +33,7 @@ export default function CommonHeader() {
               )}
               {activeCount === 0 && completedCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-green-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                  {completedCount}
+                  ✓
                 </span>
               )}
             </button>
