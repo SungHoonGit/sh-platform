@@ -65,7 +65,19 @@ public class CrawlExecutionService {
         }
     }
 
-    private boolean shouldRun(String cron5Field, LocalDateTime now, Long configId) {
+    private boolean shouldRun(String schedule, LocalDateTime now, Long configId) {
+        String[] cronLines = schedule.split("\n");
+        for (String cron5Field : cronLines) {
+            String trimmed = cron5Field.trim();
+            if (trimmed.isEmpty()) continue;
+            if (evaluateCron(trimmed, now, configId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean evaluateCron(String cron5Field, LocalDateTime now, Long configId) {
         try {
             String cron6 = "0 " + cron5Field;
             CronExpression expr = CronExpression.parse(cron6);

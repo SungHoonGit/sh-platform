@@ -34,6 +34,24 @@ const DAYS = [
   { id: 4, name: "목" }, { id: 5, name: "금" }, { id: 6, name: "토" }, { id: 0, name: "일" },
 ];
 
+const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+interface TimePair {
+  hour: number;
+  minute: number;
+}
+
+function formatHour(h: number): string {
+  if (h === 0) return "오전 12";
+  if (h < 12) return `오전 ${h}`;
+  if (h === 12) return "오후 12";
+  return `오후 ${h - 12}`;
+}
+
+function formatTimePair(tp: TimePair): string {
+  return `${formatHour(tp.hour)}:${String(tp.minute).padStart(2, "0")}`;
+}
+
 function legacyCareerRange(career: string): [number, number] {
   switch (career) {
     case "1~3년": return [1, 3];
@@ -44,38 +62,61 @@ function legacyCareerRange(career: string): [number, number] {
   }
 }
 
-function toCron(hours: number[], minute: number, days: number[]): string {
-  const hourStr = hours.length === 1 ? String(hours[0]) : hours.sort((a, b) => a - b).join(",");
-  if (days.length === 7) return `${minute} ${hourStr} * * *`;
-  if (days.length === 5 && days.includes(1) && days.includes(5)) {
-    return `${minute} ${hourStr} * * 1-5`;
-  }
-  return `${minute} ${hourStr} * * ${days.join(",")}`;
+function timePairsToCron(timePairs: TimePair[], days: number[]): string {
+  if (timePairs.length === 0) return "0 9 * * *";
+
+  const dow = days.length === 7 ? "*"
+    : days.length === 5 && days.includes(1) && days.includes(5) ? "1-5"
+    : days.join(",");
+
+  const lines = timePairs
+    .map(tp => `${tp.minute} ${tp.hour} * * ${dow}`)
+    .join("\n");
+
+  return lines;
 }
 
 function parseCronToHuman(cron: string): string {
-  const parts = cron.split(" ");
-  if (parts.length < 5) return cron;
-  const [min, hour, , , dayOfWeek] = parts;
-  const hours = hour.split(",").map(h => `${parseInt(h, 10)}시`).join(", ");
-  const days = dayOfWeek.split(",").map(d => {
+  const lines = cron.split("\n").filter(l => l.trim());
+  if (lines.length === 0) return cron;
+
+  const times = lines.map(line => {
+    const parts = line.trim().split(" ");
+    if (parts.length < 5) return line;
+    const [min, hour] = parts;
+    return `${formatHour(parseInt(hour, 10))}:${min.padStart(2, "0")}`;
+  });
+
+  const dow = lines[0].split(" ")[4] || "*";
+  const days = dow.split(",").map(d => {
+    if (d === "*") return "매일";
     if (d === "1-5") return "평일";
     return DAYS.find(day => day.id === parseInt(d))?.name || d;
   }).join(", ");
-  return `${hours} ${min}분 (${days})`;
+
+  return `${times.join(", ")} (${days})`;
 }
 
-function parseCronToSchedule(cron: string): { hours: number[]; minute: number; days: number[] } {
-  const parts = cron.split(" ");
-  if (parts.length < 5) return { hours: [9], minute: 0, days: [1, 2, 3, 4, 5] };
-  const minute = parseInt(parts[0], 10) || 0;
-  const hours = parts[1].split(",").map(h => parseInt(h, 10)).filter(h => !isNaN(h));
-  const dow = parts[4] || "*";
+function parseCronToSchedule(cron: string): { timePairs: TimePair[]; days: number[] } {
+  const lines = cron.split("\n").filter(l => l.trim());
+  if (lines.length === 0) return { timePairs: [{ hour: 9, minute: 0 }], days: [1, 2, 3, 4, 5] };
+
+  const timePairs: TimePair[] = lines.map(line => {
+    const parts = line.trim().split(" ");
+    if (parts.length < 5) return { hour: 9, minute: 0 };
+    return {
+      minute: parseInt(parts[0], 10) || 0,
+      hour: parseInt(parts[1], 10) || 9,
+    };
+  });
+
+  const dow = lines[0].split(" ")[4] || "*";
   let days: number[];
   if (dow === "*") days = [0, 1, 2, 3, 4, 5, 6];
-  else if (dow.includes("-")) days = [1, 2, 3, 4, 5];
+  else if (dow === "1-5") days = [1, 2, 3, 4, 5];
   else days = dow.split(",").map((d) => parseInt(d, 10)).filter((n) => !isNaN(n));
-  return { hours: hours.length ? hours : [9], minute, days };
+
+  return { timePairs, days };
 }
 
 export default function Schedule() {
@@ -91,8 +132,7 @@ export default function Schedule() {
   const [careerMax, setCareerMax] = useState(CAREER_TOTAL);
   const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
   const [selectedSites, setSelectedSites] = useState<string[]>(DEFAULT_SITES);
-  const [selectedHours, setSelectedHours] = useState<number[]>([9]);
-  const [minute, setMinute] = useState(0);
+  const [timePairs, setTimePairs] = useState<TimePair[]>([{ hour: 9, minute: 0 }]);
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -252,7 +292,22 @@ export default function Schedule() {
     );
   };
 
-  const cronStr = toCron(selectedHours, minute, selectedDays);
+  const addTimePair = () => {
+    setTimePairs(prev => [...prev, { hour: 9, minute: 0 }]);
+  };
+
+  const removeTimePair = (index: number) => {
+    if (timePairs.length <= 1) return;
+    setTimePairs(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateTimePair = (index: number, field: "hour" | "minute", value: number) => {
+    setTimePairs(prev => prev.map((tp, i) =>
+      i === index ? { ...tp, [field]: value } : tp
+    ));
+  };
+
+  const cronStr = timePairsToCron(timePairs, selectedDays);
 
   const handleEdit = (c: any) => {
     setName(c.name);
@@ -277,8 +332,7 @@ export default function Schedule() {
     setLocations(locs.length ? locs : DEFAULT_LOCATIONS);
     setSelectedSites(enabled.length ? enabled.map((sc: any) => sc.siteName) : DEFAULT_SITES);
     const parsed = parseCronToSchedule(c.schedule);
-    setSelectedHours(parsed.hours);
-    setMinute(parsed.minute);
+    setTimePairs(parsed.timePairs);
     setSelectedDays(parsed.days);
     setShowForm(true);
   };
@@ -389,37 +443,47 @@ export default function Schedule() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-slate-500 mb-2">실행 시간 (복수 선택 가능)</label>
-                <div className="flex flex-wrap gap-2">
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((h) => (
-                    <button
-                      key={h}
-                      onClick={() => {
-                        setSelectedHours((prev) =>
-                          prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h].sort((a, b) => a - b)
-                        );
-                      }}
-                      className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
-                        selectedHours.includes(h)
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {h}
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <label className="text-xs text-slate-500">분:</label>
-                  <select
-                    value={minute}
-                    onChange={(e) => setMinute(Number(e.target.value))}
-                    className="px-2 py-1 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs text-slate-500">실행 시간</label>
+                  <button
+                    onClick={addTimePair}
+                    className="text-xs text-blue-600 hover:text-blue-800"
                   >
-                    {[0, 10, 15, 30, 45].map((m) => (
-                      <option key={m} value={m}>{String(m).padStart(2, "0")}분</option>
-                    ))}
-                  </select>
+                    + 시간 추가
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {timePairs.map((tp, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-slate-50 rounded-lg p-2">
+                      <select
+                        value={tp.hour}
+                        onChange={(e) => updateTimePair(index, "hour", Number(e.target.value))}
+                        className="px-2 py-1.5 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      >
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <option key={i} value={i}>{formatHour(i)}</option>
+                        ))}
+                      </select>
+                      <span className="text-slate-400">:</span>
+                      <select
+                        value={tp.minute}
+                        onChange={(e) => updateTimePair(index, "minute", Number(e.target.value))}
+                        className="px-2 py-1.5 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      >
+                        {MINUTES.map((m) => (
+                          <option key={m} value={m}>{String(m).padStart(2, "0")}분</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => removeTimePair(index)}
+                        disabled={timePairs.length <= 1}
+                        className="px-2 py-1 text-red-500 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -441,7 +505,7 @@ export default function Schedule() {
                   ))}
                 </div>
                 <div className="mt-2 text-xs text-slate-500">
-                  미리보기: {selectedHours.length > 0 ? selectedHours.map(h => `${h}시`).join(", ") : "시간 미선택"} {String(minute).padStart(2, "0")}분
+                  미리보기: {timePairs.map(tp => formatTimePair(tp)).join(", ")}
                 </div>
               </div>
 
