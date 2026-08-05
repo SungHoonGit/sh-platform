@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { fetchCrawlers, executeCrawler, fetchJobPostings, fetchJobPostingDates, downloadJobPostingsExcel, type JobPostingItem } from "../api/scraper";
+import { fetchCrawlers, executeCrawler, fetchJobPostings, fetchJobPostingDates, downloadJobPostingsExcel, fetchCrawlLogsGrouped, type JobPostingItem, type CrawlLogGroup } from "../api/scraper";
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 
 const SITES = [
@@ -39,6 +39,7 @@ export default function Viewer() {
   );
   const [selectedSite, setSelectedSite] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
   const [sort, setSort] = useState<{ key: string; order: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(0);
   const SIZE = 20;
@@ -81,6 +82,12 @@ export default function Viewer() {
   const { data: dates } = useQuery({
     queryKey: ["jobDates", selectedCrawlerId],
     queryFn: () => fetchJobPostingDates(selectedCrawlerId!),
+    enabled: !!selectedCrawlerId,
+  });
+
+  const { data: groupedLogs } = useQuery({
+    queryKey: ["crawlLogsGrouped", selectedCrawlerId],
+    queryFn: () => fetchCrawlLogsGrouped(selectedCrawlerId!, 30),
     enabled: !!selectedCrawlerId,
   });
 
@@ -155,23 +162,61 @@ export default function Viewer() {
           ))}
         </div>
 
-        {/* 날짜 선택 */}
-        {dates && dates.length > 0 && (
+        {/* 날짜별 수집 이력 트리 */}
+        {groupedLogs && groupedLogs.length > 0 && (
           <div className="px-3 py-2.5 border-t border-slate-200">
-            <h3 className="text-[11px] font-bold text-slate-500 mb-1.5">수집일</h3>
-            <div className="space-y-0.5">
-              {dates.map((d) => (
-                <button
-                  key={d}
-                  onClick={() => { setSelectedDate(d); setPage(0); }}
-                  className={`w-full text-left px-2.5 py-1 rounded text-[12px] transition-colors ${
-                    selectedDate === d
-                      ? "bg-blue-50 text-blue-700 font-medium"
-                      : "hover:bg-slate-50 text-slate-600"
-                  }`}
-                >
-                  {d}
-                </button>
+            <h3 className="text-[11px] font-bold text-slate-500 mb-1.5">수집 이력</h3>
+            <div className="space-y-1">
+              {groupedLogs.map((group) => (
+                <div key={group.date}>
+                  {/* 1depth: 날짜 */}
+                  <button
+                    onClick={() => {
+                      setSelectedDate(group.date);
+                      setSelectedRunId(null);
+                      setPage(0);
+                    }}
+                    className={`w-full text-left px-2 py-1 rounded text-[12px] transition-colors flex items-center justify-between ${
+                      selectedDate === group.date && !selectedRunId
+                        ? "bg-blue-50 text-blue-700 font-medium"
+                        : "hover:bg-slate-50 text-slate-600"
+                    }`}
+                  >
+                    <span>{group.date}</span>
+                    <span className="text-[10px] text-slate-400">신규 {group.totalNewCount}건</span>
+                  </button>
+                  
+                  {/* 2depth: 수집 실행 */}
+                  <div className="ml-3 mt-0.5 space-y-0.5">
+                    {group.runs.map((run) => {
+                      const time = run.startedAt.split("T")[1]?.substring(0, 5) || "";
+                      const statusIcon = run.status === "SUCCESS" ? "✓" : run.status === "FAILED" ? "✗" : "△";
+                      return (
+                        <button
+                          key={run.logId}
+                          onClick={() => {
+                            setSelectedDate(group.date);
+                            setSelectedRunId(run.logId);
+                            setPage(0);
+                          }}
+                          className={`w-full text-left px-2 py-0.5 rounded text-[11px] transition-colors flex items-center justify-between ${
+                            selectedRunId === run.logId
+                              ? "bg-blue-100 text-blue-700 font-medium"
+                              : "hover:bg-slate-50 text-slate-500"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1">
+                            <span className={run.status === "SUCCESS" ? "text-green-500" : run.status === "FAILED" ? "text-red-500" : "text-yellow-500"}>
+                              {statusIcon}
+                            </span>
+                            <span>{time} 수집</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400">{run.newCount}건</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
           </div>

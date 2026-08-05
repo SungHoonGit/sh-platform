@@ -1,5 +1,6 @@
 package com.scraper.platform.controller;
 
+import com.scraper.platform.api.dto.CrawlLogGroupResponse;
 import com.scraper.platform.model.CrawlLog;
 import com.scraper.platform.service.CrawlConfigService;
 import com.scraper.platform.service.CrawlLogService;
@@ -40,6 +41,15 @@ public class CrawlLogController {
     public ResponseEntity<List<CrawlLog>> getRecentLogs(@PathVariable Long configId) {
         checkOwnership(configId);
         return ResponseEntity.ok(crawlLogService.getRecentLogsByConfigId(configId));
+    }
+
+    @GetMapping("/config/{configId}/grouped")
+    @Operation(summary = "날짜별 그룹 로그", description = "크롤링 로그를 날짜별로 그룹핑하여 조회합니다")
+    public ResponseEntity<List<CrawlLogGroupResponse>> getLogsGroupedByDate(
+            @PathVariable Long configId,
+            @RequestParam(defaultValue = "30") int days) {
+        checkOwnership(configId);
+        return ResponseEntity.ok(crawlLogService.getLogsGroupedByDate(configId, days));
     }
 
     @GetMapping("/status/{status}")

@@ -134,6 +134,24 @@ export async function fetchCrawlLogs(configId: number): Promise<any[]> {
   return request<any[]>(`/crawl-logs/config/${configId}/recent`);
 }
 
+export interface CrawlRunGroup {
+  logId: number;
+  startedAt: string;
+  status: string;
+  totalCount: number;
+  newCount: number;
+}
+
+export interface CrawlLogGroup {
+  date: string;
+  totalNewCount: number;
+  runs: CrawlRunGroup[];
+}
+
+export async function fetchCrawlLogsGrouped(configId: number, days: number = 30): Promise<CrawlLogGroup[]> {
+  return request<CrawlLogGroup[]>(`/crawl-logs/config/${configId}/grouped?days=${days}`);
+}
+
 export interface SiteDefinitionInfo {
   id: number;
   siteName: string;
