@@ -100,11 +100,57 @@ feat: 새 기능 / fix: 버그 수정 / docs: 문서 / refactor: 리팩토링 / 
 
 ## 문서
 
+### 문서 구조 (도서관식)
+
+```
+docs/
+├── daily/              # 📅 작업 일지
+│   └── YYYY-MM-DD-work-log.md
+│
+├── plans/              # 📋 프로젝트 설계/기획 (산출물)
+│   └── NNN-YYMMDD-<주제>-design.md
+│
+├── guides/             # 📚 가이드/개념서
+│   └── NNN-YYMMDD-<주제>-guide.md
+│
+├── errors/             # 🔴 오류/이슈 기록
+│   └── NNN-YYMMDD-<주제>-error.md
+│
+├── learnings/          # 📖 배움/학습 기록
+│   └── NNN-YYMMDD-<주제>-learning.md
+│
+├── architecture/       # 🏗️ 아키텍처
+├── scraper/            # 🔍 스크래퍼 (DDL 등)
+├── auth/               # 🔐 인증
+├── database/           # 💾 데이터베이스
+├── infra/              # 🖥️ 인프라
+└── security/           # 🛡️ 보안
+```
+
+### 파일 명명 규칙
+
+| 유형 | 형식 | 예시 |
+|------|------|------|
+| 작업 일지 | `YYYY-MM-DD-work-log.md` | `2026-08-04-work-log.md` |
+| 할 일 | `YYYY-MM-DD-todo.md` | `2026-08-04-todo.md` |
+| 설계 문서 | `NNN-YYMMDD-<주제>-design.md` | `001-260804-job-analytics-design.md` |
+| 가이드 문서 | `NNN-YYMMDD-<주제>-guide.md` | `001-260804-sse-guide.md` |
+| 오류 기록 | `NNN-YYMMDD-<주제>-error.md` | `001-260804-build-error-fix.md` |
+| 학습 기록 | `NNN-YYMMDD-<주제>-learning.md` | `001-260804-sse-concept.md` |
+
+### 주요 문서
+
 | 문서 | 내용 |
 |------|------|
-| AGENTS.md | AI 개발 규칙 (구조, 포트, 개발 사이클) |
+| AGENTS.md | AI 개발 규칙 (구조, 포트, 개발 사이클, 문서 규칙) |
 | docs/development-guide.md | 개발 가이드 (Javadoc, JUnit, Swagger) |
 | docs/architecture/standards.md | 개발 표준 (네이밍, 패키지, 컨벤션) |
-| docs/PORT-MANAGEMENT.md | 포트/서비스 관리 |
 | docs/architecture/erd.md | ERD |
-| SCRAPER-GUIDE.md | 스크래퍼 상세 가이드 |
+
+### 문서 작성 원칙
+
+> **문서는 코드와 동일하게 중요합니다.**
+> - 좋은 문서 = 낮은 버그 발생률 + 빠른 온보딩
+> - 오류 해결 시 `docs/errors/`에 기록
+> - 새 기술 학습 시 `docs/learnings/`에 기록
+> - 설계는 `docs/plans/`에, 가이드는 `docs/guides/`에

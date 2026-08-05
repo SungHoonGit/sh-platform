@@ -255,16 +255,36 @@ curl -s http://localhost:8080/v3/api-docs | python3 -m json.tool | head -20
 > - AI 에이전트는 문서를 통해 프로젝트 맥락을 이해합니다
 > - 좋은 문서 = 낮은 버그 발생률 + 빠른 온보딩
 
+### 문서 구조 (도서관식)
+
+```
+docs/
+├── daily/              # 📅 작업 일지
+├── plans/              # 📋 설계/기획 (산출물)
+├── guides/             # 📚 가이드/개념서
+├── errors/             # 🔴 오류/이슈 기록
+├── learnings/          # 📖 배움/학습 기록
+├── architecture/       # 🏗️ 아키텍처
+├── scraper/            # 🔍 스크래퍼
+├── auth/               # 🔐 인증
+├── database/           # 💾 데이터베이스
+├── infra/              # 🖥️ 인프라
+└── security/           # 🛡️ 보안
+```
+
 ### 파일 명명 규칙 (네이밍 컨벤션)
 
 | 유형 | 형식 | 예시 |
 |------|------|------|
 | **작업 일지** | `YYYY-MM-DD-work-log.md` | `2026-08-04-work-log.md` |
 | **할 일** | `YYYY-MM-DD-todo.md` | `2026-08-04-todo.md` |
-| **설계 문서** | `NNN-2026-<주제>-design.md` | `001-2026-job-analytics-design.md` |
-| **가이드 문서** | `NNN-2026-<주제>-guide.md` | `001-2026-sse-guide.md` |
+| **설계 문서** | `NNN-YYMMDD-<주제>-design.md` | `001-260804-job-analytics-design.md` |
+| **가이드 문서** | `NNN-YYMMDD-<주제>-guide.md` | `001-260804-sse-guide.md` |
+| **오류 기록** | `NNN-YYMMDD-<주제>-error.md` | `001-260804-build-error-fix.md` |
+| **학습 기록** | `NNN-YYMMDD-<주제>-learning.md` | `001-260804-sse-concept.md` |
 
 > `NNN`: 3자리 넘버링 (001부터 시작)
+> `YYMMDD`: 날짜 (연도2자리+월2자리+일2자리)
 
 ### 파일 저장 위치
 
@@ -275,6 +295,8 @@ curl -s http://localhost:8080/v3/api-docs | python3 -m json.tool | head -20
 | **작업 일지** | `docs/daily/` |
 | **설계 문서** | `docs/plans/` |
 | **가이드 문서** | `docs/guides/` |
+| **오류 기록** | `docs/errors/` |
+| **학습 기록** | `docs/learnings/` |
 | API 문서 | Swagger 자동 생성 |
 
 **모든 MD 파일은 `docs/` 디렉토리 아래에 저장한다.**
@@ -311,10 +333,10 @@ curl -s http://localhost:8080/v3/api-docs | python3 -m json.tool | head -20
 2. [작업2]
 ```
 
-### 템플릿: 설계 문서 (`NNN-2026-<주제>-design.md`)
+### 템플릿: 설계 문서 (`NNN-YYMMDD-<주제>-design.md`)
 
 ```markdown
-# NNN-2026-<주제> 설계 문서
+# NNN-YYMMDD-<주제> 설계 문서
 
 ## 개요
 - **목적**: 이 문서의 목적
@@ -323,7 +345,7 @@ curl -s http://localhost:8080/v3/api-docs | python3 -m json.tool | head -20
 - **작성자**: AI Assistant / 사용자
 
 ## 1. 배경 및 이유
-为什么需要这个功能？
+이 기능/문제가 필요한 이유
 
 ## 2. 요구 사항
 ### 2.1 기능 요구 사항
@@ -351,10 +373,10 @@ curl -s http://localhost:8080/v3/api-docs | python3 -m json.tool | head -20
 *작성일: YYYY-MM-DD*
 ```
 
-### 템플릿: 가이드 문서 (`NNN-2026-<주제>-guide.md`)
+### 템플릿: 가이드 문서 (`NNN-YYMMDD-<주제>-guide.md`)
 
 ```markdown
-# NNN-2026-<주제> 가이드
+# NNN-YYMMDD-<주제> 가이드
 
 ## 개요
 - **목적**: 이 가이드의 목적
@@ -379,6 +401,105 @@ curl -s http://localhost:8080/v3/api-docs | python3 -m json.tool | head -20
 
 ## 5. 참고 자료
 - [링크1](url)
+
+---
+*작성일: YYYY-MM-DD*
+```
+
+### 템플릿: 오류 기록 (`NNN-YYMMDD-<주제>-error.md`)
+
+```markdown
+# NNN-YYMMDD-<주제> 오류 기록
+
+## 개요
+- **발생일**: YYYY-MM-DD
+- **환경**: Windows/Linux, Java 21, Spring Boot 3.4.4
+- **심각도**: 🔴 Critical / 🟡 Warning / 🟢 Low
+
+## 1. 오류 현상
+### 1.1 에러 메시지
+```
+(에러 로그 전체)
+```
+
+### 1.2 재현 단계
+1. 단계1
+2. 단계2
+
+## 2. 원인 분석
+### 2.1 근본 원인
+(어디서, 왜 발생했는지)
+
+### 2.2 관련 코드
+- 파일: `path/to/file.java:줄번호`
+- 코드: `(해당 코드 snippet)`
+
+## 3. 해결 방법
+### 3.1 해결 과정
+(어떻게 해결했는지)
+
+### 3.2 최종 코드 변경
+```java
+// 변경 전
+// 변경 후
+```
+
+## 4. 예방 방법
+-이후 동일 오류를 방지하기 위한 방법
+
+## 5. 참고 자료
+- 관련 링크
+
+---
+*작성일: YYYY-MM-DD*
+```
+
+### 템플릿: 학습 기록 (`NNN-YYMMDD-<주제>-learning.md`)
+
+```markdown
+# NNN-YYMMDD-<주제> 학습 기록
+
+## 개요
+- **주제**: 학습한 기술/개념
+- **학습일**: YYYY-MM-DD
+- **수준**: 초급 / 중급 / 고급
+
+## 1. 개념 설명
+### 1.1 정의
+(이것이 무엇인가)
+
+### 1.2 왜 필요한가
+(어떤 문제를 해결하는가)
+
+### 1.3 관련 개념
+- 개념1: 설명
+- 개념2: 설명
+
+## 2. 사용법
+### 2.1 기본 사용
+```java
+// 기본 사용 예시
+```
+
+### 2.2 고급 사용
+```java
+// 고급 사용 예시
+```
+
+## 3. 주의사항
+- 주의1
+- 주의2
+
+## 4. 실전 적용
+### 4.1 이 프로젝트에서의 적용
+(어떻게 적용했는지)
+
+### 4.2 관련 코드
+- 파일: `path/to/file.java`
+
+## 5. 참고 자료
+- [공식 문서](url)
+- [관련 블로그](url)
 
 ---
 *작성일: YYYY-MM-DD*
@@ -419,8 +540,10 @@ curl -s http://localhost:8080/v3/api-docs | python3 -m json.tool | head -20
 | 아키텍처 | `erd.md`, `sql-ddl.md` | `docs/architecture/` |
 | API 문서 | Swagger 자동 생성 | 서버에서 자동 |
 | **작업 일지** | `2026-08-04-work-log.md` | `docs/daily/` |
-| **설계 문서** | `001-2026-*-design.md` | `docs/plans/` |
-| **가이드 문서** | `001-2026-*-guide.md` | `docs/guides/` |
+| **설계 문서** | `001-260804-*-design.md` | `docs/plans/` |
+| **가이드 문서** | `001-260804-*-guide.md` | `docs/guides/` |
+| **오류 기록** | `001-260804-*-error.md` | `docs/errors/` |
+| **학습 기록** | `001-260804-*-learning.md` | `docs/learnings/` |
 
 ---
 
@@ -431,3 +554,5 @@ curl -s http://localhost:8080/v3/api-docs | python3 -m json.tool | head -20
 > 2. 파일명은 네이밍 컨벤션 준수
 > 3. 문서 작성 후 AGENTS.md의 파일 목록 업데이트
 > 4. 기존 문서 수정 시에도 형식 유지
+> 5. 오류 해결 시 `docs/errors/`에 기록
+> 6. 새 기술 학습 시 `docs/learnings/`에 기록
