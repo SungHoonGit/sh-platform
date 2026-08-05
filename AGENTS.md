@@ -252,12 +252,14 @@ curl -s http://localhost:8080/v3/api-docs | python3 -m json.tool | head -20
 
 | 구분 | 경로 |
 |------|------|
-| 프로젝트 내부 문서 | `docs/` (DDL, 설계서 등) |
-| **작업 일지/분석 문서** | `~/git/sh-platform-docs/docs/` |
-| **일반 MD 파일** | `~/git/sh-platform-docs/docs/` |
+| DDL | `docs/scraper/` |
+| 설계서 | `docs/architecture/` |
+| **작업 일지** | `docs/daily/` |
+| **설계 문서** | `docs/plans/` |
+| **가이드 문서** | `docs/guides/` |
+| API 문서 | Swagger 자동 생성 |
 
-**중요**: sh-platform의 MD 파일은 반드시 `~/git/sh-platform-docs/docs/`에 저장한다.
-프로젝트 git 저장소 내부에 MD 파일을 생성하지 않는다.
+**모든 MD 파일은 `docs/` 디렉토리 아래에 저장한다.**
 
 ### 작업 일지 작성 규칙
 
@@ -298,5 +300,6 @@ curl -s http://localhost:8080/v3/api-docs | python3 -m json.tool | head -20
 | DDL | `ddl-job-postings.sql` | `docs/scraper/` |
 | 설계서 | `erd.md`, `sql-ddl.md` | `docs/architecture/` |
 | API 문서 | Swagger 자동 생성 | 서버에서 자동 |
-| **작업 일지** | `2026-08-04-work-log.md` | `~/git/sh-platform-docs/docs/` |
-| **분석 문서** | `fastexcel-analysis.md` | `~/git/sh-platform-docs/docs/` |
+| **작업 일지** | `2026-08-04-work-log.md` | `docs/daily/` |
+| **설계 문서** | `job-posting-analytics-design.md` | `docs/plans/` |
+| **가이드 문서** | `sse-websocket-nginx-guide.md` | `docs/guides/` |
