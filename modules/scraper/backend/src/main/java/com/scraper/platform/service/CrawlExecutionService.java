@@ -96,7 +96,6 @@ public class CrawlExecutionService {
         }
     }
 
-    @Transactional
     public void executeCrawl(CrawlConfig config) {
         log.info("Executing crawl for config: {} (id: {})", config.getName(), config.getId());
 
@@ -129,60 +128,20 @@ public class CrawlExecutionService {
                 List<Map<String, String>> allJobs = executeSiteCrawlJobs(siteConfig);
                 totalJobs += allJobs.size();
 
-                // 중복 체크 + DB 저장
-                List<Map<String, String>> newJobList = new ArrayList<>();
-                for (Map<String, String> job : allJobs) {
-                    String company = job.getOrDefault("company", "");
-                    String position = job.getOrDefault("position", job.getOrDefault("title", ""));
-                    String location = job.getOrDefault("location", "");
-                    String url = job.getOrDefault("url", "");
-
-                    String dedupKey = JobPosting.generateDedupKey(company, position, location, siteName);
-
-                    if (existingDedupKeys.contains(dedupKey)) {
-                        dupJobs++;
-                        continue;
-                    }
-
-                    // 새 공고 -> DB 저장
-                    JobPosting posting = JobPosting.builder()
-                            .config(config)
-                            .siteName(siteName)
-                            .url(url)
-                            .company(company)
-                            .position(position)
-                            .career(job.getOrDefault("career", ""))
-                            .tech(job.getOrDefault("tech", ""))
-                            .location(location)
-                            .deadline(job.getOrDefault("deadline", ""))
-                            .dedupKey(dedupKey)
-                            .crawledAt(LocalDate.now())
-                            .build();
-
-                    try {
-                        jobPostingRepository.save(posting);
-                        existingDedupKeys.add(dedupKey);
-                        newJobList.add(job);
-                    } catch (Exception e) {
-                        // UK 제약 조건 위반 = 동시 크롤링 중복
-                        if (e.getMessage() != null && e.getMessage().contains("uk_job_postings_dedup")) {
-                            dupJobs++;
-                            log.debug("Duplicate job detected by DB constraint: {}", dedupKey);
-                        } else {
-                            log.error("Failed to save job posting: {}", company + " " + position, e);
-                            dupJobs++;
-                        }
-                    }
-                }
-
-                newJobs += newJobList.size();
+                // 각 사이트별 별도 트랜잭션으로 저장
+                int[] result = saveJobPostings(config, siteConfig, allJobs, existingDedupKeys);
+                int saved = result[0];
+                int dups = result[1];
+                newJobs += saved;
+                dupJobs += dups;
 
                 // MD 파일 생성 (부가 출력)
+                List<Map<String, String>> newJobList = allJobs.subList(0, Math.min(saved, allJobs.size()));
                 combinedMd.append(crawlerFactory.getCrawler(siteConfig.getSiteDefinition().getSiteName())
                         .buildMdSection(newJobList, siteConfig.getSiteDefinition().getDisplayName()));
 
-                saveCrawlData(siteConfig, config, newJobList.size());
-                progressBroadcaster.sendSiteComplete(config.getId(), siteName, newJobList.size(), true, null);
+                saveCrawlData(siteConfig, config, saved);
+                progressBroadcaster.sendSiteComplete(config.getId(), siteName, saved, true, null);
                 success++;
                 total++;
             } catch (Exception e) {
@@ -263,6 +222,59 @@ public class CrawlExecutionService {
                 .newCount(jobCount)
                 .build();
         crawlLogRepository.save(crawlLog);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public int[] saveJobPostings(CrawlConfig config, CrawlSiteConfig siteConfig,
+                                  List<Map<String, String>> allJobs, Set<String> existingDedupKeys) {
+        String siteName = siteConfig.getSiteDefinition().getSiteName();
+        int saved = 0;
+        int dups = 0;
+
+        for (Map<String, String> job : allJobs) {
+            String company = job.getOrDefault("company", "");
+            String position = job.getOrDefault("position", job.getOrDefault("title", ""));
+            String location = job.getOrDefault("location", "");
+            String url = job.getOrDefault("url", "");
+
+            String dedupKey = JobPosting.generateDedupKey(company, position, location, siteName);
+
+            if (existingDedupKeys.contains(dedupKey)) {
+                dups++;
+                continue;
+            }
+
+            JobPosting posting = JobPosting.builder()
+                    .config(config)
+                    .siteName(siteName)
+                    .url(url)
+                    .company(company)
+                    .position(position)
+                    .career(job.getOrDefault("career", ""))
+                    .tech(job.getOrDefault("tech", ""))
+                    .location(location)
+                    .deadline(job.getOrDefault("deadline", ""))
+                    .dedupKey(dedupKey)
+                    .crawledAt(LocalDate.now())
+                    .build();
+
+            try {
+                jobPostingRepository.save(posting);
+                existingDedupKeys.add(dedupKey);
+                saved++;
+            } catch (Exception e) {
+                if (e.getMessage() != null && e.getMessage().contains("uk_job_postings_dedup")) {
+                    dups++;
+                    log.debug("Duplicate job detected: {}", dedupKey);
+                } else {
+                    log.error("Failed to save job: {} {}", company, position, e);
+                    dups++;
+                }
+            }
+        }
+
+        log.info("Site {}: saved={}, dups={}", siteName, saved, dups);
+        return new int[]{saved, dups};
     }
 
     private void saveFile(String dirPath, String filePath, String content) throws IOException {
