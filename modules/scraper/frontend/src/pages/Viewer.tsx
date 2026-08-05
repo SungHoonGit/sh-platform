@@ -44,12 +44,20 @@ export default function Viewer() {
   const SIZE = 20;
 
   const executeMutation = useMutation({
-    mutationFn: executeCrawler,
-    onSuccess: (_, configId) => {
+    mutationFn: async (configId: number) => {
+      // 1. SSE 연결 먼저 (이벤트 수신 대기)
+      const crawler = crawlers?.find((c) => c.id === configId);
+      startProgress(configId, crawler?.name || "공고 수집");
+      
+      // 2. 약간의 지연 후 execute API 호출 (SSE 연결 시간 확보)
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 3. 크롤링 실행
+      return executeCrawler(configId);
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       queryClient.invalidateQueries({ queryKey: ["jobDates"] });
-      const crawler = crawlers?.find((c) => c.id === configId);
-      startProgress(configId, crawler?.name || "크롤링");
     },
     onError: (e: Error) => alert(`실행 실패: ${e.message}`),
   });
