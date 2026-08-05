@@ -22,8 +22,7 @@ public class CrawlConfig {
     private Long id;
 
     @Column(name = "account_id", nullable = false)
-    @Builder.Default
-    private Long accountId = 1L;
+    private Long accountId;
 
     @Column(nullable = false, length = 100)
     private String name;
