@@ -48,6 +48,7 @@ public class CrawlerListController {
                     "name", config.getName(),
                     "localPath", config.getLocalPath() != null ? config.getLocalPath() : "",
                     "schedule", config.getSchedule() != null ? config.getSchedule() : "",
+                    "scheduleIcon", config.getScheduleIcon() != null ? config.getScheduleIcon() : "🤖",
                     "siteConfigs", siteConfigs
                 );
             })

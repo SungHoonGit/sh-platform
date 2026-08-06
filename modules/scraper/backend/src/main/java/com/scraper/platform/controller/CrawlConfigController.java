@@ -55,6 +55,6 @@ public class CrawlConfigController {
     @Operation(summary = "설정 삭제", description = "크롤링 설정을 삭제합니다")
     public ResponseEntity<Void> deleteConfig(@PathVariable Long id) {
         crawlConfigService.deleteConfig(id, SecurityUtils.currentAccountId());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

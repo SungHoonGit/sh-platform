@@ -35,6 +35,11 @@ INNER JOIN (
 SET jp.crawl_log_id = matched.log_id;
 
 -- ============================================================
+-- [MIGRATION] 2026-08-06: crawl_config.schedule_icon 추가
+-- ============================================================
+ALTER TABLE crawl_config ADD COLUMN IF NOT EXISTS schedule_icon VARCHAR(10) DEFAULT '🤖' COMMENT '스케줄 아이콘';
+
+-- ============================================================
 -- 1. site_definition (사이트 정의)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS site_definition (
