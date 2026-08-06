@@ -5,6 +5,35 @@
 -- ============================================================
 
 -- ============================================================
+-- [MIGRATION] 2026-08-06: job_postings.crawl_log_id 추가
+-- ============================================================
+-- 신규 테이블 생성 시 위 CREATE TABLE에 포함됨
+-- 기존 테이블에 추가 시 아래 쿼리 실행:
+
+-- 1) 컬럼 추가
+ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS crawl_log_id BIGINT NULL COMMENT '수집 실행 ID (crawl_log 연결)';
+
+-- 2) 인덱스 추가
+ALTER TABLE job_postings ADD INDEX IF NOT EXISTS idx_job_postings_crawl_log_id (crawl_log_id);
+
+-- 3) 기존 데이터 백필: crawled_at 날짜 + site_name으로 crawl_log 매칭
+--    (같은 날짜+사이트의 가장 최근 crawl_log 1건으로 연결)
+UPDATE job_postings jp
+INNER JOIN (
+    SELECT jp2.id AS posting_id, cl.id AS log_id
+    FROM job_postings jp2
+    INNER JOIN crawl_log cl
+        ON cl.config_id = jp2.config_id
+        AND DATE(cl.started_at) = jp2.crawled_at
+    INNER JOIN site_definition sd
+        ON sd.id = cl.site_definition_id
+        AND sd.site_name = jp2.site_name
+    WHERE jp2.crawl_log_id IS NULL
+    GROUP BY jp2.id, cl.id
+) matched ON jp.id = matched.posting_id
+SET jp.crawl_log_id = matched.log_id;
+
+-- ============================================================
 -- 1. site_definition (사이트 정의)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS site_definition (
