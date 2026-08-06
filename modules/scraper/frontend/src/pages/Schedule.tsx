@@ -203,6 +203,7 @@ export default function Schedule() {
         name: name.trim(),
         description: keyword.trim(),
         schedule: cronStr,
+        scheduleIcon: scheduleIcon,
         isActive: true,
         retentionDays: 30,
       };
@@ -334,6 +335,7 @@ export default function Schedule() {
   const handleEdit = (c: any) => {
     setName(c.name);
     setEditingId(c.id);
+    setScheduleIcon(c.scheduleIcon || "🤖");
     const scs = c.siteConfigs || [];
     const enabled = scs.filter((sc: any) => sc.isEnabled);
     const first = enabled[0] || scs[0];
@@ -590,7 +592,7 @@ export default function Schedule() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
-                    <span className="text-3xl">🤖</span>
+                    <span className="text-3xl">{c.scheduleIcon || "🤖"}</span>
                     <div>
                       <div className="font-bold text-lg">{c.name}</div>
                       <div className="text-sm text-slate-500 mt-0.5">

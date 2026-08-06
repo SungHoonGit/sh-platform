@@ -21,4 +21,7 @@ public interface CrawlLogRepository extends JpaRepository<CrawlLog, Long> {
     @EntityGraph(attributePaths = {"siteDefinition"})
     List<CrawlLog> findByConfigIdAndStartedAtBetweenOrderByStartedAtDesc(
             Long configId, LocalDateTime start, LocalDateTime end);
+
+    @org.springframework.transaction.annotation.Transactional
+    void deleteByConfigId(Long configId);
 }

@@ -11,6 +11,7 @@ export interface Crawler {
   name: string;
   localPath: string;
   schedule: string;
+  scheduleIcon?: string;
   siteConfigs: SiteConfig[];
 }
 

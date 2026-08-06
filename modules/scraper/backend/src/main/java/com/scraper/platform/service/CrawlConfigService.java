@@ -1,7 +1,7 @@
 package com.scraper.platform.service;
 
 import com.scraper.platform.model.CrawlConfig;
-import com.scraper.platform.repository.CrawlConfigRepository;
+import com.scraper.platform.repository.*;
 import com.shplatform.common.exception.BusinessException;
 import com.shplatform.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +18,10 @@ public class CrawlConfigService {
     private static final String DATA_ROOT = "/home/ubuntu/data/scraper";
 
     private final CrawlConfigRepository crawlConfigRepository;
+    private final JobPostingRepository jobPostingRepository;
+    private final CrawlLogRepository crawlLogRepository;
+    private final CrawlDataRepository crawlDataRepository;
+    private final CrawlSiteConfigRepository crawlSiteConfigRepository;
 
     public List<CrawlConfig> getAllConfigs(Long accountId) {
         return crawlConfigRepository.findByAccountId(accountId);
@@ -61,6 +65,7 @@ public class CrawlConfigService {
         existing.setName(updatedConfig.getName());
         existing.setDescription(updatedConfig.getDescription());
         existing.setSchedule(updatedConfig.getSchedule());
+        existing.setScheduleIcon(updatedConfig.getScheduleIcon());
         existing.setRetentionDays(updatedConfig.getRetentionDays());
         existing.setIsActive(updatedConfig.getIsActive());
         if (updatedConfig.getLocalPath() != null && !updatedConfig.getLocalPath().isBlank()) {
@@ -74,6 +79,16 @@ public class CrawlConfigService {
     public void deleteConfig(Long id, Long accountId) {
         CrawlConfig config = crawlConfigRepository.findByIdAndAccountId(id, accountId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        Long configId = config.getId();
+
+        // 자식 테이블부터 삭제 (FK 순서 준수)
+        jobPostingRepository.deleteByConfigId(configId);
+        crawlLogRepository.deleteByConfigId(configId);
+        crawlDataRepository.deleteByConfigId(configId);
+        crawlSiteConfigRepository.deleteByConfigId(configId);
+
+        // 마지막으로 부모 삭제
         crawlConfigRepository.delete(config);
     }
 

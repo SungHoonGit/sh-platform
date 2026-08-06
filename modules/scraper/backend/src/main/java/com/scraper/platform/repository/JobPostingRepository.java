@@ -65,4 +65,7 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
     List<JobPosting> findByConfigIdAndCrawlLogIdIn(Long configId, List<Long> crawlLogIds, Sort sort);
 
     List<JobPosting> findByConfigIdAndSiteNameAndCrawlLogIdIn(Long configId, String siteName, List<Long> crawlLogIds, Sort sort);
+
+    @org.springframework.transaction.annotation.Transactional
+    void deleteByConfigId(Long configId);
 }

@@ -197,6 +197,7 @@ export interface CrawlerSaveBody {
   name: string;
   description?: string;
   schedule: string;
+  scheduleIcon?: string;
   isActive?: boolean;
   retentionDays?: number;
 }

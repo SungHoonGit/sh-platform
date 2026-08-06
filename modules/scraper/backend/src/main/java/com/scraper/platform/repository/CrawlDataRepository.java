@@ -35,4 +35,7 @@ public interface CrawlDataRepository extends JpaRepository<CrawlData, Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable);
+
+    @org.springframework.transaction.annotation.Transactional
+    void deleteByConfigId(Long configId);
 }

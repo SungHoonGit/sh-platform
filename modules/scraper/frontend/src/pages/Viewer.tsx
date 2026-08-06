@@ -165,6 +165,7 @@ export default function Viewer() {
                     : "hover:bg-slate-50 text-slate-600"
                 }`}
               >
+                <span className="mr-1">{c.scheduleIcon || "🤖"}</span>
                 {c.name}
               </button>
               <button

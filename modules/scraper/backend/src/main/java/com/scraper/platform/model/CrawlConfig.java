@@ -45,6 +45,10 @@ public class CrawlConfig {
     @Column(name = "local_path", length = 500)
     private String localPath;
 
+    @Column(name = "schedule_icon", length = 10)
+    @Builder.Default
+    private String scheduleIcon = "🤖";
+
     @OneToMany(mappedBy = "config", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<CrawlSiteConfig> siteConfigs = new ArrayList<>();
