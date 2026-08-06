@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -20,71 +21,34 @@ import java.util.Set;
 @Repository
 public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
 
-    /**
-     * 특정 설정의 공고 조회 (페이지네이션)
-     */
     Page<JobPosting> findByConfigId(Long configId, Pageable pageable);
 
-    /**
-     * 특정 설정 + 사이트의 공고 조회
-     */
     Page<JobPosting> findByConfigIdAndSiteName(Long configId, String siteName, Pageable pageable);
 
-    /**
-     * 특정 설정 + 날짜의 공고 조회
-     */
     Page<JobPosting> findByConfigIdAndCrawledAt(Long configId, LocalDate crawledAt, Pageable pageable);
 
-    /**
-     * 특정 설정 + 사이트 + 날짜의 공고 조회
-     */
     Page<JobPosting> findByConfigIdAndSiteNameAndCrawledAt(Long configId, String siteName, LocalDate crawledAt, Pageable pageable);
 
-    /**
-     * 특정 설정의 중복 체크용 dedup_key 수집 (최근 N일)
-     */
+    Page<JobPosting> findByConfigIdAndCreatedAtBetween(Long configId, LocalDateTime start, LocalDateTime end, Pageable pageable);
+
     @Query("SELECT j.dedupKey FROM JobPosting j WHERE j.config.id = :configId AND j.crawledAt >= :sinceDate")
     Set<String> findDedupKeysSince(@Param("configId") Long configId, @Param("sinceDate") LocalDate sinceDate);
 
-    /**
-     * 특정 설정의 공고 수 조회
-     */
     long countByConfigId(Long configId);
 
-    /**
-     * 특정 설정 + 날짜의 공고 수 조회
-     */
     long countByConfigIdAndCrawledAt(Long configId, LocalDate crawledAt);
 
-    /**
-     * 특정 설정의 최근 수집일 조회
-     */
     @Query("SELECT MAX(j.crawledAt) FROM JobPosting j WHERE j.config.id = :configId")
     LocalDate findLastCrawledAt(@Param("configId") Long configId);
 
-    /**
-     * 특정 설정의 수집된 날짜 목록 조회
-     */
     @Query("SELECT DISTINCT j.crawledAt FROM JobPosting j WHERE j.config.id = :configId ORDER BY j.crawledAt DESC")
     List<LocalDate> findDistinctDatesByConfigId(@Param("configId") Long configId);
 
-    /**
-     * 특정 설정의 전체 공고 조회 (엑셀 내보내기용, 페이징 없음)
-     */
     List<JobPosting> findByConfigId(Long configId, Sort sort);
 
-    /**
-     * 특정 설정 + 사이트의 전체 공고 조회 (엑셀 내보내기용)
-     */
     List<JobPosting> findByConfigIdAndSiteName(Long configId, String siteName, Sort sort);
 
-    /**
-     * 특정 설정 + 날짜의 전체 공고 조회 (엑셀 내보내기용)
-     */
     List<JobPosting> findByConfigIdAndCrawledAt(Long configId, LocalDate crawledAt, Sort sort);
 
-    /**
-     * 특정 설정 + 사이트 + 날짜의 전체 공고 조회 (엑셀 내보내기용)
-     */
     List<JobPosting> findByConfigIdAndSiteNameAndCrawledAt(Long configId, String siteName, LocalDate crawledAt, Sort sort);
 }

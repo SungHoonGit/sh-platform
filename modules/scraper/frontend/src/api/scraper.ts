@@ -257,15 +257,21 @@ export async function fetchJobPostings(
   options: {
     siteName?: string;
     crawledAt?: string;
+    runId?: number;
     page?: number;
     size?: number;
+    sortKey?: string;
+    sortOrder?: string;
   } = {}
 ): Promise<JobPostingResponse> {
   const params = new URLSearchParams({ configId: String(configId) });
   if (options.siteName) params.set("siteName", options.siteName);
   if (options.crawledAt) params.set("crawledAt", options.crawledAt);
+  if (options.runId) params.set("runId", String(options.runId));
   if (options.page !== undefined) params.set("page", String(options.page));
   if (options.size !== undefined) params.set("size", String(options.size));
+  if (options.sortKey) params.set("sortKey", options.sortKey);
+  if (options.sortOrder) params.set("sortOrder", options.sortOrder);
   return request<JobPostingResponse>(`/job-postings?${params}`);
 }
 

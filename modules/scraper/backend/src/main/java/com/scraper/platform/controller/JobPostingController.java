@@ -5,7 +5,9 @@ import cn.idev.excel.ExcelWriter;
 import cn.idev.excel.write.metadata.WriteSheet;
 import com.scraper.platform.api.dto.JobPostingResponse;
 import com.scraper.platform.api.dto.JobPostingVO;
+import com.scraper.platform.model.CrawlLog;
 import com.scraper.platform.model.JobPosting;
+import com.scraper.platform.repository.CrawlLogRepository;
 import com.scraper.platform.repository.JobPostingRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +24,7 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +40,7 @@ import java.util.Map;
 public class JobPostingController {
 
     private final JobPostingRepository jobPostingRepository;
+    private final CrawlLogRepository crawlLogRepository;
 
     @GetMapping
     @Operation(summary = "채용공고 목록 조회 (페이지네이션)")
@@ -43,11 +48,30 @@ public class JobPostingController {
             @RequestParam Long configId,
             @RequestParam(required = false) String siteName,
             @RequestParam(required = false) String crawledAt,
+            @RequestParam(required = false) Long runId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sortKey,
+            @RequestParam(required = false) String sortOrder
     ) {
-        PageRequest pageRequest = PageRequest.of(page, size, 
-            Sort.by(Sort.Direction.DESC, "crawledAt").and(Sort.by(Sort.Direction.DESC, "createdAt")));
+        Sort sort;
+        if (sortKey != null && !sortKey.isEmpty()) {
+            Sort.Direction dir = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
+            switch (sortKey) {
+                case "company" -> sort = Sort.by(dir, "company");
+                case "position" -> sort = Sort.by(dir, "position");
+                case "career" -> sort = Sort.by(dir, "career");
+                case "location" -> sort = Sort.by(dir, "location");
+                case "tech" -> sort = Sort.by(dir, "tech");
+                case "deadline" -> sort = Sort.by(dir, "deadline");
+                case "site" -> sort = Sort.by(dir, "siteName");
+                default -> sort = Sort.by(Sort.Direction.DESC, "crawledAt").and(Sort.by(Sort.Direction.DESC, "createdAt"));
+            }
+        } else {
+            sort = Sort.by(Sort.Direction.DESC, "crawledAt").and(Sort.by(Sort.Direction.DESC, "createdAt"));
+        }
+
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
 
         LocalDate date = null;
         if (crawledAt != null && !crawledAt.isEmpty()) {
@@ -58,8 +82,20 @@ public class JobPostingController {
             }
         }
 
+        LocalDateTime runStart = null;
+        LocalDateTime runEnd = null;
+        if (runId != null) {
+            CrawlLog crawlLog = crawlLogRepository.findById(runId).orElse(null);
+            if (crawlLog != null) {
+                runStart = crawlLog.getStartedAt();
+                runEnd = crawlLog.getCompletedAt() != null ? crawlLog.getCompletedAt().plusMinutes(5) : runStart.plusMinutes(10);
+            }
+        }
+
         Page<JobPosting> postings;
-        if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+        if (runStart != null && runEnd != null) {
+            postings = jobPostingRepository.findByConfigIdAndCreatedAtBetween(configId, runStart, runEnd, pageRequest);
+        } else if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
             postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawledAt(configId, siteName, date, pageRequest);
         } else if (date != null) {
             postings = jobPostingRepository.findByConfigIdAndCrawledAt(configId, date, pageRequest);
@@ -133,26 +169,24 @@ public class JobPostingController {
             }
         }
 
-        Sort sort = Sort.by(Sort.Direction.DESC, "crawledAt").and(Sort.by(Sort.Direction.DESC, "createdAt"));
+        Sort exportSort = Sort.by(Sort.Direction.DESC, "crawledAt").and(Sort.by(Sort.Direction.DESC, "createdAt"));
         List<JobPosting> postings;
         if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
-            postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawledAt(configId, siteName, date, sort);
+            postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawledAt(configId, siteName, date, exportSort);
         } else if (date != null) {
-            postings = jobPostingRepository.findByConfigIdAndCrawledAt(configId, date, sort);
+            postings = jobPostingRepository.findByConfigIdAndCrawledAt(configId, date, exportSort);
         } else if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
-            postings = jobPostingRepository.findByConfigIdAndSiteName(configId, siteName, sort);
+            postings = jobPostingRepository.findByConfigIdAndSiteName(configId, siteName, exportSort);
         } else {
-            postings = jobPostingRepository.findByConfigId(configId, sort);
+            postings = jobPostingRepository.findByConfigId(configId, exportSort);
         }
 
-        // 사이트별로 그룹핑 (사이트 순서 유지)
         Map<String, List<JobPosting>> bySite = new LinkedHashMap<>();
         for (JobPosting p : postings) {
             String site = p.getSiteName() != null ? p.getSiteName() : "기타";
             bySite.computeIfAbsent(site, k -> new java.util.ArrayList<>()).add(p);
         }
 
-        // 사이트 이름 → 한글 변환
         Map<String, String> siteNameMap = Map.of(
             "saramin", "사람인",
             "jobkorea", "잡코리아",
@@ -165,7 +199,6 @@ public class JobPostingController {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
 
-        // ExcelWriter로 시트별 분리 내보내기
         try (ExcelWriter excelWriter = EasyExcel.write(response.getOutputStream(), JobPostingVO.class).build()) {
             int sheetIndex = 0;
             for (Map.Entry<String, List<JobPosting>> entry : bySite.entrySet()) {

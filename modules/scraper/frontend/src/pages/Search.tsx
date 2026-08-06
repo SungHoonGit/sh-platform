@@ -43,7 +43,7 @@ export default function Search() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeSite, setActiveSite] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<SortKey>("site");
+  const [sortBy, setSortBy] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [searched, setSearched] = useState(false);
@@ -52,6 +52,7 @@ export default function Search() {
 
   const filteredJobs = useMemo(() => {
     const base = activeSite === "all" ? allJobs : allJobs.filter((j) => j.site === activeSite);
+    if (!sortBy) return base;
     return [...base].sort((a, b) => {
       const getVal = (j: Record<string, string>) => {
         if (sortBy === "site") return j.site || "";
@@ -68,8 +69,10 @@ export default function Search() {
   }, [allJobs, activeSite, sortBy, sortDir]);
 
   const handleSort = (key: SortKey) => {
-    if (sortBy === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    if (sortBy === key && sortDir === "desc") {
+      setSortBy(null);
+    } else if (sortBy === key) {
+      setSortDir("desc");
     } else {
       setSortBy(key);
       setSortDir("asc");

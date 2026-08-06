@@ -90,14 +90,17 @@ export default function Viewer() {
   }, [groupedLogs]);
 
   const { data: jobsData, isLoading } = useQuery({
-    queryKey: ["jobs", selectedCrawlerId, selectedSite, selectedDate, page, sort],
+    queryKey: ["jobs", selectedCrawlerId, selectedSite, selectedDate, selectedRunId, page, sort],
     queryFn: async () => {
       if (!selectedCrawlerId || !selectedDate) return { jobs: [], total: 0, page: 0, size: SIZE };
       return fetchJobPostings(selectedCrawlerId, {
         siteName: selectedSite === "all" ? undefined : selectedSite,
         crawledAt: selectedDate,
+        runId: selectedRunId || undefined,
         page,
         size: SIZE,
+        sortKey: sort?.key,
+        sortOrder: sort?.order,
       });
     },
     enabled: !!selectedCrawlerId && !!selectedDate,
@@ -109,11 +112,11 @@ export default function Viewer() {
 
   const toggleSort = (key: string) => {
     setPage(0);
-    setSort((prev) =>
-      prev?.key === key
-        ? { key, order: prev.order === "asc" ? "desc" : "asc" }
-        : { key, order: "asc" }
-    );
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, order: "asc" };
+      if (prev.order === "asc") return { key, order: "desc" };
+      return null;
+    });
   };
 
   const toggleExpand = (date: string) => {
