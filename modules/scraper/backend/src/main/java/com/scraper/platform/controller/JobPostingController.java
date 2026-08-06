@@ -90,15 +90,22 @@ public class JobPostingController {
                 runStart = crawlLog.getStartedAt();
                 runEnd = crawlLog.getCompletedAt() != null ? crawlLog.getCompletedAt().plusMinutes(5) : runStart.plusMinutes(10);
             }
+        } else if (date != null) {
+            List<CrawlLog> dayLogs = crawlLogRepository.findByConfigIdAndStartedAtBetweenOrderByStartedAtDesc(
+                    configId,
+                    date.atStartOfDay(),
+                    date.plusDays(1).atStartOfDay()
+            );
+            if (!dayLogs.isEmpty()) {
+                runStart = dayLogs.stream().map(CrawlLog::getStartedAt).min(LocalDateTime::compareTo).orElse(date.atStartOfDay());
+                LocalDateTime maxEnd = dayLogs.stream().map(l -> l.getCompletedAt() != null ? l.getCompletedAt() : l.getStartedAt()).max(LocalDateTime::compareTo).orElse(date.plusDays(1).atStartOfDay());
+                runEnd = maxEnd.plusMinutes(5);
+            }
         }
 
         Page<JobPosting> postings;
         if (runStart != null && runEnd != null) {
             postings = jobPostingRepository.findByConfigIdAndCreatedAtBetween(configId, runStart, runEnd, pageRequest);
-        } else if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
-            postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawledAt(configId, siteName, date, pageRequest);
-        } else if (date != null) {
-            postings = jobPostingRepository.findByConfigIdAndCrawledAt(configId, date, pageRequest);
         } else if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
             postings = jobPostingRepository.findByConfigIdAndSiteName(configId, siteName, pageRequest);
         } else {
