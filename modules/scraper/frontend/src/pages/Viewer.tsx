@@ -19,12 +19,12 @@ const SITE_TAB_COLORS: Record<string, string> = {
 };
 
 const COLUMNS: { key: string; label: string; w: string }[] = [
-  { key: "site", label: "사이트", w: "w-[60px]" },
+  { key: "site", label: "사이트", w: "w-[80px]" },
   { key: "position", label: "포지션", w: "w-auto" },
   { key: "company", label: "회사명", w: "w-[120px]" },
   { key: "career", label: "경력", w: "w-[70px]" },
   { key: "location", label: "지역", w: "w-[70px]" },
-  { key: "tech", label: "기술", w: "w-[140px]" },
+  { key: "tech", label: "기술", w: "w-[180px]" },
   { key: "deadline", label: "마감", w: "w-[70px]" },
 ];
 
@@ -89,11 +89,18 @@ export default function Viewer() {
     }
   }, [groupedLogs]);
 
+  useEffect(() => {
+    if (selectedDate && selectedCrawlerId) {
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    }
+  }, [selectedDate, selectedCrawlerId]);
+
   const { data: jobsData, isLoading } = useQuery({
     queryKey: ["jobs", selectedCrawlerId, selectedSite, selectedDate, selectedRunId, page, sort],
     queryFn: async () => {
       if (!selectedCrawlerId || !selectedDate) return { jobs: [], total: 0, page: 0, size: SIZE };
-      return fetchJobPostings(selectedCrawlerId, {
+      console.log("[Viewer] fetchJobPostings", { configId: selectedCrawlerId, crawledAt: selectedDate, runId: selectedRunId });
+      const result = await fetchJobPostings(selectedCrawlerId, {
         siteName: selectedSite === "all" ? undefined : selectedSite,
         crawledAt: selectedDate,
         runId: selectedRunId || undefined,
@@ -102,8 +109,12 @@ export default function Viewer() {
         sortKey: sort?.key,
         sortOrder: sort?.order,
       });
+      console.log("[Viewer] result", { total: result.total, jobsCount: result.jobs.length });
+      return result;
     },
     enabled: !!selectedCrawlerId && !!selectedDate,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const jobs = jobsData?.jobs || [];
