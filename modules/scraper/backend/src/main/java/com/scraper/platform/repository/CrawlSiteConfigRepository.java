@@ -18,6 +18,7 @@ public interface CrawlSiteConfigRepository extends JpaRepository<CrawlSiteConfig
     @Query("SELECT s FROM CrawlSiteConfig s JOIN FETCH s.siteDefinition WHERE s.config.id = :configId AND s.isEnabled = true")
     List<CrawlSiteConfig> findEnabledWithSite(@Param("configId") Long configId);
 
+    @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void deleteByConfigId(Long configId);
 }
