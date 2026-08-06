@@ -87,8 +87,8 @@ public class JobPostingController {
         if (runId != null) {
             CrawlLog crawlLog = crawlLogRepository.findById(runId).orElse(null);
             if (crawlLog != null) {
-                runStart = crawlLog.getStartedAt();
-                runEnd = crawlLog.getCompletedAt() != null ? crawlLog.getCompletedAt().plusMinutes(5) : runStart.plusMinutes(10);
+                runStart = crawlLog.getStartedAt().toLocalDate().atStartOfDay();
+                runEnd = crawlLog.getStartedAt().toLocalDate().plusDays(1).atStartOfDay();
             }
         } else if (date != null) {
             runStart = date.atStartOfDay();
