@@ -218,6 +218,21 @@ export default function Viewer() {
                     {/* 2depth: 수집 실행 */}
                     {isExpanded && (
                       <div className="ml-4 mt-0.5 space-y-0.5">
+                        <button
+                          onClick={() => {
+                            setSelectedDate(group.date);
+                            setSelectedRunIds(null);
+                            setPage(0);
+                          }}
+                          className={`w-full text-left px-2 py-0.5 rounded text-[11px] transition-colors ${
+                            selectedDate === group.date && !selectedRunIds
+                              ? "bg-blue-100 text-blue-700 font-medium"
+                              : "hover:bg-slate-50 text-slate-500"
+                          }`}
+                        >
+                          전체 ({group.totalNewCount}건)
+                        </button>
+                        <div className="border-t border-slate-100 my-0.5"></div>
                         {group.runs.map((run) => {
                           const time = run.startedAt.split("T")[1]?.substring(0, 5) || "";
                           const statusIcon = run.status === "SUCCESS" ? "✓" : run.status === "FAILED" ? "✗" : "△";
@@ -230,7 +245,7 @@ export default function Viewer() {
                                 setPage(0);
                               }}
                               className={`w-full text-left px-2 py-0.5 rounded text-[11px] transition-colors flex items-center justify-between ${
-                                selectedRunIds && run.logIds.some(id => selectedRunIds.includes(id))
+                                selectedRunIds && run.logIds.length === selectedRunIds.length && run.logIds.every(id => selectedRunIds.includes(id))
                                   ? "bg-blue-100 text-blue-700 font-medium"
                                   : "hover:bg-slate-50 text-slate-500"
                               }`}
