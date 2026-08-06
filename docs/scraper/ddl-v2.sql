@@ -18,6 +18,7 @@ ALTER TABLE job_postings ADD INDEX IF NOT EXISTS idx_job_postings_crawl_log_id (
 
 -- 3) 기존 데이터 백필: crawled_at 날짜 + site_name으로 crawl_log 매칭
 --    (같은 날짜+사이트의 가장 최근 crawl_log 1건으로 연결)
+--    collation 충돌 방지를 위해 COLLATE 명시
 UPDATE job_postings jp
 INNER JOIN (
     SELECT jp2.id AS posting_id, cl.id AS log_id
@@ -27,7 +28,7 @@ INNER JOIN (
         AND DATE(cl.started_at) = jp2.crawled_at
     INNER JOIN site_definition sd
         ON sd.id = cl.site_definition_id
-        AND sd.site_name = jp2.site_name
+        AND sd.site_name COLLATE utf8mb4_unicode_ci = jp2.site_name COLLATE utf8mb4_unicode_ci
     WHERE jp2.crawl_log_id IS NULL
     GROUP BY jp2.id, cl.id
 ) matched ON jp.id = matched.posting_id
