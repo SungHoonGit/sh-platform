@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS job_postings (
     dedup_key VARCHAR(64) NOT NULL COMMENT 'SHA256(company + position + location + site_name)',
     
     -- 메타데이터
+    crawl_log_id BIGINT NULL COMMENT '수집 실행 ID (crawl_log 연결)',
     crawled_at DATE NOT NULL COMMENT '수집 일자',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -104,6 +105,7 @@ CREATE TABLE IF NOT EXISTS job_postings (
     INDEX idx_job_postings_config (config_id),
     INDEX idx_job_postings_site (site_name),
     INDEX idx_job_postings_crawled_at (crawled_at),
+    INDEX idx_job_postings_crawl_log_id (crawl_log_id),
     INDEX idx_job_postings_dedup_key (dedup_key),
     INDEX idx_job_postings_url (url(191)),
     UNIQUE INDEX uk_job_postings_dedup (dedup_key, crawled_at) COMMENT '같은 공고는 같은 날에만 중복 허용'

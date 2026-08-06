@@ -22,10 +22,11 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 채용공고 Viewer API.
@@ -45,6 +46,7 @@ public class JobPostingController {
             @RequestParam Long configId,
             @RequestParam(required = false) String siteName,
             @RequestParam(required = false) String crawledAt,
+            @RequestParam(required = false) String runIds,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sortKey,
@@ -77,8 +79,26 @@ public class JobPostingController {
             }
         }
 
+        List<Long> runIdList = null;
+        if (runIds != null && !runIds.isEmpty()) {
+            try {
+                runIdList = Arrays.stream(runIds.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .map(Long::parseLong)
+                        .collect(Collectors.toList());
+            } catch (Exception e) {
+            }
+        }
+
         Page<JobPosting> postings;
-        if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+        if (runIdList != null && !runIdList.isEmpty()) {
+            if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+                postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawlLogIdIn(configId, siteName, runIdList, pageRequest);
+            } else {
+                postings = jobPostingRepository.findByConfigIdAndCrawlLogIdIn(configId, runIdList, pageRequest);
+            }
+        } else if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
             postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawledAt(configId, siteName, date, pageRequest);
         } else if (date != null) {
             postings = jobPostingRepository.findByConfigIdAndCrawledAt(configId, date, pageRequest);
@@ -141,6 +161,7 @@ public class JobPostingController {
             @RequestParam Long configId,
             @RequestParam(required = false) String siteName,
             @RequestParam(required = false) String crawledAt,
+            @RequestParam(required = false) String runIds,
             HttpServletResponse response
     ) throws IOException {
         LocalDate date = null;
@@ -148,13 +169,30 @@ public class JobPostingController {
             try {
                 date = LocalDate.parse(crawledAt);
             } catch (Exception e) {
-                // invalid date, ignore
+            }
+        }
+
+        List<Long> runIdList = null;
+        if (runIds != null && !runIds.isEmpty()) {
+            try {
+                runIdList = Arrays.stream(runIds.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .map(Long::parseLong)
+                        .collect(Collectors.toList());
+            } catch (Exception e) {
             }
         }
 
         Sort exportSort = Sort.by(Sort.Direction.DESC, "crawledAt").and(Sort.by(Sort.Direction.DESC, "createdAt"));
         List<JobPosting> postings;
-        if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+        if (runIdList != null && !runIdList.isEmpty()) {
+            if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+                postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawlLogIdIn(configId, siteName, runIdList, exportSort);
+            } else {
+                postings = jobPostingRepository.findByConfigIdAndCrawlLogIdIn(configId, runIdList, exportSort);
+            }
+        } else if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
             postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawledAt(configId, siteName, date, exportSort);
         } else if (date != null) {
             postings = jobPostingRepository.findByConfigIdAndCrawledAt(configId, date, exportSort);

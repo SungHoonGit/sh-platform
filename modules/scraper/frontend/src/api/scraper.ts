@@ -136,6 +136,7 @@ export async function fetchCrawlLogs(configId: number): Promise<any[]> {
 
 export interface CrawlRunGroup {
   logId: number;
+  logIds: number[];
   startedAt: string;
   status: string;
   totalCount: number;
@@ -257,6 +258,7 @@ export async function fetchJobPostings(
   options: {
     siteName?: string;
     crawledAt?: string;
+    runIds?: number[];
     page?: number;
     size?: number;
     sortKey?: string;
@@ -266,6 +268,9 @@ export async function fetchJobPostings(
   const params = new URLSearchParams({ configId: String(configId) });
   if (options.siteName) params.set("siteName", options.siteName);
   if (options.crawledAt) params.set("crawledAt", options.crawledAt);
+  if (options.runIds && options.runIds.length > 0) {
+    params.set("runIds", options.runIds.join(","));
+  }
   if (options.page !== undefined) params.set("page", String(options.page));
   if (options.size !== undefined) params.set("size", String(options.size));
   if (options.sortKey) params.set("sortKey", options.sortKey);

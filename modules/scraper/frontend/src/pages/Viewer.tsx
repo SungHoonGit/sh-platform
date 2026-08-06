@@ -39,6 +39,7 @@ export default function Viewer() {
   );
   const [selectedSite, setSelectedSite] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedRunIds, setSelectedRunIds] = useState<number[] | null>(null);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<{ key: string; order: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(0);
@@ -95,12 +96,13 @@ export default function Viewer() {
   }, [selectedDate, selectedCrawlerId]);
 
   const { data: jobsData, isLoading } = useQuery({
-    queryKey: ["jobs", selectedCrawlerId, selectedSite, selectedDate, page, sort],
+    queryKey: ["jobs", selectedCrawlerId, selectedSite, selectedDate, selectedRunIds, page, sort],
     queryFn: async () => {
       if (!selectedCrawlerId || !selectedDate) return { jobs: [], total: 0, page: 0, size: SIZE };
       const result = await fetchJobPostings(selectedCrawlerId, {
         siteName: selectedSite === "all" ? undefined : selectedSite,
         crawledAt: selectedDate,
+        runIds: selectedRunIds || undefined,
         page,
         size: SIZE,
         sortKey: sort?.key,
@@ -197,10 +199,11 @@ export default function Viewer() {
                       <button
                         onClick={() => {
                           setSelectedDate(group.date);
+                          setSelectedRunIds(null);
                           setPage(0);
                         }}
                         className={`flex-1 text-left px-1.5 py-0.5 rounded text-[12px] transition-colors flex items-center justify-between ${
-                          selectedDate === group.date
+                          selectedDate === group.date && !selectedRunIds
                             ? "bg-blue-50 text-blue-700 font-medium"
                             : "hover:bg-slate-50 text-slate-600"
                         }`}
@@ -223,10 +226,13 @@ export default function Viewer() {
                               key={run.logId}
                               onClick={() => {
                                 setSelectedDate(group.date);
+                                setSelectedRunIds(run.logIds);
                                 setPage(0);
                               }}
                               className={`w-full text-left px-2 py-0.5 rounded text-[11px] transition-colors flex items-center justify-between ${
-                                "hover:bg-slate-50 text-slate-500"
+                                selectedRunIds && run.logIds.some(id => selectedRunIds.includes(id))
+                                  ? "bg-blue-100 text-blue-700 font-medium"
+                                  : "hover:bg-slate-50 text-slate-500"
                               }`}
                             >
                               <span className="flex items-center gap-1">

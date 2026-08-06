@@ -64,6 +64,9 @@ public class JobPosting {
     @Column(name = "dedup_key", length = 64, nullable = false)
     private String dedupKey;
 
+    @Column(name = "crawl_log_id")
+    private Long crawlLogId;
+
     @Column(name = "crawled_at", nullable = false)
     private LocalDate crawledAt;
 

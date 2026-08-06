@@ -61,6 +61,6 @@ public class CrawlLog {
     }
 
     public enum CrawlStatus {
-        SUCCESS, FAILED, PARTIAL
+        RUNNING, SUCCESS, FAILED, PARTIAL
     }
 }

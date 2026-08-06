@@ -122,8 +122,13 @@ public class CrawlLogService {
             int totalCount = group.stream().mapToInt(l -> l.getTotalCount() != null ? l.getTotalCount() : 0).sum();
             int newCount = group.stream().mapToInt(l -> l.getNewCount() != null ? l.getNewCount() : 0).sum();
 
+            List<Long> logIds = group.stream()
+                    .map(CrawlLog::getId)
+                    .collect(Collectors.toList());
+
             return CrawlRunGroup.builder()
                     .logId(representative.getId())
+                    .logIds(logIds)
                     .startedAt(representative.getStartedAt())
                     .status(combinedStatus.name())
                     .totalCount(totalCount)

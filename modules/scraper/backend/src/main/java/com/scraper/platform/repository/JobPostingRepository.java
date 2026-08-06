@@ -57,4 +57,12 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
     List<JobPosting> findByConfigIdAndCrawledAt(Long configId, LocalDate crawledAt, Sort sort);
 
     List<JobPosting> findByConfigIdAndSiteNameAndCrawledAt(Long configId, String siteName, LocalDate crawledAt, Sort sort);
+
+    Page<JobPosting> findByConfigIdAndCrawlLogIdIn(Long configId, List<Long> crawlLogIds, Pageable pageable);
+
+    Page<JobPosting> findByConfigIdAndSiteNameAndCrawlLogIdIn(Long configId, String siteName, List<Long> crawlLogIds, Pageable pageable);
+
+    List<JobPosting> findByConfigIdAndCrawlLogIdIn(Long configId, List<Long> crawlLogIds, Sort sort);
+
+    List<JobPosting> findByConfigIdAndSiteNameAndCrawlLogIdIn(Long configId, String siteName, List<Long> crawlLogIds, Sort sort);
 }

@@ -128,8 +128,19 @@ public class CrawlExecutionService {
                 List<Map<String, String>> allJobs = executeSiteCrawlJobs(siteConfig);
                 totalJobs += allJobs.size();
 
+                SiteDefinition site = siteConfig.getSiteDefinition();
+                CrawlLog crawlLog = CrawlLog.builder()
+                        .config(config)
+                        .siteDefinition(site)
+                        .status(CrawlLog.CrawlStatus.RUNNING)
+                        .totalCount(0)
+                        .newCount(0)
+                        .build();
+                crawlLog = crawlLogRepository.save(crawlLog);
+                Long crawlLogId = crawlLog.getId();
+
                 // 각 사이트별 별도 트랜잭션으로 저장
-                int[] result = saveJobPostings(config, siteConfig, allJobs, existingDedupKeys);
+                int[] result = saveJobPostings(config, siteConfig, allJobs, existingDedupKeys, crawlLogId);
                 int saved = result[0];
                 int dups = result[1];
                 newJobs += saved;
@@ -140,7 +151,7 @@ public class CrawlExecutionService {
                 combinedMd.append(crawlerFactory.getCrawler(siteConfig.getSiteDefinition().getSiteName())
                         .buildMdSection(newJobList, siteConfig.getSiteDefinition().getDisplayName()));
 
-                saveCrawlData(siteConfig, config, saved);
+                saveCrawlLogComplete(crawlLogId, saved);
                 progressBroadcaster.sendSiteComplete(config.getId(), siteName, saved, true, null);
                 success++;
                 total++;
@@ -200,33 +211,19 @@ public class CrawlExecutionService {
         return jobs;
     }
 
-    private void saveCrawlData(CrawlSiteConfig siteConfig, CrawlConfig config, int jobCount) {
-        SiteDefinition site = siteConfig.getSiteDefinition();
-        String keyword = extractKeyword(siteConfig.getParamValues());
-        CrawlData crawlData = CrawlData.builder()
-                .config(siteConfig.getConfig())
-                .title(String.format("[%s] %s 채용공고", site.getDisplayName(), keyword))
-                .fileName(LocalDate.now() + ".md")
-                .filePath(config.getLocalPath() + "/" + LocalDate.now() + ".md")
-                .sourceSite(site.getSiteName())
-                .sourceUrl(site.getBaseUrl())
-                .crawledAt(LocalDateTime.now())
-                .build();
-        crawlDataRepository.save(crawlData);
-
-        CrawlLog crawlLog = CrawlLog.builder()
-                .config(siteConfig.getConfig())
-                .siteDefinition(site)
-                .status(CrawlLog.CrawlStatus.SUCCESS)
-                .totalCount(jobCount)
-                .newCount(jobCount)
-                .build();
-        crawlLogRepository.save(crawlLog);
+    private void saveCrawlLogComplete(Long crawlLogId, int jobCount) {
+        CrawlLog crawlLog = crawlLogRepository.findById(crawlLogId).orElse(null);
+        if (crawlLog != null) {
+            crawlLog.setStatus(CrawlLog.CrawlStatus.SUCCESS);
+            crawlLog.setTotalCount(jobCount);
+            crawlLog.setNewCount(jobCount);
+            crawlLogRepository.save(crawlLog);
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int[] saveJobPostings(CrawlConfig config, CrawlSiteConfig siteConfig,
-                                  List<Map<String, String>> allJobs, Set<String> existingDedupKeys) {
+                                  List<Map<String, String>> allJobs, Set<String> existingDedupKeys, Long crawlLogId) {
         String siteName = siteConfig.getSiteDefinition().getSiteName();
         int saved = 0;
         int dups = 0;
@@ -255,6 +252,7 @@ public class CrawlExecutionService {
                     .location(location)
                     .deadline(job.getOrDefault("deadline", ""))
                     .dedupKey(dedupKey)
+                    .crawlLogId(crawlLogId)
                     .crawledAt(LocalDate.now())
                     .build();
 

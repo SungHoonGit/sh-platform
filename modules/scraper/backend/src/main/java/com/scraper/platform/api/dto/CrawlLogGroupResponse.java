@@ -26,6 +26,7 @@ public class CrawlLogGroupResponse {
     @AllArgsConstructor
     public static class CrawlRunGroup {
         private Long logId;
+        private List<Long> logIds;
         private LocalDateTime startedAt;
         private String status;
         private int totalCount;
