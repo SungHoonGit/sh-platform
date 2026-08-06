@@ -52,11 +52,6 @@ export default function Viewer() {
       await new Promise(resolve => setTimeout(resolve, 100));
       return executeCrawler(configId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["jobDates"] });
-      queryClient.invalidateQueries({ queryKey: ["crawlLogsGrouped"] });
-    },
     onError: (e: Error) => alert(`실행 실패: ${e.message}`),
   });
 

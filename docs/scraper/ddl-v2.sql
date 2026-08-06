@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS crawl_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     config_id BIGINT COMMENT '크롤링 설정 ID',
     site_definition_id BIGINT COMMENT '사이트 ID',
-    status ENUM('success', 'failed', 'partial') NOT NULL DEFAULT 'success' COMMENT '실행 결과',
+    status ENUM('RUNNING', 'SUCCESS', 'FAILED', 'PARTIAL') NOT NULL DEFAULT 'SUCCESS' COMMENT '실행 결과',
     total_count INT DEFAULT 0 COMMENT '전체 수집 건수',
     new_count INT DEFAULT 0 COMMENT '신규 수집 건수',
     error_message TEXT COMMENT '에러 메시지',

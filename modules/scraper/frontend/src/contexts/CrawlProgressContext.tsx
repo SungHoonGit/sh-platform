@@ -129,6 +129,7 @@ export function CrawlProgressProvider({ children }: { children: ReactNode }) {
         );
         queryClient.invalidateQueries({ queryKey: ["jobs"] });
         queryClient.invalidateQueries({ queryKey: ["jobDates"] });
+        queryClient.invalidateQueries({ queryKey: ["crawlLogsGrouped"] });
         queryClient.invalidateQueries({ queryKey: ["crawlers"] });
         // 완료 알림은 30초간 유지 (사용자가 확인할 수 있도록)
         setTimeout(() => {
