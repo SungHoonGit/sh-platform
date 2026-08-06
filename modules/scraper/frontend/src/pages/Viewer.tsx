@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { fetchCrawlers, executeCrawler, fetchJobPostings, fetchJobPostingDates, downloadJobPostingsExcel, fetchCrawlLogsGrouped, type JobPostingItem } from "../api/scraper";
+import { fetchCrawlers, executeCrawler, fetchJobPostings, downloadJobPostingsExcel, fetchCrawlLogsGrouped, type JobPostingItem } from "../api/scraper";
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 
 const SITES = [
