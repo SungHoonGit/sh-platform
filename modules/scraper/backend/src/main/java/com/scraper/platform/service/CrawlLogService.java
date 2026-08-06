@@ -61,11 +61,10 @@ public class CrawlLogService {
                     .collect(Collectors.toList());
 
             List<CrawlRunGroup> groupedRuns = groupByTimeProximity(dayLogs);
-            int totalNew = groupedRuns.stream().mapToInt(CrawlRunGroup::getNewCount).sum();
 
             result.add(CrawlLogGroupResponse.builder()
                     .date(date)
-                    .totalNewCount(totalNew > 0 ? totalNew : totalCount.intValue())
+                    .totalNewCount(totalCount.intValue())
                     .totalRunCount(Math.max(groupedRuns.size(), 1))
                     .runs(groupedRuns)
                     .build());
