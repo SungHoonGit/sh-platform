@@ -3,6 +3,7 @@ package com.scraper.platform.repository;
 import com.scraper.platform.model.CrawlLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +18,7 @@ public interface CrawlLogRepository extends JpaRepository<CrawlLog, Long> {
     List<CrawlLog> findTop10ByConfigIdOrderByStartedAtDesc(Long configId);
     Page<CrawlLog> findByStatusOrderByStartedAtDesc(CrawlLog.CrawlStatus status, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"siteDefinition"})
     List<CrawlLog> findByConfigIdAndStartedAtBetweenOrderByStartedAtDesc(
             Long configId, LocalDateTime start, LocalDateTime end);
 }
