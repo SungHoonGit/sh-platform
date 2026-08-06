@@ -91,16 +91,8 @@ public class JobPostingController {
                 runEnd = crawlLog.getCompletedAt() != null ? crawlLog.getCompletedAt().plusMinutes(5) : runStart.plusMinutes(10);
             }
         } else if (date != null) {
-            List<CrawlLog> dayLogs = crawlLogRepository.findByConfigIdAndStartedAtBetweenOrderByStartedAtDesc(
-                    configId,
-                    date.atStartOfDay(),
-                    date.plusDays(1).atStartOfDay()
-            );
-            if (!dayLogs.isEmpty()) {
-                runStart = dayLogs.stream().map(CrawlLog::getStartedAt).min(LocalDateTime::compareTo).orElse(date.atStartOfDay());
-                LocalDateTime maxEnd = dayLogs.stream().map(l -> l.getCompletedAt() != null ? l.getCompletedAt() : l.getStartedAt()).max(LocalDateTime::compareTo).orElse(date.plusDays(1).atStartOfDay());
-                runEnd = maxEnd.plusMinutes(5);
-            }
+            runStart = date.atStartOfDay();
+            runEnd = date.plusDays(1).atStartOfDay();
         }
 
         Page<JobPosting> postings;
