@@ -40,25 +40,22 @@ export default function Viewer() {
   const [selectedSite, setSelectedSite] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<{ key: string; order: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(0);
   const SIZE = 20;
 
   const executeMutation = useMutation({
     mutationFn: async (configId: number) => {
-      // 1. SSE 연결 먼저 (이벤트 수신 대기)
       const crawler = crawlers?.find((c) => c.id === configId);
       startProgress(configId, crawler?.name || "공고 수집");
-      
-      // 2. 약간의 지연 후 execute API 호출 (SSE 연결 시간 확보)
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // 3. 크롤링 실행
       return executeCrawler(configId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       queryClient.invalidateQueries({ queryKey: ["jobDates"] });
+      queryClient.invalidateQueries({ queryKey: ["crawlLogsGrouped"] });
     },
     onError: (e: Error) => alert(`실행 실패: ${e.message}`),
   });
@@ -79,12 +76,6 @@ export default function Viewer() {
     [crawlers, selectedCrawlerId]
   );
 
-  const { data: dates } = useQuery({
-    queryKey: ["jobDates", selectedCrawlerId],
-    queryFn: () => fetchJobPostingDates(selectedCrawlerId!),
-    enabled: !!selectedCrawlerId,
-  });
-
   const { data: groupedLogs } = useQuery({
     queryKey: ["crawlLogsGrouped", selectedCrawlerId],
     queryFn: () => fetchCrawlLogsGrouped(selectedCrawlerId!, 30),
@@ -92,23 +83,24 @@ export default function Viewer() {
   });
 
   useEffect(() => {
-    if (dates && dates.length > 0 && !selectedDate) {
-      setSelectedDate(dates[0]);
+    if (groupedLogs && groupedLogs.length > 0 && !selectedDate) {
+      setSelectedDate(groupedLogs[0].date);
+      setExpandedDates(new Set([groupedLogs[0].date]));
     }
-  }, [dates]);
+  }, [groupedLogs]);
 
   const { data: jobsData, isLoading } = useQuery({
     queryKey: ["jobs", selectedCrawlerId, selectedSite, selectedDate, page, sort],
     queryFn: async () => {
-      if (!selectedCrawlerId) return { jobs: [], total: 0, page: 0, size: SIZE };
+      if (!selectedCrawlerId || !selectedDate) return { jobs: [], total: 0, page: 0, size: SIZE };
       return fetchJobPostings(selectedCrawlerId, {
         siteName: selectedSite === "all" ? undefined : selectedSite,
-        crawledAt: selectedDate || undefined,
+        crawledAt: selectedDate,
         page,
         size: SIZE,
       });
     },
-    enabled: !!selectedCrawlerId,
+    enabled: !!selectedCrawlerId && !!selectedDate,
   });
 
   const jobs = jobsData?.jobs || [];
@@ -124,9 +116,21 @@ export default function Viewer() {
     );
   };
 
+  const toggleExpand = (date: string) => {
+    setExpandedDates((prev) => {
+      const next = new Set(prev);
+      if (next.has(date)) {
+        next.delete(date);
+      } else {
+        next.add(date);
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="flex h-full text-[13px]">
-      {/* 왼쪽 사이드바 - 스케줄 목록 */}
+      {/* 왼쪽 사이드바 */}
       <div className="w-60 bg-white border-r border-slate-200 shrink-0 overflow-auto flex flex-col">
         <div className="px-3 py-2.5 border-b border-slate-200">
           <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide">스케줄</h3>
@@ -140,6 +144,8 @@ export default function Viewer() {
                   setSelectedCrawlerId(c.id);
                   setSelectedSite("all");
                   setSelectedDate("");
+                  setSelectedRunId(null);
+                  setExpandedDates(new Set());
                   setPage(0);
                 }}
                 className={`flex-1 text-left px-2.5 py-1.5 rounded text-[12px] transition-colors ${
@@ -166,58 +172,73 @@ export default function Viewer() {
         {groupedLogs && groupedLogs.length > 0 && (
           <div className="px-3 py-2.5 border-t border-slate-200">
             <h3 className="text-[11px] font-bold text-slate-500 mb-1.5">수집 이력</h3>
-            <div className="space-y-1">
-              {groupedLogs.map((group) => (
-                <div key={group.date}>
-                  {/* 1depth: 날짜 */}
-                  <button
-                    onClick={() => {
-                      setSelectedDate(group.date);
-                      setSelectedRunId(null);
-                      setPage(0);
-                    }}
-                    className={`w-full text-left px-2 py-1 rounded text-[12px] transition-colors flex items-center justify-between ${
-                      selectedDate === group.date && !selectedRunId
-                        ? "bg-blue-50 text-blue-700 font-medium"
-                        : "hover:bg-slate-50 text-slate-600"
-                    }`}
-                  >
-                    <span>{group.date}</span>
-                    <span className="text-[10px] text-slate-400">신규 {group.totalNewCount}건</span>
-                  </button>
-                  
-                  {/* 2depth: 수집 실행 */}
-                  <div className="ml-3 mt-0.5 space-y-0.5">
-                    {group.runs.map((run) => {
-                      const time = run.startedAt.split("T")[1]?.substring(0, 5) || "";
-                      const statusIcon = run.status === "SUCCESS" ? "✓" : run.status === "FAILED" ? "✗" : "△";
-                      return (
-                        <button
-                          key={run.logId}
-                          onClick={() => {
-                            setSelectedDate(group.date);
-                            setSelectedRunId(run.logId);
-                            setPage(0);
-                          }}
-                          className={`w-full text-left px-2 py-0.5 rounded text-[11px] transition-colors flex items-center justify-between ${
-                            selectedRunId === run.logId
-                              ? "bg-blue-100 text-blue-700 font-medium"
-                              : "hover:bg-slate-50 text-slate-500"
-                          }`}
-                        >
-                          <span className="flex items-center gap-1">
-                            <span className={run.status === "SUCCESS" ? "text-green-500" : run.status === "FAILED" ? "text-red-500" : "text-yellow-500"}>
-                              {statusIcon}
-                            </span>
-                            <span>{time} 수집</span>
-                          </span>
-                          <span className="text-[10px] text-slate-400">{run.newCount}건</span>
-                        </button>
-                      );
-                    })}
+            <div className="space-y-0.5">
+              {groupedLogs.map((group) => {
+                const isExpanded = expandedDates.has(group.date);
+                return (
+                  <div key={group.date}>
+                    {/* 1depth: 날짜 */}
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => toggleExpand(group.date)}
+                        className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-slate-600"
+                      >
+                        {isExpanded ? "▼" : "▶"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedDate(group.date);
+                          setSelectedRunId(null);
+                          setPage(0);
+                        }}
+                        className={`flex-1 text-left px-1.5 py-0.5 rounded text-[12px] transition-colors flex items-center justify-between ${
+                          selectedDate === group.date && !selectedRunId
+                            ? "bg-blue-50 text-blue-700 font-medium"
+                            : "hover:bg-slate-50 text-slate-600"
+                        }`}
+                      >
+                        <span>{group.date}</span>
+                        <span className="text-[10px] text-slate-400">
+                          {group.totalRunCount}회 신규 {group.totalNewCount}건
+                        </span>
+                      </button>
+                    </div>
+                    
+                    {/* 2depth: 수집 실행 */}
+                    {isExpanded && (
+                      <div className="ml-4 mt-0.5 space-y-0.5">
+                        {group.runs.map((run) => {
+                          const time = run.startedAt.split("T")[1]?.substring(0, 5) || "";
+                          const statusIcon = run.status === "SUCCESS" ? "✓" : run.status === "FAILED" ? "✗" : "△";
+                          return (
+                            <button
+                              key={run.logId}
+                              onClick={() => {
+                                setSelectedDate(group.date);
+                                setSelectedRunId(run.logId);
+                                setPage(0);
+                              }}
+                              className={`w-full text-left px-2 py-0.5 rounded text-[11px] transition-colors flex items-center justify-between ${
+                                selectedRunId === run.logId
+                                  ? "bg-blue-100 text-blue-700 font-medium"
+                                  : "hover:bg-slate-50 text-slate-500"
+                              }`}
+                            >
+                              <span className="flex items-center gap-1">
+                                <span className={run.status === "SUCCESS" ? "text-green-500" : run.status === "FAILED" ? "text-red-500" : "text-yellow-500"}>
+                                  {statusIcon}
+                                </span>
+                                <span>{time} ({run.siteCount}개 사이트)</span>
+                              </span>
+                              <span className="text-[10px] text-slate-400">{run.newCount}건</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -227,7 +248,6 @@ export default function Viewer() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* 헤더 */}
         <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-2">
-          {/* 스케줄 이름 */}
           <div className="flex items-center gap-2 mr-4">
             <span className="text-[13px] font-semibold text-slate-800">
               {selectedCrawler?.name || "전체"}
@@ -235,9 +255,11 @@ export default function Viewer() {
             {selectedDate && (
               <span className="text-[11px] text-slate-400">| {selectedDate}</span>
             )}
+            {selectedRunId && (
+              <span className="text-[11px] text-slate-400">선택된 실행</span>
+            )}
           </div>
 
-          {/* 사이트 탭 */}
           <button
             onClick={() => { setSelectedSite("all"); setPage(0); }}
             className={`px-2.5 py-1 rounded text-[12px] font-medium transition-colors ${
@@ -262,7 +284,6 @@ export default function Viewer() {
             </button>
           ))}
 
-          {/* 우측 정보 + 다운로드 */}
           <div className="ml-auto flex items-center gap-3">
             <span className="text-[12px] text-slate-500">{total}건</span>
             <button
@@ -283,7 +304,13 @@ export default function Viewer() {
 
         {/* 결과 테이블 */}
         <div className="flex-1 overflow-auto">
-          {isLoading ? (
+          {!selectedDate ? (
+            <div className="flex flex-col items-center justify-center h-full text-slate-400">
+              <div className="text-4xl mb-2">📅</div>
+              <div className="text-[13px]">수집 이력을 선택하세요</div>
+              <div className="text-[11px] mt-1">왼쪽에서 날짜를 클릭하면 데이터가 표시됩니다</div>
+            </div>
+          ) : isLoading ? (
             <div className="flex items-center justify-center h-full text-slate-500 text-[13px]">로딩 중...</div>
           ) : jobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
@@ -349,7 +376,6 @@ export default function Viewer() {
                 </tbody>
               </table>
 
-              {/* 페이지네이션 */}
               {totalPages > 1 && (
                 <div className="py-2 flex items-center justify-center gap-0.5 mt-3">
                   <button onClick={() => setPage(0)} disabled={page === 0}

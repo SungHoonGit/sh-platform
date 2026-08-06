@@ -17,6 +17,7 @@ public class CrawlLogGroupResponse {
 
     private LocalDate date;
     private int totalNewCount;
+    private int totalRunCount;
     private List<CrawlRunGroup> runs;
 
     @Data
@@ -29,5 +30,7 @@ public class CrawlLogGroupResponse {
         private String status;
         private int totalCount;
         private int newCount;
+        private int siteCount;
+        private List<String> siteNames;
     }
 }

@@ -140,11 +140,14 @@ export interface CrawlRunGroup {
   status: string;
   totalCount: number;
   newCount: number;
+  siteCount: number;
+  siteNames: string[];
 }
 
 export interface CrawlLogGroup {
   date: string;
   totalNewCount: number;
+  totalRunCount: number;
   runs: CrawlRunGroup[];
 }
 
