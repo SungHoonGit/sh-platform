@@ -5,9 +5,7 @@ import cn.idev.excel.ExcelWriter;
 import cn.idev.excel.write.metadata.WriteSheet;
 import com.scraper.platform.api.dto.JobPostingResponse;
 import com.scraper.platform.api.dto.JobPostingVO;
-import com.scraper.platform.model.CrawlLog;
 import com.scraper.platform.model.JobPosting;
-import com.scraper.platform.repository.CrawlLogRepository;
 import com.scraper.platform.repository.JobPostingRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,7 +38,6 @@ import java.util.Map;
 public class JobPostingController {
 
     private final JobPostingRepository jobPostingRepository;
-    private final CrawlLogRepository crawlLogRepository;
 
     @GetMapping
     @Operation(summary = "채용공고 목록 조회 (페이지네이션)")
@@ -48,7 +45,6 @@ public class JobPostingController {
             @RequestParam Long configId,
             @RequestParam(required = false) String siteName,
             @RequestParam(required = false) String crawledAt,
-            @RequestParam(required = false) Long runId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sortKey,
@@ -78,26 +74,14 @@ public class JobPostingController {
             try {
                 date = LocalDate.parse(crawledAt);
             } catch (Exception e) {
-                // invalid date, ignore
             }
-        }
-
-        LocalDateTime runStart = null;
-        LocalDateTime runEnd = null;
-        if (runId != null) {
-            CrawlLog crawlLog = crawlLogRepository.findById(runId).orElse(null);
-            if (crawlLog != null) {
-                runStart = crawlLog.getStartedAt().toLocalDate().atStartOfDay();
-                runEnd = crawlLog.getStartedAt().toLocalDate().plusDays(1).atStartOfDay();
-            }
-        } else if (date != null) {
-            runStart = date.atStartOfDay();
-            runEnd = date.plusDays(1).atStartOfDay();
         }
 
         Page<JobPosting> postings;
-        if (runStart != null && runEnd != null) {
-            postings = jobPostingRepository.findByConfigIdAndCreatedAtBetween(configId, runStart, runEnd, pageRequest);
+        if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+            postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawledAt(configId, siteName, date, pageRequest);
+        } else if (date != null) {
+            postings = jobPostingRepository.findByConfigIdAndCrawledAt(configId, date, pageRequest);
         } else if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
             postings = jobPostingRepository.findByConfigIdAndSiteName(configId, siteName, pageRequest);
         } else {

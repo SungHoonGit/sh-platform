@@ -44,6 +44,12 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
     @Query("SELECT DISTINCT j.crawledAt FROM JobPosting j WHERE j.config.id = :configId ORDER BY j.crawledAt DESC")
     List<LocalDate> findDistinctDatesByConfigId(@Param("configId") Long configId);
 
+    @Query("SELECT j.crawledAt, j.siteName, COUNT(j) FROM JobPosting j WHERE j.config.id = :configId GROUP BY j.crawledAt, j.siteName ORDER BY j.crawledAt DESC")
+    List<Object[]> countByConfigIdGroupedByDateAndSite(@Param("configId") Long configId);
+
+    @Query("SELECT j.crawledAt, COUNT(j) FROM JobPosting j WHERE j.config.id = :configId GROUP BY j.crawledAt ORDER BY j.crawledAt DESC")
+    List<Object[]> countByConfigIdGroupedByDate(@Param("configId") Long configId);
+
     List<JobPosting> findByConfigId(Long configId, Sort sort);
 
     List<JobPosting> findByConfigIdAndSiteName(Long configId, String siteName, Sort sort);
