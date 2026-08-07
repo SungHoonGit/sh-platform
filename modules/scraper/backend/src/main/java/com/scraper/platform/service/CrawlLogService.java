@@ -51,8 +51,8 @@ public class CrawlLogService {
             LocalDate date = (LocalDate) row[0];
             Long totalCount = (Long) row[1];
 
-            LocalDate logDateMin = date.minusDays(1);
-            LocalDate logDateMax = date.plusDays(1);
+            LocalDate logDateMin = date;
+            LocalDate logDateMax = date;
             List<CrawlLog> dayLogs = allLogs.stream()
                     .filter(l -> {
                         LocalDate logDate = l.getStartedAt().toLocalDate();

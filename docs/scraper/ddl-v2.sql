@@ -5,6 +5,12 @@
 -- ============================================================
 
 -- ============================================================
+-- [MIGRATION] 2026-08-06: crawl_log.status ENUM에 RUNNING 추가
+-- ============================================================
+-- 기존 DB: ENUM('success','failed','partial') → ENUM('RUNNING','SUCCESS','FAILED','PARTIAL')
+ALTER TABLE crawl_log MODIFY COLUMN status ENUM('RUNNING','SUCCESS','FAILED','PARTIAL') NOT NULL DEFAULT 'SUCCESS';
+
+-- ============================================================
 -- [MIGRATION] 2026-08-06: job_postings.crawl_log_id 추가
 -- ============================================================
 -- 신규 테이블 생성 시 위 CREATE TABLE에 포함됨
