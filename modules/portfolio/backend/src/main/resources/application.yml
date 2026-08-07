@@ -12,6 +12,13 @@ spring:
     username: sh_user
     password: SHpass1234!
     driver-class-name: org.mariadb.jdbc.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      max-lifetime: 1800000
+      idle-timeout: 600000
+      connection-timeout: 30000
+      leak-detection-threshold: 30000
   jpa:
     hibernate:
       ddl-auto: none

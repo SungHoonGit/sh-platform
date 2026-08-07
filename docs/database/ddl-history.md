@@ -64,6 +64,23 @@
 - **이유**: 검색 조건별 통계 집계 및 분석 지원
 - **적용 방법**: DBeaver 수동 실행 필요
 
+### 6. HikariCP 연결 풀 설정 추가
+- **파일**: 모든 모듈 `application.yml`
+- **설정**:
+  ```yaml
+  spring:
+    datasource:
+      hikari:
+        maximum-pool-size: 5
+        minimum-idle: 2
+        max-lifetime: 1800000
+        idle-timeout: 600000
+        connection-timeout: 30000
+        leak-detection-threshold: 30000
+  ```
+- **이유**: DB 연결 풀 누수 방지 (40개 → 20개로 축소)
+- **적용 방법**: 배포 시 자동 적용
+
 ---
 
 *최종 업데이트: 2026-08-07*
