@@ -254,8 +254,9 @@ export default function Viewer() {
       {/* 메인 영역 */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* 헤더 */}
-        <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-2">
-          <div className="flex items-center gap-2 mr-4">
+        <div className="bg-white border-b border-slate-200 px-4 py-2">
+          {/* 첫째 줄: 크롤러 + 날짜 + 검색 조건 */}
+          <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[13px] font-semibold text-slate-800">
               {selectedCrawler?.scheduleIcon || "🤖"} {selectedCrawler?.name || "전체"}
             </span>
@@ -283,7 +284,9 @@ export default function Viewer() {
             )}
           </div>
 
-          <button
+          {/* 둘째 줄: 사이트 탭 + 건수 + Excel */}
+          <div className="flex items-center gap-2">
+            <button
             onClick={() => { setSelectedSite("all"); setPage(0); }}
             className={`px-2.5 py-1 rounded text-[12px] font-medium transition-colors ${
               selectedSite === "all"
@@ -322,6 +325,7 @@ export default function Viewer() {
             >
               📥 Excel
             </button>
+          </div>
           </div>
         </div>
 
