@@ -1,5 +1,7 @@
 package com.scraper.platform.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scraper.platform.model.CrawlConfig;
 import com.scraper.platform.repository.CrawlConfigRepository;
 import com.shplatform.common.security.SecurityUtils;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,17 +46,46 @@ public class CrawlerListController {
                     ))
                     .collect(Collectors.toList());
                 
+                Map<String, Object> searchCriteria = extractSearchCriteria(config.getSiteConfigs());
+                
                 return Map.<String, Object>of(
                     "id", config.getId(),
                     "name", config.getName(),
                     "localPath", config.getLocalPath() != null ? config.getLocalPath() : "",
                     "schedule", config.getSchedule() != null ? config.getSchedule() : "",
                     "scheduleIcon", config.getScheduleIcon() != null ? config.getScheduleIcon() : "🤖",
-                    "siteConfigs", siteConfigs
+                    "siteConfigs", siteConfigs,
+                    "searchCriteria", searchCriteria
                 );
             })
             .collect(Collectors.toList());
         
         return ResponseEntity.ok(result);
+    }
+
+    private Map<String, Object> extractSearchCriteria(List<com.scraper.platform.model.CrawlSiteConfig> siteConfigs) {
+        Map<String, Object> criteria = new HashMap<>();
+        ObjectMapper mapper = new ObjectMapper();
+        
+        for (com.scraper.platform.model.CrawlSiteConfig siteConfig : siteConfigs) {
+            if (siteConfig.getParamValues() == null || siteConfig.getParamValues().isEmpty()) continue;
+            
+            try {
+                JsonNode node = mapper.readTree(siteConfig.getParamValues());
+                if (node.has("keyword") && !node.get("keyword").asText().isEmpty()) {
+                    criteria.putIfAbsent("keyword", node.get("keyword").asText());
+                }
+                if (node.has("career") && !node.get("career").asText().isEmpty()) {
+                    criteria.putIfAbsent("career", node.get("career").asText());
+                }
+                if (node.has("location") && !node.get("location").asText().isEmpty()) {
+                    criteria.putIfAbsent("location", node.get("location").asText());
+                }
+            } catch (Exception e) {
+                // JSON 파싱 실패 시 무시
+            }
+        }
+        
+        return criteria;
     }
 }

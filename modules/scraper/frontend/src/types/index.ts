@@ -6,6 +6,12 @@ export interface SiteConfig {
   paramValues: string;
 }
 
+export interface SearchCriteria {
+  keyword?: string;
+  career?: string;
+  location?: string;
+}
+
 export interface Crawler {
   id: number;
   name: string;
@@ -13,6 +19,7 @@ export interface Crawler {
   schedule: string;
   scheduleIcon?: string;
   siteConfigs: SiteConfig[];
+  searchCriteria?: SearchCriteria;
 }
 
 export interface JobItem {

@@ -257,10 +257,29 @@ export default function Viewer() {
         <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-2">
           <div className="flex items-center gap-2 mr-4">
             <span className="text-[13px] font-semibold text-slate-800">
-              {selectedCrawler?.name || "전체"}
+              {selectedCrawler?.scheduleIcon || "🤖"} {selectedCrawler?.name || "전체"}
             </span>
             {selectedDate && (
               <span className="text-[11px] text-slate-400">| {selectedDate}</span>
+            )}
+            {selectedCrawler?.searchCriteria && (
+              <div className="flex items-center gap-1 ml-2">
+                {selectedCrawler.searchCriteria.keyword && (
+                  <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-medium">
+                    keyword: {selectedCrawler.searchCriteria.keyword}
+                  </span>
+                )}
+                {selectedCrawler.searchCriteria.career && (
+                  <span className="px-1.5 py-0.5 bg-green-50 text-green-600 rounded text-[10px] font-medium">
+                    career: {selectedCrawler.searchCriteria.career}
+                  </span>
+                )}
+                {selectedCrawler.searchCriteria.location && (
+                  <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-medium">
+                    location: {selectedCrawler.searchCriteria.location}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 
