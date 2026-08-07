@@ -258,38 +258,40 @@ export default function Viewer() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* 헤더 */}
         <div className="bg-white border-b border-slate-200 px-4 py-2">
-          {/* 첫째 줄: 크롤러 + 날짜 + 검색 조건 */}
-          <div className="flex items-center gap-2 mb-1.5">
+          {/* 첫째 줄: 크롤러 + 날짜 */}
+          <div className="flex items-center gap-2 mb-1">
             <span className="text-[13px] font-semibold text-slate-800">
               {selectedCrawler?.scheduleIcon || "🤖"} {selectedCrawler?.name || "전체"}
             </span>
             {selectedDate && (
               <span className="text-[11px] text-slate-400">| {selectedDate}</span>
             )}
-            {(() => {
-              const criteriaStr = currentSearchCriteria || (selectedCrawler?.searchCriteria ? JSON.stringify(selectedCrawler.searchCriteria) : "");
-              if (!criteriaStr) return null;
-              try {
-                const criteria = typeof criteriaStr === "string" ? JSON.parse(criteriaStr) : criteriaStr;
-                const parts = [];
-                if (criteria.keyword) parts.push({ label: "keyword", value: criteria.keyword, color: "bg-blue-50 text-blue-600" });
-                if (criteria.career) parts.push({ label: "career", value: criteria.career, color: "bg-green-50 text-green-600" });
-                if (criteria.location) parts.push({ label: "location", value: criteria.location, color: "bg-purple-50 text-purple-600" });
-                if (parts.length === 0) return null;
-                return (
-                  <div className="flex items-center gap-1 ml-2">
-                    {parts.map((p, i) => (
-                      <span key={i} className={`px-1.5 py-0.5 ${p.color} rounded text-[10px] font-medium`}>
-                        {p.label}: {p.value}
-                      </span>
-                    ))}
-                  </div>
-                );
-              } catch {
-                return null;
-              }
-            })()}
           </div>
+
+          {/* 검색 조건 배지 */}
+          {(() => {
+            const criteriaStr = currentSearchCriteria || (selectedCrawler?.searchCriteria ? JSON.stringify(selectedCrawler.searchCriteria) : "");
+            if (!criteriaStr) return null;
+            try {
+              const criteria = typeof criteriaStr === "string" ? JSON.parse(criteriaStr) : criteriaStr;
+              const parts = [];
+              if (criteria.keyword) parts.push({ label: "keyword", value: criteria.keyword, color: "bg-blue-50 text-blue-600" });
+              if (criteria.career) parts.push({ label: "career", value: criteria.career, color: "bg-green-50 text-green-600" });
+              if (criteria.location) parts.push({ label: "location", value: criteria.location, color: "bg-purple-50 text-purple-600" });
+              if (parts.length === 0) return null;
+              return (
+                <div className="flex items-center gap-1 mb-1.5">
+                  {parts.map((p, i) => (
+                    <span key={i} className={`px-1.5 py-0.5 ${p.color} rounded text-[10px] font-medium`}>
+                      {p.label}: {p.value}
+                    </span>
+                  ))}
+                </div>
+              );
+            } catch {
+              return null;
+            }
+          })()}
 
           {/* 둘째 줄: 사이트 탭 + 건수 + Excel */}
           <div className="flex items-center gap-2">
