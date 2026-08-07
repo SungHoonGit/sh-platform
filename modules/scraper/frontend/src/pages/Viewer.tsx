@@ -219,17 +219,6 @@ export default function Viewer() {
                         {group.runs.map((run) => {
                           const time = run.startedAt.split("T")[1]?.substring(0, 5) || "";
                           const statusIcon = run.status === "SUCCESS" ? "✓" : run.status === "FAILED" ? "✗" : "△";
-                          let searchInfo = "";
-                          if (run.searchCriteria) {
-                            try {
-                              const criteria = JSON.parse(run.searchCriteria);
-                              const parts = [];
-                              if (criteria.keyword) parts.push(criteria.keyword);
-                              if (criteria.career) parts.push(criteria.career);
-                              if (criteria.location) parts.push(criteria.location);
-                              searchInfo = parts.join(" | ");
-                            } catch {}
-                          }
                           return (
                             <button
                               key={run.logId}
