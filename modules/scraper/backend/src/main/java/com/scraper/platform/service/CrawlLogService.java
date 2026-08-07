@@ -134,6 +134,7 @@ public class CrawlLogService {
                     .newCount(newCount)
                     .siteCount(siteNames.size())
                     .siteNames(siteNames)
+                    .searchCriteria(representative.getSearchCriteria())
                     .build();
         }).collect(Collectors.toList());
     }

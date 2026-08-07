@@ -129,12 +129,14 @@ public class CrawlExecutionService {
                 totalJobs += allJobs.size();
 
                 SiteDefinition site = siteConfig.getSiteDefinition();
+                String searchCriteriaJson = extractSearchCriteria(siteConfigs);
                 CrawlLog crawlLog = CrawlLog.builder()
                         .config(config)
                         .siteDefinition(site)
                         .status(CrawlLog.CrawlStatus.RUNNING)
                         .totalCount(0)
                         .newCount(0)
+                        .searchCriteria(searchCriteriaJson)
                         .build();
                 crawlLog = crawlLogRepository.save(crawlLog);
                 Long crawlLogId = crawlLog.getId();
@@ -293,6 +295,36 @@ public class CrawlExecutionService {
             return node.has("keyword") ? node.get("keyword").asText() : "전체";
         } catch (Exception e) {
             return "전체";
+        }
+    }
+
+    private String extractSearchCriteria(List<CrawlSiteConfig> siteConfigs) {
+        java.util.Map<String, String> criteria = new java.util.HashMap<>();
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        
+        for (CrawlSiteConfig siteConfig : siteConfigs) {
+            if (siteConfig.getParamValues() == null || siteConfig.getParamValues().isEmpty()) continue;
+            
+            try {
+                com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(siteConfig.getParamValues());
+                if (node.has("keyword") && !node.get("keyword").asText().isEmpty()) {
+                    criteria.putIfAbsent("keyword", node.get("keyword").asText());
+                }
+                if (node.has("career") && !node.get("career").asText().isEmpty()) {
+                    criteria.putIfAbsent("career", node.get("career").asText());
+                }
+                if (node.has("location") && !node.get("location").asText().isEmpty()) {
+                    criteria.putIfAbsent("location", node.get("location").asText());
+                }
+            } catch (Exception e) {
+                // JSON 파싱 실패 시 무시
+            }
+        }
+        
+        try {
+            return mapper.writeValueAsString(criteria);
+        } catch (Exception e) {
+            return "{}";
         }
     }
 }

@@ -40,6 +40,9 @@ public class CrawlLog {
     @Builder.Default
     private Integer newCount = 0;
 
+    @Column(name = "search_criteria", columnDefinition = "JSON")
+    private String searchCriteria;
+
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 

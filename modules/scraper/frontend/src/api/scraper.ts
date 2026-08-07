@@ -143,6 +143,7 @@ export interface CrawlRunGroup {
   newCount: number;
   siteCount: number;
   siteNames: string[];
+  searchCriteria?: string;
 }
 
 export interface CrawlLogGroup {

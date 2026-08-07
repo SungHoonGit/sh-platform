@@ -33,4 +33,37 @@
 
 ---
 
-*최종 업데이트: 2026-08-06*
+## 2026-08-07
+
+### 4. crawl_log.search_criteria 컬럼 추가
+- **SQL**: `ALTER TABLE crawl_log ADD COLUMN IF NOT EXISTS search_criteria JSON NULL COMMENT '실행 시점 검색 조건 {"keyword":"Java","career":"3~5년","location":"서울"}';`
+- **이유**: 크롤링 시작 시 실행 시점의 검색 조건 저장하여 이력 추적 지원
+- **적용 방법**: DBeaver 수동 실행 필요
+
+### 5. crawl_stats 테이블 생성
+- **SQL**:
+  ```sql
+  CREATE TABLE IF NOT EXISTS crawl_stats (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      config_id BIGINT NOT NULL,
+      crawl_date DATE NOT NULL COMMENT '크롤링 날짜',
+      keyword VARCHAR(100) COMMENT '검색 키워드',
+      career VARCHAR(50) COMMENT '경력 조건',
+      location VARCHAR(50) COMMENT '지역 조건',
+      total_jobs INT DEFAULT 0 COMMENT '전체 수집 건수',
+      new_jobs INT DEFAULT 0 COMMENT '신규 수집 건수',
+      dup_jobs INT DEFAULT 0 COMMENT '중복 제외 건수',
+      success_sites INT DEFAULT 0 COMMENT '성공 사이트 수',
+      failed_sites INT DEFAULT 0 COMMENT '실패 사이트 수',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_crawl_stats_config_date (config_id, crawl_date),
+      INDEX idx_crawl_stats_keyword (keyword),
+      FOREIGN KEY (config_id) REFERENCES crawl_config(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='크롤링 통계';
+  ```
+- **이유**: 검색 조건별 통계 집계 및 분석 지원
+- **적용 방법**: DBeaver 수동 실행 필요
+
+---
+
+*최종 업데이트: 2026-08-07*

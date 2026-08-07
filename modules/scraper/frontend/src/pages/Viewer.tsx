@@ -43,6 +43,7 @@ export default function Viewer() {
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<{ key: string; order: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(0);
+  const [currentSearchCriteria, setCurrentSearchCriteria] = useState<string>("");
   const SIZE = 20;
 
   const executeMutation = useMutation({
@@ -196,6 +197,7 @@ export default function Viewer() {
                         onClick={() => {
                           setSelectedDate(group.date);
                           setSelectedRunIds(null);
+                          setCurrentSearchCriteria("");
                           setPage(0);
                         }}
                         className={`flex-1 text-left px-1.5 py-0.5 rounded text-[12px] transition-colors flex items-center justify-between ${
@@ -217,12 +219,24 @@ export default function Viewer() {
                         {group.runs.map((run) => {
                           const time = run.startedAt.split("T")[1]?.substring(0, 5) || "";
                           const statusIcon = run.status === "SUCCESS" ? "✓" : run.status === "FAILED" ? "✗" : "△";
+                          let searchInfo = "";
+                          if (run.searchCriteria) {
+                            try {
+                              const criteria = JSON.parse(run.searchCriteria);
+                              const parts = [];
+                              if (criteria.keyword) parts.push(criteria.keyword);
+                              if (criteria.career) parts.push(criteria.career);
+                              if (criteria.location) parts.push(criteria.location);
+                              searchInfo = parts.join(" | ");
+                            } catch {}
+                          }
                           return (
                             <button
                               key={run.logId}
                               onClick={() => {
                                 setSelectedDate(group.date);
                                 setSelectedRunIds(run.logIds);
+                                setCurrentSearchCriteria(run.searchCriteria || "");
                                 setPage(0);
                               }}
                               className={`w-full text-left px-2 py-0.5 rounded text-[11px] transition-colors flex items-center justify-between ${
@@ -263,25 +277,29 @@ export default function Viewer() {
             {selectedDate && (
               <span className="text-[11px] text-slate-400">| {selectedDate}</span>
             )}
-            {selectedCrawler?.searchCriteria && (
-              <div className="flex items-center gap-1 ml-2">
-                {selectedCrawler.searchCriteria.keyword && (
-                  <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-medium">
-                    keyword: {selectedCrawler.searchCriteria.keyword}
-                  </span>
-                )}
-                {selectedCrawler.searchCriteria.career && (
-                  <span className="px-1.5 py-0.5 bg-green-50 text-green-600 rounded text-[10px] font-medium">
-                    career: {selectedCrawler.searchCriteria.career}
-                  </span>
-                )}
-                {selectedCrawler.searchCriteria.location && (
-                  <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-medium">
-                    location: {selectedCrawler.searchCriteria.location}
-                  </span>
-                )}
-              </div>
-            )}
+            {(() => {
+              const criteriaStr = currentSearchCriteria || (selectedCrawler?.searchCriteria ? JSON.stringify(selectedCrawler.searchCriteria) : "");
+              if (!criteriaStr) return null;
+              try {
+                const criteria = typeof criteriaStr === "string" ? JSON.parse(criteriaStr) : criteriaStr;
+                const parts = [];
+                if (criteria.keyword) parts.push({ label: "keyword", value: criteria.keyword, color: "bg-blue-50 text-blue-600" });
+                if (criteria.career) parts.push({ label: "career", value: criteria.career, color: "bg-green-50 text-green-600" });
+                if (criteria.location) parts.push({ label: "location", value: criteria.location, color: "bg-purple-50 text-purple-600" });
+                if (parts.length === 0) return null;
+                return (
+                  <div className="flex items-center gap-1 ml-2">
+                    {parts.map((p, i) => (
+                      <span key={i} className={`px-1.5 py-0.5 ${p.color} rounded text-[10px] font-medium`}>
+                        {p.label}: {p.value}
+                      </span>
+                    ))}
+                  </div>
+                );
+              } catch {
+                return null;
+              }
+            })()}
           </div>
 
           {/* 둘째 줄: 사이트 탭 + 건수 + Excel */}
