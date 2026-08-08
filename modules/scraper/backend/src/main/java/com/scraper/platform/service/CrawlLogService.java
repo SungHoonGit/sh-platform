@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -20,6 +21,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CrawlLogService {
+
+    private static final long GROUPING_MINUTES = 30;
 
     private final CrawlLogRepository crawlLogRepository;
     private final JobPostingRepository jobPostingRepository;
@@ -79,6 +82,7 @@ public class CrawlLogService {
 
         List<List<CrawlLog>> groups = new ArrayList<>();
         Map<String, List<CrawlLog>> batchGroups = new LinkedHashMap<>();
+        List<CrawlLog> legacyLogs = new ArrayList<>();
 
         for (CrawlLog log : sorted) {
             String batchId = log.getBatchId();
@@ -87,10 +91,11 @@ public class CrawlLogService {
                 batchGroups.computeIfAbsent(batchId, k -> new ArrayList<>()).add(log);
             } else {
                 // batch_id 없는 레거시 로그는 시간 근접성으로 그룹핑
-                groups.add(Collections.singletonList(log));
+                legacyLogs.add(log);
             }
         }
         groups.addAll(batchGroups.values());
+        groups.addAll(groupLegacyByTimeProximity(legacyLogs));
 
         // 최신 실행부터 표시
         groups.sort(Comparator.comparing(
@@ -98,6 +103,44 @@ public class CrawlLogService {
                 Comparator.reverseOrder()));
 
         return groups.stream().map(this::toRunGroup).collect(Collectors.toList());
+    }
+
+    /**
+     * batch_id가 없는 레거시 로그를 시작 시간 근접성 기준으로 그룹핑한다.
+     * 같은 실행에서 만들어진 사이트별 로그(수십 초 간격)는 한 그룹으로 묶고,
+     * 별도의 실행(수 분 이상 간격)은 분리한다.
+     *
+     * @param logs batch_id가 없는 로그 목록
+     * @return 시간 근접 그룹 목록
+     */
+    private List<List<CrawlLog>> groupLegacyByTimeProximity(List<CrawlLog> logs) {
+        List<List<CrawlLog>> groups = new ArrayList<>();
+        if (logs.isEmpty()) return groups;
+
+        List<CrawlLog> sorted = logs.stream()
+                .sorted(Comparator.comparing(CrawlLog::getStartedAt).reversed())
+                .collect(Collectors.toList());
+
+        List<CrawlLog> currentGroup = new ArrayList<>();
+        for (CrawlLog log : sorted) {
+            if (currentGroup.isEmpty()) {
+                currentGroup.add(log);
+            } else {
+                LocalDateTime groupTime = currentGroup.get(0).getStartedAt();
+                long minutesBetween = Math.abs(ChronoUnit.MINUTES.between(log.getStartedAt(), groupTime));
+                if (minutesBetween <= GROUPING_MINUTES) {
+                    currentGroup.add(log);
+                } else {
+                    groups.add(currentGroup);
+                    currentGroup = new ArrayList<>();
+                    currentGroup.add(log);
+                }
+            }
+        }
+        if (!currentGroup.isEmpty()) {
+            groups.add(currentGroup);
+        }
+        return groups;
     }
 
     private CrawlRunGroup toRunGroup(List<CrawlLog> group) {
