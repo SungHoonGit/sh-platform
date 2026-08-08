@@ -52,6 +52,13 @@ ALTER TABLE crawl_config ADD COLUMN IF NOT EXISTS schedule_icon VARCHAR(10) DEFA
 ALTER TABLE crawl_log ADD COLUMN IF NOT EXISTS search_criteria JSON NULL COMMENT '실행 시점 검색 조건 {"keyword":"Java","career":"3~5년","location":"서울"}';
 
 -- ============================================================
+-- [MIGRATION] 2026-08-08: crawl_log.batch_id 추가
+-- ============================================================
+-- 한 번의 크롤링 실행(수동/스케줄)에 속한 사이트별 로그를 묶기 위한 실행 배치 식별자
+ALTER TABLE crawl_log ADD COLUMN IF NOT EXISTS batch_id VARCHAR(36) NULL COMMENT '크롤링 실행 배치 ID (한 실행 내 사이트별 로그 그룹핑)';
+ALTER TABLE crawl_log ADD INDEX IF NOT EXISTS idx_crawl_log_batch_id (batch_id);
+
+-- ============================================================
 -- [MIGRATION] 2026-08-07: crawl_stats 테이블 생성
 -- ============================================================
 -- 크롤링 통계 집계용 테이블
@@ -216,6 +223,7 @@ CREATE TABLE IF NOT EXISTS crawl_log (
     total_count INT DEFAULT 0 COMMENT '전체 수집 건수',
     new_count INT DEFAULT 0 COMMENT '신규 수집 건수',
     search_criteria JSON NULL COMMENT '실행 시점 검색 조건 {"keyword":"Java","career":"3~5년","location":"서울"}',
+    batch_id VARCHAR(36) NULL COMMENT '크롤링 실행 배치 ID (한 실행 내 사이트별 로그 그룹핑)',
     error_message TEXT COMMENT '에러 메시지',
     started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '시작 시간',
     completed_at TIMESTAMP NULL COMMENT '완료 시간',
@@ -225,7 +233,8 @@ CREATE TABLE IF NOT EXISTS crawl_log (
     INDEX idx_crawl_log_config (config_id),
     INDEX idx_crawl_log_site (site_definition_id),
     INDEX idx_crawl_log_started_at (started_at),
-    INDEX idx_crawl_log_status (status)
+    INDEX idx_crawl_log_status (status),
+    INDEX idx_crawl_log_batch_id (batch_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================

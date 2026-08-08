@@ -113,6 +113,9 @@ public class CrawlExecutionService {
         Set<String> existingDedupKeys = jobPostingRepository.findDedupKeysSince(config.getId(), dedupSince);
         log.info("Dedup: found {} existing dedup keys since {}", existingDedupKeys.size(), dedupSince);
 
+        // 한 번의 크롤링 실행에 속한 사이트별 로그를 묶기 위한 배치 ID
+        String batchId = UUID.randomUUID().toString();
+
         List<CrawlSiteConfig> siteConfigs = crawlSiteConfigRepository
                 .findEnabledWithSite(config.getId());
 
@@ -137,6 +140,7 @@ public class CrawlExecutionService {
                         .totalCount(0)
                         .newCount(0)
                         .searchCriteria(searchCriteriaJson)
+                        .batchId(batchId)
                         .build();
                 crawlLog = crawlLogRepository.save(crawlLog);
                 Long crawlLogId = crawlLog.getId();

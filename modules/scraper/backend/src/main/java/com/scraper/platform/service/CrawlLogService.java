@@ -13,8 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,8 +20,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CrawlLogService {
-
-    private static final long GROUPING_MINUTES = 30;
 
     private final CrawlLogRepository crawlLogRepository;
     private final JobPostingRepository jobPostingRepository;
@@ -60,7 +56,8 @@ public class CrawlLogService {
                     })
                     .collect(Collectors.toList());
 
-            List<CrawlRunGroup> groupedRuns = groupByTimeProximity(dayLogs);
+            List<CrawlRunGroup> groupedRuns = groupByBatch(dayLogs);
+            groupedRuns = markNewCriteria(groupedRuns);
 
             result.add(CrawlLogGroupResponse.builder()
                     .date(date)
@@ -73,7 +70,7 @@ public class CrawlLogService {
         return result;
     }
 
-    private List<CrawlRunGroup> groupByTimeProximity(List<CrawlLog> logs) {
+    private List<CrawlRunGroup> groupByBatch(List<CrawlLog> logs) {
         if (logs.isEmpty()) return Collections.emptyList();
 
         List<CrawlLog> sorted = logs.stream()
@@ -81,62 +78,87 @@ public class CrawlLogService {
                 .collect(Collectors.toList());
 
         List<List<CrawlLog>> groups = new ArrayList<>();
-        List<CrawlLog> currentGroup = new ArrayList<>();
+        Map<String, List<CrawlLog>> batchGroups = new LinkedHashMap<>();
 
         for (CrawlLog log : sorted) {
-            if (currentGroup.isEmpty()) {
-                currentGroup.add(log);
+            String batchId = log.getBatchId();
+            if (batchId != null && !batchId.isEmpty()) {
+                // batch_id가 있으면 같은 배치끼리 그룹핑
+                batchGroups.computeIfAbsent(batchId, k -> new ArrayList<>()).add(log);
             } else {
-                LocalDateTime groupTime = currentGroup.get(0).getStartedAt();
-                long minutesBetween = Math.abs(ChronoUnit.MINUTES.between(log.getStartedAt(), groupTime));
-                if (minutesBetween <= GROUPING_MINUTES) {
-                    currentGroup.add(log);
-                } else {
-                    groups.add(currentGroup);
-                    currentGroup = new ArrayList<>();
-                    currentGroup.add(log);
+                // batch_id 없는 레거시 로그는 시간 근접성으로 그룹핑
+                groups.add(Collections.singletonList(log));
+            }
+        }
+        groups.addAll(batchGroups.values());
+
+        // 최신 실행부터 표시
+        groups.sort(Comparator.comparing(
+                l -> l.stream().map(CrawlLog::getStartedAt).max(LocalDateTime::compareTo).orElse(LocalDateTime.MIN),
+                Comparator.reverseOrder()));
+
+        return groups.stream().map(this::toRunGroup).collect(Collectors.toList());
+    }
+
+    private CrawlRunGroup toRunGroup(List<CrawlLog> group) {
+        CrawlLog representative = group.get(0);
+        List<String> siteNames = group.stream()
+                .map(l -> l.getSiteDefinition() != null ? l.getSiteDefinition().getSiteName() : "unknown")
+                .collect(Collectors.toList());
+
+        boolean allSuccess = group.stream()
+                .allMatch(l -> l.getStatus() == CrawlLog.CrawlStatus.SUCCESS);
+        boolean anyFailed = group.stream()
+                .anyMatch(l -> l.getStatus() == CrawlLog.CrawlStatus.FAILED);
+
+        CrawlLog.CrawlStatus combinedStatus;
+        if (allSuccess) combinedStatus = CrawlLog.CrawlStatus.SUCCESS;
+        else if (anyFailed) combinedStatus = CrawlLog.CrawlStatus.FAILED;
+        else combinedStatus = CrawlLog.CrawlStatus.PARTIAL;
+
+        int totalCount = group.stream().mapToInt(l -> l.getTotalCount() != null ? l.getTotalCount() : 0).sum();
+        int newCount = group.stream().mapToInt(l -> l.getNewCount() != null ? l.getNewCount() : 0).sum();
+
+        List<Long> logIds = group.stream()
+                .map(CrawlLog::getId)
+                .collect(Collectors.toList());
+
+        return CrawlRunGroup.builder()
+                .logId(representative.getId())
+                .logIds(logIds)
+                .startedAt(representative.getStartedAt())
+                .status(combinedStatus.name())
+                .totalCount(totalCount)
+                .newCount(newCount)
+                .siteCount(siteNames.size())
+                .siteNames(siteNames)
+                .searchCriteria(representative.getSearchCriteria())
+                .build();
+    }
+
+    /**
+     * 직전 실행 대비 검색 조건이 변경된 실행에 newCriteria 플래그를 설정한다.
+     * 최신 실행부터 정렬된 목록에서 이전(더 과거) 실행과 비교한다.
+     *
+     * @param runs 최신순으로 정렬된 실행 그룹 목록
+     * @return newCriteria가 마킹된 목록
+     */
+    private List<CrawlRunGroup> markNewCriteria(List<CrawlRunGroup> runs) {
+        if (runs.size() <= 1) return runs;
+
+        for (int i = 0; i < runs.size(); i++) {
+            CrawlRunGroup current = runs.get(i);
+            String currentCriteria = current.getSearchCriteria();
+            for (int j = i + 1; j < runs.size(); j++) {
+                CrawlRunGroup previous = runs.get(j);
+                String previousCriteria = previous.getSearchCriteria();
+                if (!Objects.equals(currentCriteria, previousCriteria)) {
+                    current.setNewCriteria(true);
+                    break;
                 }
             }
         }
-        if (!currentGroup.isEmpty()) {
-            groups.add(currentGroup);
-        }
-
-        return groups.stream().map(group -> {
-            CrawlLog representative = group.get(0);
-            List<String> siteNames = group.stream()
-                    .map(l -> l.getSiteDefinition() != null ? l.getSiteDefinition().getSiteName() : "unknown")
-                    .collect(Collectors.toList());
-
-            boolean allSuccess = group.stream()
-                    .allMatch(l -> l.getStatus() == CrawlLog.CrawlStatus.SUCCESS);
-            boolean anyFailed = group.stream()
-                    .anyMatch(l -> l.getStatus() == CrawlLog.CrawlStatus.FAILED);
-
-            CrawlLog.CrawlStatus combinedStatus;
-            if (allSuccess) combinedStatus = CrawlLog.CrawlStatus.SUCCESS;
-            else if (anyFailed) combinedStatus = CrawlLog.CrawlStatus.FAILED;
-            else combinedStatus = CrawlLog.CrawlStatus.PARTIAL;
-
-            int totalCount = group.stream().mapToInt(l -> l.getTotalCount() != null ? l.getTotalCount() : 0).sum();
-            int newCount = group.stream().mapToInt(l -> l.getNewCount() != null ? l.getNewCount() : 0).sum();
-
-            List<Long> logIds = group.stream()
-                    .map(CrawlLog::getId)
-                    .collect(Collectors.toList());
-
-            return CrawlRunGroup.builder()
-                    .logId(representative.getId())
-                    .logIds(logIds)
-                    .startedAt(representative.getStartedAt())
-                    .status(combinedStatus.name())
-                    .totalCount(totalCount)
-                    .newCount(newCount)
-                    .siteCount(siteNames.size())
-                    .siteNames(siteNames)
-                    .searchCriteria(representative.getSearchCriteria())
-                    .build();
-        }).collect(Collectors.toList());
+        return runs;
     }
 
     @Transactional

@@ -43,6 +43,9 @@ public class CrawlLog {
     @Column(name = "search_criteria", columnDefinition = "JSON")
     private String searchCriteria;
 
+    @Column(name = "batch_id", length = 36)
+    private String batchId;
+
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 

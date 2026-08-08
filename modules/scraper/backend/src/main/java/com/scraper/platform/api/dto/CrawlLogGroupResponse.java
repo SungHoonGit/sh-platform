@@ -34,5 +34,6 @@ public class CrawlLogGroupResponse {
         private int siteCount;
         private List<String> siteNames;
         private String searchCriteria;
+        private boolean newCriteria;
     }
 }

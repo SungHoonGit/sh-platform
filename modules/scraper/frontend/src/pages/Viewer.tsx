@@ -22,10 +22,10 @@ const COLUMNS: { key: string; label: string; w: string }[] = [
   { key: "site", label: "사이트", w: "w-[80px]" },
   { key: "position", label: "포지션", w: "w-auto" },
   { key: "company", label: "회사명", w: "w-[120px]" },
-  { key: "career", label: "경력", w: "w-[70px]" },
-  { key: "location", label: "지역", w: "w-[70px]" },
+  { key: "career", label: "경력", w: "w-[80px]" },
+  { key: "location", label: "지역", w: "w-[80px]" },
   { key: "tech", label: "기술", w: "w-[180px]" },
-  { key: "deadline", label: "마감", w: "w-[70px]" },
+  { key: "deadline", label: "마감", w: "w-[110px]" },
 ];
 
 export default function Viewer() {
@@ -44,6 +44,7 @@ export default function Viewer() {
   const [sort, setSort] = useState<{ key: string; order: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(0);
   const [currentSearchCriteria, setCurrentSearchCriteria] = useState<string>("");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const SIZE = 20;
 
   const executeMutation = useMutation({
@@ -114,6 +115,20 @@ export default function Viewer() {
   const jobs = jobsData?.jobs || [];
   const total = jobsData?.total || 0;
   const totalPages = Math.ceil(total / SIZE);
+
+  const filteredJobs = useMemo(() => {
+    const kw = searchKeyword.trim().toLowerCase();
+    if (!kw) return jobs;
+    return jobs.filter((j: JobPostingItem) =>
+      [j.position, j.company, j.tech, j.location, j.career, j.site]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(kw))
+    );
+  }, [jobs, searchKeyword]);
+
+  const displayJobs = searchKeyword.trim() ? filteredJobs : jobs;
+  const displayTotal = searchKeyword.trim() ? filteredJobs.length : total;
+  const displayTotalPages = searchKeyword.trim() ? Math.max(1, Math.ceil(filteredJobs.length / SIZE)) : totalPages;
 
   const toggleSort = (key: string) => {
     setPage(0);
@@ -239,6 +254,9 @@ export default function Viewer() {
                                   {statusIcon}
                                 </span>
                                 <span>{time} ({run.siteCount}개 사이트)</span>
+                                {run.newCriteria && (
+                                  <span className="px-1 py-0.5 rounded bg-orange-100 text-orange-600 text-[9px] font-bold">new!</span>
+                                )}
                               </span>
                               <span className="text-[10px] text-slate-400">{run.newCount}건</span>
                             </button>
@@ -320,7 +338,14 @@ export default function Viewer() {
           ))}
 
           <div className="ml-auto flex items-center gap-3">
-            <span className="text-[12px] text-slate-500">{total}건</span>
+            <input
+              type="text"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              placeholder="검색..."
+              className="px-2 py-1 rounded border border-slate-300 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500 w-40"
+            />
+            <span className="text-[12px] text-slate-500">{displayTotal}건</span>
             <button
               onClick={() => {
                 if (!selectedCrawlerId) return;
@@ -348,11 +373,11 @@ export default function Viewer() {
             </div>
           ) : isLoading ? (
             <div className="flex items-center justify-center h-full text-slate-500 text-[13px]">로딩 중...</div>
-          ) : jobs.length === 0 ? (
+          ) : displayJobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
               <div className="text-4xl mb-2">📋</div>
               <div className="text-[13px]">데이터가 없습니다</div>
-              <div className="text-[11px] mt-1">수동 수집을 실행해 보세요</div>
+              <div className="text-[11px] mt-1">{searchKeyword ? "검색 결과가 없습니다" : "수동 수집을 실행해 보세요"}</div>
             </div>
           ) : (
             <div className="p-3">
@@ -379,7 +404,7 @@ export default function Viewer() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {jobs.map((job: JobPostingItem, i: number) => {
+                  {displayJobs.map((job: JobPostingItem, i: number) => {
                     const no = page * SIZE + i + 1;
                     const siteDef = SITES.find((s) => s.id === job.site || s.name === job.site);
                     return (
@@ -412,20 +437,20 @@ export default function Viewer() {
                 </tbody>
               </table>
 
-              {totalPages > 1 && (
+              {displayTotalPages > 1 && (
                 <div className="py-2 flex items-center justify-center gap-0.5 mt-3">
                   <button onClick={() => setPage(0)} disabled={page === 0}
                     className="px-1.5 py-0.5 text-[11px] rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">«</button>
                   <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}
                     className="px-1.5 py-0.5 text-[11px] rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">‹</button>
-                  {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                  {Array.from({ length: Math.min(7, displayTotalPages) }, (_, i) => {
                     let pageNum: number;
-                    if (totalPages <= 7) {
+                    if (displayTotalPages <= 7) {
                       pageNum = i;
                     } else if (page <= 3) {
                       pageNum = i;
-                    } else if (page >= totalPages - 4) {
-                      pageNum = totalPages - 7 + i;
+                    } else if (page >= displayTotalPages - 4) {
+                      pageNum = displayTotalPages - 7 + i;
                     } else {
                       pageNum = page - 3 + i;
                     }
@@ -436,11 +461,11 @@ export default function Viewer() {
                         }`}>{pageNum + 1}</button>
                     );
                   })}
-                  <button onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+                  <button onClick={() => setPage((p) => Math.min(displayTotalPages - 1, p + 1))} disabled={page >= displayTotalPages - 1}
                     className="px-1.5 py-0.5 text-[11px] rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">›</button>
-                  <button onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}
+                  <button onClick={() => setPage(displayTotalPages - 1)} disabled={page >= displayTotalPages - 1}
                     className="px-1.5 py-0.5 text-[11px] rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">»</button>
-                  <span className="ml-2 text-[10px] text-slate-400">{page + 1}/{totalPages}</span>
+                  <span className="ml-2 text-[10px] text-slate-400">{page + 1}/{displayTotalPages}</span>
                 </div>
               )}
             </div>
