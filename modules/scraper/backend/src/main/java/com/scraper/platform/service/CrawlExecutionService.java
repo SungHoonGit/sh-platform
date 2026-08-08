@@ -58,7 +58,7 @@ public class CrawlExecutionService {
             if (shouldRun(schedule, now, config.getId())) {
                 log.info("Scheduled crawl triggered for config: {} (id: {})", config.getName(), config.getId());
                 try {
-                    executeCrawl(config);
+                    executeCrawl(config, CrawlLog.CrawlSource.SCHEDULE);
                 } catch (Exception e) {
                     log.error("Failed to execute scheduled crawl for config: {}", config.getName(), e);
                 }
@@ -96,8 +96,14 @@ public class CrawlExecutionService {
         }
     }
 
-    public void executeCrawl(CrawlConfig config) {
-        log.info("Executing crawl for config: {} (id: {})", config.getName(), config.getId());
+    /**
+     * 지정된 설정으로 크롤링을 실행한다.
+     *
+     * @param config 크롤링 설정
+     * @param source 실행 출처 (MANUAL: 수동, SCHEDULE: 스케줄)
+     */
+    public void executeCrawl(CrawlConfig config, CrawlLog.CrawlSource source) {
+        log.info("Executing crawl for config: {} (id: {}) source: {}", config.getName(), config.getId(), source);
 
         int total = 0;
         int success = 0;
@@ -141,6 +147,7 @@ public class CrawlExecutionService {
                         .newCount(0)
                         .searchCriteria(searchCriteriaJson)
                         .batchId(batchId)
+                        .source(source)
                         .build();
                 crawlLog = crawlLogRepository.save(crawlLog);
                 Long crawlLogId = crawlLog.getId();

@@ -145,6 +145,7 @@ export interface CrawlRunGroup {
   siteNames: string[];
   searchCriteria?: string;
   newCriteria?: boolean;
+  source?: string;
 }
 
 export interface CrawlLogGroup {

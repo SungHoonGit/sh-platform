@@ -234,6 +234,9 @@ export default function Viewer() {
                         {group.runs.map((run) => {
                           const time = run.startedAt.split("T")[1]?.substring(0, 5) || "";
                           const statusIcon = run.status === "SUCCESS" ? "✓" : run.status === "FAILED" ? "✗" : "△";
+                          const isAuto = run.source === "SCHEDULE";
+                          const runTypeIcon = isAuto ? "🕐" : "👆";
+                          const runTypeTitle = isAuto ? "스케줄 실행" : "수동 실행";
                           return (
                             <button
                               key={run.logId}
@@ -253,6 +256,7 @@ export default function Viewer() {
                                 <span className={run.status === "SUCCESS" ? "text-green-500" : run.status === "FAILED" ? "text-red-500" : "text-yellow-500"}>
                                   {statusIcon}
                                 </span>
+                                <span title={runTypeTitle}>{runTypeIcon}</span>
                                 <span>{time} ({run.siteCount}개 사이트)</span>
                                 {run.newCriteria && (
                                   <span className="px-1 py-0.5 rounded bg-orange-100 text-orange-600 text-[9px] font-bold">new!</span>

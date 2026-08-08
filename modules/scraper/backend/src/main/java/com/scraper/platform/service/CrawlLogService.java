@@ -176,12 +176,13 @@ public class CrawlLogService {
                 .siteCount(siteNames.size())
                 .siteNames(siteNames)
                 .searchCriteria(representative.getSearchCriteria())
+                .source(representative.getSource() != null ? representative.getSource().name() : "MANUAL")
                 .build();
     }
 
     /**
      * 직전 실행 대비 검색 조건이 변경된 실행에 newCriteria 플래그를 설정한다.
-     * 최신 실행부터 정렬된 목록에서 이전(더 과거) 실행과 비교한다.
+     * 최신 실행부터 정렬된 목록에서 바로 이전 실행(더 과거)과만 비교한다.
      *
      * @param runs 최신순으로 정렬된 실행 그룹 목록
      * @return newCriteria가 마킹된 목록
@@ -189,16 +190,11 @@ public class CrawlLogService {
     private List<CrawlRunGroup> markNewCriteria(List<CrawlRunGroup> runs) {
         if (runs.size() <= 1) return runs;
 
-        for (int i = 0; i < runs.size(); i++) {
+        for (int i = 0; i < runs.size() - 1; i++) {
             CrawlRunGroup current = runs.get(i);
-            String currentCriteria = current.getSearchCriteria();
-            for (int j = i + 1; j < runs.size(); j++) {
-                CrawlRunGroup previous = runs.get(j);
-                String previousCriteria = previous.getSearchCriteria();
-                if (!Objects.equals(currentCriteria, previousCriteria)) {
-                    current.setNewCriteria(true);
-                    break;
-                }
+            CrawlRunGroup previous = runs.get(i + 1);
+            if (!Objects.equals(current.getSearchCriteria(), previous.getSearchCriteria())) {
+                current.setNewCriteria(true);
             }
         }
         return runs;

@@ -46,6 +46,11 @@ public class CrawlLog {
     @Column(name = "batch_id", length = 36)
     private String batchId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false, length = 20)
+    @Builder.Default
+    private CrawlSource source = CrawlSource.MANUAL;
+
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
@@ -68,5 +73,9 @@ public class CrawlLog {
 
     public enum CrawlStatus {
         RUNNING, SUCCESS, FAILED, PARTIAL
+    }
+
+    public enum CrawlSource {
+        MANUAL, SCHEDULE
     }
 }

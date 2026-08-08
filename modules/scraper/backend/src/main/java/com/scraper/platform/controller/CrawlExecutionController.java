@@ -1,6 +1,7 @@
 package com.scraper.platform.controller;
 
 import com.scraper.platform.model.CrawlConfig;
+import com.scraper.platform.model.CrawlLog;
 import com.scraper.platform.service.CrawlConfigService;
 import com.scraper.platform.service.CrawlExecutionService;
 import com.scraper.platform.service.CrawlProgressBroadcaster;
@@ -33,7 +34,7 @@ public class CrawlExecutionController {
 
         CompletableFuture.runAsync(() -> {
             try {
-                crawlExecutionService.executeCrawl(config);
+                crawlExecutionService.executeCrawl(config, CrawlLog.CrawlSource.MANUAL);
             } catch (Exception e) {
                 org.slf4j.LoggerFactory.getLogger(CrawlExecutionController.class)
                     .error("Async crawl failed for config: {}", config.getName(), e);
