@@ -58,6 +58,29 @@ ALTER TABLE crawl_log ADD COLUMN IF NOT EXISTS search_criteria JSON NULL COMMENT
 ALTER TABLE crawl_log ADD COLUMN IF NOT EXISTS batch_id VARCHAR(36) NULL COMMENT '크롤링 실행 배치 ID (한 실행 내 사이트별 로그 그룹핑)';
 ALTER TABLE crawl_log ADD INDEX IF NOT EXISTS idx_crawl_log_batch_id (batch_id);
 
+-- 기존 데이터 백필: 같은 config에서 2분 이내 연속 실행은 같은 배치로 묶는다
+SET @batch_num := 0;
+SET @prev_config := NULL;
+SET @prev_time := NULL;
+CREATE TEMPORARY TABLE tmp_batch_assign AS
+SELECT id,
+       IF(@prev_config = config_id AND TIMESTAMPDIFF(SECOND, @prev_time, started_at) <= 120,
+          @batch_num, @batch_num := @batch_num + 1) AS batch_num,
+       @prev_config := config_id AS cur_config,
+       @prev_time := started_at AS cur_time
+FROM (SELECT id, config_id, started_at FROM crawl_log WHERE batch_id IS NULL ORDER BY config_id, started_at) t;
+
+CREATE TEMPORARY TABLE tmp_batch_uuid AS
+SELECT batch_num, UUID() AS batch_uuid FROM (SELECT DISTINCT batch_num FROM tmp_batch_assign) d;
+
+UPDATE crawl_log cl
+JOIN tmp_batch_assign ta ON cl.id = ta.id
+JOIN tmp_batch_uuid tu ON ta.batch_num = tu.batch_num
+SET cl.batch_id = tu.batch_uuid;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_batch_assign;
+DROP TEMPORARY TABLE IF EXISTS tmp_batch_uuid;
+
 -- ============================================================
 -- [MIGRATION] 2026-08-07: crawl_stats 테이블 생성
 -- ============================================================
