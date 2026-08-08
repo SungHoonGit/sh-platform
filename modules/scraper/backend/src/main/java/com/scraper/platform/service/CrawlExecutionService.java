@@ -312,6 +312,11 @@ public class CrawlExecutionService {
                 }
                 if (node.has("career") && !node.get("career").asText().isEmpty()) {
                     criteria.putIfAbsent("career", node.get("career").asText());
+                } else {
+                    String career = buildCareerDisplay(node);
+                    if (career != null && !career.isEmpty()) {
+                        criteria.putIfAbsent("career", career);
+                    }
                 }
                 if (node.has("location") && !node.get("location").asText().isEmpty()) {
                     criteria.putIfAbsent("location", node.get("location").asText());
@@ -326,5 +331,20 @@ public class CrawlExecutionService {
         } catch (Exception e) {
             return "{}";
         }
+    }
+
+    private String buildCareerDisplay(com.fasterxml.jackson.databind.JsonNode node) {
+        boolean hasMin = node.has("careerMin") && !node.get("careerMin").asText().isEmpty();
+        boolean hasMax = node.has("careerMax") && !node.get("careerMax").asText().isEmpty();
+        if (!hasMin && !hasMax) return null;
+
+        int min = hasMin ? node.get("careerMin").asInt() : 0;
+        int max = hasMax ? node.get("careerMax").asInt() : 15;
+
+        if (min <= 0 && max >= 15) return null;
+
+        String minStr = min > 0 ? min + "년" : "신입";
+        String maxStr = max >= 15 ? "15년+" : max + "년";
+        return minStr + "~" + maxStr;
     }
 }
