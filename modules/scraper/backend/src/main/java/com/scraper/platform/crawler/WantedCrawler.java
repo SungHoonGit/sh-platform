@@ -79,7 +79,13 @@ public class WantedCrawler implements SiteCrawler {
                 break;
             }
 
-            JsonNode root = objectMapper.readTree(json);
+            JsonNode root;
+            try {
+                root = objectMapper.readTree(json);
+            } catch (Exception e) {
+                log.error("Wanted API response is not valid JSON (page {}): {}", p, json.substring(0, Math.min(300, json.length())));
+                break;
+            }
             JsonNode data = root.get("data");
             if (data == null || !data.isArray() || data.isEmpty()) {
                 log.info("No more jobs at page {}: data={}", p, data);
@@ -117,7 +123,7 @@ public class WantedCrawler implements SiteCrawler {
 
     private String fetchWithCurl(String url) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(
-            "curl", "-s", "-L",
+            "curl", "-s", "-L", "-w", "\n%{http_code}",
             "--max-time", "30",
             "--compressed",
             "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -140,11 +146,27 @@ public class WantedCrawler implements SiteCrawler {
         }
 
         int exitCode = process.exitValue();
+        String output = new String(bytes, StandardCharsets.UTF_8);
+
         if (exitCode != 0) {
-            throw new IOException("curl failed with exit code " + exitCode + " for URL: " + url);
+            log.error("curl failed with exit code {}: {}", exitCode, output.substring(0, Math.min(300, output.length())));
+            return null;
         }
 
-        return new String(bytes, StandardCharsets.UTF_8);
+        // curl -w %{http_code}로 마지막 줄에서 상태 코드 추출
+        String[] lines = output.split("\n");
+        if (lines.length >= 2) {
+            String httpCode = lines[lines.length - 1].trim();
+            String body = output.substring(0, output.lastIndexOf("\n")).trim();
+            log.info("Wanted curl HTTP status: {}", httpCode);
+            if (!"200".equals(httpCode)) {
+                log.warn("Wanted curl returned HTTP {}: {}", httpCode, body.substring(0, Math.min(200, body.length())));
+                return null;
+            }
+            return body;
+        }
+
+        return output;
     }
 
     private String buildUrl(Map<String, String> siteParams, int page, int perPage) {
