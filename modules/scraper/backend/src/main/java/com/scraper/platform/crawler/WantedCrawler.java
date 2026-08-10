@@ -42,12 +42,31 @@ public class WantedCrawler implements SiteCrawler {
         // SiteSearchMapper를 사용하여 표준 파라미터를 사이트별 URL 파라미터로 변환
         Map<String, String> siteParams = siteSearchMapper.toSiteParams(getSiteName(), paramValues);
 
-        // 경력 범위(최소 연수)는 원티드 years 파라미터로 직접 변환
+        // 필터링 플래그 추적
+        boolean careerFiltered = false;
+        boolean locationFiltered = false;
+
         Map<String, String> params = parseParams(paramValues);
-        String careerMin = params.get("careerMin");
-        if (careerMin != null && !careerMin.isEmpty() && !careerMin.equals("0")
+
+        // 경력 필터 처리
+        String career = params.getOrDefault("career", "");
+        String careerMin = params.getOrDefault("careerMin", "");
+        if (!career.isEmpty() && !career.equals("전체") && !career.equals("경력무관")) {
+            careerFiltered = true;
+        } else if (!careerMin.isEmpty() && !careerMin.equals("0")) {
+            careerFiltered = true;
+        }
+
+        // 경력 범위(최소 연수)는 원티드 years 파라미터로 직접 변환
+        if (!careerMin.isEmpty() && !careerMin.equals("0")
                 && !siteParams.containsKey("years")) {
             siteParams.put("years", careerMin);
+        }
+
+        // 지역 필터 처리
+        String location = params.getOrDefault("location", "");
+        if (!location.isEmpty() && !location.equals("전체")) {
+            locationFiltered = true;
         }
 
         int perPage = 20;
@@ -71,6 +90,13 @@ public class WantedCrawler implements SiteCrawler {
             for (JsonNode jobNode : data) {
                 Map<String, String> job = parseJobNode(jobNode);
                 if (!job.isEmpty()) {
+                    // 필터링 플래그 설정
+                    if (careerFiltered) {
+                        job.put("careerFiltered", "true");
+                    }
+                    if (locationFiltered) {
+                        job.put("locationFiltered", "true");
+                    }
                     allJobs.add(job);
                 }
             }
@@ -129,45 +155,6 @@ public class WantedCrawler implements SiteCrawler {
         }
 
         return sb.toString();
-    }
-
-    /**
-     * 경력 한글명을 원티드 years 파라미터 값으로 변환한다.
-     *
-     * @param career 경력 한글명 (신입, 1~3년, 3~5년, 5~10년, 10년이상)
-     * @return 원티드 years 값 (0, 1, 3, 5, 10)
-     */
-    String mapCareerToYears(String career) {
-        return switch (career) {
-            case "신입" -> "0";
-            case "1~3년" -> "1";
-            case "3~5년" -> "3";
-            case "5~10년" -> "5";
-            case "10년이상" -> "10";
-            default -> "";
-        };
-    }
-
-    /**
-     * 지역 한글명을 원티드 locations 키로 변환한다.
-     *
-     * @param location 지역 한글명 (서울, 경기, 인천, 부산, 대구, 대전, 광주, 세종, 강원, 제주)
-     * @return 원티드 locations 키 (seoul, gyeonggi, incheon, busan, ...)
-     */
-    String mapLocationCode(String location) {
-        return switch (location) {
-            case "서울" -> "seoul";
-            case "경기" -> "gyeonggi";
-            case "인천" -> "incheon";
-            case "부산" -> "busan";
-            case "대구" -> "daegu";
-            case "대전" -> "daejeon";
-            case "광주" -> "gwangju";
-            case "세종" -> "sejong";
-            case "강원" -> "gangwon";
-            case "제주" -> "jeju";
-            default -> "";
-        };
     }
 
     private Map<String, String> parseJobNode(JsonNode node) {

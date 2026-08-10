@@ -42,9 +42,21 @@ public class RememberCrawler implements SiteCrawler {
 
         Map<String, String> params = parseParams(paramValues);
 
+        // 필터링 플래그 추적
+        boolean careerFiltered = false;
+        boolean locationFiltered = false;
+
+        // 경력 필터 처리
+        String career = params.getOrDefault("career", "");
+        String careerMin = params.getOrDefault("careerMin", "");
+        if (!career.isEmpty() && !career.equals("전체") && !career.equals("경력무관")) {
+            careerFiltered = true;
+        } else if (!careerMin.isEmpty() && !careerMin.equals("0")) {
+            careerFiltered = true;
+        }
+
         // 경력 범위(최소 연수)는 리멤버 min_experience로 직접 변환
-        String careerMin = params.get("careerMin");
-        if (careerMin != null && !careerMin.isEmpty() && !careerMin.equals("0")
+        if (!careerMin.isEmpty() && !careerMin.equals("0")
                 && !siteParams.containsKey("min_experience")) {
             siteParams.put("min_experience", careerMin);
         }
@@ -54,6 +66,9 @@ public class RememberCrawler implements SiteCrawler {
         String location = params.getOrDefault("location", "");
         if (location.contains(",")) {
             siteParams.remove("sido");
+            locationFiltered = true;
+        } else if (!location.isEmpty() && !location.equals("전체")) {
+            locationFiltered = true;
         }
 
         int maxPages = 5;
@@ -77,6 +92,13 @@ public class RememberCrawler implements SiteCrawler {
             for (JsonNode jobNode : data) {
                 Map<String, String> job = parseJobNode(jobNode);
                 if (!job.isEmpty()) {
+                    // 필터링 플래그 설정
+                    if (careerFiltered) {
+                        job.put("careerFiltered", "true");
+                    }
+                    if (locationFiltered) {
+                        job.put("locationFiltered", "true");
+                    }
                     allJobs.add(job);
                 }
             }
@@ -111,7 +133,13 @@ public class RememberCrawler implements SiteCrawler {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            log.warn("Remember API returned status {}: {}", response.statusCode(), response.body().substring(0, Math.min(200, response.body().length())));
+            String responseBody = response.body();
+            if (responseBody != null && !responseBody.isEmpty()) {
+                log.warn("Remember API returned status {}: {}", response.statusCode(),
+                    responseBody.substring(0, Math.min(200, responseBody.length())));
+            } else {
+                log.warn("Remember API returned status {} with empty body", response.statusCode());
+            }
             return null;
         }
 
@@ -135,23 +163,6 @@ public class RememberCrawler implements SiteCrawler {
             log.error("Failed to build request body", e);
             return "{\"page\":" + page + ",\"per\":" + perPage + ",\"sort\":\"starts_at_desc\"}";
         }
-    }
-
-    /**
-     * 경력 한글명을 리멤버 min_experience 값으로 변환한다.
-     *
-     * @param career 경력 한글명 (신입, 1~3년, 3~5년, 5~10년, 10년이상)
-     * @return 리멤버 min_experience 값 (0, 1, 3, 5, 10)
-     */
-    String mapCareerToExperience(String career) {
-        return switch (career) {
-            case "신입" -> "0";
-            case "1~3년" -> "1";
-            case "3~5년" -> "3";
-            case "5~10년" -> "5";
-            case "10년이상" -> "10";
-            default -> "";
-        };
     }
 
     private Map<String, String> parseJobNode(JsonNode node) {
