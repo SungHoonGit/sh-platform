@@ -101,9 +101,8 @@ public class WantedCrawler implements SiteCrawler {
                 }
             }
 
-            // 다음 페이지 링크 확인
-            JsonNode links = root.get("links");
-            if (links == null || links.get("next") == null || links.get("next").isNull()) {
+            // 데이터가 요청한 개수보다 적으면 마지막 페이지
+            if (data.size() < perPage) {
                 break;
             }
 
@@ -140,8 +139,8 @@ public class WantedCrawler implements SiteCrawler {
         StringBuilder sb = new StringBuilder(API_BASE);
         sb.append("?country=kr");
         sb.append("&job_sort=job.latest_order");
-        sb.append("&page=").append(page);
-        sb.append("&per_page=").append(perPage);
+        sb.append("&limit=").append(perPage);
+        sb.append("&offset=").append((page - 1) * perPage);
 
         // SiteSearchMapper에서 변환된 파라미터를 URL에 추가
         for (Map.Entry<String, String> entry : siteParams.entrySet()) {
