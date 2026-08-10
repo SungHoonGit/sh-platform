@@ -126,10 +126,9 @@ export default function Viewer() {
   const total = jobsData?.total || 0;
   const totalPages = Math.ceil(total / SIZE);
 
-  // 현재 데이터에 있는 사이트만 추출
+  // 현재 데이터에 있는 사이트 추출
   const availableSites = useMemo(() => {
-    const siteSet = new Set(jobs.map((j: JobPostingItem) => j.site).filter(Boolean));
-    return SITES.filter((s) => siteSet.has(s.id));
+    return new Set(jobs.map((j: JobPostingItem) => j.site).filter(Boolean));
   }, [jobs]);
 
   const filteredJobs = useMemo(() => {
@@ -359,19 +358,24 @@ export default function Viewer() {
           >
             전체
           </button>
-          {availableSites.map((site) => (
-            <button
-              key={site.id}
-              onClick={() => { setSelectedSite(site.id); setPage(0); }}
-              className={`px-2.5 py-1 rounded text-[12px] font-medium transition-colors ${
-                selectedSite === site.id
-                  ? SITE_TAB_COLORS[site.name] || "bg-blue-600 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-            >
-              {site.name}
-            </button>
-          ))}
+          {SITES.map((site) => {
+            const hasData = availableSites.has(site.id);
+            return (
+              <button
+                key={site.id}
+                onClick={() => { setSelectedSite(site.id); setPage(0); }}
+                className={`px-2.5 py-1 rounded text-[12px] font-medium transition-colors ${
+                  selectedSite === site.id
+                    ? SITE_TAB_COLORS[site.name] || "bg-blue-600 text-white"
+                    : hasData
+                      ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                }`}
+              >
+                {site.name}
+              </button>
+            );
+          })}
 
           <div className="ml-auto flex items-center gap-3">
             <input
