@@ -4,7 +4,6 @@ import com.scraper.platform.api.dto.SearchRequest;
 import com.scraper.platform.api.dto.SearchResponse;
 import com.scraper.platform.crawler.CrawlerFactory;
 import com.scraper.platform.crawler.SiteCrawler;
-import com.scraper.platform.model.CompanyRating;
 import com.scraper.platform.model.SiteDefinition;
 import com.scraper.platform.repository.SiteDefinitionRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,6 @@ public class SearchService {
 
     private final SiteDefinitionRepository siteDefinitionRepository;
     private final CrawlerFactory crawlerFactory;
-    private final CompanyRatingService companyRatingService;
 
     private ExecutorService executorService = Executors.newFixedThreadPool(4);
 
@@ -111,47 +109,17 @@ public class SearchService {
             filteredCounts.put(sn, (int) cnt);
         }
 
-        // 기업 평점 수집 (Background)
+        // 고유 기업명 목록 추출 (프론트에서 평점 조회용)
         List<String> companyNames = filtered.stream()
                 .map(j -> j.get("company"))
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
-        
-        if (!companyNames.isEmpty()) {
-            try {
-                List<CompanyRating> ratings = companyRatingService.getRatings(companyNames);
-                Map<String, CompanyRating> ratingMap = ratings.stream()
-                        .collect(Collectors.toMap(CompanyRating::getCompanyName, r -> r, (a, b) -> a));
-                
-                // 각 공고에 평점 정보 추가
-                for (Map<String, String> job : filtered) {
-                    String company = job.get("company");
-                    if (company != null && ratingMap.containsKey(company)) {
-                        CompanyRating rating = ratingMap.get(company);
-                        if (rating.getAverageScore() != null) {
-                            job.put("companyScore", String.valueOf(rating.getAverageScore()));
-                        }
-                        if (rating.getJobplanetScore() != null) {
-                            job.put("jobplanetScore", String.valueOf(rating.getJobplanetScore()));
-                        }
-                        if (rating.getJobkoreaScore() != null) {
-                            job.put("jobkoreaScore", String.valueOf(rating.getJobkoreaScore()));
-                        }
-                        if (rating.getSaraminScore() != null) {
-                            job.put("saraminScore", String.valueOf(rating.getSaraminScore()));
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch company ratings: {}", e.getMessage());
-            }
-        }
 
         long searchTime = System.currentTimeMillis() - startTime;
         log.info("Real-time search completed: {} raw, {} filtered in {}ms", allJobs.size(), filtered.size(), searchTime);
 
-        return SearchResponse.of(filtered.size(), filtered, filteredCounts, searchTime, failedSites);
+        return SearchResponse.of(filtered.size(), filtered, filteredCounts, searchTime, failedSites, companyNames);
     }
 
     private List<Map<String, String>> filterJobs(List<Map<String, String>> jobs, Integer careerMin, Integer careerMax, List<String> locations) {

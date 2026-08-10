@@ -19,11 +19,15 @@ public record SearchResponse(
     long searchTime,
 
     @Schema(description = "에러가 발생한 사이트 목록")
-    List<String> failedSites
+    List<String> failedSites,
+
+    @Schema(description = "고유 기업명 목록 (평점 조회용)")
+    List<String> companyNames
 ) {
     public static SearchResponse of(int total, List<Map<String, String>> jobs,
                                      Map<String, Integer> siteCounts,
-                                     long searchTime, List<String> failedSites) {
-        return new SearchResponse(total, jobs, siteCounts, searchTime, failedSites);
+                                     long searchTime, List<String> failedSites,
+                                     List<String> companyNames) {
+        return new SearchResponse(total, jobs, siteCounts, searchTime, failedSites, companyNames);
     }
 }

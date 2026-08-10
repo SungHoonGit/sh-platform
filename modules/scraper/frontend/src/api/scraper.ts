@@ -29,6 +29,7 @@ export interface SearchResponse {
   siteCounts: Record<string, number>;
   searchTime: number;
   failedSites: string[];
+  companyNames: string[];
 }
 
 export async function realTimeSearch(search: SearchRequest): Promise<SearchResponse> {
@@ -37,6 +38,23 @@ export async function realTimeSearch(search: SearchRequest): Promise<SearchRespo
     body: JSON.stringify(search),
   });
   return json.data;
+}
+
+export interface CompanyRating {
+  companyName: string;
+  jobplanetScore: number | null;
+  jobkoreaScore: number | null;
+  saraminScore: number | null;
+  averageScore: number | null;
+}
+
+export async function fetchCompanyRatings(companyNames: string[]): Promise<CompanyRating[]> {
+  if (companyNames.length === 0) return [];
+  const json = await request<{ ratings: CompanyRating[] }>("/company-ratings/batch", {
+    method: "POST",
+    body: JSON.stringify(companyNames),
+  });
+  return json.ratings || [];
 }
 
 export async function fetchCrawlers(): Promise<Crawler[]> {

@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
-import { realTimeSearch, type SearchRequest, type SearchResponse } from "../api/scraper";
+import { realTimeSearch, fetchCompanyRatings, type SearchRequest, type SearchResponse, type CompanyRating } from "../api/scraper";
 import {
   REGIONS,
   DEFAULT_LOCATIONS,
@@ -46,8 +46,20 @@ export default function Search() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [searched, setSearched] = useState(false);
+  const [ratingsMap, setRatingsMap] = useState<Map<string, CompanyRating>>(new Map());
+  const ratingsLoadedRef = useRef<Set<string>>(new Set());
 
-  const allJobs = useMemo(() => data?.jobs ?? [], [data]);
+  const allJobs = useMemo(() => {
+    const jobs = data?.jobs ?? [];
+    if (ratingsMap.size === 0) return jobs;
+    return jobs.map(j => {
+      const rating = ratingsMap.get(j.company || "");
+      if (rating && rating.averageScore != null) {
+        return { ...j, companyScore: String(rating.averageScore) };
+      }
+      return j;
+    });
+  }, [data, ratingsMap]);
 
   const filteredJobs = useMemo(() => {
     const base = activeSite === "all" ? allJobs : allJobs.filter((j) => j.site === activeSite);
@@ -96,6 +108,29 @@ export default function Search() {
     });
   }, [data]);
 
+  const loadRatings = useCallback(async (companyNames: string[]) => {
+    const newCompanies = companyNames.filter(name => !ratingsLoadedRef.current.has(name));
+    if (newCompanies.length === 0) return;
+
+    try {
+      const ratings = await fetchCompanyRatings(newCompanies);
+      const newMap = new Map(ratingsMap);
+      ratings.forEach(r => {
+        newMap.set(r.companyName, r);
+        ratingsLoadedRef.current.add(r.companyName);
+      });
+      setRatingsMap(newMap);
+
+      // 평점이 아직 없는 회사들이 있으면 3초 후 재시도
+      const missing = newCompanies.filter(name => !ratings.some(r => r.companyName === name && r.averageScore != null));
+      if (missing.length > 0) {
+        setTimeout(() => loadRatings(missing), 3000);
+      }
+    } catch (e) {
+      console.warn("Failed to load ratings:", e);
+    }
+  }, [ratingsMap]);
+
   const handleSearch = async () => {
     if (!keyword.trim() || selectedSites.length === 0) return;
     setSearched(true);
@@ -120,6 +155,10 @@ export default function Search() {
     try {
       const result = await realTimeSearch(payload);
       setData(result);
+      // 검색 완료 후 평점 별도 로드
+      if (result.companyNames?.length > 0) {
+        loadRatings(result.companyNames);
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {

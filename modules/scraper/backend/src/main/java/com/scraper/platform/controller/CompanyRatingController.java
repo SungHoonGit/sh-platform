@@ -48,6 +48,27 @@ public class CompanyRatingController {
     }
 
     /**
+     * 여러 기업의 평점을 조회한다 (POST, 대량 조회용).
+     * POST /api/v1/company-ratings/batch
+     */
+    @PostMapping("/batch")
+    @Operation(summary = "기업 평점 일괄 조회", description = "여러 기업의 평점을 일괄 조회합니다. 캐시/DB에서 즉시 반환됩니다.")
+    public ResponseEntity<Map<String, Object>> getRatingsBatch(
+            @RequestBody List<String> companyNames) {
+
+        List<CompanyRating> ratings = companyRatingService.getRatings(companyNames);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("ratings", ratings);
+        response.put("total", ratings.size());
+        response.put("cachedCount", ratings.stream()
+                .filter(r -> r.getAverageScore() != null)
+                .count());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 단일 기업의 평점을 조회한다.
      * GET /api/v1/company-ratings/{companyName}
      */
