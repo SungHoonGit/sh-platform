@@ -379,3 +379,21 @@ UPDATE site_definition SET is_enabled = FALSE WHERE site_name = 'remember';
 -- 원티드 비활성화 (서버 IP 차단 - 데이터센터에서 API 접근 불가)
 -- ============================================================
 UPDATE site_definition SET is_enabled = FALSE WHERE site_name = 'wanted';
+
+-- ============================================================
+-- [MIGRATION] 2026-08-09: company_ratings 테이블 생성
+-- ============================================================
+-- 기업 평점 수집용 테이블 (잡플래닛, 잡코리아, 사람인)
+CREATE TABLE IF NOT EXISTS company_ratings (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    company_name VARCHAR(200) NOT NULL COMMENT '회사명',
+    jobplanet_score DECIMAL(2,1) NULL COMMENT '잡플래닛 평점 (1.0~5.0)',
+    jobkorea_score DECIMAL(2,1) NULL COMMENT '잡코리아 평점 (1.0~5.0)',
+    saramin_score DECIMAL(2,1) NULL COMMENT '사람인 평점 (1.0~5.0)',
+    average_score DECIMAL(2,1) NULL COMMENT '평균 평점',
+    last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '마지막 업데이트 시간',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_company_ratings_name (company_name),
+    INDEX idx_company_ratings_average (average_score),
+    INDEX idx_company_ratings_updated (last_updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='기업 평점 (잡플래닛, 잡코리아, 사람인)';
