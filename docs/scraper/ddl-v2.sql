@@ -374,3 +374,8 @@ INSERT IGNORE INTO site_search_mapping (site_definition_id, standard_key, url_pa
 -- 리멤버 비활성화 (키워드 검색 미지원)
 -- ============================================================
 UPDATE site_definition SET is_enabled = FALSE WHERE site_name = 'remember';
+
+-- ============================================================
+-- 원티드 비활성화 (서버 IP 차단 - 데이터센터에서 API 접근 불가)
+-- ============================================================
+UPDATE site_definition SET is_enabled = FALSE WHERE site_name = 'wanted';

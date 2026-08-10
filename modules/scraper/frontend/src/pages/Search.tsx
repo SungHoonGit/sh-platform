@@ -14,7 +14,6 @@ import {
 const SITES = [
   { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700 border-blue-200" },
   { id: "jobkorea", name: "잡코리아", color: "bg-green-100 text-green-700 border-green-200" },
-  { id: "wanted", name: "원티드", color: "bg-red-100 text-red-700 border-red-200" },
 ];
 
 const PAGE_SIZE = 20;
