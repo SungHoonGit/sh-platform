@@ -22,6 +22,7 @@ import java.util.concurrent.Executor;
 public class CompanyRatingService {
 
     private final Map<String, CompanyRating> cache = new ConcurrentHashMap<>();
+    private final Set<String> scrapingInProgress = ConcurrentHashMap.newKeySet();
     private final CompanyRatingRepository companyRatingRepository;
     private final Executor taskExecutor;
 
@@ -57,17 +58,31 @@ public class CompanyRatingService {
                 continue;
             }
 
-            // 3. 미캐시 기업 목록에 추가
-            uncachedCompanies.add(normalized);
-            result.add(CompanyRating.builder()
-                    .companyName(normalized)
-                    .build());
+            // 3. 미캐시 기업 목록에 추가 (이미 수집 중인 회사 제외)
+            if (!scrapingInProgress.contains(normalized)) {
+                uncachedCompanies.add(normalized);
+                result.add(CompanyRating.builder()
+                        .companyName(normalized)
+                        .build());
+            } else {
+                // 수집 중이면 빈 데이터 반환
+                result.add(CompanyRating.builder()
+                        .companyName(normalized)
+                        .build());
+            }
         }
 
         // 4. 미캐시 기업들은 별도 스레드에서 수집 (검색 응답 블로킹 방지)
         if (!uncachedCompanies.isEmpty()) {
             List<String> toScrape = new ArrayList<>(uncachedCompanies);
-            taskExecutor.execute(() -> scrapeAndCacheBatch(toScrape));
+            toScrape.forEach(scrapingInProgress::add);
+            taskExecutor.execute(() -> {
+                try {
+                    scrapeAndCacheBatch(toScrape);
+                } finally {
+                    toScrape.forEach(scrapingInProgress::remove);
+                }
+            });
         }
 
         return result;

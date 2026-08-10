@@ -120,12 +120,6 @@ export default function Search() {
         ratingsLoadedRef.current.add(r.companyName);
       });
       setRatingsMap(newMap);
-
-      // 평점이 아직 없는 회사들이 있으면 3초 후 재시도
-      const missing = newCompanies.filter(name => !ratings.some(r => r.companyName === name && r.averageScore != null));
-      if (missing.length > 0) {
-        setTimeout(() => loadRatings(missing), 3000);
-      }
     } catch (e) {
       console.warn("Failed to load ratings:", e);
     }
