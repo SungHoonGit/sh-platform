@@ -126,6 +126,17 @@ export default function Viewer() {
   const total = jobsData?.total || 0;
   const totalPages = Math.ceil(total / SIZE);
 
+  // 스케줄에 설정된 활성 사이트만 표시
+  const availableSites = useMemo(() => {
+    if (!selectedCrawler?.siteConfigs) return SITES;
+    const enabledSites = new Set(
+      selectedCrawler.siteConfigs
+        .filter((sc) => sc.isEnabled)
+        .map((sc) => sc.siteName)
+    );
+    return SITES.filter((s) => enabledSites.has(s.id));
+  }, [selectedCrawler]);
+
   const filteredJobs = useMemo(() => {
     const kw = searchKeyword.trim().toLowerCase();
     if (!kw) return jobs;
@@ -353,7 +364,7 @@ export default function Viewer() {
           >
             전체
           </button>
-          {SITES.map((site) => (
+          {availableSites.map((site) => (
             <button
               key={site.id}
               onClick={() => { setSelectedSite(site.id); setPage(0); }}
