@@ -30,16 +30,16 @@ public class CompanyRating {
     @Column(name = "company_name", length = 200, nullable = false, unique = true)
     private String companyName;
 
-    @Column(name = "jobplanet_score", precision = 2, scale = 1)
+    @Column(name = "jobplanet_score")
     private Double jobplanetScore;
 
-    @Column(name = "jobkorea_score", precision = 2, scale = 1)
+    @Column(name = "jobkorea_score")
     private Double jobkoreaScore;
 
-    @Column(name = "saramin_score", precision = 2, scale = 1)
+    @Column(name = "saramin_score")
     private Double saraminScore;
 
-    @Column(name = "average_score", precision = 2, scale = 1)
+    @Column(name = "average_score")
     private Double averageScore;
 
     @Column(name = "last_updated_at")
