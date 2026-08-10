@@ -83,4 +83,22 @@
 
 ---
 
-*최종 업데이트: 2026-08-07*
+## 2026-08-09
+
+### 8. company_ratings 테이블 score 컬럼 타입 변경
+- **SQL**:
+  ```sql
+  ALTER TABLE company_ratings 
+    MODIFY COLUMN jobplanet_score DOUBLE NULL,
+    MODIFY COLUMN jobkorea_score DOUBLE NULL,
+    MODIFY COLUMN saramin_score DOUBLE NULL,
+    MODIFY COLUMN average_score DOUBLE NULL;
+  ```
+- **이유**: Hibernate `Double` 타입과 `DECIMAL` 컬럼 타입 불일치로 서비스 크래시 (`scale has no meaning for SQL floating point types`)
+- **변경 전**: `DECIMAL(2,1)`
+- **변경 후**: `DOUBLE`
+- **적용 방법**: 서버 수동 SQL 실행 (DBeaver 또는 mysql CLI)
+
+---
+
+*최종 업데이트: 2026-08-09*
