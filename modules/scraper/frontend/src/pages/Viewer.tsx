@@ -248,7 +248,7 @@ export default function Viewer() {
                           const runTypeIcon = isAuto ? "🕐" : "👆";
                           const runTypeTitle = isAuto ? "스케줄 실행" : "수동 실행";
                           const isSelected = selectedDate === group.date && selectedRunIds && run.logIds.length === selectedRunIds.length && run.logIds.every(id => selectedRunIds.includes(id));
-                          const canDelete = !isAuto; // 수동 실행만 삭제 가능
+                          const canDelete = !isAuto;
                           return (
                             <div key={run.logId} className="flex items-center gap-1">
                               <button
@@ -264,20 +264,17 @@ export default function Viewer() {
                                     : "hover:bg-slate-50 text-slate-500"
                                 }`}
                               >
-                                <span className="flex items-center gap-1 shrink-0">
+                                <span className="flex items-center gap-1">
                                   <span className={run.status === "SUCCESS" ? "text-green-500" : run.status === "FAILED" ? "text-red-500" : "text-yellow-500"}>
                                     {statusIcon}
                                   </span>
                                   <span title={runTypeTitle}>{runTypeIcon}</span>
                                   <span>{time}</span>
-                                  <span className="text-slate-400">({run.siteCount}개)</span>
-                                </span>
-                                <span className="flex items-center gap-1 shrink-0">
                                   {run.newCriteria && (
                                     <span className="px-1 py-0.5 rounded bg-orange-100 text-orange-600 text-[9px] font-bold">new!</span>
                                   )}
-                                  <span className="text-[10px] text-slate-400">{run.newCount}건</span>
                                 </span>
+                                <span className="text-[10px] text-slate-400">{run.newCount}건</span>
                               </button>
                               {canDelete && (
                                 <button
@@ -286,7 +283,7 @@ export default function Viewer() {
                                     if (!confirm(`이 수집 이력을 삭제하시겠습니까?`)) return;
                                     run.logIds.forEach(id => deleteMutation.mutate(id));
                                   }}
-                                  className="px-1.5 py-0.5 text-[10px] text-red-400 hover:text-red-600 hover:bg-red-50 rounded shrink-0"
+                                  className="px-1.5 py-0.5 text-[10px] text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
                                   title="삭제"
                                 >
                                   🗑️
