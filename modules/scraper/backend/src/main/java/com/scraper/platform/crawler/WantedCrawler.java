@@ -69,6 +69,8 @@ public class WantedCrawler implements SiteCrawler {
             locationFiltered = true;
         }
 
+        log.info("Wanted crawler start: keyword={}, careerMin={}, siteParams={}", params.get("keyword"), careerMin, siteParams);
+
         int perPage = 20;
         List<Map<String, String>> allJobs = new ArrayList<>();
 
@@ -78,14 +80,19 @@ public class WantedCrawler implements SiteCrawler {
             log.info("Wanted API URL (page {}): {}", p, url);
 
             String json = fetchJson(url);
-            if (json == null) break;
+            if (json == null) {
+                log.warn("Wanted API returned null for page {}", p);
+                break;
+            }
 
             JsonNode root = objectMapper.readTree(json);
             JsonNode data = root.get("data");
             if (data == null || !data.isArray() || data.isEmpty()) {
-                log.info("No more jobs at page {}", p);
+                log.info("No more jobs at page {}: data={}", p, data);
                 break;
             }
+
+            log.info("Wanted API returned {} jobs at page {}", data.size(), p);
 
             for (JsonNode jobNode : data) {
                 Map<String, String> job = parseJobNode(jobNode);
@@ -129,6 +136,9 @@ public class WantedCrawler implements SiteCrawler {
 
         if (response.statusCode() != 200) {
             log.warn("Wanted API returned status {}: {}", response.statusCode(), url);
+            if (response.body() != null && !response.body().isEmpty()) {
+                log.warn("Wanted API response body: {}", response.body().substring(0, Math.min(200, response.body().length())));
+            }
             return null;
         }
 

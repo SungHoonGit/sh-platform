@@ -42,6 +42,9 @@ public class RememberCrawler implements SiteCrawler {
 
         Map<String, String> params = parseParams(paramValues);
 
+        // 리 memorandum API는 query 파라미터를 무시하므로 키워드를 직접 필터링
+        String keyword = params.getOrDefault("keyword", "").trim().toLowerCase();
+
         // 필터링 플래그 추적
         boolean careerFiltered = false;
         boolean locationFiltered = false;
@@ -92,6 +95,16 @@ public class RememberCrawler implements SiteCrawler {
             for (JsonNode jobNode : data) {
                 Map<String, String> job = parseJobNode(jobNode);
                 if (!job.isEmpty()) {
+                    // 리먼버 API가 키워드를 무시하므로 직접 필터링
+                    if (!keyword.isEmpty()) {
+                        String position = job.getOrDefault("position", "").toLowerCase();
+                        String company = job.getOrDefault("company", "").toLowerCase();
+                        String tech = job.getOrDefault("tech", "").toLowerCase();
+                        if (!position.contains(keyword) && !company.contains(keyword) && !tech.contains(keyword)) {
+                            continue;
+                        }
+                    }
+
                     // 필터링 플래그 설정
                     if (careerFiltered) {
                         job.put("careerFiltered", "true");
