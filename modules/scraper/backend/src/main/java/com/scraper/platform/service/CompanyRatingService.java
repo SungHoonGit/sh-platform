@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 
 /**
  * 기업 평점 수집 서비스.
@@ -22,6 +23,7 @@ public class CompanyRatingService {
 
     private final Map<String, CompanyRating> cache = new ConcurrentHashMap<>();
     private final CompanyRatingRepository companyRatingRepository;
+    private final Executor taskExecutor;
 
     /**
      * 여러 기업의 평점을 조회한다.
@@ -62,9 +64,10 @@ public class CompanyRatingService {
                     .build());
         }
 
-        // 4. 미캐시 기업들은 Background에서 수집
+        // 4. 미캐시 기업들은 별도 스레드에서 수집 (검색 응답 블로킹 방지)
         if (!uncachedCompanies.isEmpty()) {
-            scrapeAndCacheBatch(uncachedCompanies);
+            List<String> toScrape = new ArrayList<>(uncachedCompanies);
+            taskExecutor.execute(() -> scrapeAndCacheBatch(toScrape));
         }
 
         return result;
@@ -93,8 +96,8 @@ public class CompanyRatingService {
             return dbRating.get();
         }
 
-        // 3. Background에서 수집
-        scrapeAndCache(normalized);
+        // 3. Background에서 수집 (별도 스레드)
+        taskExecutor.execute(() -> scrapeAndCache(normalized));
         return CompanyRating.builder()
                 .companyName(normalized)
                 .build();
