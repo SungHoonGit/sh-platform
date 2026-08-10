@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/company-ratings")
+@RequestMapping("/company-ratings")
 @RequiredArgsConstructor
 @Tag(name = "Company Rating", description = "기업 평점 조회 API")
 public class CompanyRatingController {
