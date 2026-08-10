@@ -221,4 +221,29 @@ public class CrawlLogService {
         
         return crawlLogRepository.save(log);
     }
+
+    @Transactional
+    public void deleteLog(Long logId) {
+        CrawlLog log = crawlLogRepository.findById(logId)
+                .orElseThrow(() -> new RuntimeException("Log not found: " + logId));
+        
+        // 연결된 job_postings의 crawl_log_id 해제
+        jobPostingRepository.nullifyCrawlLogId(logId);
+        
+        crawlLogRepository.deleteById(logId);
+    }
+
+    @Transactional
+    public int deleteLogs(List<Long> logIds) {
+        int deleted = 0;
+        for (Long logId : logIds) {
+            try {
+                deleteLog(logId);
+                deleted++;
+            } catch (Exception e) {
+                // 개별 삭제 실패 시 무시하고 계속
+            }
+        }
+        return deleted;
+    }
 }

@@ -159,6 +159,17 @@ export async function fetchCrawlLogsGrouped(configId: number, days: number = 30)
   return request<CrawlLogGroup[]>(`/crawl-logs/config/${configId}/grouped?days=${days}`);
 }
 
+export async function deleteCrawlLog(logId: number): Promise<void> {
+  return request<void>(`/crawl-logs/${logId}`, { method: "DELETE" });
+}
+
+export async function deleteCrawlLogs(logIds: number[]): Promise<{ deleted: number }> {
+  return request<{ deleted: number }>("/crawl-logs/batch", {
+    method: "DELETE",
+    body: JSON.stringify(logIds),
+  });
+}
+
 export interface SiteDefinitionInfo {
   id: number;
   siteName: string;

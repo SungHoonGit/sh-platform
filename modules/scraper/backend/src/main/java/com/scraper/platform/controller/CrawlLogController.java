@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/crawl-logs")
@@ -60,6 +61,20 @@ public class CrawlLogController {
             @RequestParam(defaultValue = "20") int size) {
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by("startedAt").descending());
         return ResponseEntity.ok(crawlLogService.getLogsByStatus(status, pageRequest));
+    }
+
+    @DeleteMapping("/{logId}")
+    @Operation(summary = "크롤링 로그 삭제", description = "크롤링 로그와 관련 데이터를 삭제합니다")
+    public ResponseEntity<Map<String, Object>> deleteLog(@PathVariable Long logId) {
+        crawlLogService.deleteLog(logId);
+        return ResponseEntity.ok(Map.of("success", true, "message", "삭제 완료"));
+    }
+
+    @DeleteMapping("/batch")
+    @Operation(summary = "크롤링 로그 일괄 삭제", description = "여러 크롤링 로그를 일괄 삭제합니다")
+    public ResponseEntity<Map<String, Object>> deleteLogs(@RequestBody List<Long> logIds) {
+        int deleted = crawlLogService.deleteLogs(logIds);
+        return ResponseEntity.ok(Map.of("success", true, "deleted", deleted, "message", deleted + "건 삭제 완료"));
     }
 
     private void checkOwnership(Long configId) {

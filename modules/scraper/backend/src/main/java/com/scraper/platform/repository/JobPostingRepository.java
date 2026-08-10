@@ -69,4 +69,9 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void deleteByConfigId(Long configId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("UPDATE JobPosting j SET j.crawlLogId = NULL WHERE j.crawlLogId = :crawlLogId")
+    void nullifyCrawlLogId(@Param("crawlLogId") Long crawlLogId);
 }
