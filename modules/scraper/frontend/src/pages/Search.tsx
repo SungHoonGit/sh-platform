@@ -28,7 +28,7 @@ const COLUMNS: { key: SortKey; label: string; w: string }[] = [
   { key: "location", label: "지역", w: "w-[80px]" },
   { key: "tech", label: "기술", w: "w-[160px]" },
   { key: "deadline", label: "마감", w: "w-[80px]" },
-  { key: "companyScore", label: "평점", w: "w-[60px]" },
+  { key: "companyScore", label: "평가", w: "w-[60px]" },
 ];
 
 export default function Search() {
@@ -429,7 +429,20 @@ export default function Search() {
                           <td className="px-2 py-1.5 font-medium text-slate-800 truncate">
                             {job.position || job.title || "-"}
                           </td>
-                          <td className="px-2 py-1.5 text-slate-600 truncate">{job.company || "-"}</td>
+                          <td className="px-2 py-1.5 text-slate-600 truncate group relative">
+                            <span>{job.company || "-"}</span>
+                            {job.company && (
+                              <a
+                                href={`https://www.jobplanet.co.kr/search?query=${encodeURIComponent(job.company)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute hidden group-hover:inline-flex items-center ml-1 text-[10px] text-blue-500 hover:text-blue-700 bg-white border border-blue-200 rounded px-1.5 py-0.5 shadow-sm z-20"
+                              >
+                                잡플래닛 검색 ↗
+                              </a>
+                            )}
+                          </td>
                           <td className="px-2 py-1.5 text-slate-500 truncate">{job.career || "-"}</td>
                           <td className="px-2 py-1.5 text-slate-500 truncate">{job.location || "-"}</td>
                           <td className="px-2 py-1.5">
@@ -439,10 +452,16 @@ export default function Search() {
                           </td>
                           <td className="px-2 py-1.5 text-slate-400 truncate">{job.deadline || "-"}</td>
                           <td className="px-2 py-1.5">
-                            {job.companyScore ? (
-                              <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
-                                ★ {job.companyScore}
-                              </span>
+                            {job.company ? (
+                              <a
+                                href={`https://www.jobplanet.co.kr/search?query=${encodeURIComponent(job.company)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-[10px] text-blue-500 hover:text-blue-700 hover:underline"
+                              >
+                                잡플래닛
+                              </a>
                             ) : <span className="text-slate-300">-</span>}
                           </td>
                         </tr>
