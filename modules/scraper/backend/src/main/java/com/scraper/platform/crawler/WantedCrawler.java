@@ -8,14 +8,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
+import java.io.IOException;
 import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -24,9 +21,6 @@ public class WantedCrawler implements SiteCrawler {
 
     private static final String API_BASE = "https://www.wanted.co.kr/api/v4/jobs";
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
 
     private final SiteSearchMapper siteSearchMapper;
 
@@ -79,7 +73,7 @@ public class WantedCrawler implements SiteCrawler {
             String url = buildUrl(siteParams, p, perPage);
             log.info("Wanted API URL (page {}): {}", p, url);
 
-            String json = fetchJson(url);
+            String json = fetchWithCurl(url);
             if (json == null) {
                 log.warn("Wanted API returned null for page {}", p);
                 break;
@@ -121,28 +115,36 @@ public class WantedCrawler implements SiteCrawler {
         return allJobs;
     }
 
-    private String fetchJson(String url) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
-                .header("Accept", "application/json")
-                .header("Accept-Language", "ko-KR,ko;q=0.9")
-                .header("Referer", "https://www.wanted.co.kr/")
-                .timeout(Duration.ofSeconds(15))
-                .GET()
-                .build();
+    private String fetchWithCurl(String url) throws IOException, InterruptedException {
+        ProcessBuilder pb = new ProcessBuilder(
+            "curl", "-s", "-L",
+            "--max-time", "30",
+            "--compressed",
+            "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "-H", "Accept: application/json, text/plain, */*",
+            "-H", "Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+            "-H", "Accept-Encoding: gzip, deflate, br",
+            "-H", "Referer: https://www.wanted.co.kr/",
+            "-H", "Origin: https://www.wanted.co.kr",
+            url
+        );
+        pb.redirectErrorStream(true);
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        Process process = pb.start();
+        byte[] bytes = process.getInputStream().readAllBytes();
+        boolean finished = process.waitFor(35, TimeUnit.SECONDS);
 
-        if (response.statusCode() != 200) {
-            log.warn("Wanted API returned status {}: {}", response.statusCode(), url);
-            if (response.body() != null && !response.body().isEmpty()) {
-                log.warn("Wanted API response body: {}", response.body().substring(0, Math.min(200, response.body().length())));
-            }
-            return null;
+        if (!finished) {
+            process.destroyForcibly();
+            throw new IOException("curl timed out for URL: " + url);
         }
 
-        return response.body();
+        int exitCode = process.exitValue();
+        if (exitCode != 0) {
+            throw new IOException("curl failed with exit code " + exitCode + " for URL: " + url);
+        }
+
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     private String buildUrl(Map<String, String> siteParams, int page, int perPage) {
