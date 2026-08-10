@@ -18,7 +18,7 @@ const SITES = [
 
 const PAGE_SIZE = 20;
 
-type SortKey = "site" | "company" | "position" | "career" | "location" | "tech" | "deadline";
+type SortKey = "site" | "company" | "position" | "career" | "location" | "tech" | "deadline" | "companyScore";
 
 const COLUMNS: { key: SortKey; label: string; w: string }[] = [
   { key: "site", label: "사이트", w: "w-[70px]" },
@@ -60,8 +60,14 @@ export default function Search() {
         if (sortBy === "career") return j.career || "";
         if (sortBy === "location") return j.location || "";
         if (sortBy === "tech") return j.tech || "";
+        if (sortBy === "companyScore") return j.companyScore || "0";
         return j.deadline || "";
       };
+      if (sortBy === "companyScore") {
+        const aVal = parseFloat(a.companyScore || "0");
+        const bVal = parseFloat(b.companyScore || "0");
+        return sortDir === "asc" ? aVal - bVal : bVal - aVal;
+      }
       const cmp = getVal(a).localeCompare(getVal(b), "ko");
       return sortDir === "asc" ? cmp : -cmp;
     });
