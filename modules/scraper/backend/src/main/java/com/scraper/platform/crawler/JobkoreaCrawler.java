@@ -257,17 +257,23 @@ public class JobkoreaCrawler implements SiteCrawler {
 
         job.put("url", "https://www.jobkorea.co.kr/Recruit/GI_Read/" + id);
 
-        // 기술 스택 추출
+        // 기술 스택 추출 (_internal_featureToolCode + _internal_featureSkillCode)
         List<String> techs = new ArrayList<>();
-        node.path("skillNameList").forEach(s -> {
-            String skill = s.asText("");
-            if (!skill.isEmpty()) techs.add(skill);
-        });
+        String toolCode = node.path("_internal_featureToolCode").asText("");
+        if (!toolCode.isEmpty()) {
+            for (String t : toolCode.split(",")) {
+                String trimmed = t.trim();
+                if (!trimmed.isEmpty()) techs.add(trimmed);
+            }
+        }
         if (techs.isEmpty()) {
-            node.path("tagList").forEach(t -> {
-                String tag = t.asText("");
-                if (!tag.isEmpty()) techs.add(tag);
-            });
+            String skillCode = node.path("_internal_featureSkillCode").asText("");
+            if (!skillCode.isEmpty()) {
+                for (String t : skillCode.split(",")) {
+                    String trimmed = t.trim();
+                    if (!trimmed.isEmpty()) techs.add(trimmed);
+                }
+            }
         }
         if (!techs.isEmpty()) {
             job.put("tech", String.join(", ", techs));

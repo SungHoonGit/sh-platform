@@ -124,10 +124,13 @@ public class CompanyRatingService {
     @Async
     public void scrapeAndCache(String companyName) {
         try {
-            CompanyRating rating = companyRatingRepository.findByCompanyName(companyName)
-                    .orElseGet(() -> CompanyRating.builder()
-                            .companyName(companyName)
-                            .build());
+            // 기존 데이터 조회 (race condition 방지)
+            CompanyRating rating = companyRatingRepository.findByCompanyName(companyName).orElse(null);
+            if (rating == null) {
+                rating = CompanyRating.builder()
+                        .companyName(companyName)
+                        .build();
+            }
 
             // 잡플래닛 평점 수집
             try {
@@ -166,8 +169,21 @@ public class CompanyRatingService {
             rating.calculateAverage();
             rating.setLastUpdatedAt(LocalDateTime.now());
 
-            // DB 저장
-            companyRatingRepository.save(rating);
+            // DB 저장 (중복 시 업데이트)
+            try {
+                companyRatingRepository.save(rating);
+            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                CompanyRating existing = companyRatingRepository.findByCompanyName(companyName).orElse(null);
+                if (existing != null) {
+                    existing.setJobplanetScore(rating.getJobplanetScore());
+                    existing.setJobkoreaScore(rating.getJobkoreaScore());
+                    existing.setSaraminScore(rating.getSaraminScore());
+                    existing.setAverageScore(rating.getAverageScore());
+                    existing.setLastUpdatedAt(LocalDateTime.now());
+                    companyRatingRepository.save(existing);
+                    rating = existing;
+                }
+            }
 
             // 캐시 업데이트
             cache.put(companyName, rating);
