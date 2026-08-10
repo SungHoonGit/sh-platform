@@ -369,3 +369,8 @@ INSERT IGNORE INTO site_search_mapping (site_definition_id, standard_key, url_pa
 (6, 'keyword',   'query',          'direct',  NULL, 1),
 (6, 'career',    'min_experience', 'mapped',  '{"신입":"0","1~3년":"1","3~5년":"3","5~10년":"5","10년이상":"10"}', 2),
 (6, 'location',  'sido',           'direct',  NULL, 3);
+
+-- ============================================================
+-- 리멤버 비활성화 (키워드 검색 미지원)
+-- ============================================================
+UPDATE site_definition SET is_enabled = FALSE WHERE site_name = 'remember';
