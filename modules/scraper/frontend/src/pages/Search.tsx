@@ -28,6 +28,7 @@ const COLUMNS: { key: SortKey; label: string; w: string }[] = [
   { key: "location", label: "지역", w: "w-[80px]" },
   { key: "tech", label: "기술", w: "w-[160px]" },
   { key: "deadline", label: "마감", w: "w-[80px]" },
+  { key: "companyScore", label: "평점", w: "w-[60px]" },
 ];
 
 export default function Search() {
@@ -36,7 +37,7 @@ export default function Search() {
   const [careerMin, setCareerMin] = useState(0);
   const [careerMax, setCareerMax] = useState(CAREER_TOTAL);
   const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
-  const [selectedSites, setSelectedSites] = useState<string[]>(["saramin", "jobkorea", "wanted", "remember"]);
+  const [selectedSites, setSelectedSites] = useState<string[]>(["saramin", "jobkorea"]);
   const [data, setData] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -398,6 +399,13 @@ export default function Search() {
                             ) : <span className="text-slate-300">-</span>}
                           </td>
                           <td className="px-2 py-1.5 text-slate-400 truncate">{job.deadline || "-"}</td>
+                          <td className="px-2 py-1.5">
+                            {job.companyScore ? (
+                              <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                                ★ {job.companyScore}
+                              </span>
+                            ) : <span className="text-slate-300">-</span>}
+                          </td>
                         </tr>
                       );
                     })}
