@@ -126,6 +126,12 @@ export default function Viewer() {
   const total = jobsData?.total || 0;
   const totalPages = Math.ceil(total / SIZE);
 
+  // 현재 데이터에 있는 사이트만 추출
+  const availableSites = useMemo(() => {
+    const siteSet = new Set(jobs.map((j: JobPostingItem) => j.site).filter(Boolean));
+    return SITES.filter((s) => siteSet.has(s.id));
+  }, [jobs]);
+
   const filteredJobs = useMemo(() => {
     const kw = searchKeyword.trim().toLowerCase();
     if (!kw) return jobs;
@@ -341,7 +347,7 @@ export default function Viewer() {
             }
           })()}
 
-          {/* 둘째 줄: 사이트 탭 + 건수 + Excel */}
+          {/* 둘째 줄: 사이트 탭 + 검색 + 건수 + Excel */}
           <div className="flex items-center gap-2">
             <button
             onClick={() => { setSelectedSite("all"); setPage(0); }}
@@ -353,7 +359,7 @@ export default function Viewer() {
           >
             전체
           </button>
-          {SITES.map((site) => (
+          {availableSites.map((site) => (
             <button
               key={site.id}
               onClick={() => { setSelectedSite(site.id); setPage(0); }}
