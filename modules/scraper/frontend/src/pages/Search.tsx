@@ -355,17 +355,11 @@ export default function Search() {
                       bySite.get(site)!.push(job);
                     }
 
-                    // 헤더 스타일 함수
+                    // 헤더 스타일 함수 (백엔드 @HeadFontStyle과 동일)
                     const styleHeader = (ws: ExcelJS.Worksheet) => {
                       const row = ws.getRow(1);
                       row.font = { bold: true, size: 10, name: "Arial" };
                       row.alignment = { horizontal: "center" };
-                      row.eachCell((cell) => {
-                        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9E1F2" } };
-                        cell.border = {
-                          bottom: { style: "thin", color: { argb: "FFB4C6E7" } },
-                        };
-                      });
                       row.commit();
                     };
 
