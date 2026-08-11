@@ -222,6 +222,26 @@ public class JobPostingController {
 
         try (ExcelWriter excelWriter = EasyExcel.write(response.getOutputStream(), JobPostingVO.class).build()) {
             int sheetIndex = 0;
+
+            // 전체 시트 먼저 추가
+            List<JobPostingVO> allVoList = postings.stream()
+                    .map(p -> JobPostingVO.builder()
+                            .siteName(p.getSiteName())
+                            .company(p.getCompany())
+                            .position(p.getPosition())
+                            .career(p.getCareer())
+                            .tech(p.getTech())
+                            .location(p.getLocation())
+                            .deadline(p.getDeadline())
+                            .url(p.getUrl())
+                            .crawledAt(p.getCrawledAt() != null ? p.getCrawledAt().toString() : "")
+                            .build())
+                    .toList();
+            WriteSheet allSheet = EasyExcel.writerSheet(sheetIndex, "전체").build();
+            excelWriter.write(allVoList, allSheet);
+            sheetIndex++;
+
+            // 사이트별 시트
             for (Map.Entry<String, List<JobPosting>> entry : bySite.entrySet()) {
                 String siteKey = entry.getKey();
                 List<JobPosting> sitePostings = entry.getValue();
