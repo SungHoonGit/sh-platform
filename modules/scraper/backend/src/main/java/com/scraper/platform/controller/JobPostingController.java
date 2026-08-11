@@ -185,21 +185,33 @@ public class JobPostingController {
         }
 
         Sort exportSort = Sort.by(Sort.Direction.DESC, "crawledAt").and(Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 전체 시트용: 항상 모든 데이터 조회
+        List<JobPosting> allPostings;
+        if (runIdList != null && !runIdList.isEmpty()) {
+            allPostings = jobPostingRepository.findByConfigIdAndCrawlLogIdIn(configId, runIdList, exportSort);
+        } else if (date != null) {
+            allPostings = jobPostingRepository.findByConfigIdAndCrawledAt(configId, date, exportSort);
+        } else {
+            allPostings = jobPostingRepository.findByConfigId(configId, exportSort);
+        }
+
+        // 사이트별 시트용: 선택된 사이트만 필터
         List<JobPosting> postings;
         if (runIdList != null && !runIdList.isEmpty()) {
             if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
                 postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawlLogIdIn(configId, siteName, runIdList, exportSort);
             } else {
-                postings = jobPostingRepository.findByConfigIdAndCrawlLogIdIn(configId, runIdList, exportSort);
+                postings = allPostings;
             }
         } else if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
             postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawledAt(configId, siteName, date, exportSort);
         } else if (date != null) {
-            postings = jobPostingRepository.findByConfigIdAndCrawledAt(configId, date, exportSort);
+            postings = allPostings;
         } else if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
             postings = jobPostingRepository.findByConfigIdAndSiteName(configId, siteName, exportSort);
         } else {
-            postings = jobPostingRepository.findByConfigId(configId, exportSort);
+            postings = allPostings;
         }
 
         Map<String, List<JobPosting>> bySite = new LinkedHashMap<>();
@@ -224,7 +236,7 @@ public class JobPostingController {
             int sheetIndex = 0;
 
             // 전체 시트 먼저 추가
-            List<JobPostingVO> allVoList = postings.stream()
+            List<JobPostingVO> allVoList = allPostings.stream()
                     .map(p -> JobPostingVO.builder()
                             .siteName(p.getSiteName())
                             .company(p.getCompany())
