@@ -462,7 +462,7 @@ export default function Viewer() {
                           {job.position || "-"}
                         </td>
                         <td className="px-2 py-1 text-slate-600 truncate">
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 group/comp">
                             <span className="truncate">{job.company || "-"}</span>
                             {job.company && (
                               <a
@@ -470,7 +470,7 @@ export default function Viewer() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="shrink-0 text-[9px] text-blue-400 hover:text-blue-600 border border-blue-200 rounded px-1 py-0.5 hover:bg-blue-50"
+                                className="shrink-0 text-[9px] text-blue-400 hover:text-blue-600 opacity-0 group-hover/comp:opacity-100 transition-opacity border border-blue-200 rounded px-1 py-0.5 hover:bg-blue-50"
                                 title="잡플래닛에서 검색"
                               >
                                 JP
