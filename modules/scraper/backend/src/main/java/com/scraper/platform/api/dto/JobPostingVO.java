@@ -3,8 +3,6 @@ package com.scraper.platform.api.dto;
 import cn.idev.excel.annotation.ExcelProperty;
 import lombok.*;
 
-import java.time.LocalDate;
-
 /**
  * 채용공고 엑셀 내보내기용 VO.
  * FastExcel 어노테이션으로 컬럼 매핑.
