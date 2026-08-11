@@ -438,7 +438,7 @@ export default function Search() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
-                                  className="shrink-0 text-[9px] text-blue-400 hover:text-blue-600 opacity-0 group-hover/comp:opacity-100 transition-opacity border border-blue-200 rounded px-1 py-0.5 hover:bg-blue-50"
+                                  className="shrink-0 text-[9px] text-green-500 hover:text-green-600 opacity-0 group-hover/comp:opacity-100 transition-opacity border border-green-200 rounded px-1 py-0.5 hover:bg-green-50"
                                   title="잡플래닛에서 검색"
                                 >
                                   JP
