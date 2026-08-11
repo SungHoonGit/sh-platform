@@ -1,6 +1,10 @@
 package com.scraper.platform.api.dto;
 
 import cn.idev.excel.annotation.ExcelProperty;
+import cn.idev.excel.annotation.write.style.HeadFontStyle;
+import cn.idev.excel.annotation.write.style.HeadStyle;
+import cn.idev.excel.enums.BooleanEnum;
+import cn.idev.excel.enums.poi.HorizontalAlignmentEnum;
 import lombok.*;
 
 /**
@@ -12,6 +16,8 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@HeadFontStyle(fontName = "Arial", fontHeightInPoints = 10, bold = BooleanEnum.TRUE)
+@HeadStyle(horizontalAlignment = HorizontalAlignmentEnum.CENTER)
 public class JobPostingVO {
 
     @ExcelProperty(value = "사이트", index = 0)

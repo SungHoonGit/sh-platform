@@ -2,7 +2,6 @@ package com.scraper.platform.controller;
 
 import cn.idev.excel.EasyExcel;
 import cn.idev.excel.ExcelWriter;
-import cn.idev.excel.write.handler.CellWriteHandler;
 import cn.idev.excel.write.metadata.WriteSheet;
 import com.scraper.platform.api.dto.JobPostingResponse;
 import com.scraper.platform.api.dto.JobPostingVO;
@@ -12,7 +11,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.ss.usermodel.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -222,32 +220,7 @@ public class JobPostingController {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
 
-        CellWriteHandler headerFontHandler = new CellWriteHandler() {
-            @Override
-            public void afterCellDispose(cn.idev.excel.write.metadata.holder.WriteSheetHolder writeSheetHolder,
-                                         cn.idev.excel.write.metadata.holder.WriteTableHolder writeTableHolder,
-                                         java.util.List<cn.idev.excel.metadata.data.WriteCellData<?>> cellDataList,
-                                         org.apache.poi.ss.usermodel.Cell cell,
-                                         cn.idev.excel.metadata.Head head,
-                                         java.lang.Integer relativeRowIndex,
-                                         java.lang.Boolean isHead) {
-                if (Boolean.TRUE.equals(isHead) && head != null) {
-                    Workbook workbook = writeSheetHolder.getParentWriteWorkbookHolder().getWorkbook();
-                    CellStyle style = workbook.createCellStyle();
-                    Font font = workbook.createFont();
-                    font.setFontName("Arial");
-                    font.setFontHeightInPoints((short) 11);
-                    font.setBold(true);
-                    style.setFont(font);
-                    style.setAlignment(HorizontalAlignment.CENTER);
-                    cell.setCellStyle(style);
-                }
-            }
-        };
-
-        try (ExcelWriter excelWriter = EasyExcel.write(response.getOutputStream(), JobPostingVO.class)
-                .registerWriteHandler(headerFontHandler)
-                .build()) {
+        try (ExcelWriter excelWriter = EasyExcel.write(response.getOutputStream(), JobPostingVO.class).build()) {
             int sheetIndex = 0;
 
             // 전체 시트 먼저 추가
