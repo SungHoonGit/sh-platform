@@ -360,9 +360,8 @@ export default function Search() {
                     const allSheet = XLSX.utils.aoa_to_sheet(allData);
                     XLSX.utils.book_append_sheet(wb, allSheet, "전체");
 
-                    // 선택된 사이트만 시트로 추가
+                    // 모든 사이트별 시트 추가
                     for (const [site, jobs] of bySite) {
-                      if (!selectedSites.includes(site)) continue;
                       const sheetName = SITE_NAME_MAP[site] || site;
                       const siteData = [headers, ...jobs.map(toRow)];
                       const sheet = XLSX.utils.aoa_to_sheet(siteData);
