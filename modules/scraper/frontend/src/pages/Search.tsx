@@ -331,7 +331,8 @@ export default function Search() {
                       remember: "리멤버",
                     };
 
-                    const headers = ["사이트", "회사명", "포지션", "경력", "지역", "기술", "마감", "URL"];
+                    const today = new Date().toISOString().slice(0, 10);
+                    const headers = ["사이트", "회사명", "포지션", "경력", "지역", "기술", "마감", "검색일", "URL"];
                     const toRow = (j: Record<string, string>) => [
                       SITE_NAME_MAP[j.site] || j.site || "",
                       j.company || "",
@@ -340,12 +341,13 @@ export default function Search() {
                       j.location || "",
                       j.tech || "",
                       j.deadline || "",
+                      today,
                       j.url || "",
                     ];
 
                     const wb = XLSX.utils.book_new();
 
-                    // 사이트별 시트 분리
+                    // 선택된 사이트만 필터링 (전체 + 선택 사이트)
                     const bySite = new Map<string, Record<string, string>[]>();
                     for (const job of filteredJobs) {
                       const site = job.site || "기타";
@@ -358,15 +360,15 @@ export default function Search() {
                     const allSheet = XLSX.utils.aoa_to_sheet(allData);
                     XLSX.utils.book_append_sheet(wb, allSheet, "전체");
 
-                    // 사이트별 시트
+                    // 선택된 사이트만 시트로 추가
                     for (const [site, jobs] of bySite) {
+                      if (!selectedSites.includes(site)) continue;
                       const sheetName = SITE_NAME_MAP[site] || site;
                       const siteData = [headers, ...jobs.map(toRow)];
                       const sheet = XLSX.utils.aoa_to_sheet(siteData);
                       XLSX.utils.book_append_sheet(wb, sheet, sheetName);
                     }
 
-                    const today = new Date().toISOString().slice(0, 10);
                     XLSX.writeFile(wb, `검색결과_${keyword}_${today}.xlsx`);
                   }}
                   disabled={filteredJobs.length === 0}
@@ -393,14 +395,14 @@ export default function Search() {
                   <div className="text-sm">다른 키워드나 조건으로 다시 검색해 보세요</div>
                 </div>
               ) : (
-                <table className="w-full text-xs table-fixed">
+                <table className="w-full text-[12px] table-fixed">
                   <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                     <tr>
-                      <th className="px-2 py-2 text-left font-semibold text-slate-500 w-[40px]">#</th>
+                      <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[40px]">#</th>
                       {COLUMNS.map((col) => (
                         <th key={col.key}
                           onClick={() => handleSort(col.key)}
-                          className={`px-2 py-2 text-left font-semibold text-slate-500 cursor-pointer hover:text-blue-600 select-none ${col.w}`}>
+                          className={`px-2 py-1.5 text-left font-bold text-slate-600 cursor-pointer hover:text-blue-600 select-none ${col.w}`}>
                           <span className="inline-flex items-center gap-1">
                             {col.label}
                             {sortBy === col.key && (

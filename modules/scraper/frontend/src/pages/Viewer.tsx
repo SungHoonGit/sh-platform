@@ -423,12 +423,12 @@ export default function Viewer() {
               <table className="w-full text-[12px] table-fixed">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
-                    <th className="px-2 py-1.5 text-left font-semibold text-slate-500 w-[32px]">#</th>
+                    <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[32px]">#</th>
                     {COLUMNS.map((c) => (
                       <th
                         key={c.key}
                         onClick={() => toggleSort(c.key)}
-                        className={`px-2 py-1.5 text-left font-semibold text-slate-500 cursor-pointer hover:text-blue-600 select-none ${c.w}`}
+                        className={`px-2 py-1.5 text-left font-bold text-slate-600 cursor-pointer hover:text-blue-600 select-none ${c.w}`}
                       >
                         <span className="inline-flex items-center gap-0.5">
                           {c.label}
