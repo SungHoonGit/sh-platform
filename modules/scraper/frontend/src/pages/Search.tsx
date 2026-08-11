@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { realTimeSearch, fetchCompanyRatings, type SearchRequest, type SearchResponse, type CompanyRating } from "../api/scraper";
 import {
   REGIONS,
@@ -345,9 +345,9 @@ export default function Search() {
                       today,
                     ];
 
-                    const wb = XLSX.utils.book_new();
+                    const wb = new ExcelJS.Workbook();
 
-                    // 선택된 사이트만 필터링 (전체 + 선택 사이트)
+                    // 사이트별 그룹핑
                     const bySite = new Map<string, Record<string, string>[]>();
                     for (const job of filteredJobs) {
                       const site = job.site || "기타";
@@ -355,20 +355,43 @@ export default function Search() {
                       bySite.get(site)!.push(job);
                     }
 
-                    // 전체 시트
-                    const allData = [headers, ...filteredJobs.map(toRow)];
-                    const allSheet = XLSX.utils.aoa_to_sheet(allData);
-                    XLSX.utils.book_append_sheet(wb, allSheet, "전체");
+                    // 헤더 스타일 함수
+                    const styleHeader = (ws: ExcelJS.Worksheet) => {
+                      const row = ws.getRow(1);
+                      row.font = { bold: true, size: 10, name: "Arial" };
+                      row.alignment = { horizontal: "center" };
+                      row.eachCell((cell) => {
+                        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9E1F2" } };
+                        cell.border = {
+                          bottom: { style: "thin", color: { argb: "FFB4C6E7" } },
+                        };
+                      });
+                      row.commit();
+                    };
 
-                    // 모든 사이트별 시트 추가
+                    // 전체 시트
+                    const allSheet = wb.addWorksheet("전체");
+                    allSheet.columns = headers.map((h) => ({ header: h, key: h, width: 14 }));
+                    filteredJobs.forEach((j) => allSheet.addRow(toRow(j)));
+                    styleHeader(allSheet);
+
+                    // 사이트별 시트
                     for (const [site, jobs] of bySite) {
                       const sheetName = SITE_NAME_MAP[site] || site;
-                      const siteData = [headers, ...jobs.map(toRow)];
-                      const sheet = XLSX.utils.aoa_to_sheet(siteData);
-                      XLSX.utils.book_append_sheet(wb, sheet, sheetName);
+                      const siteSheet = wb.addWorksheet(sheetName);
+                      siteSheet.columns = headers.map((h) => ({ header: h, key: h, width: 14 }));
+                      jobs.forEach((j) => siteSheet.addRow(toRow(j)));
+                      styleHeader(siteSheet);
                     }
 
-                    XLSX.writeFile(wb, `검색결과_${keyword}_${today}.xlsx`);
+                    const buffer = await wb.xlsx.writeBuffer();
+                    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `검색결과_${keyword}_${today}.xlsx`;
+                    a.click();
+                    URL.revokeObjectURL(url);
                   }}
                   disabled={filteredJobs.length === 0}
                   className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
