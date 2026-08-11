@@ -360,7 +360,6 @@ export default function Search() {
                       row.font = { bold: true, size: 10, name: "Arial" };
                       row.alignment = { horizontal: "center" };
                       row.eachCell((cell) => {
-                        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9D9D9" } };
                         cell.border = {
                           top: { style: "thin", color: { argb: "FF000000" } },
                           bottom: { style: "thin", color: { argb: "FF000000" } },

@@ -6,7 +6,6 @@ import cn.idev.excel.annotation.write.style.HeadFontStyle;
 import cn.idev.excel.annotation.write.style.HeadStyle;
 import cn.idev.excel.enums.BooleanEnum;
 import cn.idev.excel.enums.poi.BorderStyleEnum;
-import cn.idev.excel.enums.poi.FillPatternTypeEnum;
 import cn.idev.excel.enums.poi.HorizontalAlignmentEnum;
 import lombok.*;
 
@@ -29,9 +28,7 @@ import lombok.*;
     leftBorderColor = 0,
     rightBorderColor = 0,
     topBorderColor = 0,
-    bottomBorderColor = 0,
-    fillPatternType = FillPatternTypeEnum.SOLID_FOREGROUND,
-    fillForegroundColor = 56
+    bottomBorderColor = 0
 )
 public class JobPostingVO {
 
