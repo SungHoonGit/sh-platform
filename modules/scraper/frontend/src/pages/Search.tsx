@@ -354,12 +354,13 @@ export default function Search() {
                       bySite.get(site)!.push(job);
                     }
 
-                    // 헤더 스타일 함수 (백엔드 @HeadFontStyle + @HeadStyle과 동일)
+                    // 헤더 스타일 함수 (백엔드와 동일 + 회색 배경)
                     const styleHeader = (ws: ExcelJS.Worksheet) => {
                       const row = ws.getRow(1);
                       row.font = { bold: true, size: 10, name: "Arial" };
                       row.alignment = { horizontal: "center" };
                       row.eachCell((cell) => {
+                        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9D9D9" } };
                         cell.border = {
                           top: { style: "thin", color: { argb: "FF000000" } },
                           bottom: { style: "thin", color: { argb: "FF000000" } },
