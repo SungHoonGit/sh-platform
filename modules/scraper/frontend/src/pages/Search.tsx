@@ -321,7 +321,7 @@ export default function Search() {
                   {data?.searchTime ? `${(data.searchTime / 1000).toFixed(1)}초 소요` : ""}
                 </span>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (filteredJobs.length === 0) return;
 
                     const SITE_NAME_MAP: Record<string, string> = {
@@ -332,7 +332,6 @@ export default function Search() {
                     };
 
                     const today = new Date().toISOString().slice(0, 10);
-                    const headers = ["사이트", "회사명", "포지션", "경력", "기술스택", "지역", "마감일", "URL", "수집일"];
                     const toRow = (j: Record<string, string>) => [
                       SITE_NAME_MAP[j.site] || j.site || "",
                       j.company || "",
