@@ -2,6 +2,9 @@ package com.shplatform.common.notification;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -14,6 +17,7 @@ public class NotificationService {
 
     private final NotificationConfigRepository configRepository;
     private final NotificationLogRepository logRepository;
+    private final JavaMailSender mailSender;
 
     @Transactional(readOnly = true)
     public List<NotificationConfig> getConfigsByModule(String moduleName) {
@@ -42,6 +46,11 @@ public class NotificationService {
     @Transactional
     public void deleteConfig(Long id) {
         configRepository.deleteById(id);
+    }
+
+    @Async
+    public void sendNotificationAsync(String moduleName, String eventType, String subject, String content) {
+        sendNotification(moduleName, eventType, subject + "\n\n" + content);
     }
 
     @Transactional
@@ -93,7 +102,27 @@ public class NotificationService {
     }
 
     private void sendEmail(String to, String content) {
-        log.info("Sending email to {}: {}", to, content);
+        try {
+            // 첫 줄에서 제목 추출
+            String[] lines = content.split("\n");
+            String subject = "[SH Platform] 알림";
+            String body = content;
+            
+            if (lines.length > 0 && lines[0].contains("Config:")) {
+                subject = "[SH Platform] 신규 채용공고 수집 완료";
+            }
+            
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setSubject(subject);
+            message.setText(body);
+            message.setFrom("noreply@shplatform.com");
+            mailSender.send(message);
+            log.info("Email sent to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send email to {}: {}", to, e.getMessage());
+            throw e;
+        }
     }
 
     private void sendKakao(String phone, String content) {

@@ -16,6 +16,7 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-data-jpa")
     api("org.springframework.boot:spring-boot-starter-validation")
     api("org.springframework.boot:spring-boot-starter-security")
+    api("org.springframework.boot:spring-boot-starter-mail")
 
     // JWT 검증 (RS256) — auth/scraper/resume/portfolio 공용 (nimbus-jose-jwt 포함)
     implementation("org.springframework.security:spring-security-oauth2-jose")

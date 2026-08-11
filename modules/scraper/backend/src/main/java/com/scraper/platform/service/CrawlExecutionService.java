@@ -24,6 +24,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 @Slf4j
 @Service
@@ -196,10 +198,37 @@ public class CrawlExecutionService {
         }
 
         if (success > 0) {
-            String msg = dupJobs > 0
-                    ? String.format("Config '%s': %d sites, %d new jobs (dedup: %d removed)", config.getName(), success, newJobs, dupJobs)
-                    : String.format("Config '%s': %d sites, %d jobs crawled", config.getName(), success, newJobs);
-            notificationService.sendNotification("scraper", "new_jobs_found", msg);
+            // 최근 수집된 공고 조회 (최대 10건)
+            LocalDateTime crawlStartTime = LocalDateTime.now().minusMinutes(30);
+            Page<JobPosting> recentJobsPage = jobPostingRepository.findByConfigIdAndCreatedAtBetween(
+                    config.getId(), crawlStartTime, LocalDateTime.now(),
+                    PageRequest.of(0, 10, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")));
+            List<JobPosting> recentJobs = recentJobsPage.getContent();
+            
+            // 이메일 내용 생성
+            StringBuilder emailContent = new StringBuilder();
+            emailContent.append(String.format("Config: %s\n", config.getName()));
+            emailContent.append(String.format("수집 사이트: %d개 성공\n", success));
+            emailContent.append(String.format("신규 공고: %d건\n\n", newJobs));
+            
+            if (!recentJobs.isEmpty()) {
+                emailContent.append("=== 신규 공고 목록 (최대 10건) ===\n\n");
+                int limit = Math.min(recentJobs.size(), 10);
+                for (int i = 0; i < limit; i++) {
+                    JobPosting job = recentJobs.get(i);
+                    emailContent.append(String.format("%d. %s | %s | %s | %s\n",
+                            i + 1,
+                            job.getCompany() != null ? job.getCompany() : "-",
+                            job.getPosition() != null ? job.getPosition() : "-",
+                            job.getCareer() != null ? job.getCareer() : "-",
+                            job.getLocation() != null ? job.getLocation() : "-"));
+                }
+                emailContent.append("\n");
+            }
+            
+            emailContent.append(String.format("상세 보기: https://sunghoonyk.duckdns.org/scraper/viewer"));
+            
+            notificationService.sendNotification("scraper", "new_jobs_found", emailContent.toString());
         }
 
         if (error > 0) {
