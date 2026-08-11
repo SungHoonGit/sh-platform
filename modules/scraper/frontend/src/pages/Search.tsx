@@ -332,17 +332,17 @@ export default function Search() {
                     };
 
                     const today = new Date().toISOString().slice(0, 10);
-                    const headers = ["사이트", "회사명", "포지션", "경력", "지역", "기술", "마감", "검색일", "URL"];
+                    const headers = ["사이트", "회사명", "포지션", "경력", "기술스택", "지역", "마감일", "URL", "수집일"];
                     const toRow = (j: Record<string, string>) => [
                       SITE_NAME_MAP[j.site] || j.site || "",
                       j.company || "",
                       j.position || j.title || "",
                       j.career || "",
-                      j.location || "",
                       j.tech || "",
+                      j.location || "",
                       j.deadline || "",
-                      today,
                       j.url || "",
+                      today,
                     ];
 
                     const wb = XLSX.utils.book_new();
