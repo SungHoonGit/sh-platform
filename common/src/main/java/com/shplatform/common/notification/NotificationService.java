@@ -102,6 +102,7 @@ public class NotificationService {
     }
 
     public void sendEmail(String to, String content) {
+        log.info("[EMAIL] Attempting to send email to: {}", to);
         try {
             // 첫 줄에서 제목 추출
             String[] lines = content.split("\n");
@@ -118,9 +119,9 @@ public class NotificationService {
             message.setText(body);
             message.setFrom("noreply@shplatform.com");
             mailSender.send(message);
-            log.info("Email sent to {}", to);
+            log.info("[EMAIL] Email sent successfully to {}", to);
         } catch (Exception e) {
-            log.error("Failed to send email to {}: {}", to, e.getMessage());
+            log.error("[EMAIL] Failed to send email to {}: {}", to, e.getMessage(), e);
             throw e;
         }
     }
