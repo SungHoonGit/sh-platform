@@ -355,17 +355,39 @@ export default function Search() {
                       bySite.get(site)!.push(job);
                     }
 
-                    // 헤더 스타일 함수 (백엔드 @HeadFontStyle과 동일)
+                    // 헤더 스타일 함수 (백엔드 @HeadFontStyle + @HeadStyle과 동일)
                     const styleHeader = (ws: ExcelJS.Worksheet) => {
                       const row = ws.getRow(1);
                       row.font = { bold: true, size: 10, name: "Arial" };
                       row.alignment = { horizontal: "center" };
+                      row.eachCell((cell) => {
+                        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9D9D9" } };
+                        cell.border = {
+                          top: { style: "thin", color: { argb: "FF000000" } },
+                          bottom: { style: "thin", color: { argb: "FF000000" } },
+                          left: { style: "thin", color: { argb: "FF000000" } },
+                          right: { style: "thin", color: { argb: "FF000000" } },
+                        };
+                      });
                       row.commit();
                     };
 
+                    // 열 간격 (백엔드 @ColumnWidth와 동일)
+                    const colWidths = [
+                      { header: "사이트", key: "사이트", width: 10 },
+                      { header: "회사명", key: "회사명", width: 20 },
+                      { header: "포지션", key: "포지션", width: 30 },
+                      { header: "경력", key: "경력", width: 12 },
+                      { header: "기술스택", key: "기술스택", width: 25 },
+                      { header: "지역", key: "지역", width: 15 },
+                      { header: "마감일", key: "마감일", width: 12 },
+                      { header: "URL", key: "URL", width: 30 },
+                      { header: "수집일", key: "수집일", width: 15 },
+                    ];
+
                     // 전체 시트
                     const allSheet = wb.addWorksheet("전체");
-                    allSheet.columns = headers.map((h) => ({ header: h, key: h, width: 14 }));
+                    allSheet.columns = colWidths;
                     filteredJobs.forEach((j) => allSheet.addRow(toRow(j)));
                     styleHeader(allSheet);
 
@@ -373,7 +395,7 @@ export default function Search() {
                     for (const [site, jobs] of bySite) {
                       const sheetName = SITE_NAME_MAP[site] || site;
                       const siteSheet = wb.addWorksheet(sheetName);
-                      siteSheet.columns = headers.map((h) => ({ header: h, key: h, width: 14 }));
+                      siteSheet.columns = colWidths;
                       jobs.forEach((j) => siteSheet.addRow(toRow(j)));
                       styleHeader(siteSheet);
                     }
