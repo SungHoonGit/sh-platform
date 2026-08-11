@@ -42,6 +42,10 @@ public class CrawlConfig {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "email_notification")
+    @Builder.Default
+    private Boolean emailNotification = false;
+
     @Column(name = "local_path", length = 500)
     private String localPath;
 

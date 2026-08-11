@@ -137,6 +137,7 @@ export default function Schedule() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [scheduleIcon, setScheduleIcon] = useState("🤖");
+  const [emailNotification, setEmailNotification] = useState(false);
   const savingRef = useRef(false);
 
   useEffect(() => {
@@ -199,6 +200,7 @@ export default function Schedule() {
         description: keyword.trim(),
         schedule: cronStr,
         scheduleIcon: scheduleIcon,
+        emailNotification: emailNotification,
         isActive: true,
         retentionDays: 30,
       };
@@ -279,6 +281,7 @@ export default function Schedule() {
     setTimePairs([{ hour: 9, minute: 0 }]);
     setSelectedDays([1, 2, 3, 4, 5]);
     setScheduleIcon("🤖");
+    setEmailNotification(false);
   };
 
   const handleSave = () => {
@@ -331,6 +334,7 @@ export default function Schedule() {
     setName(c.name);
     setEditingId(c.id);
     setScheduleIcon(c.scheduleIcon || "🤖");
+    setEmailNotification(c.emailNotification || false);
     const scs = c.siteConfigs || [];
     const enabled = scs.filter((sc: any) => sc.isEnabled);
     const first = enabled[0] || scs[0];
@@ -431,6 +435,18 @@ export default function Schedule() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={emailNotification}
+                    onChange={(e) => setEmailNotification(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-slate-600">신규 공고 수집 시 이메일 알림</span>
+                </label>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

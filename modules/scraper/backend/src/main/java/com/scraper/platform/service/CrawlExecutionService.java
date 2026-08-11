@@ -197,7 +197,7 @@ public class CrawlExecutionService {
             log.error("Failed to save combined MD file for config: {}", config.getName(), e);
         }
 
-        if (success > 0) {
+        if (success > 0 && Boolean.TRUE.equals(config.getEmailNotification())) {
             // 최근 수집된 공고 조회 (최대 10건)
             LocalDateTime crawlStartTime = LocalDateTime.now().minusMinutes(30);
             Page<JobPosting> recentJobsPage = jobPostingRepository.findByConfigIdAndCreatedAtBetween(
@@ -231,7 +231,7 @@ public class CrawlExecutionService {
             notificationService.sendNotification("scraper", "new_jobs_found", emailContent.toString());
         }
 
-        if (error > 0) {
+        if (error > 0 && Boolean.TRUE.equals(config.getEmailNotification())) {
             notificationService.sendNotification("scraper", "crawl_failed",
                     String.format("Config '%s': %d/%d sites failed", config.getName(), error, total));
         }
