@@ -101,7 +101,7 @@ public class NotificationService {
         };
     }
 
-    private void sendEmail(String to, String content) {
+    public void sendEmail(String to, String content) {
         try {
             // 첫 줄에서 제목 추출
             String[] lines = content.split("\n");

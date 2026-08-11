@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../hooks/useAuth";
 import {
   fetchCrawlers,
   executeCrawler,
@@ -125,6 +126,7 @@ export default function Schedule() {
   const queryClient = useQueryClient();
   const state = location.state as any;
   const { startProgress } = useCrawlProgress();
+  const { user } = useAuth();
 
   const [name, setName] = useState("");
   const [keyword, setKeyword] = useState("");
@@ -201,6 +203,7 @@ export default function Schedule() {
         schedule: cronStr,
         scheduleIcon: scheduleIcon,
         emailNotification: emailNotification,
+        recipientEmail: emailNotification ? user?.email : null,
         isActive: true,
         retentionDays: 30,
       };

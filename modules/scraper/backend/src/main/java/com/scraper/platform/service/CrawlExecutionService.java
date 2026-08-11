@@ -228,11 +228,11 @@ public class CrawlExecutionService {
             
             emailContent.append(String.format("상세 보기: https://sunghoonyk.duckdns.org/scraper/viewer"));
             
-            notificationService.sendNotification("scraper", "new_jobs_found", emailContent.toString());
+            notificationService.sendEmail(config.getRecipientEmail(), emailContent.toString());
         }
 
         if (error > 0 && Boolean.TRUE.equals(config.getEmailNotification())) {
-            notificationService.sendNotification("scraper", "crawl_failed",
+            notificationService.sendEmail(config.getRecipientEmail(),
                     String.format("Config '%s': %d/%d sites failed", config.getName(), error, total));
         }
 
