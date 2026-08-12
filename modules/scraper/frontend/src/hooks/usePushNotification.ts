@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || "";
-
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -17,6 +15,7 @@ export function usePushNotification() {
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [vapidKey, setVapidKey] = useState<string>("");
 
   useEffect(() => {
     setIsSupported("serviceWorker" in navigator && "PushManager" in window);
@@ -25,7 +24,18 @@ export function usePushNotification() {
   useEffect(() => {
     if (!isSupported) return;
     checkSubscription();
+    fetchVapidKey();
   }, [isSupported]);
+
+  const fetchVapidKey = async () => {
+    try {
+      const res = await fetch("/scraper/api/v1/push/vapid-public-key");
+      const data = await res.json();
+      setVapidKey(data.publicKey || "");
+    } catch (e) {
+      console.error("Failed to fetch VAPID key:", e);
+    }
+  };
 
   const checkSubscription = async () => {
     try {
@@ -38,14 +48,14 @@ export function usePushNotification() {
   };
 
   const subscribe = useCallback(async () => {
-    if (!isSupported || !VAPID_PUBLIC_KEY) return false;
+    if (!isSupported || !vapidKey) return false;
     setLoading(true);
 
     try {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
       });
 
       const { endpoint } = subscription;
@@ -70,7 +80,7 @@ export function usePushNotification() {
       setLoading(false);
       return false;
     }
-  }, [isSupported]);
+  }, [isSupported, vapidKey]);
 
   const unsubscribe = useCallback(async () => {
     setLoading(true);
