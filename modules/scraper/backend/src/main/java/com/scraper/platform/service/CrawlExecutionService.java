@@ -5,6 +5,7 @@ import com.scraper.platform.crawler.SiteCrawler;
 import com.scraper.platform.model.*;
 import com.scraper.platform.repository.*;
 import com.shplatform.common.notification.NotificationService;
+import com.shplatform.common.notification.WebPushService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,6 +42,7 @@ public class CrawlExecutionService {
     private final CrawlLogRepository crawlLogRepository;
     private final JobPostingRepository jobPostingRepository;
     private final NotificationService notificationService;
+    private final WebPushService webPushService;
     private final CrawlerFactory crawlerFactory;
     private final CrawlProgressBroadcaster progressBroadcaster;
 
@@ -238,6 +240,16 @@ public class CrawlExecutionService {
         if (error > 0 && Boolean.TRUE.equals(config.getEmailNotification())) {
             notificationService.sendEmail(config.getRecipientEmail(),
                     String.format("Config '%s': %d/%d sites failed", config.getName(), error, total));
+        }
+
+        // 웹 푸쉬 발송
+        if (success > 0 && Boolean.TRUE.equals(config.getEmailNotification())) {
+            String pushTitle = String.format("%s 수집 완료", config.getName());
+            String pushBody = String.format("신규 %d건 수집", newJobs);
+            if (dupJobs > 0) {
+                pushBody += String.format(" (중복 %d건 제외)", dupJobs);
+            }
+            webPushService.sendPushToUser(config.getAccountId(), pushTitle, pushBody, "/scraper/viewer");
         }
 
         progressBroadcaster.sendCrawlComplete(config.getId(), total, success, totalJobs, newJobs, dupJobs);

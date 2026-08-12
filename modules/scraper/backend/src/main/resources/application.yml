@@ -66,3 +66,9 @@ logging:
   level:
     root: INFO
     com.scraper.platform: INFO
+
+webpush:
+  vapid:
+    public-key: ${WEBPUSH_VAPID_PUBLIC_KEY:}
+    private-key: ${WEBPUSH_VAPID_PRIVATE_KEY:}
+    subject: ${WEBPUSH_VAPID_SUBJECT:mailto:noreply@shplatform.com}

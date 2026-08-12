@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
+import { usePushNotification } from "../hooks/usePushNotification";
 import {
   fetchCrawlers,
   executeCrawler,
@@ -140,7 +141,9 @@ export default function Schedule() {
   const [showForm, setShowForm] = useState(false);
   const [scheduleIcon, setScheduleIcon] = useState("🤖");
   const [emailNotification, setEmailNotification] = useState(false);
+  const [pushNotification, setPushNotification] = useState(false);
   const savingRef = useRef(false);
+  const { isSupported: pushSupported, isSubscribed: pushSubscribed, subscribe: subscribePush, unsubscribe: unsubscribePush } = usePushNotification();
 
   useEffect(() => {
     if (state) {
@@ -451,6 +454,31 @@ export default function Schedule() {
                   <span className="text-xs text-slate-600">신규 공고 수집 시 이메일 알림</span>
                 </label>
               </div>
+
+              {pushSupported && (
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={pushNotification && pushSubscribed}
+                      onChange={async (e) => {
+                        if (e.target.checked) {
+                          const ok = await subscribePush();
+                          if (ok) setPushNotification(true);
+                        } else {
+                          await unsubscribePush();
+                          setPushNotification(false);
+                        }
+                      }}
+                      className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-xs text-slate-600">브라우저 푸쉬 알림</span>
+                    {!pushSubscribed && (
+                      <span className="text-[10px] text-slate-400">(권한 필요)</span>
+                    )}
+                  </label>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

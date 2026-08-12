@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 import AuthGuard from "./components/AuthGuard";
 import Layout from "./components/Layout";
 import Search from "./pages/Search";
@@ -14,7 +15,20 @@ const queryClient = new QueryClient({
   },
 });
 
+function registerServiceWorker() {
+  if ("serviceWorker" in navigator && "PushManager" in window) {
+    navigator.serviceWorker
+      .register("/scraper/sw.js")
+      .then((reg) => console.log("SW registered:", reg.scope))
+      .catch((err) => console.error("SW registration failed:", err));
+  }
+}
+
 export default function App() {
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <CrawlProgressProvider>

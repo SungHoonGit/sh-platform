@@ -18,6 +18,15 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-security")
     api("org.springframework.boot:spring-boot-starter-mail")
 
+    // Web Push (VAPID)
+    implementation("nl.martijndwars:web-push:5.1.2") {
+        exclude(group = "org.apache.httpcomponents", module = "httpclient")
+    }
+    implementation("org.bouncycastle:bcprov-jdk18on:1.79")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.79")
+    implementation("org.apache.httpcomponents:httpclient:4.5.14")
+    implementation("org.bitbucket.b_c:jose4j:0.9.6")
+
     // JWT 검증 (RS256) — auth/scraper/resume/portfolio 공용 (nimbus-jose-jwt 포함)
     implementation("org.springframework.security:spring-security-oauth2-jose")
 
