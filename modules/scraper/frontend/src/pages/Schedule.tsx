@@ -464,7 +464,11 @@ export default function Schedule() {
                       onChange={async (e) => {
                         if (e.target.checked) {
                           const ok = await subscribePush();
-                          if (ok) setPushNotification(true);
+                          if (ok) {
+                            setPushNotification(true);
+                          } else {
+                            alert("브라우저 알림 권한이 필요합니다.\n\n브라우저 주소창 왼쪽 🔒 아이콘 → 알림 → 허용으로 변경해주세요.");
+                          }
                         } else {
                           await unsubscribePush();
                           setPushNotification(false);
@@ -474,7 +478,7 @@ export default function Schedule() {
                     />
                     <span className="text-xs text-slate-600">브라우저 푸쉬 알림</span>
                     {!pushSubscribed && (
-                      <span className="text-[10px] text-slate-400">(권한 필요)</span>
+                      <span className="text-[10px] text-slate-400 ml-1" title="체크박스 클릭 시 브라우저에서 알림 권한 요청 팝업이 뜹니다">(권한 필요)</span>
                     )}
                   </label>
                 </div>
