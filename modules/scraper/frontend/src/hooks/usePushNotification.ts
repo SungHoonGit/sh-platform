@@ -31,9 +31,10 @@ export function usePushNotification() {
     try {
       const res = await fetch("/scraper/api/v1/push/vapid-public-key");
       const data = await res.json();
+      console.log("[PUSH] VAPID key fetched:", data.publicKey ? "OK" : "EMPTY");
       setVapidKey(data.publicKey || "");
     } catch (e) {
-      console.error("Failed to fetch VAPID key:", e);
+      console.error("[PUSH] Failed to fetch VAPID key:", e);
     }
   };
 
@@ -48,20 +49,23 @@ export function usePushNotification() {
   };
 
   const subscribe = useCallback(async () => {
+    console.log("[PUSH] Subscribe called, isSupported:", isSupported, "vapidKey:", vapidKey ? "present" : "EMPTY");
     if (!isSupported || !vapidKey) return false;
     setLoading(true);
 
     try {
       const registration = await navigator.serviceWorker.ready;
+      console.log("[PUSH] SW ready, subscribing with key length:", vapidKey.length);
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
       });
+      console.log("[PUSH] Subscription OK");
 
       const { endpoint } = subscription;
       const keys = subscription.toJSON().keys;
 
-      await fetch("/scraper/api/v1/push/subscribe", {
+      const res = await fetch("/scraper/api/v1/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -71,12 +75,13 @@ export function usePushNotification() {
           userAgent: navigator.userAgent,
         }),
       });
+      console.log("[PUSH] Server response:", res.status);
 
       setIsSubscribed(true);
       setLoading(false);
       return true;
     } catch (e) {
-      console.error("Push subscribe failed:", e);
+      console.error("[PUSH] Subscribe failed:", e);
       setLoading(false);
       return false;
     }

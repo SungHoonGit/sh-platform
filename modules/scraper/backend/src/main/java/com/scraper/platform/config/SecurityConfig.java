@@ -29,6 +29,7 @@ public class SecurityConfig {
                     "/sw.js",
                     "/search", "/schedule", "/viewer",
                     "/crawl-config/*/progress",
+                    "/api/v1/push/vapid-public-key",
                     "/api/health",
                     "/actuator/health", "/actuator/info", "/actuator/prometheus", "/actuator/metrics",
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs-ui/**"
