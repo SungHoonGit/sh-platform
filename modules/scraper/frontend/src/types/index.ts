@@ -18,6 +18,8 @@ export interface Crawler {
   localPath: string;
   schedule: string;
   scheduleIcon?: string;
+  emailNotification?: boolean;
+  recipientEmail?: string | null;
   siteConfigs: SiteConfig[];
   searchCriteria?: SearchCriteria;
 }

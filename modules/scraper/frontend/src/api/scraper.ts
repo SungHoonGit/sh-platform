@@ -232,6 +232,8 @@ export interface CrawlerSaveBody {
   scheduleIcon?: string;
   isActive?: boolean;
   retentionDays?: number;
+  emailNotification?: boolean;
+  recipientEmail?: string | null;
 }
 
 export async function saveCrawler(body: CrawlerSaveBody): Promise<Crawler> {
