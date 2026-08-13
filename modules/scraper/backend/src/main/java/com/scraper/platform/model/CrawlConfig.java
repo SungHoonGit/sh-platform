@@ -46,6 +46,10 @@ public class CrawlConfig {
     @Builder.Default
     private Boolean emailNotification = false;
 
+    @Column(name = "push_notification")
+    @Builder.Default
+    private Boolean pushNotification = false;
+
     @Column(name = "recipient_email", length = 200)
     private String recipientEmail;
 

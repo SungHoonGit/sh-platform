@@ -69,6 +69,7 @@ public class CrawlConfigService {
         existing.setRetentionDays(updatedConfig.getRetentionDays());
         existing.setIsActive(updatedConfig.getIsActive());
         existing.setEmailNotification(updatedConfig.getEmailNotification());
+        existing.setPushNotification(updatedConfig.getPushNotification());
         existing.setRecipientEmail(updatedConfig.getRecipientEmail());
         if (updatedConfig.getLocalPath() != null && !updatedConfig.getLocalPath().isBlank()) {
             existing.setLocalPath(updatedConfig.getLocalPath());

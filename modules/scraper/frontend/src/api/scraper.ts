@@ -233,6 +233,7 @@ export interface CrawlerSaveBody {
   isActive?: boolean;
   retentionDays?: number;
   emailNotification?: boolean;
+  pushNotification?: boolean;
   recipientEmail?: string | null;
 }
 

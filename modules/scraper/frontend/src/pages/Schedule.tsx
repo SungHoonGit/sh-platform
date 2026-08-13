@@ -206,6 +206,7 @@ export default function Schedule() {
         schedule: cronStr,
         scheduleIcon: scheduleIcon,
         emailNotification: emailNotification,
+        pushNotification: pushNotification,
         recipientEmail: emailNotification ? user?.email : null,
         isActive: true,
         retentionDays: 30,
@@ -288,6 +289,7 @@ export default function Schedule() {
     setSelectedDays([1, 2, 3, 4, 5]);
     setScheduleIcon("🤖");
     setEmailNotification(false);
+    setPushNotification(false);
   };
 
   const handleSave = () => {
@@ -341,6 +343,7 @@ export default function Schedule() {
     setEditingId(c.id);
     setScheduleIcon(c.scheduleIcon || "🤖");
     setEmailNotification(c.emailNotification || false);
+    setPushNotification(c.pushNotification || false);
     const scs = c.siteConfigs || [];
     const enabled = scs.filter((sc: any) => sc.isEnabled);
     const first = enabled[0] || scs[0];

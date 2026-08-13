@@ -55,6 +55,7 @@ public class CrawlerListController {
                     "schedule", config.getSchedule() != null ? config.getSchedule() : "",
                     "scheduleIcon", config.getScheduleIcon() != null ? config.getScheduleIcon() : "🤖",
                     "emailNotification", config.getEmailNotification() != null ? config.getEmailNotification() : false,
+                    "pushNotification", config.getPushNotification() != null ? config.getPushNotification() : false,
                     "recipientEmail", config.getRecipientEmail() != null ? config.getRecipientEmail() : "",
                     "siteConfigs", siteConfigs,
                     "searchCriteria", searchCriteria

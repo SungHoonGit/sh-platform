@@ -243,7 +243,7 @@ public class CrawlExecutionService {
         }
 
         // 웹 푸쉬 발송
-        if (success > 0 && Boolean.TRUE.equals(config.getEmailNotification())) {
+        if (success > 0 && Boolean.TRUE.equals(config.getPushNotification())) {
             String pushTitle = String.format("%s 수집 완료", config.getName());
             String pushBody = String.format("신규 %d건 수집", newJobs);
             if (dupJobs > 0) {

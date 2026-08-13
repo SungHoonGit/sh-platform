@@ -19,6 +19,7 @@ export interface Crawler {
   schedule: string;
   scheduleIcon?: string;
   emailNotification?: boolean;
+  pushNotification?: boolean;
   recipientEmail?: string | null;
   siteConfigs: SiteConfig[];
   searchCriteria?: SearchCriteria;
