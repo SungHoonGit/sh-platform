@@ -483,6 +483,15 @@ export default function Schedule() {
                     {!pushSubscribed && (
                       <span className="text-[10px] text-slate-400 ml-1" title="체크박스 클릭 시 브라우저에서 알림 권한 요청 팝업이 뜹니다">(권한 필요)</span>
                     )}
+                    <span className="relative group ml-1">
+                      <span className="inline-block w-3.5 h-3.5 rounded-full bg-slate-300 text-white text-[9px] font-bold leading-[14px] text-center cursor-help">?</span>
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-56 p-2 bg-slate-800 text-white text-[10px] leading-relaxed rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                        푸쉬 알림이 오려면:<br/>
+                        1. 브라우저 알림 권한 허용<br/>
+                        2. Windows 알림 설정 켬<br/>
+                        3. 브라우저가 켜져 있어야 함
+                      </span>
+                    </span>
                   </label>
                 </div>
               )}
