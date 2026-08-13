@@ -71,8 +71,8 @@ public class WebPushService {
             try {
                 Notification notification = new Notification(
                         sub.getEndpoint(),
-                        sub.getAuthKey(),
                         sub.getP256dh(),
+                        sub.getAuthKey(),
                         payload);
 
                 pushService.send(notification);
