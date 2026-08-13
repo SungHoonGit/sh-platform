@@ -32,9 +32,12 @@ public class PushController {
 
     @DeleteMapping("/unsubscribe")
     @Operation(summary = "푸쉬 구독 해제", description = "브라우저 푸쉬 구독을 해제합니다")
-    public ResponseEntity<Map<String, String>> unsubscribe(@RequestBody Map<String, String> body) {
-        String endpoint = body.get("endpoint");
-        webPushService.unsubscribe(endpoint);
+    public ResponseEntity<Map<String, String>> unsubscribe(@RequestParam String endpoint) {
+        try {
+            webPushService.unsubscribe(endpoint);
+        } catch (Exception e) {
+            // 구독이 없어도 에러 반환하지 않음
+        }
         return ResponseEntity.ok(Map.of("status", "ok"));
     }
 

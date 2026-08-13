@@ -96,13 +96,11 @@ export function usePushNotification() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await fetch("/scraper/api/v1/push/unsubscribe", {
+        await fetch(`/scraper/api/v1/push/unsubscribe?endpoint=${encodeURIComponent(subscription.endpoint)}`, {
           method: "DELETE",
           headers: {
-            "Content-Type": "application/json",
             "Authorization": `Bearer ${localStorage.getItem("accessToken") || ""}`,
           },
-          body: JSON.stringify({ endpoint: subscription.endpoint }),
         });
         await subscription.unsubscribe();
       }
