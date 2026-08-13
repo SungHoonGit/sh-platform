@@ -67,7 +67,10 @@ export function usePushNotification() {
 
       const res = await fetch("/scraper/api/v1/push/subscribe", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("accessToken") || ""}`,
+        },
         body: JSON.stringify({
           endpoint,
           p256dh: keys?.p256dh || "",
@@ -95,7 +98,10 @@ export function usePushNotification() {
       if (subscription) {
         await fetch("/scraper/api/v1/push/unsubscribe", {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("accessToken") || ""}`,
+          },
           body: JSON.stringify({ endpoint: subscription.endpoint }),
         });
         await subscription.unsubscribe();
