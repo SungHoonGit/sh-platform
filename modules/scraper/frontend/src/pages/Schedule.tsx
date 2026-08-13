@@ -460,7 +460,7 @@ export default function Schedule() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={pushNotification && pushSubscribed}
+                      checked={pushNotification}
                       onChange={async (e) => {
                         if (e.target.checked) {
                           const ok = await subscribePush();
