@@ -1,32 +1,46 @@
-# React + TypeScript + Vite
+# Auth Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript + Vite 인증 UI
 
-Currently, two official plugins are available:
+## 개요
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- 로그인/회원가입 폼
+- 소셜 로그인 (카카오, 네이버, 구글, 깃험)
+- 비밀번호 찾기
 
-## React Compiler
+## 기술 스택
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- Vite 8
+- TypeScript 6
+- Tailwind CSS 4
 
-## Expanding the Oxlint configuration
+## 시작
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+cd modules/auth/frontend
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## 구조
+
+```
+frontend/
+├── src/
+│   ├── components/         # 컴포넌트
+│   │   ├── LoginForm.tsx        # 로그인 폼
+│   │   ├── SignupForm.tsx       # 회원가입 폼
+│   │   └── SocialLoginButtons.tsx  # 소셜 로그인 버튼
+│   ├── pages/              # 페이지
+│   │   ├── AuthCallback.tsx     # 소셜 콜백 처리
+│   │   └── AuthError.tsx        # 에러 페이지
+│   ├── lib/                # API 클라이언트, 유틸
+│   └── App.tsx             # 라우팅
+├── index.html
+└── package.json
+```
+
+## 배포
+
+GitHub Actions에서 master push 시 자동 빌드 및 nginx 배포.
