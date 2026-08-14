@@ -210,4 +210,20 @@ public class AuthController {
                 user.updatedAt() != null ? user.updatedAt().format(dtf) : null
         );
     }
+
+    @GetMapping("/oauth2/available-providers")
+    @Operation(summary = "사용 가능한 소셜 로그인 Provider 목록", description = "백엔드에 설정된 OAuth2 Provider 목록을 반환한다. 인증 불필요.")
+    public ResponseEntity<ApiResponse<List<String>>> getAvailableProviders(
+            @org.springframework.beans.factory.annotation.Value("${KAKAO_CLIENT_ID:}") String kakaoId,
+            @org.springframework.beans.factory.annotation.Value("${NAVER_CLIENT_ID:}") String naverId,
+            @org.springframework.beans.factory.annotation.Value("${GOOGLE_CLIENT_ID:}") String googleId,
+            @org.springframework.beans.factory.annotation.Value("${GITHUB_CLIENT_ID:}") String githubId
+    ) {
+        List<String> providers = new java.util.ArrayList<>();
+        if (kakaoId != null && !kakaoId.isBlank()) providers.add("kakao");
+        if (naverId != null && !naverId.isBlank()) providers.add("naver");
+        if (googleId != null && !googleId.isBlank()) providers.add("google");
+        if (githubId != null && !githubId.isBlank()) providers.add("github");
+        return ResponseEntity.ok(ApiResponse.success(providers));
+    }
 }

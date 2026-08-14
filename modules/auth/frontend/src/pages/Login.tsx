@@ -1,11 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+
+const PROVIDER_UI: Record<string, { label: string; color: string; hover: string; textColor: string; icon: string }> = {
+  kakao: { label: "카카오", color: "bg-[#FEE500]", hover: "hover:bg-[#FDD835]", textColor: "text-[#191919]", icon: "K" },
+  naver: { label: "네이버", color: "bg-[#03C75A]", hover: "hover:bg-[#02B34D]", textColor: "text-white", icon: "N" },
+  google: { label: "구글", color: "bg-white", hover: "hover:bg-slate-100", textColor: "text-slate-700", icon: "G" },
+  github: { label: "GitHub", color: "bg-[#24292E]", hover: "hover:bg-[#2F363D]", textColor: "text-white", icon: "G" },
+};
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get("redirect") || "/platform";
+  const [providers, setProviders] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/v1/auth/oauth2/available-providers")
+      .then((res) => res.json())
+      .then((data) => setProviders(data.data || []))
+      .catch(() => {});
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,31 +83,34 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/20"></div>
+          {providers.length > 0 && (
+            <div className="mt-6">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/20"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-transparent text-slate-400">또는</span>
+                </div>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-transparent text-slate-400">또는</span>
-              </div>
-            </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <a href="/oauth2/authorization/kakao" className="flex items-center justify-center gap-2 py-3 bg-[#FEE500] hover:bg-[#FDD835] text-[#191919] font-medium rounded-xl transition-colors">
-                <span className="text-lg">K</span> 카카오
-              </a>
-              <a href="/oauth2/authorization/naver" className="flex items-center justify-center gap-2 py-3 bg-[#03C75A] hover:bg-[#02B34D] text-white font-medium rounded-xl transition-colors">
-                <span className="text-lg">N</span> 네이버
-              </a>
-              <a href="/oauth2/authorization/google" className="flex items-center justify-center gap-2 py-3 bg-white hover:bg-slate-100 text-slate-700 font-medium rounded-xl transition-colors">
-                <span className="text-lg">G</span> 구글
-              </a>
-              <a href="/oauth2/authorization/github" className="flex items-center justify-center gap-2 py-3 bg-[#24292E] hover:bg-[#2F363D] text-white font-medium rounded-xl transition-colors">
-                <span className="text-lg">G</span> GitHub
-              </a>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                {providers.map((p) => {
+                  const ui = PROVIDER_UI[p];
+                  if (!ui) return null;
+                  return (
+                    <a
+                      key={p}
+                      href={`/oauth2/authorization/${p}`}
+                      className={`flex items-center justify-center gap-2 py-3 ${ui.color} ${ui.hover} ${ui.textColor} font-medium rounded-xl transition-colors`}
+                    >
+                      <span className="text-lg">{ui.icon}</span> {ui.label}
+                    </a>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="mt-6 text-center">
             <Link to="/signup" className="text-sm text-blue-400 hover:text-blue-300">
