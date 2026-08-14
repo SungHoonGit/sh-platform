@@ -413,8 +413,7 @@ export default function Schedule() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="예: java_daily"
-                  disabled={!!editingId}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50"
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
