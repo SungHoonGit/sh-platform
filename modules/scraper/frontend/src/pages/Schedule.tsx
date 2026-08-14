@@ -367,6 +367,9 @@ export default function Schedule() {
     setTimePairs(parsed.timePairs);
     setSelectedDays(parsed.days);
     setShowForm(true);
+    setTimeout(() => {
+      document.getElementById("schedule-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
   };
 
   const handleDelete = (c: any) => {
@@ -393,10 +396,10 @@ export default function Schedule() {
 
       {/* 스케줄 폼 - 하단에 별도 영역으로 표시 */}
       {showForm && (
-        <div className="bg-white border-2 border-blue-200 rounded-xl p-6 mb-6">
+        <div id="schedule-form" className="bg-white border-2 border-blue-200 rounded-xl p-6 mb-6 scroll-mt-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-slate-700">
-              {editingId ? "스케줄 수정" : "신규 스케줄 등록"}
+              {editingId ? "📝 스케줄 수정" : "신규 스케줄 등록"}
             </h3>
             <button onClick={resetForm} className="text-slate-400 hover:text-slate-600">✕</button>
           </div>
