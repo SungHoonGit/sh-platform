@@ -45,7 +45,7 @@ Prometheus   Loki   (알림 엔진)     Grafana Alerting
 | 알림 (자원/서비스) | ✅ 전 규칙 등록 | Grafana → Alerting |
 | 알림 (로그/DB) | ✅ 전 규칙 등록 | Grafana → Alerting |
 
-> **등록 현황 (2026-08-18 완료)**: 1~13번 전 규칙 Grafana UI에 등록 완료. Server Offline ❌ 제거 (단일 서버에서 무의미). 메일 발송은 SMTP 테스트로 검증 예정.
+> **등록 현황 (2026-08-18 완료)**: 1~13번 전 규칙 Grafana UI에 등록 완료. 전 규칙 **No data 상태 = Normal(OK)** 처리 완료 → 평소 조용, 이상 발생 시에만 메일. Server Offline ❌ 제거 (단일 서버에서 무의미). 메일 발송 확인됨 (DatasourceNoData 알림 수신으로 SMTP 동작 검증).
 
 ## 3. 접속 경로
 
@@ -222,8 +222,14 @@ sudo systemctl restart grafana-server
 1. **Alert rules** 탭 → **New alert rule**
 2. 데이터소스 선택 (Prometheus 또는 Loki)
 3. 쿼리 + 조건 입력
-4. **Evaluate**: Evaluate every `1m` / For: `표의 지속시간`
-5. **Save rule and exit**
+4. **Set evaluation behavior**: Evaluate every `1m` / For: `표의 지속시간`
+5. **Configure no data and error handling** (접혀 있음 → 펼침):
+   - `Alert state if no data` → **`Normal`** (구버전은 `OK`)
+   - `Alert state if execution error` → **`Normal`** (구버전은 `OK`)
+   - **Missing series evaluations to resolve**: 기본 `2` 유지
+6. **Save rule and exit**
+
+> **중요 (DatasourceNoData 알림 함정)**: No data 상태를 `Normal`로 설정하지 않으면, **데이터가 없는 게 정상인 규칙**(로그 기반 규칙 8~11, 5xx 6번, slow query 13번)이 평소에 계속 발화해서 **"DatasourceNoData" 알림 메일이 반복 수신**됩니다. 이것은 실제 장애가 아니라 "쿼리에 데이터가 없다"는 알림이므로, 로그 규칙 등 평소 No data가 정상인 규칙은 반드시 `Normal`로 설정해야 합니다. Grafana 11 이상은 `OK`라는 명칭이 `Normal`로 바뀌었습니다.
 
 ### 7.4 알림 기준표 (대중적 기준 + 서버 사양 반영)
 
