@@ -1,23 +1,31 @@
 package com.shplatform.common.notification;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class NotificationService {
 
     private final NotificationConfigRepository configRepository;
     private final NotificationLogRepository logRepository;
     private final JavaMailSender mailSender;
+
+    @Autowired
+    public NotificationService(NotificationConfigRepository configRepository,
+                               NotificationLogRepository logRepository,
+                               @Autowired(required = false) JavaMailSender mailSender) {
+        this.configRepository = configRepository;
+        this.logRepository = logRepository;
+        this.mailSender = mailSender;
+    }
 
     @Transactional(readOnly = true)
     public List<NotificationConfig> getConfigsByModule(String moduleName) {
@@ -103,6 +111,10 @@ public class NotificationService {
 
     public void sendEmail(String to, String content) {
         log.info("[EMAIL] Attempting to send email to: {}", to);
+        if (mailSender == null) {
+            log.warn("[EMAIL] JavaMailSender not configured in this module. Email skipped: to={}", to);
+            return;
+        }
         try {
             // 첫 줄에서 제목 추출
             String[] lines = content.split("\n");
