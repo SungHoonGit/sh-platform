@@ -236,7 +236,9 @@ sudo systemctl restart grafana-server
 |---|--------|---------------|------|------|--------|---------|
 | 5 | 서비스 다운 (통합) | `up{job="spring-boot"}` | `== 0` | 1분 | 🔴 Critical | `Spring Boot 서비스 다운 ({{ $labels.instance }})` |
 | 6 | 5xx 에러 증가 | `sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))` | `> 0.05` | 5분 | 🟡 Warning | `HTTP 5xx 에러율이 5%를 초과했습니다` |
-| 7 | 응답 지연 P95 | `histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))` | `> 2s` | 5분 | 🟡 Warning | `응답 시간 P95가 2초를 초과했습니다` |
+| 7 | 응답 지연 P95 | `histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))` | `> 2` | 5분 | 🟡 Warning | `응답 시간 P95가 2초를 초과했습니다` |
+
+> **P95 규칙 `is above` 값은 초(seconds) 단위** — `2` = P95 응답시간 2초 초과 시 알림. 요구사항에 따라 `1`(엄격)~`5`(여유)로 조정. 이 규칙은 히스토그램 활성화 필요 (`management.metrics.distribution.percentiles-histogram.http.server.requests: true`)
 
 > 서비스 다운 규칙은 `up{job="spring-boot"}` 하나로 4개 서비스(instance 별)를 모두 감지. 죽은 인스턴스만 발화됨.
 
