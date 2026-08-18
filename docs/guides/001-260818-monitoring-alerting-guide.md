@@ -42,7 +42,10 @@ Prometheus   Loki   (알림 엔진)     Grafana Alerting
 | Spring Boot (HTTP/5xx/JVM) | ✅ | Grafana → Spring 대시보드 / `/actuator/prometheus` |
 | DB (커넥션/쿼리/slow query) | ✅ | Grafana → mysqld_exporter 대시보드 |
 | 로그 (에러/접근) | ✅ | Grafana → Explore → Loki |
-| 알림 (자원/서비스/로그) | ⚠️ 미설정 | Grafana → Alerting |
+| 알림 (자원/서비스) | 🔄 등록 중 | Grafana → Alerting |
+| 알림 (로그/DB) | ⬜ 미설정 | Grafana → Alerting |
+
+> **등록 현황 (2026-08-18)**: CPU 90% ✅ / Memory 90% 🔄 / Disk 85% ⬜ / Load ⬜ / 서비스 다운 ✅ / 5xx ⬜ / 지연 ⬜ / Server Offline ❌ 제거 (단일 서버에서 무의미).
 
 ## 3. 접속 경로
 
@@ -216,41 +219,42 @@ sudo systemctl restart grafana-server
 
 #### 7.4.1 서버 수준 (Prometheus — node-exporter)
 
-| # | 알림명 | 쿼리 (PromQL) | 조건 | 지속 | 심각도 |
-|---|--------|---------------|------|------|--------|
-| 1 | Server Offline | `up{job="node-exporter"}` | `== 0` | 즉시 | 🔴 Critical |
-| 2 | CPU 90% 초과 | `100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)` | `> 90` | 5분 | 🟡 Warning |
-| 3 | Memory 90% 초과 | `(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100` | `> 90` | 5분 | 🟡 Warning |
-| 4 | Disk 85% 초과 | `(1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100` | `> 85` | 5분 | 🟡 Warning |
-| 5 | Load 1분 초과 | `node_load1` | `> 4` (단일코어) | 10분 | 🟡 Warning |
+| # | 알림명 | 쿼리 (PromQL) | 조건 | 지속 | 심각도 | Summary |
+|---|--------|---------------|------|------|--------|---------|
+| 1 | CPU 90% 초과 | `100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)` | `> 90` | 5분 | 🟡 Warning | `서버 CPU가 90%를 5분 이상 초과했습니다` |
+| 2 | Memory 90% 초과 | `(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100` | `> 90` | 5분 | 🟡 Warning | `서버 메모리가 90%를 5분 이상 초과했습니다` |
+| 3 | Disk 85% 초과 | `(1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100` | `> 85` | 5분 | 🟡 Warning | `루트 디스크 사용률이 85%를 초과했습니다` |
+| 4 | Load 1분 초과 | `node_load1` | `> 4` (단일코어) | 10분 | 🟡 Warning | `서버 부하(load1)가 4를 10분 이상 초과했습니다` |
+
+> **Server Offline 알림은 미사용 (제거됨)**: 단일 서버 구성에서는 서버가 꺼지면 Grafana도 함께 죽어 메일 발송이 불가능. 실질적으로 node-exporter만 죽은 희귀 케이스만 잡음. 진짜 서버 사망 감지는 외부 서비스(UptimeRobot 등)로 대체 예정.
 
 #### 7.4.2 서비스 수준 (Prometheus — Spring Boot)
 
 > 실제 Prometheus job 구조: `job="spring-boot"`, 서비스는 `instance` 라벨로 구분 (localhost:8080~8083)
 
-| # | 알림명 | 쿼리 (PromQL) | 조건 | 지속 | 심각도 |
-|---|--------|---------------|------|------|--------|
-| 6 | 서비스 다운 (통합) | `up{job="spring-boot"}` | `== 0` | 1분 | 🔴 Critical |
-| 7 | 5xx 에러 증가 | `sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))` | `> 0.05` | 5분 | 🟡 Warning |
-| 8 | 응답 지연 P95 | `histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))` | `> 2s` | 5분 | 🟡 Warning |
+| # | 알림명 | 쿼리 (PromQL) | 조건 | 지속 | 심각도 | Summary |
+|---|--------|---------------|------|------|--------|---------|
+| 5 | 서비스 다운 (통합) | `up{job="spring-boot"}` | `== 0` | 1분 | 🔴 Critical | `Spring Boot 서비스 다운 ({{ $labels.instance }})` |
+| 6 | 5xx 에러 증가 | `sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))` | `> 0.05` | 5분 | 🟡 Warning | `HTTP 5xx 에러율이 5%를 초과했습니다` |
+| 7 | 응답 지연 P95 | `histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))` | `> 2s` | 5분 | 🟡 Warning | `응답 시간 P95가 2초를 초과했습니다` |
 
 > 서비스 다운 규칙은 `up{job="spring-boot"}` 하나로 4개 서비스(instance 별)를 모두 감지. 죽은 인스턴스만 발화됨.
 
 #### 7.4.3 로그 수준 (Loki — LogQL)
 
-| # | 알림명 | 쿼리 (LogQL) | 조건 | 지속 | 심각도 |
-|---|--------|--------------|------|------|--------|
-| 9 | 앱 에러 급증 | `sum(rate({job="spring-boot"} |= "ERROR" [5m]))` | `> 0.1` (초당) | 5분 | 🟡 Warning |
-| 10 | 인증 실패 급증 | `sum(rate({job="auth"} |= "Failed" [5m]))` | `> 0.05` | 5분 | 🔴 Critical |
-| 11 | nginx 5xx 증가 | `sum(rate({job="nginx"} |= "500" [5m]))` | `> 0.01` | 5분 | 🟡 Warning |
-| 12 | 이상 접근 (403/경로) | `sum(rate({job="nginx"} |= "/api/v1/auth" [5m]))` | 사용자 정의 | 5분 | 🟡 Warning |
+| # | 알림명 | 쿼리 (LogQL) | 조건 | 지속 | 심각도 | Summary |
+|---|--------|--------------|------|------|--------|---------|
+| 8 | 앱 에러 급증 | `sum(rate({job="spring-boot"} |= "ERROR" [5m]))` | `> 0.1` (초당) | 5분 | 🟡 Warning | `Spring Boot 에러 로그가 급증했습니다` |
+| 9 | 인증 실패 급증 | `sum(rate({job="auth"} |= "Failed" [5m]))` | `> 0.05` | 5분 | 🔴 Critical | `인증 실패가 급증했습니다 (무차별 대입 의심)` |
+| 10 | nginx 5xx 증가 | `sum(rate({job="nginx"} |= "500" [5m]))` | `> 0.01` | 5분 | 🟡 Warning | `nginx 5xx 응답이 증가했습니다` |
+| 11 | 이상 접근 (403/경로) | `sum(rate({job="nginx"} |= "/api/v1/auth" [5m]))` | 사용자 정의 | 5분 | 🟡 Warning | `이상 접근 패턴이 감지되었습니다` |
 
 #### 7.4.4 DB 수준 (Prometheus — mysqld_exporter)
 
-| # | 알림명 | 쿼리 (PromQL) | 조건 | 지속 | 심각도 |
-|---|--------|---------------|------|------|--------|
-| 13 | DB 커넥션 풀 소진 | `mysql_global_status_threads_connected` | `> 200` | 5분 | 🟡 Warning |
-| 14 | Slow Query 증가 | `rate(mysql_global_status_slow_queries[5m])` | `> 0.1` | 10분 | 🟡 Warning |
+| # | 알림명 | 쿼리 (PromQL) | 조건 | 지속 | 심각도 | Summary |
+|---|--------|---------------|------|------|--------|---------|
+| 12 | DB 커넥션 풀 소진 | `mysql_global_status_threads_connected` | `> 200` | 5분 | 🟡 Warning | `DB 커넥션 수가 200을 초과했습니다` |
+| 13 | Slow Query 증가 | `rate(mysql_global_status_slow_queries[5m])` | `> 0.1` | 10분 | 🟡 Warning | `Slow Query 발생률이 증가했습니다` |
 
 ### 7.5 Notification policies
 
@@ -262,11 +266,12 @@ sudo systemctl restart grafana-server
 | 단계 | 항목 | 이유 |
 |------|------|------|
 | 1 | SMTP 설정 + 이메일 테스트 | 모든 알림의 전제 |
-| 2 | Server Offline | 서버 사망 감지 최우선 |
-| 3 | 서비스 다운 (`up == 0`) | 재시작 루프 등 잡을 수 있음 |
-| 4 | Disk 85% | DB/로그 디스크 풀림 예방 |
-| 5 | Memory 90% | JVM 힙 상향 필요 감지 |
-| 6 | 로그 기반 알림 (에러/인증실패) | 앱 이상 탐지 |
+| 2 | 서비스 다운 (`up == 0`) | 재시작 루프 등 잡을 수 있음 |
+| 3 | Disk 85% | DB/로그 디스크 풀림 예방 |
+| 4 | Memory 90% | JVM 힙 상향 필요 감지 |
+| 5 | 로그 기반 알림 (에러/인증실패) | 앱 이상 탐지 |
+
+> **서버 사망 감지(Server Offline)는 알림으로 대체 불가** — 서버가 꺼지면 Grafana도 죽어 메일 발송 불가. 외부 uptime 서비스(UptimeRobot 등) 도입 시 감지 가능.
 
 ---
 

@@ -7,42 +7,6 @@ groups:
     folder: SH Platform
     interval: 1m
     rules:
-      - uid: server-offline
-        title: Server Offline (메트릭 중단)
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange:
-              from: 300
-              to: 0
-            datasourceUid: prometheus
-            model:
-              expr: up{job="node-exporter"}
-              instant: true
-              refId: A
-          - refId: C
-            relativeTimeRange:
-              from: 300
-              to: 0
-            datasourceUid: __expr__
-            model:
-              type: threshold
-              expression: A
-              conditions:
-                - evaluator:
-                    type: lt
-                    params: [1]
-                  operator:
-                    type: and
-                  query:
-                    params: [A]
-              refId: C
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: 서버 모니터링 메트릭 수신 중단 - 서버 offline 가능성
-
       - uid: cpu-90
         title: CPU 90% 초과
         condition: C
