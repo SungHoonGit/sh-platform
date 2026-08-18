@@ -53,7 +53,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         String returnUrl = request.getParameter("returnUrl");
         if (returnUrl == null || returnUrl.isBlank() || !isSafeRedirect(returnUrl)) {
-            returnUrl = "/";
+            returnUrl = "/platform";
         }
 
         String redirectUrl = frontendUrl + "/auth/callback"
