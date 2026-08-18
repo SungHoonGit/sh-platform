@@ -1,0 +1,380 @@
+apiVersion: 1
+
+groups:
+  # ============ 서버 수준 (node-exporter) ============
+  - orgId: 1
+    name: sh-platform-server
+    folder: SH Platform
+    interval: 1m
+    rules:
+      - uid: server-offline
+        title: Server Offline (메트릭 중단)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="node-exporter"}
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+              refId: C
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 서버 모니터링 메트릭 수신 중단 - 서버 offline 가능성
+
+      - uid: cpu-90
+        title: CPU 90% 초과
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [90]
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 서버 CPU가 90%를 5분 이상 초과했습니다
+
+      - uid: memory-90
+        title: Memory 90% 초과
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [90]
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 서버 메모리가 90%를 5분 이상 초과했습니다
+
+      - uid: disk-85
+        title: Disk 85% 초과
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [85]
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 루트 디스크 사용률이 85%를 초과했습니다
+
+      - uid: load-1
+        title: Load 1분 초과
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: node_load1
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [4]
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+              refId: C
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 서버 부하(load1)가 4를 10분 이상 초과했습니다
+
+  # ============ 서비스 수준 (Spring Boot) ============
+  - orgId: 1
+    name: sh-platform-service
+    folder: SH Platform
+    interval: 1m
+    rules:
+      - uid: svc-down
+        title: Spring Boot 서비스 다운
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="spring-boot"}
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+              refId: C
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Spring Boot 서비스 다운 (instance: {{ $labels.instance }})
+
+      - uid: svc-5xx-rate
+        title: HTTP 5xx 에러율 증가
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.05]
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: HTTP 5xx 에러율이 5%를 초과했습니다
+
+      - uid: svc-latency-p95
+        title: 응답 지연 P95 초과
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [2]
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 응답 시간 P95가 2초를 초과했습니다
+
+  # ============ DB 수준 (mysqld_exporter) ============
+  - orgId: 1
+    name: sh-platform-db
+    folder: SH Platform
+    interval: 1m
+    rules:
+      - uid: db-conn-pool
+        title: DB 커넥션 풀 소진
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: mysql_global_status_threads_connected
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [200]
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: DB 커넥션 수가 200을 초과했습니다
+
+      - uid: db-slow-query
+        title: Slow Query 증가
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: rate(mysql_global_status_slow_queries[5m])
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.1]
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+              refId: C
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Slow Query 비율이 증가했습니다

@@ -226,13 +226,15 @@ sudo systemctl restart grafana-server
 
 #### 7.4.2 서비스 수준 (Prometheus — Spring Boot)
 
+> 실제 Prometheus job 구조: `job="spring-boot"`, 서비스는 `instance` 라벨로 구분 (localhost:8080~8083)
+
 | # | 알림명 | 쿼리 (PromQL) | 조건 | 지속 | 심각도 |
 |---|--------|---------------|------|------|--------|
-| 6 | 서비스 다운 | `up{job="sh-platform-auth"}` (각 서비스) | `== 0` | 1분 | 🔴 Critical |
+| 6 | 서비스 다운 (통합) | `up{job="spring-boot"}` | `== 0` | 1분 | 🔴 Critical |
 | 7 | 5xx 에러 증가 | `sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))` | `> 0.05` | 5분 | 🟡 Warning |
 | 8 | 응답 지연 P95 | `histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))` | `> 2s` | 5분 | 🟡 Warning |
 
-> `job` 라벨은 `prometheus.yml`의 실제 스크랩 설정과 일치해야 함.
+> 서비스 다운 규칙은 `up{job="spring-boot"}` 하나로 4개 서비스(instance 별)를 모두 감지. 죽은 인스턴스만 발화됨.
 
 #### 7.4.3 로그 수준 (Loki — LogQL)
 
