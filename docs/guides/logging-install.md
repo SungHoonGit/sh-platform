@@ -396,6 +396,6 @@ sudo tail -f /var/log/grafana/grafana.log | grep loki
 
 ## 10. 참고 자료
 
+- [통합 모니터링/알림 가이드](001-260818-monitoring-alerting-guide.md)
 - [개념 가이드](logging-concept.md)
-- [사용 가이드](logging-guide.md)
 - [Loki 공식 문서](https://grafana.com/docs/loki/latest/)

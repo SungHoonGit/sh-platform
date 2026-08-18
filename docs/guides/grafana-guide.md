@@ -219,7 +219,7 @@ For: 5m (5분간 지속 시 알림)
 - [Prometheus 공식 문서](https://prometheus.io/docs/)
 - [Grafana 공식 문서](https://grafana.com/docs/)
 - [PromQLcheatsheet](https://promlabs.com/promql-cheat-sheet/)
-- [모니터링 설정 가이드](monitoring-guide.md)
+- [통합 모니터링/알림 가이드](001-260818-monitoring-alerting-guide.md)
 - [중앙 집중 로깅 계획서](logging-plan.md)
 
 ---

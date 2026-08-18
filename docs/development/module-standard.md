@@ -323,8 +323,8 @@ public class BoardRepository {
 
 ## 6. 참고 자료
 
+- [통합 모니터링/알림 가이드](../guides/001-260818-monitoring-alerting-guide.md)
 - [중앙 집중 로깅 개념](logging-concept.md)
 - [설치 가이드](logging-install.md)
-- [사용 가이드](logging-guide.md)
 - [Grafana 실습 가이드](grafana-practical-guide.md)
 - [테넌트 관리 설계](../saas/tenant-management-design.md)

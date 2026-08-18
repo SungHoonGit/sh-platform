@@ -942,9 +942,9 @@ sudo systemctl restart grafana-server
 
 ## 17. 참고 자료
 
+- [통합 모니터링/알림 가이드](guides/001-260818-monitoring-alerting-guide.md)
 - [개념 가이드](logging-concept.md)
 - [설치 가이드](logging-install.md)
-- [사용 가이드](logging-guide.md)
 - [Prometheus 공식 문서](https://prometheus.io/docs/)
 - [Grafana 공식 문서](https://grafana.com/docs/)
 - [PromQLcheatsheet](https://promlabs.com/promql-cheat-sheet/)
