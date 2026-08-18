@@ -42,10 +42,10 @@ Prometheus   Loki   (알림 엔진)     Grafana Alerting
 | Spring Boot (HTTP/5xx/JVM) | ✅ | Grafana → Spring 대시보드 / `/actuator/prometheus` |
 | DB (커넥션/쿼리/slow query) | ✅ | Grafana → mysqld_exporter 대시보드 |
 | 로그 (에러/접근) | ✅ | Grafana → Explore → Loki |
-| 알림 (자원/서비스) | 🔄 등록 중 | Grafana → Alerting |
-| 알림 (로그/DB) | ⬜ 미설정 | Grafana → Alerting |
+| 알림 (자원/서비스) | ✅ 전 규칙 등록 | Grafana → Alerting |
+| 알림 (로그/DB) | ✅ 전 규칙 등록 | Grafana → Alerting |
 
-> **등록 현황 (2026-08-18)**: CPU 90% ✅ / Memory 90% 🔄 / Disk 85% ⬜ / Load ⬜ / 서비스 다운 ✅ / 5xx ⬜ / 지연 ⬜ / Server Offline ❌ 제거 (단일 서버에서 무의미).
+> **등록 현황 (2026-08-18 완료)**: 1~13번 전 규칙 Grafana UI에 등록 완료. Server Offline ❌ 제거 (단일 서버에서 무의미). 메일 발송은 SMTP 테스트로 검증 예정.
 
 ## 3. 접속 경로
 
@@ -163,6 +163,18 @@ sum(rate({job="spring-boot"} |= "ERROR" [5m]))
 {job="nginx"} |= "192.168.1.100"
 ```
 
+> **nginx 로그 형식 (2026-08-18 확인)**: JSON이 아니라 **combined 포맷** (`IP - - [날짜] "METHOD 경로 PROTO" 상태코드 ...`). 라벨은 `job=nginx`, `type=access|error`, `service_name=nginx`, `filename` 만 존재 — `status` 라벨이 없어 `sum by (status)`가 바로 안 됨. 상태코드별 집계는 `| pattern` 파서로 추출:
+>
+> ```logql
+> # 상태코드별 분포 (패턴 파서 사용)
+> sum by (status) (count_over_time({job="nginx", type="access"} | pattern `<_ip> - - [<_time>] "<_method> <_path> <_proto>" <status> <_size> "<_referer>" "<_ua>"` [5m]))
+>
+> # 상태코드별 시계열
+> sum by (status) (rate({job="nginx", type="access"} | pattern `<_ip> - - [<_time>] "<_method> <_path> <_proto>" <status> <_size> "<_referer>" "<_ua>"` [5m]))
+> ```
+>
+> `<이름>` 자리에 로그 값이 매칭되고 그 이름이 라벨이 됨 → 그 뒤로 `sum by (status)` 사용 가능.
+
 **시스템 (인증/변경)**
 ```logql
 # 인증 실패
@@ -252,6 +264,10 @@ sudo systemctl restart grafana-server
 | 11 | 이상 접근 (403/경로) | `sum(rate({job="nginx"} |= "/api/v1/auth" [5m]))` | 사용자 정의 | 5분 | 🟡 Warning | `이상 접근 패턴이 감지되었습니다` |
 
 #### 7.4.4 DB 수준 (Prometheus — mysqld_exporter)
+
+> **데이터소스는 반드시 Prometheus** — `mysql_global_status_threads_connected` 같은 메트릭은 mysqld_exporter(:9104)가 MariaDB에서 뽑아 Prometheus로 노출하기 때문. Grafana의 **MySQL 데이터소스**(직접 DB 연결용)를 선택하면 "failed to connect to server" 오류가 남.
+>
+> **의미**: WAS(HikariCP) 기준이 아니라 **DB(MariaDB) 입장의 연결 수**. WAS들이 동시에 재시작하며 커넥션을 몰고 가면 DB 커넥션 수가 치솟으므로, 이 규칙이 DB 과부하를 조기에 잡는 역할.
 
 | # | 알림명 | 쿼리 (PromQL) | 조건 | 지속 | 심각도 | Summary |
 |---|--------|---------------|------|------|--------|---------|
@@ -357,6 +373,46 @@ logcli query --since=1h {job="nginx"} |= "500"
 | Spring Boot | 7일 | Loki compactor |
 | nginx | 7일 | Loki compactor |
 | syslog | 7일 | Loki compactor |
+
+### 9.1 보관 기간 설정 방법 (Loki retention)
+
+Loki는 로그 보관 주기를 **compactor**가 관리하며 `limits_config.retention_period`로 정합니다.
+
+```yaml
+# /etc/loki/loki-config.yaml
+limits_config:
+  retention_period: 168h   # 7일 (720h = 30일)
+  # retention_enabled는 v2.9+ 에서 기본 true
+
+compactor:
+  retention_enabled: true
+  # 작업 주기: 기본 10분마다 보관 기간 초과 청크 삭제
+```
+
+```bash
+# 현재 설정 확인
+grep -A5 "compactor\|retention" /etc/loki/loki-config.yaml
+
+# 변경 후 적용
+sudo systemctl restart loki
+```
+
+**고려사항**:
+- 7일이면 에러 로그 트러블슈팅에 충분 (대부분 당일~3일 이내 해결)
+- 보관 기간을 늘리면 디스크 사용량 증가 → `df -h`로 여유 확인 후 결정
+- 현재 서버는 Loki retention 기본값으로 두고, 디스크 85% 알림(3번)이 울리면 조정하면 됨
+
+### 9.2 로그 기반 알림의 "No data"는 정상
+
+로그 알림 규칙(8~11번)은 **평소에 No data일 수 있습니다** — 해당 로그(ERROR, 인증 실패, `/api/v1/auth` 접근 등)가 없으면 당연히 데이터가 없습니다. 실제 이상이 발생하는 순간에만 알림이 발화하므로, No data를 "문제"로 보지 않습니다.
+
+No data가 실제 쿼리 문제인지 확인하는 법:
+```bash
+curl -s -G 'http://localhost:3100/loki/api/v1/query_range' \
+  --data-urlencode 'query={job="nginx"} |= "/api/v1/auth"' \
+  --data-urlencode 'limit=3' | python3 -m json.tool
+```
+로그가 쌓이는데 No data면 쿼리 문제, 로그 자체가 없으면 정상입니다.
 
 ---
 
