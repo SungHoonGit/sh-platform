@@ -16,6 +16,7 @@ public class UserMapper {
                 entity.getProvider(),
                 entity.getProviderId(),
                 entity.isEmailVerified(),
+                entity.getPassword() != null,
                 entity.getLocale(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

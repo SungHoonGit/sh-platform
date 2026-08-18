@@ -403,6 +403,45 @@ class AuthServiceImplTest {
     }
 
     // ──────────────────────────────────────────────
+    //  setPassword
+    // ──────────────────────────────────────────────
+
+    @Test
+    void setPassword_shouldSetPassword_whenOAuth2User() {
+        var entity = new UserEntity();
+        entity.setPassword(null);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(entity));
+
+        var request = new SetPasswordRequest("NewPw1@34");
+        authService.setPassword(1L, request);
+
+        assertTrue(passwordEncoder.matches("NewPw1@34", entity.getPassword()));
+        verify(userRepository).save(entity);
+    }
+
+    @Test
+    void setPassword_shouldThrow_whenPasswordAlreadySet() {
+        var entity = new UserEntity();
+        entity.setPassword(passwordEncoder.encode("OldPw1!"));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(entity));
+
+        var request = new SetPasswordRequest("NewPw1@34");
+        var ex = assertThrows(BusinessException.class,
+                () -> authService.setPassword(1L, request));
+        assertEquals(ErrorCode.FORBIDDEN, ex.getErrorCode());
+    }
+
+    @Test
+    void setPassword_shouldThrow_whenUserNotFound() {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
+
+        var request = new SetPasswordRequest("NewPw1@34");
+        var ex = assertThrows(BusinessException.class,
+                () -> authService.setPassword(999L, request));
+        assertEquals(ErrorCode.NOT_FOUND, ex.getErrorCode());
+    }
+
+    // ──────────────────────────────────────────────
     //  deleteAccount
     // ──────────────────────────────────────────────
 

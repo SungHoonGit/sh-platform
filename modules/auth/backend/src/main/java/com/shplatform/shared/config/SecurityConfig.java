@@ -18,8 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.web.CookieOAuth2AuthorizationRequestRepository;
-import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRepository;
+import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -168,8 +167,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public OAuth2AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
-        return new CookieOAuth2AuthorizationRequestRepository();
+    public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
+        return new CookieAuthorizationRequestRepository();
     }
 
     @Bean

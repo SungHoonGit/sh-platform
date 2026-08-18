@@ -175,6 +175,16 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("비밀번호가 변경되었습니다.", null));
     }
 
+    @PostMapping("/me/password")
+    @Operation(summary = "비밀번호 설정", description = "소셜 전용 계정(비밀번호 없음)에 비밀번호를 설정한다.")
+    public ResponseEntity<ApiResponse<Void>> setPassword(
+            @Valid @RequestBody SetPasswordRequest request,
+            @AuthenticationPrincipal Object principal
+    ) {
+        authService.setPassword(getCurrentUserId(principal), request);
+        return ResponseEntity.ok(ApiResponse.success("비밀번호가 설정되었습니다.", null));
+    }
+
     @DeleteMapping("/me")
     @Operation(summary = "회원 탈퇴", description = "password를 받아 계정을 삭제한다. 연결된 OAuth2 계정도 함께 해제.")
     public ResponseEntity<ApiResponse<Void>> deleteAccount(
@@ -198,6 +208,7 @@ public class AuthController {
 
     private UserResponse toUserResponse(User user) {
         var dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        List<String> linkedProviders = accountLinkService.getLinkedProviders(user.id());
         return new UserResponse(
                 user.id(),
                 user.email(),
@@ -207,7 +218,9 @@ public class AuthController {
                 user.emailVerified(),
                 user.locale(),
                 user.createdAt() != null ? user.createdAt().format(dtf) : null,
-                user.updatedAt() != null ? user.updatedAt().format(dtf) : null
+                user.updatedAt() != null ? user.updatedAt().format(dtf) : null,
+                user.passwordSet(),
+                linkedProviders
         );
     }
 

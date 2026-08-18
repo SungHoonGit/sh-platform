@@ -12,5 +12,6 @@ public interface AuthService {
     User getUser(Long userId);
     User updateProfile(Long userId, UpdateProfileRequest request);
     void changePassword(Long userId, ChangePasswordRequest request);
+    void setPassword(Long userId, SetPasswordRequest request);
     void deleteAccount(Long userId, String password);
 }

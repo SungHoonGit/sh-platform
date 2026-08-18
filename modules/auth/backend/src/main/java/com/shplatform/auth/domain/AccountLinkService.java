@@ -3,6 +3,8 @@ package com.shplatform.auth.domain;
 import com.shplatform.auth.infrastructure.UserProviderEntity;
 import com.shplatform.auth.infrastructure.UserProviderRepository;
 import com.shplatform.auth.infrastructure.UserRepository;
+import com.shplatform.shared.exception.BusinessException;
+import com.shplatform.shared.exception.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -53,9 +55,17 @@ public class AccountLinkService {
 
     @Transactional
     public void unlinkProvider(Long userId, String provider) {
-        long count = userProviderRepository.findByUserId(userId).size();
-        if (count <= 1) {
-            throw new IllegalStateException("마지막 프로바이더는 연결 해제할 수 없습니다.");
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        if (!userProviderRepository.existsByUserIdAndProvider(userId, provider)) {
+            throw new BusinessException(ErrorCode.PROVIDER_NOT_FOUND);
+        }
+
+        List<UserProviderEntity> providers = userProviderRepository.findByUserId(userId);
+        boolean hasPassword = user.getPassword() != null;
+        if (providers.size() <= 1 && !hasPassword) {
+            throw new BusinessException(ErrorCode.LAST_PROVIDER_CANNOT_UNLINK);
         }
 
         userProviderRepository.deleteByUserIdAndProvider(userId, provider);

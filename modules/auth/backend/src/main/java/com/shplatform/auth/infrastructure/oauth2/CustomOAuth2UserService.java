@@ -63,6 +63,14 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         var existingUser = userRepository.findByEmail(email);
         if (existingUser.isPresent()) {
             var user = existingUser.get();
+            // 보안: 이메일 인증이 완료된 계정에만 연결한다 (미검증 이메일 사전등록 공격 방지)
+            if (!user.isEmailVerified()) {
+                log.warn("[OAUTH2] auto-link blocked: existing user email not verified, email={}, provider={}",
+                        email, provider);
+                throw new OAuth2AuthenticationException(
+                        "이미 같은 이메일의 계정이 존재하지만 이메일 인증이 완료되지 않았습니다. "
+                                + "이메일 인증 후 다시 시도해주세요.");
+            }
             linkProvider(user, provider, providerId, email);
             return user;
         }

@@ -12,5 +12,7 @@ public record UserResponse(
         @Schema(description = "이메일 인증 여부") boolean emailVerified,
         @Schema(description = "로케일", example = "ko_KR") String locale,
         @Schema(description = "가입일시", example = "2025-01-01 12:00:00") String createdAt,
-        @Schema(description = "수정일시", example = "2025-01-01 12:00:00") String updatedAt
+        @Schema(description = "수정일시", example = "2025-01-01 12:00:00") String updatedAt,
+        @Schema(description = "비밀번호 설정 여부") boolean passwordSet,
+        @Schema(description = "연결된 OAuth2 provider 목록", example = "[\"kakao\",\"google\"]") java.util.List<String> linkedProviders
 ) {}

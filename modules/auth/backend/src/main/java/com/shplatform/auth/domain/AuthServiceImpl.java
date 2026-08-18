@@ -185,6 +185,19 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public void setPassword(Long userId, SetPasswordRequest request) {
+        var entity = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (entity.getPassword() != null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        entity.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(entity);
+        log.info("[AUTH] password set: userId={}", userId);
+    }
+
+    @Override
+    @Transactional
     public void deleteAccount(Long userId, String password) {
         var entity = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));

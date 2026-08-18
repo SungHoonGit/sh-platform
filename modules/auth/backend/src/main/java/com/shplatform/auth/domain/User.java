@@ -10,6 +10,7 @@ public record User(
         String provider,
         String providerId,
         boolean emailVerified,
+        boolean passwordSet,
         String locale,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -17,7 +18,7 @@ public record User(
     public static User createLocal(String email, String name) {
         return new User(
                 null, email, name, UserRole.USER,
-                "LOCAL", null, false, "ko",
+                "LOCAL", null, false, true, "ko",
                 null, null
         );
     }
@@ -25,7 +26,7 @@ public record User(
     public User verifyEmail() {
         return new User(
                 id, email, name, role, provider, providerId,
-                true, locale, createdAt, updatedAt
+                true, passwordSet, locale, createdAt, updatedAt
         );
     }
 }
