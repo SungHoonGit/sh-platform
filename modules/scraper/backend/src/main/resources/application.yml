@@ -58,6 +58,12 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
 
 jwt:
   public-key: ${JWT_PUBLIC_KEY:-----BEGIN PUBLIC KEY-----MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxkUEb22qrrg6+oR7RNfWGOCzfMLACJvYiY6QUaEjY9BWoPMlt2QNiB8Pqqt75rTAINtMc7LBFsNN3jL7WsLsxU0TH1QJaNhgTnSERijpTVPaH+iOozsUWqMyEpaqnVCwzm673XPWPYyexPbDL4bF5gI57Z99nQS24Dq76hk6ok384ut/j0CzUn7IKDf33ENvsIbQkp1ICwBc4iKKSr8TnfMCcSpScWdYWo4aU+h+hR1x7aNkX9Qx7g/nL4YBafiq7Ubw35MWTdohFlENXyK7VNS+YWHbi67JyMGvVKcAG/AtJwtWBTFLUYp4wzo5CDfGQBEV8/ujehVdb/TryAlY9wIDAQAB-----END PUBLIC KEY-----}

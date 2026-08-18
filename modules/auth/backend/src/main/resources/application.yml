@@ -49,3 +49,8 @@ management:
   metrics:
     tags:
       application: sh-platform-auth
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
