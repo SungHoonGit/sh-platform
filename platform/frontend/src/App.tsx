@@ -7,6 +7,7 @@ import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminTenants from "./pages/admin/AdminTenants";
+import AccountSettings from "./pages/AccountSettings";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ function App() {
               <Route path="/platform/admin" element={<AdminDashboard />} />
               <Route path="/platform/admin/users" element={<AdminUsers />} />
               <Route path="/platform/admin/tenants" element={<AdminTenants />} />
+              <Route path="/platform/account" element={<AccountSettings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

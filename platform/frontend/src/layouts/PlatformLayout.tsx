@@ -1,11 +1,15 @@
 import { Outlet, NavLink } from "react-router-dom";
-import { LayoutDashboard, Search, FileText, Briefcase, Shield, Users, Building2, LogOut } from "lucide-react";
+import { LayoutDashboard, Search, FileText, Briefcase, Shield, Users, Building2, UserCircle, LogOut } from "lucide-react";
 
 const navItems = [
   { to: "/platform", icon: LayoutDashboard, label: "대시보드", end: true },
   { to: "/scraper/", icon: Search, label: "스크래퍼", external: true },
   { to: "/platform/resume", icon: FileText, label: "이력서" },
   { to: "/platform/portfolio", icon: Briefcase, label: "포트폴리오" },
+];
+
+const accountItems = [
+  { to: "/platform/account", icon: UserCircle, label: "계정 설정" },
 ];
 
 const adminItems = [
@@ -81,6 +85,20 @@ export default function PlatformLayout() {
         </nav>
 
         <div className="p-3 border-t border-slate-700">
+          {accountItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                  isActive ? "bg-slate-700 text-white" : "text-slate-300 hover:bg-slate-800"
+                }`
+              }
+            >
+              <item.icon size={18} />
+              {item.label}
+            </NavLink>
+          ))}
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 transition-colors"
