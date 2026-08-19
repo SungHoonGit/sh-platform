@@ -39,13 +39,13 @@
 
 ```
 ${LOG_PATH}/
-├── auth/        sh-platform.log + sh-platform-error.log   (기존, 하위 디렉토리로 이동)
-├── scraper/     sh-platform.log + sh-platform-error.log
-├── resume/      sh-platform.log + sh-platform-error.log
-└── portfolio/   sh-platform.log + sh-platform-error.log
+├── auth-platform/     auth-platform.log + auth-platform-error.log
+├── scraper-platform/  scraper-platform.log + scraper-platform-error.log
+├── resume-platform/   resume-platform.log + resume-platform-error.log
+└── portfolio-platform/ portfolio-platform.log + portfolio-platform-error.log
 ```
 
-> `LOG_PATH`는 Spring Boot의 `logging.file.path`에서 전달. 기본값은 상대경로 `logs` → 로컬/개발 어디서든 동작, 서버는 systemd 환경변수로 절대경로 지정.
+> 디렉토리와 파일명 모두 **`${APP_NAME}`(=`spring.application.name`)** 기반. 로그 파일명만 봐도 어떤 서비스인지 구분 가능하고, Promtail이 경로에서 `service` 라벨 추출하기 좋음. auth는 `spring.application.name: auth-platform` 명시 추가.
 
 ### 3.2 로그 경로 휴대성 (상대경로 기본 + 환경변수 오버라이드)
 
@@ -91,9 +91,9 @@ logging:
 
     <!-- 파일 로그 (일별 분리) -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/{모듈}/sh-platform.log</file>
+        <file>${LOG_PATH}/${APP_NAME}/${APP_NAME}.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/{모듈}/sh-platform.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}/${APP_NAME}.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>
             <totalSizeCap>500MB</totalSizeCap>
         </rollingPolicy>
@@ -104,9 +104,9 @@ logging:
 
     <!-- 에러 전용 로그 -->
     <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/{모듈}/sh-platform-error.log</file>
+        <file>${LOG_PATH}/${APP_NAME}/${APP_NAME}-error.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/{모듈}/sh-platform-error.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}/${APP_NAME}-error.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>
         </rollingPolicy>
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
@@ -147,20 +147,24 @@ sudo systemctl restart sh-platform-{auth,scraper,resume,portfolio}
 
 ### 3.5 Promtail 설정
 
-`/etc/promtail/promtail-config.yaml`에서 각 서비스 로그 경로를 수집 대상에 추가:
+`/etc/promtail/promtail-config.yaml`에서 `spring-boot` job의 `__path__`를 새 경로로 변경 + `service` 라벨 추출:
 
 ```yaml
 scrape_configs:
   - job_name: spring-boot
     static_configs:
-      - targets: [localhost]
+      - targets:
+          - localhost
         labels:
           job: spring-boot
           __path__: /home/ubuntu/sh-platform/logs/*/*.log
-    # 또는 서비스별 path를 추가해 instance/service 라벨 구분
+    relabel_configs:
+      - source_labels: [__path__]
+        regex: '.*/logs/([^/]+)/.*\.log'
+        target_label: service
 ```
 
-> **주의**: 현재 Promtail이 어떤 경로를 읽는지 확인 후 기존 auth 로그 추적이 깨지지 않도록 **경로를 추가**하는 방식으로 수정. (glob 패턴 `*/*.log`가 auth까지 포함하면 auth가 하위 디렉토리에 없어도 무방 — 단 기존 `logs/sh-platform.log`는 별도 포함 필요)
+> `service` 라벨 = 디렉토리명(`auth-platform`, `scraper-platform`, `resume-platform`, `portfolio-platform`). 기존 옛 경로 `logs/*.log`는 신규 구조로 대체되므로 제거 (옛 로그는 이미 수집됨). 변경 후 `sudo systemctl restart promtail`.
 
 **Promtail 라벨 확인** (배포 후):
 ```bash
