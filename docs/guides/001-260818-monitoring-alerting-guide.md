@@ -192,7 +192,7 @@ sum(rate({job="spring-boot"} |= "ERROR" [5m]))
 
 ### 6.7 Spring Boot Log 대시보드 (Loki)
 
-> **구성 (2026-08-19)**: 서비스 선택 변수 + 패널 4개. 각 패널은 **쿼리 1개**만 넣는다 (여러 쿼리 섞으면 빈 화면).
+> **구성 (2026-08-19)**: 서비스 선택 변수 + 패널 4개. 각 패널은 **쿼리 1개**만 넣는다 (여러 쿼리 섞으면 빈 화면). 최종 구성: 실시간 로그 목록(Logs), 로그 레벨 분포(Bar chart), ERROR 로그 수(Stat), 로그 수 추이(Time series).
 
 #### 6.7.1 서비스 변수 (드롭다운)
 
@@ -228,6 +228,26 @@ sum by (service) (count_over_time({job="spring-boot"} [5m]))
 sum by (service) (count_over_time({job="spring-boot"} |= "ERROR" [5m]))
 ```
 - Visualization: **Stat**
+
+#### 6.7.6 패널 2 대체 — 로그 레벨 분포 (Bar chart)
+
+> 서비스별 로그 수 대신 **레벨(info/warn/error) 분포**를 보는 게 WAS 모니터링에 더 유용. Loki가 로그에서 `detected_level` 라벨을 자동 추출하므로 바로 사용 가능.
+
+- 쿼리:
+```logql
+sum by (detected_level) (count_over_time({job="spring-boot", service=~"$service"} [5m]))
+```
+- Visualization: **Bar chart**
+- 0건 레벨도 항상 표시하려면 (레벨 3개 고정):
+```logql
+sum by (detected_level) (count_over_time({job="spring-boot", service=~"$service"} [5m]))
+or on() label_replace(vector(0), "detected_level", "info", "", "")
+or on() label_replace(vector(0), "detected_level", "warn", "", "")
+or on() label_replace(vector(0), "detected_level", "error", "", "")
+```
+- **색상 레벨별 고정**: 패널 Edit → 우측 하단 **Add field override** → Match(name)=`error` → Add override property → **Standard options → Color → Fixed color** → 빨강 (`warn`=주황, `info`=파랑도 동일 반복)
+  - ⚠ 숫자 Thresholds(90/10 등)는 **건수(값) 기준** 색칠이라 레벨 이름별 색상에는 부적합. **Field overrides**로 해야 함.
+  - Grafana 11에서 Overrides는 우측 패널 맨 아래 `Add field override`.
 
 #### 6.7.5 패널 4 — 로그 수 추이 (Time series)
 
