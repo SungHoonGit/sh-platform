@@ -61,14 +61,16 @@ logging:
 `logback-spring.xml` (4개 모듈 공통):
 ```xml
 <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs"/>
-<file>${LOG_PATH}/{모듈}/sh-platform.log</file>
+<file>${LOG_PATH}/${APP_NAME}/${APP_NAME}.log</file>
 ```
 
 **동작**:
 | 환경 | LOG_PATH | 로그 경로 |
 |------|----------|-----------|
-| 로컬/개발 | 미설정 → 기본 `logs` | `./logs/{모듈}/sh-platform.log` (상대) |
-| 서버 | systemd `Environment=LOG_PATH=/home/ubuntu/sh-platform/logs` | `/home/ubuntu/sh-platform/logs/{모듈}/sh-platform.log` |
+| 로컬/개발 | 미설정 → 기본 `logs` | `./logs/{APP_NAME}/{APP_NAME}.log` (상대) |
+| 서버 | systemd `Environment=LOG_PATH=/home/ubuntu/sh-platform/logs` | `/home/ubuntu/sh-platform/logs/{APP_NAME}/{APP_NAME}.log` |
+
+> `{APP_NAME}` = `spring.application.name` (auth-platform, scraper-platform, resume-platform, portfolio-platform). auth는 `spring.application.name: auth-platform` 명시 추가.
 
 > **이점**: 소스를 어디서 받아도(로컬/CI/다른 서버) 절대경로 수정 없이 로그가 남음. 운영 배포 시에만 systemd 환경변수로 경로 지정.
 
@@ -145,30 +147,39 @@ sudo systemctl restart sh-platform-{auth,scraper,resume,portfolio}
 
 > **주의**: auth의 기존 로그가 `logs/sh-platform.log`(최상위)에 있었으나, 이번 설계에서 **`logs/auth/` 하위로 이동**. 기존 로그는 수동 이동 또는 방치.
 
-### 3.5 Promtail 설정
+### 3.5 Promtail 설정 (실제 적용 — 서비스별 static_configs 분리)
 
-`/etc/promtail/promtail-config.yaml`에서 `spring-boot` job의 `__path__`를 새 경로로 변경 + `service` 라벨 추출:
+`/etc/promtail/promtail-config.yaml`에서 `spring-boot` job을 **서비스별로 분리**하고, `service` 라벨을 **정적으로 명시**:
 
 ```yaml
 scrape_configs:
-  - job_name: spring-boot
+  - job_name: spring-boot-auth
     static_configs:
       - targets:
           - localhost
         labels:
           job: spring-boot
-          __path__: /home/ubuntu/sh-platform/logs/*/*.log
-    relabel_configs:
-      - source_labels: [__path__]
-        regex: '.*/logs/([^/]+)/.*\.log'
-        target_label: service
+          service: auth-platform
+          __path__: /home/ubuntu/sh-platform/logs/auth-platform/*.log
+
+  - job_name: spring-boot-scraper
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: spring-boot
+          service: scraper-platform
+          __path__: /home/ubuntu/sh-platform/logs/scraper-platform/*.log
+
+  # resume-platform / portfolio-platform 동일 패턴
 ```
 
-> `service` 라벨 = 디렉토리명(`auth-platform`, `scraper-platform`, `resume-platform`, `portfolio-platform`). 기존 옛 경로 `logs/*.log`는 신규 구조로 대체되므로 제거 (옛 로그는 이미 수집됨). 변경 후 `sudo systemctl restart promtail`.
+> **왜 relabel이 아닌 static 분리인가 (2026-08-19 발견)**: glob 경로(`logs/*/*.log`)에 relabel 정규식(`.*/logs/([^/]+)/.*\.log`)을 적용하면 **파일명이 아니라 glob 패턴의 `*`가 캡처**되어 `service="*"`가 됨. 정규식 파싱은 경로 구조가 바뀌면 깨지므로, **서비스별 static_configs + 정적 라벨**이 가장 안전. `job: spring-boot`를 공통으로 유지하여 기존 알림 규칙(8번 앱 에러 등)이 그대로 동작.
 
 **Promtail 라벨 확인** (배포 후):
 ```bash
-curl -s 'http://localhost:3100/loki/api/v1/label/values' --data-urlencode 'query={job="spring-boot"}'
+curl -s 'http://localhost:3100/loki/api/v1/label/service/values' | python3 -m json.tool
+# ["*", "auth-platform", "scraper-platform", ...] — "*"는 설정 변경 전 옛 스트림
 ```
 
 ## 4. 구현 계획
@@ -180,6 +191,8 @@ curl -s 'http://localhost:3100/loki/api/v1/label/values' --data-urlencode 'query
 | Phase 3 | 서버 systemd에 `LOG_PATH` 환경변수 추가 + 재시작 | `daemon-reload` 후 로그 파일 생성 확인 |
 | Phase 4 | Promtail 설정에 경로 추가 + 재시작 | `sudo systemctl restart promtail` |
 | Phase 5 | Loki에서 서비스별 로그 확인 | Explore → `{job="spring-boot"}` 로그 검색 |
+
+> **구현 현황 (2026-08-19)**: Phase 1~5 완료 ✅. 서비스별 로그 파일(`/home/ubuntu/sh-platform/logs/{app}-platform/*.log`) 생성 확인, Promtail static 분리 적용, Loki에서 `service=auth-platform` 스트림 수집 확인, Spring Boot Log 대시보드(레벨 분포 포함) 생성 완료.
 
 ## 5. 참고 자료
 - [journald 로그 학습](../learnings/003-260818-journald-logging-learning.md)
