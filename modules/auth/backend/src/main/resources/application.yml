@@ -33,6 +33,8 @@ oauth2:
   callback-base: ${OAUTH2_CALLBACK_BASE:http://localhost:8080}
 
 logging:
+  file:
+    path: ${LOG_PATH:logs}
   level:
     com.shplatform: DEBUG
 
