@@ -190,6 +190,55 @@ sum(rate({job="spring-boot"} |= "ERROR" [5m]))
 2. 상단 **Metric** 버튼 클릭 → 로그를 메트릭으로 변환
 3. `sum(rate({job="spring-boot"} |= "ERROR" [5m])) by (job)`
 
+### 6.7 Spring Boot Log 대시보드 (Loki)
+
+> **구성 (2026-08-19)**: 서비스 선택 변수 + 패널 4개. 각 패널은 **쿼리 1개**만 넣는다 (여러 쿼리 섞으면 빈 화면).
+
+#### 6.7.1 서비스 변수 (드롭다운)
+
+1. 대시보드 → **Settings → Variables → + New variable**
+2. 설정 (Label values 방식):
+   - Name: `service`
+   - Type: **Query** → Query type: **Label values**
+   - Data source: **Loki**
+   - **Label**: `service` (⚠ `job` 아님)
+   - **Stream selector**: `{job="spring-boot"}` (⚠ `label_values(...)` 함수를 넣지 말 것 — Label values 모드에서는 스트림만 입력)
+3. Refresh: `On dashboard load` → 저장 → 대시보드 상단에 드롭다운 생성
+
+> **실패 사례**: `Label values` 모드에서 Label=`job`, Stream selector=`label_values({job="spring-boot"}, service)`로 넣으면 값이 0개. **Label=`service`**, **Stream selector=`{job="spring-boot"}`** 가 정답.
+
+#### 6.7.2 패널 1 — 실시간 로그 목록 (Logs)
+
+- 쿼리: `{job="spring-boot", service=~"$service"}`
+- Visualization: **Logs**
+- 기본 필터로 사용 (서비스 선택에 따라 해당 서비스 로그만 표시)
+
+#### 6.7.3 패널 2 — 서비스별 로그 수 (Bar chart)
+
+- 쿼리:
+```logql
+sum by (service) (count_over_time({job="spring-boot"} [5m]))
+```
+- Visualization: **Bar chart**
+
+#### 6.7.4 패널 3 — ERROR 로그 수 (Stat)
+
+- 쿼리:
+```logql
+sum by (service) (count_over_time({job="spring-boot"} |= "ERROR" [5m]))
+```
+- Visualization: **Stat**
+
+#### 6.7.5 패널 4 — 로그 수 추이 (Time series)
+
+- 쿼리:
+```logql
+sum(rate({job="spring-boot"}[5m]))
+```
+- Visualization: **Time series**
+
+> **시간 범위**: 대시보드 우측 상단 타임피커 하나로 전체 패널이 따라감. 패널이 빈 화면이면 우측 상단 시간을 **Last 15 minutes**로 먼저 확인.
+
 ---
 
 ## 7. 알림(Alert) 설정
@@ -361,6 +410,40 @@ cat /var/lib/promtail/positions.yaml
 ls -la /home/ubuntu/sh-platform/logs/
 ls -la /var/log/nginx/
 ```
+
+### 8.6.1 Promtail `service` 라벨이 `*`로 들어감
+
+**증상**: `curl -s http://localhost:3100/loki/api/v1/label/service/values` 결과가 `["*"]` → Grafana 변수 드롭다운이 `*`만 표시.
+
+**원인**: glob 경로에 relabel 정규식을 적용하면 **파일명이 아니라 glob 패턴(`logs/*/*.log`)에서 `*`를 캡처**함:
+```yaml
+relabel_configs:
+  - source_labels: [__path__]
+    regex: '.*/logs/([^/]+)/.*\.log'   # ⚠ glob 패턴이면 "logs/*/*.log"의 * 를 캡처 → service="*"
+    target_label: service
+```
+
+**해결**: 정규식 파싱 대신 **서비스별 static_configs 분리 + 정적 라벨** 사용:
+```yaml
+  - job_name: spring-boot-auth
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: spring-boot
+          service: auth-platform
+          __path__: /home/ubuntu/sh-platform/logs/auth-platform/*.log
+  # ... scraper-platform / resume-platform / portfolio-platform 동일 패턴
+```
+
+**검증**:
+```bash
+sudo systemctl restart promtail
+sudo systemctl restart sh-platform-auth   # 새 로그 발생시켜 새 스트림 생성
+curl -s 'http://localhost:3100/loki/api/v1/label/service/values' | python3 -m json.tool
+# ["*", "auth-platform", "scraper-platform"] → "*"는 옛 스트림(과거 데이터), 새 스트림 정상
+```
+
+> `*`는 설정 변경 전 옛 스트림에 남은 데이터라 새로 쌓이지 않음. 그래프/변수에서 제외하려면 `service=~".+"` 필터 사용. Loki 보관 기간이 지나면 자연히 사라짐.
 
 ### 8.7 CLI에서 로그 조회 (logcli)
 
