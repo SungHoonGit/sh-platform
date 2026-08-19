@@ -9,7 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.client.jackson2.OAuth2ClientJackson2Module;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 
 /**
  * OAuth2 인가 요청을 HttpSession이 아닌 쿠키에 저장하는 리포지토리.
@@ -27,8 +29,20 @@ public class CookieAuthorizationRequestRepository
     public static final String COOKIE_NAME = "OAUTH2_AUTHORIZATION_REQUEST";
     private static final int COOKIE_MAX_AGE = 300;
 
-    private final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new OAuth2ClientJackson2Module());
+    private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
+
+    private static ObjectMapper createObjectMapper() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new OAuth2ClientJackson2Module());
+        objectMapper.activateDefaultTyping(
+                BasicPolymorphicTypeValidator.builder()
+                        .allowIfSubType("org.springframework.security.")
+                        .allowIfSubType("java.util.")
+                        .build(),
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY);
+        return objectMapper;
+    }
 
     @Override
     public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
@@ -38,7 +52,7 @@ public class CookieAuthorizationRequestRepository
         }
         try {
             byte[] decoded = Base64.getUrlDecoder().decode(cookie.getValue());
-            return objectMapper.readValue(decoded, OAuth2AuthorizationRequest.class);
+            return OBJECT_MAPPER.readValue(decoded, OAuth2AuthorizationRequest.class);
         } catch (Exception e) {
             log.warn("[OAUTH2] failed to load authorization request from cookie: {}", e.getMessage());
             return null;
@@ -53,7 +67,7 @@ public class CookieAuthorizationRequestRepository
             return;
         }
         try {
-            byte[] encoded = objectMapper.writeValueAsBytes(authorizationRequest);
+            byte[] encoded = OBJECT_MAPPER.writeValueAsBytes(authorizationRequest);
             String value = Base64.getUrlEncoder().withoutPadding().encodeToString(encoded);
             Cookie cookie = new Cookie(COOKIE_NAME, value);
             cookie.setPath("/");
