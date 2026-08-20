@@ -213,23 +213,7 @@ sum(rate({job="spring-boot"} |= "ERROR" [5m]))
 - Visualization: **Logs**
 - 기본 필터로 사용 (서비스 선택에 따라 해당 서비스 로그만 표시)
 
-#### 6.7.3 패널 2 — 서비스별 로그 수 (Bar chart)
-
-- 쿼리:
-```logql
-sum by (service) (count_over_time({job="spring-boot"} [5m]))
-```
-- Visualization: **Bar chart**
-
-#### 6.7.4 패널 3 — ERROR 로그 수 (Stat)
-
-- 쿼리:
-```logql
-sum by (service) (count_over_time({job="spring-boot"} |= "ERROR" [5m]))
-```
-- Visualization: **Stat**
-
-#### 6.7.6 패널 2 대체 — 로그 레벨 분포 (Bar chart)
+#### 6.7.3 패널 2 — 로그 레벨 분포 (Bar chart)
 
 > 서비스별 로그 수 대신 **레벨(info/warn/error) 분포**를 보는 게 WAS 모니터링에 더 유용. Loki가 로그에서 `detected_level` 라벨을 자동 추출하므로 바로 사용 가능.
 
@@ -249,6 +233,14 @@ or on() label_replace(vector(0), "detected_level", "error", "", "")
   - ⚠ 숫자 Thresholds(90/10 등)는 **건수(값) 기준** 색칠이라 레벨 이름별 색상에는 부적합. **Field overrides**로 해야 함.
   - Grafana 11에서 Overrides는 우측 패널 맨 아래 `Add field override`.
 
+#### 6.7.4 패널 3 — ERROR 로그 수 (Stat)
+
+- 쿼리:
+```logql
+sum by (service) (count_over_time({job="spring-boot"} |= "ERROR" [5m]))
+```
+- Visualization: **Stat**
+
 #### 6.7.5 패널 4 — 로그 수 추이 (Time series)
 
 - 쿼리:
@@ -256,6 +248,7 @@ or on() label_replace(vector(0), "detected_level", "error", "", "")
 sum(rate({job="spring-boot"}[5m]))
 ```
 - Visualization: **Time series**
+- 개선(선택): `sum by (service)` 또는 `sum by (detected_level)`로 분리하면 이상 징후 가시성 향상
 
 > **시간 범위**: 대시보드 우측 상단 타임피커 하나로 전체 패널이 따라감. 패널이 빈 화면이면 우측 상단 시간을 **Last 15 minutes**로 먼저 확인.
 
