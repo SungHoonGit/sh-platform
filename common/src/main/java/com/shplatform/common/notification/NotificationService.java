@@ -3,10 +3,13 @@ package com.shplatform.common.notification;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.MessagingException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -135,6 +138,34 @@ public class NotificationService {
         } catch (Exception e) {
             log.error("[EMAIL] Failed to send email to {}: {}", to, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * HTML 형식으로 이메일을 전송한다.
+     *
+     * @param to      수신자 이메일
+     * @param subject 제목
+     * @param html    HTML 본문
+     */
+    public void sendHtmlEmail(String to, String subject, String html) {
+        log.info("[EMAIL] Attempting to send HTML email to: {}", to);
+        if (mailSender == null) {
+            log.warn("[EMAIL] JavaMailSender not configured in this module. Email skipped: to={}", to);
+            return;
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setFrom("noreply@shplatform.com");
+            helper.setText(html, true);
+            mailSender.send(message);
+            log.info("[EMAIL] HTML email sent successfully to {}", to);
+        } catch (MessagingException | RuntimeException e) {
+            log.error("[EMAIL] Failed to send HTML email to {}: {}", to, e.getMessage(), e);
+            throw new IllegalStateException("HTML email send failed", e);
         }
     }
 

@@ -210,31 +210,10 @@ public class CrawlExecutionService {
                     config.getId(), crawlStartTime, LocalDateTime.now(),
                     PageRequest.of(0, 10, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")));
             List<JobPosting> recentJobs = recentJobsPage.getContent();
-            
-            // 이메일 내용 생성
-            StringBuilder emailContent = new StringBuilder();
-            emailContent.append(String.format("Config: %s\n", config.getName()));
-            emailContent.append(String.format("수집 사이트: %d개 성공\n", success));
-            emailContent.append(String.format("신규 공고: %d건\n\n", newJobs));
-            
-            if (!recentJobs.isEmpty()) {
-                emailContent.append("=== 신규 공고 목록 (최대 10건) ===\n\n");
-                int limit = Math.min(recentJobs.size(), 10);
-                for (int i = 0; i < limit; i++) {
-                    JobPosting job = recentJobs.get(i);
-                    emailContent.append(String.format("%d. %s | %s | %s | %s\n",
-                            i + 1,
-                            job.getCompany() != null ? job.getCompany() : "-",
-                            job.getPosition() != null ? job.getPosition() : "-",
-                            job.getCareer() != null ? job.getCareer() : "-",
-                            job.getLocation() != null ? job.getLocation() : "-"));
-                }
-                emailContent.append("\n");
-            }
-            
-            emailContent.append(String.format("상세 보기: https://sunghoonyk.duckdns.org/scraper/viewer"));
-            
-            notificationService.sendEmail(config.getRecipientEmail(), emailContent.toString());
+
+            String subject = "[SH Platform] 신규 채용공고 수집 완료";
+            String html = buildJobAlertHtml(config.getName(), success, newJobs, dupJobs, recentJobs);
+            notificationService.sendHtmlEmail(config.getRecipientEmail(), subject, html);
         }
 
         if (error > 0 && Boolean.TRUE.equals(config.getEmailNotification())) {
@@ -402,5 +381,81 @@ public class CrawlExecutionService {
         String minStr = min > 0 ? min + "년" : "신입";
         String maxStr = max >= 15 ? "15년+" : max + "년";
         return minStr + "~" + maxStr;
+    }
+
+    private String buildJobAlertHtml(String configName, int success, int newJobs, int dupJobs,
+                                     List<JobPosting> recentJobs) {
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html><html><body style=\"margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;\">");
+        html.append("<div style=\"max-width:620px;margin:24px auto;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);\">");
+
+        // 헤더
+        html.append("<div style=\"background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:24px 28px;color:#ffffff;\">");
+        html.append("<h2 style=\"margin:0;font-size:20px;\">📢 신규 채용공고 수집 완료</h2>");
+        html.append("<p style=\"margin:6px 0 0;font-size:14px;color:#bfdbfe;\">").append(configName).append("</p>");
+        html.append("</div>");
+
+        // 요약
+        html.append("<div style=\"padding:24px 28px;\">");
+        html.append("<div style=\"display:flex;gap:12px;margin-bottom:20px;\">");
+        html.append("<div style=\"flex:1;text-align:center;background:#eff6ff;border-radius:8px;padding:14px;border:1px solid #dbeafe;\">");
+        html.append("<div style=\"font-size:24px;font-weight:700;color:#2563eb;\">").append(success).append("</div>");
+        html.append("<div style=\"font-size:12px;color:#64748b;margin-top:4px;\">수집 사이트</div></div>");
+        html.append("<div style=\"flex:1;text-align:center;background:#f0fdf4;border-radius:8px;padding:14px;border:1px solid #dcfce7;\">");
+        html.append("<div style=\"font-size:24px;font-weight:700;color:#16a34a;\">").append(newJobs).append("</div>");
+        html.append("<div style=\"font-size:12px;color:#64748b;margin-top:4px;\">신규 공고</div></div>");
+        html.append("<div style=\"flex:1;text-align:center;background:#f8fafc;border-radius:8px;padding:14px;border:1px solid #e2e8f0;\">");
+        html.append("<div style=\"font-size:24px;font-weight:700;color:#64748b;\">").append(dupJobs).append("</div>");
+        html.append("<div style=\"font-size:12px;color:#64748b;margin-top:4px;\">중복 제외</div></div>");
+        html.append("</div>");
+
+        // 공고 목록
+        if (!recentJobs.isEmpty()) {
+            html.append("<h3 style=\"font-size:15px;color:#1e293b;margin:0 0 12px;\">신규 공고 목록 (최대 10건)</h3>");
+            html.append("<table style=\"width:100%;border-collapse:collapse;font-size:13px;\">");
+            html.append("<tr style=\"background:#f1f5f9;\">");
+            html.append("<th style=\"text-align:left;padding:8px 10px;border:1px solid #e2e8f0;color:#475569;\">회사</th>");
+            html.append("<th style=\"text-align:left;padding:8px 10px;border:1px solid #e2e8f0;color:#475569;\">직무</th>");
+            html.append("<th style=\"text-align:left;padding:8px 10px;border:1px solid #e2e8f0;color:#475569;\">경력</th>");
+            html.append("<th style=\"text-align:left;padding:8px 10px;border:1px solid #e2e8f0;color:#475569;\">지역</th>");
+            html.append("</tr>");
+
+            int limit = Math.min(recentJobs.size(), 10);
+            for (int i = 0; i < limit; i++) {
+                JobPosting job = recentJobs.get(i);
+                String bg = (i % 2 == 0) ? "#ffffff" : "#f8fafc";
+                html.append("<tr style=\"background:").append(bg).append(";\">");
+                html.append("<td style=\"padding:8px 10px;border:1px solid #e2e8f0;font-weight:600;color:#1e293b;\">")
+                        .append(escapeHtml(job.getCompany() != null ? job.getCompany() : "-")).append("</td>");
+                html.append("<td style=\"padding:8px 10px;border:1px solid #e2e8f0;color:#334155;\">")
+                        .append(escapeHtml(job.getPosition() != null ? job.getPosition() : "-")).append("</td>");
+                html.append("<td style=\"padding:8px 10px;border:1px solid #e2e8f0;color:#334155;\">")
+                        .append(escapeHtml(job.getCareer() != null ? job.getCareer() : "-")).append("</td>");
+                html.append("<td style=\"padding:8px 10px;border:1px solid #e2e8f0;color:#334155;\">")
+                        .append(escapeHtml(job.getLocation() != null ? job.getLocation() : "-")).append("</td>");
+                html.append("</tr>");
+            }
+            html.append("</table>");
+        } else {
+            html.append("<p style=\"font-size:14px;color:#64748b;\">새로 수집된 공고가 없습니다.</p>");
+        }
+
+        // 버튼
+        html.append("<div style=\"margin-top:24px;text-align:center;\">");
+        html.append("<a href=\"https://sunghoonyk.duckdns.org/scraper/viewer\" style=\"display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;\">공고 보러 가기 →</a>");
+        html.append("</div>");
+
+        html.append("<p style=\"margin:20px 0 0;font-size:11px;color:#94a3b8;text-align:center;\">본 메일은 SH Platform에서 자동 발송되었습니다.</p>");
+        html.append("</div></div></body></html>");
+        return html.toString();
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) return "";
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 }
