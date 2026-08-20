@@ -1,9 +1,9 @@
 spring:
   datasource:
-    url: jdbc:mariadb://localhost:3307/sh_pass
+    url: jdbc:mariadb://127.0.0.1:3307/sh_pass
     driver-class-name: org.mariadb.jdbc.Driver
-    username: sh_user
-    password: SHpass1234!
+    username: sh_local
+    password: sh_local_pass
 
   jpa:
     hibernate:

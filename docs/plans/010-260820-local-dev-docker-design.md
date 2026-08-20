@@ -44,7 +44,7 @@
 [로컬 PC]                                [Docker Desktop]
 ┌────────────────────┐                  ┌─────────────────────────────┐
 │ auth  (8080)       │── jdbc ──┐       │ MariaDB:10.11               │
-│ scraper(8081)      │── jdbc ──┼──────▶│  port 3306                  │
+│ scraper(8081)      │── jdbc ──┼──────▶│  port 3307 (호스트 매핑)    │
 │ resume (8082)      │── jdbc ──┤       │  DB 4개:                     │
 │ portfolio(8083)    │── jdbc ──┘       │  ├ sh_pass                  │
 │  (bootRun -P local)│                   │  ├ scraper_platform         │
@@ -54,6 +54,9 @@
                                          └─────────────────────────────┘
 ```
 
+> **포트 3307 사용 이유**: Windows에 기존 MySQL/MariaDB(mysqld)가 3306을 점유할 수 있음.
+> Docker 컨테이너는 내부 3306, 호스트 매핑은 3307 → 기존 DB와 충돌 방지.
+
 ### 3.2 docker-compose.yml (루트)
 
 ```yaml
@@ -62,7 +65,7 @@ services:
     image: mariadb:10.11
     container_name: sh-local-mariadb
     ports:
-      - "3306:3306"
+      - "3307:3306"
     environment:
       MARIADB_ROOT_PASSWORD: root
       MARIADB_DATABASE: sh_pass
@@ -132,12 +135,15 @@ spring:
       ddl-auto: update
 ```
 
-| 모듈 | application-local.yml DB명 | 기본 port |
-|------|---------------------------|-----------|
-| auth | `sh_pass` | 8080 |
-| scraper | `scraper_platform` | 8081 |
-| resume | `resume_platform` | 8082 |
-| portfolio | `portfolio_platform` | 8083 |
+| 모듈 | application-local.yml DB명 | 접속 URL | 기본 port |
+|------|---------------------------|----------|-----------|
+| auth | `sh_pass` | `jdbc:mariadb://127.0.0.1:3307/sh_pass` | 8080 |
+| scraper | `scraper_platform` | `jdbc:mariadb://127.0.0.1:3307/scraper_platform` | 8081 |
+| resume | `resume_platform` | `jdbc:mariadb://127.0.0.1:3307/resume_platform` | 8082 |
+| portfolio | `portfolio_platform` | `jdbc:mariadb://127.0.0.1:3307/portfolio_platform` | 8083 |
+
+> **127.0.0.1 사용 이유**: Windows에서 `localhost`는 IPv6(::1)로 해석되어 MariaDB가
+> `sh_local@localhost`/`sh_local@::1` 계정을 찾다 실패할 수 있음. `127.0.0.1`로 명시하면 IPv4로 접속.
 
 ### 3.5 프로필 활성화 전략
 
@@ -146,6 +152,7 @@ spring:
   ```bash
   ./gradlew :modules:scraper:backend:bootRun --args='--spring.profiles.active=local'
   ```
+- **사전 준비**: Docker Desktop 실행 후 `docker compose up -d` (MariaDB 컨테이너 기동)
 - auth는 이미 `spring.profiles.active: ${SPRING_PROFILES_ACTIVE:local}`로 기본 local → **주의**: 서버 배포 시 `SPRING_PROFILES_ACTIVE=prod` 환경변수 필수
 
 ### 3.6 예상 파일 목록
