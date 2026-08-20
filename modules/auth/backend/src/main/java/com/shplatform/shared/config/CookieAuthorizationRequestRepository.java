@@ -27,6 +27,7 @@ public class CookieAuthorizationRequestRepository
     private static final Logger log = LoggerFactory.getLogger(CookieAuthorizationRequestRepository.class);
 
     public static final String COOKIE_NAME = "OAUTH2_AUTHORIZATION_REQUEST";
+    public static final String REDIRECT_COOKIE_NAME = "OAUTH2_RETURN_URL";
     private static final int COOKIE_MAX_AGE = 300;
 
     private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
@@ -78,6 +79,18 @@ public class CookieAuthorizationRequestRepository
                 cookie.setAttribute("SameSite", "Lax");
             }
             response.addCookie(cookie);
+
+            String returnUrl = request.getParameter("redirect");
+            if (returnUrl != null && !returnUrl.isBlank()) {
+                Cookie redirectCookie = new Cookie(REDIRECT_COOKIE_NAME, returnUrl);
+                redirectCookie.setPath("/");
+                redirectCookie.setMaxAge(COOKIE_MAX_AGE);
+                if (request.isSecure()) {
+                    redirectCookie.setSecure(true);
+                    redirectCookie.setAttribute("SameSite", "Lax");
+                }
+                response.addCookie(redirectCookie);
+            }
         } catch (Exception e) {
             log.warn("[OAUTH2] failed to save authorization request to cookie: {}", e.getMessage());
         }
@@ -94,7 +107,42 @@ public class CookieAuthorizationRequestRepository
             expired.setMaxAge(0);
             response.addCookie(expired);
         }
+        removeRedirectCookie(request, response);
         return authRequest;
+    }
+
+    /**
+     * OAuth2 인증 시작 시 저장한 returnUrl 쿠키를 읽는다.
+     *
+     * @param request 서블릿 요청
+     * @return 저장된 returnUrl, 없으면 {@code null}
+     */
+    public String loadRedirectCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        for (Cookie cookie : cookies) {
+            if (REDIRECT_COOKIE_NAME.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
+    }
+
+    private void removeRedirectCookie(HttpServletRequest request, HttpServletResponse response) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return;
+        }
+        for (Cookie cookie : cookies) {
+            if (REDIRECT_COOKIE_NAME.equals(cookie.getName())) {
+                Cookie expired = new Cookie(REDIRECT_COOKIE_NAME, "");
+                expired.setPath("/");
+                expired.setMaxAge(0);
+                response.addCookie(expired);
+            }
+        }
     }
 
     private Cookie findCookie(HttpServletRequest request) {

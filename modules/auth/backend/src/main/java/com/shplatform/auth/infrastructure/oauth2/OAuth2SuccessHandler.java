@@ -3,6 +3,7 @@ package com.shplatform.auth.infrastructure.oauth2;
 import com.shplatform.auth.infrastructure.RefreshTokenEntity;
 import com.shplatform.auth.infrastructure.RefreshTokenRepository;
 import com.shplatform.auth.infrastructure.TokenProvider;
+import com.shplatform.shared.config.CookieAuthorizationRequestRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,14 +25,17 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
     private final TokenProvider tokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final CookieAuthorizationRequestRepository authorizationRequestRepository;
 
     @Value("${oauth2.frontend-url:http://localhost:3000}")
     private String frontendUrl;
 
     public OAuth2SuccessHandler(TokenProvider tokenProvider,
-                                 RefreshTokenRepository refreshTokenRepository) {
+                                 RefreshTokenRepository refreshTokenRepository,
+                                 CookieAuthorizationRequestRepository authorizationRequestRepository) {
         this.tokenProvider = tokenProvider;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.authorizationRequestRepository = authorizationRequestRepository;
     }
 
     @Override
@@ -52,6 +56,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         refreshTokenRepository.save(refreshTokenEntity);
 
         String returnUrl = request.getParameter("returnUrl");
+        if (returnUrl == null || returnUrl.isBlank()) {
+            returnUrl = authorizationRequestRepository.loadRedirectCookie(request);
+        }
         if (returnUrl == null || returnUrl.isBlank() || !isSafeRedirect(returnUrl)) {
             returnUrl = "/platform";
         }

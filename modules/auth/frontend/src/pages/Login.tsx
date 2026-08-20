@@ -101,7 +101,7 @@ export default function Login() {
                   return (
                     <a
                       key={p}
-                      href={`/oauth2/authorization/${p}`}
+                      href={`/oauth2/authorization/${p}?redirect=${encodeURIComponent(redirect)}`}
                       className={`flex items-center justify-center gap-2 py-3 ${ui.color} ${ui.hover} ${ui.textColor} font-medium rounded-xl transition-colors`}
                     >
                       <span className="text-lg">{ui.icon}</span> {ui.label}
