@@ -31,8 +31,8 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
 
     Page<JobPosting> findByConfigIdAndCreatedAtBetween(Long configId, LocalDateTime start, LocalDateTime end, Pageable pageable);
 
-    @Query("SELECT j.dedupKey FROM JobPosting j WHERE j.config.id = :configId AND j.crawledAt >= :sinceDate")
-    Set<String> findDedupKeysSince(@Param("configId") Long configId, @Param("sinceDate") LocalDate sinceDate);
+    @Query("SELECT j.dedupKey FROM JobPosting j WHERE j.crawledAt >= :sinceDate")
+    Set<String> findDedupKeysSince(@Param("sinceDate") LocalDate sinceDate);
 
     long countByConfigId(Long configId);
 

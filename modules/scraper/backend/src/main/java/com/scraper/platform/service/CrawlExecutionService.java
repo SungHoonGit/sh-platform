@@ -118,9 +118,9 @@ public class CrawlExecutionService {
         String keyword = "전체";
         StringBuilder combinedMd = new StringBuilder();
 
-        // DB 기반 중복 체크: 최근 N일간의 dedup_key 수집
+        // DB 기반 중복 체크: 최근 N일간의 dedup_key 수집 (전역 — dedup_key는 config와 무관한 전역 유니크)
         LocalDate dedupSince = LocalDate.now().minusDays(DEDUP_LOOKBACK_DAYS);
-        Set<String> existingDedupKeys = jobPostingRepository.findDedupKeysSince(config.getId(), dedupSince);
+        Set<String> existingDedupKeys = jobPostingRepository.findDedupKeysSince(dedupSince);
         log.info("Dedup: found {} existing dedup keys since {}", existingDedupKeys.size(), dedupSince);
 
         // 한 번의 크롤링 실행에 속한 사이트별 로그를 묶기 위한 배치 ID

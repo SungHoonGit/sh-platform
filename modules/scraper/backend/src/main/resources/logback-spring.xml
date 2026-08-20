@@ -4,6 +4,9 @@
     <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="sh-platform"/>
     <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs"/>
 
+<!-- 중복 공고 유니크 예외 ERROR 필터 (정상 중복, dup 처리됨) -->
+    <filter class="com.scraper.platform.config.DuplicateJobErrorFilter"/>
+
     <!-- 콘솔 출력 (systemd journal) -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -30,6 +33,7 @@
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/${APP_NAME}/${APP_NAME}-error.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
         </rollingPolicy>
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
