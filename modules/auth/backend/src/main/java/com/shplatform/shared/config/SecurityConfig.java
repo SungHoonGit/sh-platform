@@ -179,6 +179,8 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers(
+                    "/", "/index.html", "/assets/**", "/favicon.svg", "/icons.svg",
+                    "/*.js", "/*.css",
                     "/api/v1/auth/signup", "/api/v1/auth/login",
                     "/api/v1/auth/refresh", "/api/v1/auth/verify-email",
                     "/api/v1/auth/verify-code", "/api/v1/auth/oauth2/**",

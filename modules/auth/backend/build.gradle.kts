@@ -10,6 +10,15 @@ tasks.jar {
     enabled = false
 }
 
+val copyFrontendDist by tasks.registering(Copy::class) {
+    from("../frontend/dist")
+    into(layout.buildDirectory.dir("resources/main/static"))
+}
+
+tasks.processResources {
+    dependsOn(copyFrontendDist)
+}
+
 dependencies {
     implementation(project(":common"))
 
