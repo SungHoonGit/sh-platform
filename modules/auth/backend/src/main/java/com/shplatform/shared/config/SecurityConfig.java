@@ -167,7 +167,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
+    public CookieAuthorizationRequestRepository authorizationRequestRepository() {
         return new CookieAuthorizationRequestRepository();
     }
 
