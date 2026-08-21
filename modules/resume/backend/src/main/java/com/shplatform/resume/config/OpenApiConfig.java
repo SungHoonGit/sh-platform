@@ -1,4 +1,4 @@
-package com.resume.platform.config;
+package com.shplatform.resume.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
