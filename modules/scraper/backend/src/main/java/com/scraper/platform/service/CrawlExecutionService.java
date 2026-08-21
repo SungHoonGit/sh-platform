@@ -428,6 +428,7 @@ public class CrawlExecutionService {
         // 버튼
         body.append(EmailTemplate.button("https://sunghoonyk.duckdns.org/scraper/viewer", "공고 보러 가기 →"));
 
-        return EmailTemplate.frame("📢 신규 채용공고 수집 완료", EmailTemplate.escapeHtml(configName), body.toString());
+        return EmailTemplate.frame("신규 채용공고 수집 완료", configName, body.toString(),
+                "크롤링 알림 설정에 따라 발송되었습니다.");
     }
 }

@@ -40,12 +40,13 @@ public class EmailService {
     }
 
     private String buildVerificationCodeHtml(String code) {
-        String body = "<p style=\"margin:0 0 16px;font-size:14px;color:#334155;\">안녕하세요.<br>"
+        String body = "<p style=\"margin:0 0 18px;font-size:14px;color:#334155;line-height:1.7;\">안녕하세요.<br>"
                 + "아래 인증 코드를 입력해 주세요.</p>"
                 + EmailTemplate.codeBox(code)
-                + "<p style=\"margin:0 0 8px;font-size:13px;color:#64748b;\">⏱ 이 코드는 "
+                + "<p style=\"margin:0 0 10px;font-size:13px;color:#64748b;\">이 코드는 "
                 + "<b style=\"color:#1e293b;\">5분</b> 후 만료됩니다.</p>"
                 + "<p style=\"margin:0;font-size:12px;color:#94a3b8;\">본인이 요청하지 않은 경우 이 메일은 무시하셔도 됩니다.</p>";
-        return EmailTemplate.frame("🔐 이메일 인증 코드", "SH Platform 회원 인증", body);
+        return EmailTemplate.frame("이메일 인증 코드", "SH Platform 회원 인증", body,
+                "회원가입 과정의 이메일 인증 요청에 의해 발송되었습니다.");
     }
 }
