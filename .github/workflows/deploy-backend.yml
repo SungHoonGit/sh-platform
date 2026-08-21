@@ -91,6 +91,8 @@ jobs:
 
             # DDL 먼저 실행 (scraper가 ddl-auto:validate 이므로 재시작 전 필수)
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-v2.sql
+            # resume DDL (IF NOT EXISTS 라 매 배포 실행해도 무해)
+            mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' resume_platform < docs/resume/ddl-resume-v1.sql
 
             # Infra config sync (infra/services.yml 에서 생성된 파일 — render_config.py 산출물)
             sudo cp infra/generated/prometheus.yml /etc/prometheus/prometheus.yml
