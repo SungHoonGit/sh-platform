@@ -15,8 +15,7 @@ sh-platform/
 │   ├── auth/frontend/               # React 로그인/회원가입
 │   ├── scraper/backend/             # 채용공고 수집 (port 8081)
 │   ├── scraper/frontend/            # React 스크래퍼 SPA
-│   ├── resume/backend/              # 이력서 서비스 (port 8082)
-│   └── portfolio/backend/           # 포트폴리오 서비스 (port 8083)
+│   ├── resume/backend/              # 이력서 서비스 (port 8082, 포트폴리오 통합)
 ├── platform/frontend/               # 플랫폼 프레임 (대시보드+관리자, /platform/)
 ├── docs/                            # 프로젝트 전체 문서
 ├── scripts/                         # DB 파티션 등 유틸 스크립트
@@ -30,7 +29,6 @@ sh-platform/
 :modules:auth:backend             → modules/auth/backend/
 :modules:scraper:backend          → modules/scraper/backend/
 :modules:resume:backend           → modules/resume/backend/
-:modules:portfolio:backend        → modules/portfolio/backend/
 ```
 
 ## 기술 스택
@@ -62,7 +60,6 @@ sh-platform/
 | 8080 | auth | `/swagger-ui/` | `/api/*` |
 | 8081 | scraper | `/scraper/swagger-ui/` | `/scraper/*` |
 | 8082 | resume | `/resume/swagger-ui/` | `/resume/*` |
-| 8083 | portfolio | `/portfolio/swagger-ui/` | `/portfolio/*` |
 | 9090 | Prometheus | - | `/prometheus/` |
 | 3000 | Grafana | - | `/grafana/` |
 
@@ -70,16 +67,16 @@ sh-platform/
 
 ```bash
 # 상태 확인
-sudo systemctl status sh-platform-{auth,scraper,resume,portfolio}
+sudo systemctl status sh-platform-{auth,scraper,resume}
 
 # 개별 재시작
 sudo systemctl restart sh-platform-auth
 
 # 전체 재시작 (순서 중요: common 영향 받는 것들)
-sudo systemctl stop sh-platform-{portfolio,resume,scraper,auth}
-sudo fuser -k 8080/tcp 8081/tcp 8082/tcp 8083/tcp 2>/dev/null
+sudo systemctl stop sh-platform-{resume,scraper,auth}
+sudo fuser -k 8080/tcp 8081/tcp 8082/tcp 2>/dev/null
 sudo systemctl start sh-platform-auth && sleep 20 && \
-sudo systemctl start sh-platform-scraper sh-platform-resume sh-platform-portfolio
+sudo systemctl start sh-platform-scraper sh-platform-resume
 ```
 
 **포트 충돌 해결**: `ss -tlnp | grep 8080` → `sudo fuser -k 8080/tcp`
@@ -93,7 +90,6 @@ Gradle 빌드 출력 → systemd 실행 경로가 다름:
 | auth | `modules/auth/backend/build/libs/sh-platform-auth-*.jar` | `builds/sh-platform-auth.jar` |
 | scraper | `modules/scraper/backend/build/libs/sh-platform-scraper-*.jar` | `builds/sh-platform-scraper.jar` |
 | resume | `modules/resume/backend/build/libs/sh-platform-resume-*.jar` | `builds/sh-platform-resume.jar` |
-| portfolio | `modules/portfolio/backend/build/libs/sh-platform-portfolio-*.jar` | `builds/sh-platform-portfolio.jar` |
 
 **수동 배포 시**: `cp modules/scraper/backend/build/libs/sh-platform-scraper-*.jar builds/sh-platform-scraper.jar`
 

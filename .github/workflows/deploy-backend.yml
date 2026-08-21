@@ -67,12 +67,10 @@ jobs:
             ./gradlew :modules:auth:backend:clean :modules:auth:backend:build -q
             ./gradlew :modules:scraper:backend:clean :modules:scraper:backend:build -q
             ./gradlew :modules:resume:backend:clean :modules:resume:backend:build -q
-            ./gradlew :modules:portfolio:backend:clean :modules:portfolio:backend:build -q
 
             cp modules/auth/backend/build/libs/sh-platform-auth-*.jar builds/sh-platform-auth.jar
             cp modules/scraper/backend/build/libs/sh-platform-scraper-*.jar builds/sh-platform-scraper.jar
             cp modules/resume/backend/build/libs/sh-platform-resume-*.jar builds/sh-platform-resume.jar
-            cp modules/portfolio/backend/build/libs/sh-platform-portfolio-*.jar builds/sh-platform-portfolio.jar
 
             # Platform Frontend build
             cd platform/frontend
@@ -91,11 +89,11 @@ jobs:
             # DDL 먼저 실행 (scraper가 ddl-auto:validate 이므로 재시작 전 필수)
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-v2.sql
 
-            sudo systemctl stop sh-platform-auth sh-platform-scraper sh-platform-resume sh-platform-portfolio 2>/dev/null || true
+            sudo systemctl stop sh-platform-auth sh-platform-scraper sh-platform-resume 2>/dev/null || true
             sleep 2
 
             sudo systemctl start sh-platform-auth && sleep 10
-            sudo systemctl start sh-platform-scraper sh-platform-resume sh-platform-portfolio
+            sudo systemctl start sh-platform-scraper sh-platform-resume
 
             # Nginx config sync (git managed)
             sudo mkdir -p /var/www/sh-platform

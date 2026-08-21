@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Search, FileText, Briefcase, ArrowRight } from "lucide-react";
+import { Search, FileText, ArrowRight } from "lucide-react";
 
 const modules = [
   {
@@ -17,13 +17,6 @@ const modules = [
     path: "/platform/resume",
     color: "bg-green-500",
   },
-  {
-    name: "포트폴리오",
-    description: "포트폴리오 관리",
-    icon: Briefcase,
-    path: "/platform/portfolio",
-    color: "bg-purple-500",
-  },
 ];
 
 export default function Dashboard() {
@@ -36,7 +29,7 @@ export default function Dashboard() {
         <p className="text-slate-500 mt-1">SH Platform에 오신 것을 환영합니다</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {modules.map((module) => (
           <div
             key={module.name}

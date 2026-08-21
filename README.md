@@ -19,8 +19,7 @@ sh-platform/
 │   ├── auth/frontend/               # React 로그인/회원가입
 │   ├── scraper/backend/             # 채용공고 수집 (port 8081)
 │   ├── scraper/frontend/            # React 스크래퍼 SPA
-│   ├── resume/backend/              # 이력서 서비스 (port 8082)
-│   └── portfolio/backend/           # 포트폴리오 서비스 (port 8083)
+│   ├── resume/backend/              # 이력서 서비스 (port 8082, 포트폴리오 통합)
 ├── platform/frontend/               # 플랫폼 프레임 (대시보드+관리자)
 ├── docs/                            # 프로젝트 문서
 ├── scripts/                         # DB 파티션 등 유틸
@@ -36,8 +35,7 @@ sh-platform/
 | common | - | 공통 라이브러리 (스케줄링, 알림, 파일뷰어) | 완료 |
 | scraper | 8081 | 채용공고 수집 + 통합검색 + 스케줄러 | 완료 |
 | platform | - | 플랫폼 프레임 (대시보드, 관리자) | 완료 |
-| resume | 8082 | 이력서 서비스 | 예정 |
-| portfolio | 8083 | 포트폴리오 서비스 | 예정 |
+| resume | 8082 | 이력서 서비스 (포트폴리오 통합) | 예정 |
 
 ## 서비스 URL
 
@@ -57,7 +55,7 @@ sh-platform/
 
 | VM | IP | 역할 |
 |----|-----|------|
-| WEB | 140.245.95.162 | nginx + Spring Boot (4개 서비스) |
+| WEB | 140.245.95.162 | nginx + Spring Boot (3개 서비스) |
 | DB | 10.0.0.39 | MariaDB 10.11.14 |
 
 - 도메인: sunghoonyk.duckdns.org
@@ -77,7 +75,6 @@ sh-platform/
 sudo systemctl restart sh-platform-auth
 sudo systemctl restart sh-platform-scraper
 sudo systemctl restart sh-platform-resume
-sudo systemctl restart sh-platform-portfolio
 ```
 
 ## 개발 규칙

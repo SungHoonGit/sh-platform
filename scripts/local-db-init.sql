@@ -6,8 +6,6 @@ CREATE DATABASE IF NOT EXISTS scraper_platform
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS resume_platform
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS portfolio_platform
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- 로컬 사용자(sh_local)에 전체 권한
 GRANT ALL PRIVILEGES ON *.* TO 'sh_local'@'%';

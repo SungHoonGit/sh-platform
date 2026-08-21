@@ -1,11 +1,10 @@
 import { Outlet, NavLink } from "react-router-dom";
-import { LayoutDashboard, Search, FileText, Briefcase, Shield, Users, Building2, UserCircle, LogOut } from "lucide-react";
+import { LayoutDashboard, Search, FileText, Shield, Users, Building2, UserCircle, LogOut } from "lucide-react";
 
 const navItems = [
   { to: "/platform", icon: LayoutDashboard, label: "대시보드", end: true },
   { to: "/scraper/", icon: Search, label: "스크래퍼", external: true },
   { to: "/platform/resume", icon: FileText, label: "이력서" },
-  { to: "/platform/portfolio", icon: Briefcase, label: "포트폴리오" },
 ];
 
 const accountItems = [
