@@ -89,6 +89,14 @@ jobs:
             # DDL 먼저 실행 (scraper가 ddl-auto:validate 이므로 재시작 전 필수)
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-v2.sql
 
+            # Infra config sync (infra/services.yml 에서 생성된 파일 — render_config.py 산출물)
+            sudo cp infra/generated/prometheus.yml /etc/prometheus/prometheus.yml
+            sudo cp infra/generated/promtail-config.yaml /etc/promtail/promtail-config.yaml
+            sudo cp infra/generated/systemd/*.service /etc/systemd/system/
+            sudo systemctl daemon-reload
+            sudo systemctl reload prometheus
+            sudo systemctl restart promtail
+
             sudo systemctl stop sh-platform-auth sh-platform-scraper sh-platform-resume 2>/dev/null || true
             sleep 2
 

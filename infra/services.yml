@@ -1,0 +1,80 @@
+# ============================================================================
+# SH Platform 서비스 단일 정의 (Single Source of Truth)
+#
+# 이 파일이 유일하게 손으로 편집하는 인프라 원본입니다.
+# 아래 명령으로 나머지 설정파일들이 자동 생성됩니다:
+#
+#   python scripts/render_config.py
+#
+# 생성 대상 (infra/generated/ 에 출력, git 추적됨):
+#   - prometheus.yml          스크랩 타겟
+#   - promtail-config.yaml    로그 수집 job
+#   - systemd/*.service       서비스 유닛
+#   - nginx 서비스 location 블록 (sh-platform.conf 마커 영역에 주입)
+#
+# 새 모듈 추가 절차: docs/guides/008-260821-infra-ssot-guide.md 참고
+# ============================================================================
+
+app_home: /home/ubuntu/sh-platform
+domain: sunghoonyk.duckdns.org
+
+services:
+  - name: auth
+    port: 8080
+    description: SH Platform Auth Service
+    routing: custom            # nginx 블록 수동 관리 (root 경로 다수: /api/, /oauth2/ 등)
+
+  - name: scraper
+    port: 8081
+    description: SH Platform Scraper Service
+    routing: prefix
+    prefix: /scraper
+    sse: true                  # SSE 프록시 옵션 포함
+
+  - name: resume
+    port: 8082
+    description: SH Platform Resume Service
+    routing: prefix
+    prefix: /resume
+
+# ===== Spring Boot 외 고정 모니터링 타겟 (prometheus.yml) =====
+static_targets:
+  - job: prometheus
+    comment: Prometheus 자체 모니터링
+    targets: [localhost:9090]
+  - job: node-exporter
+    comment: Node Exporter (서버 메트릭)
+    targets: [localhost:9100]
+  - job: mysql
+    comment: MariaDB (mysqld_exporter)
+    targets: [localhost:9104]
+  - job: kakao-bot
+    comment: Kakao Bot (prometheus_client)
+    targets: [localhost:5002]
+
+# ===== 애플리케이션 외 고정 로그 수집 (promtail) =====
+log_jobs:
+  - name: nginx-access
+    job: nginx
+    labels: { type: access }
+    path: /var/log/nginx/access.log
+  - name: nginx-error
+    job: nginx
+    labels: { type: error }
+    path: /var/log/nginx/error.log
+  - name: mariadb-slow
+    job: mariadb
+    labels: { type: slow }
+    path: /var/log/mysql/*-slow.log
+  - name: kakao-bot
+    job: kakao-bot
+    labels: {}
+    path: /home/ubuntu/kakao-bot-oci/logs/*.log
+  - name: syslog
+    job: syslog
+    labels: {}
+    path: /var/log/syslog
+  - name: auth-log
+    job: auth
+    labels: {}
+    path: /var/log/auth.log

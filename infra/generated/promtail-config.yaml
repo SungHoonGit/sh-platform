@@ -1,0 +1,91 @@
+# 이 파일은 자동 생성됩니다 — 수동 수정 금지
+# 원본: infra/services.yml  /  생성기: scripts/render_config.py
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://localhost:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: spring-boot-auth
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: spring-boot
+          service: auth-platform
+          __path__: /home/ubuntu/sh-platform/logs/auth-platform/*.log
+
+  - job_name: spring-boot-scraper
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: spring-boot
+          service: scraper-platform
+          __path__: /home/ubuntu/sh-platform/logs/scraper-platform/*.log
+
+  - job_name: spring-boot-resume
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: spring-boot
+          service: resume-platform
+          __path__: /home/ubuntu/sh-platform/logs/resume-platform/*.log
+
+  - job_name: nginx-access
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          type: access
+          __path__: /var/log/nginx/access.log
+
+  - job_name: nginx-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          type: error
+          __path__: /var/log/nginx/error.log
+
+  - job_name: mariadb-slow
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: mariadb
+          type: slow
+          __path__: /var/log/mysql/*-slow.log
+
+  - job_name: kakao-bot
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: kakao-bot
+          __path__: /home/ubuntu/kakao-bot-oci/logs/*.log
+
+  - job_name: syslog
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: syslog
+          __path__: /var/log/syslog
+
+  - job_name: auth-log
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: auth
+          __path__: /var/log/auth.log

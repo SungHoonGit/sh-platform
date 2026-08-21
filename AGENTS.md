@@ -93,6 +93,9 @@ Gradle 빌드 출력 → systemd 실행 경로가 다름:
 
 **수동 배포 시**: `cp modules/scraper/backend/build/libs/sh-platform-scraper-*.jar builds/sh-platform-scraper.jar`
 
+**인프라 설정 단일 소스 (SSOT)**: 서비스명/포트는 `infra/services.yml`이 원본. 수정 후 반드시
+`python scripts/render_config.py` 실행 (prometheus/promtail/systemd/nginx 생성물 갱신, 가이드: docs/guides/008-260821-infra-ssot-guide.md).
+
 **`ddl-site-search-mapping.sql`** 실행 필요: `mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-site-search-mapping.sql`
 
 DB명은 `scraper_platform` (sh_platform 아님).
