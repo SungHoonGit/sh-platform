@@ -18,9 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
-import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -40,6 +38,7 @@ public class SecurityConfig {
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
     private final RateLimiter rateLimiter;
+    private final CookieAuthorizationRequestRepository authorizationRequestRepository;
 
     @Value("${oauth2.callback-base:http://localhost:8080}")
     private String callbackBase;
@@ -68,12 +67,14 @@ public class SecurityConfig {
                           CustomOAuth2UserService customOAuth2UserService,
                           OAuth2SuccessHandler oAuth2SuccessHandler,
                           OAuth2FailureHandler oAuth2FailureHandler,
-                          RateLimiter rateLimiter) {
+                          RateLimiter rateLimiter,
+                          CookieAuthorizationRequestRepository authorizationRequestRepository) {
         this.tokenProvider = tokenProvider;
         this.customOAuth2UserService = customOAuth2UserService;
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
         this.oAuth2FailureHandler = oAuth2FailureHandler;
         this.rateLimiter = rateLimiter;
+        this.authorizationRequestRepository = authorizationRequestRepository;
     }
 
     @Bean
@@ -167,11 +168,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CookieAuthorizationRequestRepository authorizationRequestRepository() {
-        return new CookieAuthorizationRequestRepository();
-    }
-
-    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         var auth = http
             .csrf(csrf -> csrf.disable())
@@ -203,7 +199,7 @@ public class SecurityConfig {
 
         if (!providers.isEmpty()) {
             auth.oauth2Login(oauth -> oauth
-                .authorizationEndpoint(ep -> ep.authorizationRequestRepository(authorizationRequestRepository()))
+                .authorizationEndpoint(ep -> ep.authorizationRequestRepository(authorizationRequestRepository))
                 .successHandler(oAuth2SuccessHandler)
                 .failureHandler(oAuth2FailureHandler)
                 .userInfoEndpoint(info -> info.userService(customOAuth2UserService))

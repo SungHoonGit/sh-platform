@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.client.jackson2.OAuth2ClientJackson2Module;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
@@ -21,6 +22,7 @@ import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
  * Spring Security 6.4부터 기본 제공되던 CookieOAuth2AuthorizationRequestRepository가
  * 제거되어 직접 구현한다.
  */
+@Component
 public class CookieAuthorizationRequestRepository
         implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
 
