@@ -1,4 +1,4 @@
-package com.resume.platform;
+package com.shplatform.resume;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -8,16 +8,16 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication
 @ComponentScan(basePackages = {
-    "com.resume.platform",
+    "com.shplatform.resume",
     "com.shplatform.common"
 })
 @EntityScan(basePackages = {
-    "com.resume.platform.model",
+    "com.shplatform.resume",
     "com.shplatform.common.scheduling",
     "com.shplatform.common.notification"
 })
 @EnableJpaRepositories(basePackages = {
-    "com.resume.platform.repository",
+    "com.shplatform.resume",
     "com.shplatform.common.scheduling",
     "com.shplatform.common.notification"
 })

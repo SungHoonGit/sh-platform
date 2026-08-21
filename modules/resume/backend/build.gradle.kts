@@ -10,7 +10,7 @@ tasks.jar {
     enabled = false
 }
 
-group = "com.resume"
+group = "com.shplatform"
 
 dependencies {
     implementation(project(":common"))

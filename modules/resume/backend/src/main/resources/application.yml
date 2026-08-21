@@ -59,4 +59,4 @@ logging:
     path: ${LOG_PATH:logs}
   level:
     root: INFO
-    com.resume.platform: INFO
+    com.shplatform.resume: INFO

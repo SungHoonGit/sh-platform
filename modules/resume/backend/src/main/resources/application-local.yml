@@ -10,4 +10,4 @@ spring:
 
 logging:
   level:
-    com.resume.platform: DEBUG
+    com.shplatform.resume: DEBUG
