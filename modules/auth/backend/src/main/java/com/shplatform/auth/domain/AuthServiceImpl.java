@@ -56,6 +56,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void sendVerificationEmail(String email, String purpose) {
+        if ("SIGNUP".equals(purpose) && userRepository.existsByEmail(email)) {
+            log.warn("[AUTH] verification email rejected (duplicate email): email={}", email);
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+        }
         var code = String.format("%06d", (int) (Math.random() * 1000000));
         var entity = new VerificationCodeEntity();
         entity.setEmail(email);

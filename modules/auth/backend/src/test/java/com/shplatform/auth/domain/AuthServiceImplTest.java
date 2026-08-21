@@ -150,6 +150,18 @@ class AuthServiceImplTest {
     }
 
     @Test
+    void sendVerificationEmail_shouldThrow_whenDuplicateEmailForSignup() {
+        when(userRepository.existsByEmail(anyString())).thenReturn(true);
+
+        var ex = assertThrows(BusinessException.class,
+                () -> authService.sendVerificationEmail("test@example.com", "SIGNUP"));
+
+        assertEquals(ErrorCode.DUPLICATE_EMAIL, ex.getErrorCode());
+        verify(verificationCodeRepository, never()).save(any());
+        verify(emailService, never()).sendVerificationCode(anyString(), anyString());
+    }
+
+    @Test
     void verifyCode_shouldSucceed_whenCodeMatch() {
         var record = new VerificationCodeEntity();
         record.setEmail("test@example.com");
