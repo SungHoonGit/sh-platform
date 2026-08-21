@@ -33,7 +33,7 @@ export function useAuth(): AuthState {
   const logout = useCallback(() => {
     logoutApi();
     setUser(null);
-    window.location.href = "/";
+    window.location.href = "/?redirect=" + encodeURIComponent("/scraper/");
   }, []);
 
   return {
