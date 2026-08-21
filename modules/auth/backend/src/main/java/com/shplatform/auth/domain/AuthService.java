@@ -3,6 +3,16 @@ package com.shplatform.auth.domain;
 import com.shplatform.auth.api.dto.*;
 
 public interface AuthService {
+
+    /**
+     * (명령형) 회원가입을 처리한다. 검증 완료된 SIGNUP 인증 코드가 있어야 하며,
+     * 계정은 이메일 인증 완료 상태로 생성된다.
+     *
+     * @param request 이름, 이메일, 비밀번호
+     * @return 생성된 사용자 정보
+     * @throws BusinessException DUPLICATE_EMAIL - 이미 가입된 이메일인 경우
+     * @throws BusinessException EMAIL_NOT_VERIFIED - 인증 완료된 코드가 없는 경우
+     */
     User signup(SignupRequest request);
 
     /**

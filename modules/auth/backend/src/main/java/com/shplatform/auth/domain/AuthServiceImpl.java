@@ -46,7 +46,13 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(request.email())) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
-        var domain = User.createLocal(request.email(), request.name());
+        // 회원가입 플로우는 이메일 인증(verify-code) 선행이 전제이므로,
+        // 검증 완료된 SIGNUP 코드가 있는 경우에만 인증 완료 상태로 계정을 생성한다.
+        verificationCodeRepository
+                .findTopByEmailAndPurposeOrderByCreatedAtDesc(request.email(), "SIGNUP")
+                .filter(VerificationCodeEntity::isVerified)
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED));
+        var domain = User.createLocal(request.email(), request.name()).verifyEmail();
         var entity = userMapper.toEntity(domain, passwordEncoder.encode(request.password()));
         var saved = userRepository.save(entity);
         log.info("[AUTH] signup success: email={}, userId={}", request.email(), saved.getId());

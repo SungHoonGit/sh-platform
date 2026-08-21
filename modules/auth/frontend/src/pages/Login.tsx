@@ -36,7 +36,8 @@ export default function Login() {
         localStorage.setItem("refreshToken", data.data?.refreshToken);
         window.location.href = redirect;
       } else {
-        alert("로그인 실패");
+        const data = await res.json().catch(() => null);
+        alert(data?.message || "로그인 실패");
       }
     } catch {
       alert("로그인 중 오류가 발생했습니다");

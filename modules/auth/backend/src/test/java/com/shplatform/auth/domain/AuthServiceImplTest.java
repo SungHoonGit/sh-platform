@@ -13,6 +13,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -51,8 +52,16 @@ class AuthServiceImplTest {
     // ──────────────────────────────────────────────
 
     @Test
-    void signup_shouldCreateUser_whenEmailNotDuplicate() {
+    void signup_shouldCreateVerifiedUser_whenVerificationCodeIsVerified() {
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        var codeRecord = new VerificationCodeEntity();
+        codeRecord.setEmail("test@example.com");
+        codeRecord.setCode("123456");
+        codeRecord.setPurpose("SIGNUP");
+        codeRecord.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        codeRecord.setVerified(true);
+        when(verificationCodeRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(
+                anyString(), anyString())).thenReturn(Optional.of(codeRecord));
         var saved = new UserEntity();
         saved.setId(1L);
         saved.setEmail("test@example.com");
@@ -65,7 +74,21 @@ class AuthServiceImplTest {
         assertEquals("test@example.com", result.email());
         assertEquals("테스터", result.name());
         assertEquals("LOCAL", result.provider());
-        verify(userRepository).save(any());
+        var captor = ArgumentCaptor.forClass(UserEntity.class);
+        verify(userRepository).save(captor.capture());
+        assertTrue(captor.getValue().isEmailVerified());
+    }
+
+    @Test
+    void signup_shouldThrow_whenEmailNotVerified() {
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(verificationCodeRepository.findTopByEmailAndPurposeOrderByCreatedAtDesc(
+                anyString(), anyString())).thenReturn(Optional.empty());
+
+        var request = new SignupRequest("test@example.com", "Password1!", "테스터");
+        var ex = assertThrows(BusinessException.class, () -> authService.signup(request));
+        assertEquals(ErrorCode.EMAIL_NOT_VERIFIED, ex.getErrorCode());
+        verify(userRepository, never()).save(any());
     }
 
     @Test
