@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { apiGet, logout } from "../api/client";
+import { apiGet, apiPut, logout } from "../api/client";
 import type { ResumeView } from "../types/resume";
 import type { ResumeDocument } from "../types/document";
 import CrudSection, { type FieldDef } from "../components/CrudSection";
 import ProfileEditor from "../components/ProfileEditor";
+import { TEMPLATE_LABELS, TEMPLATE_OPTIONS } from "../components/templates/shared";
 
 interface SectionConfig {
   title: string;
@@ -127,6 +128,7 @@ const SECTIONS: SectionConfig[] = [
 export default function EditPage({ documentId }: { documentId?: number }) {
   const [view, setView] = useState<ResumeView | null>(null);
   const [documents, setDocuments] = useState<ResumeDocument[]>([]);
+  const [templateCode, setTemplateCode] = useState("CLASSIC");
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -134,13 +136,27 @@ export default function EditPage({ documentId }: { documentId?: number }) {
       .then(setView)
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
     apiGet<ResumeDocument[]>("/documents")
-      .then(setDocuments)
+      .then((docs) => {
+        setDocuments(docs);
+        const doc = docs.find((d) => d.id === documentId);
+        if (doc) setTemplateCode(doc.templateCode || "CLASSIC");
+      })
       .catch(() => undefined);
-  }, []);
+  }, [documentId]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const changeTemplate = async (code: string) => {
+    if (!documentId) return;
+    setTemplateCode(code);
+    try {
+      await apiPut(`/documents/${documentId}`, { templateCode: code });
+    } catch {
+      setError("테마 변경에 실패했습니다.");
+    }
+  };
 
   if (error === "UNAUTHORIZED") {
     return (
@@ -186,6 +202,19 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                 {documents.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.title}
+                  </option>
+                ))}
+              </select>
+            )}
+            {documentId && (
+              <select
+                value={TEMPLATE_LABELS[templateCode] ? templateCode : "CLASSIC"}
+                onChange={(e) => void changeTemplate(e.target.value)}
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm text-slate-600 focus:outline-none focus:border-gray-500"
+              >
+                {TEMPLATE_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    테마: {TEMPLATE_LABELS[t]}
                   </option>
                 ))}
               </select>

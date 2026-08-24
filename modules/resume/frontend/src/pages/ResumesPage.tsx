@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiDelete, apiGet, apiPost, apiPut } from "../api/client";
 import type { ResumeDocument } from "../types/document";
+import { TEMPLATE_LABELS, TEMPLATE_OPTIONS } from "../components/templates/shared";
 
 export default function ResumesPage() {
   const [documents, setDocuments] = useState<ResumeDocument[] | null>(null);
@@ -59,6 +60,15 @@ export default function ResumesPage() {
       load();
     } catch {
       setError("대표 지정에 실패했습니다.");
+    }
+  };
+
+  const changeTemplate = async (id: number, templateCode: string) => {
+    try {
+      await apiPut(`/documents/${id}`, { templateCode });
+      load();
+    } catch {
+      setError("테마 변경에 실패했습니다.");
     }
   };
 
@@ -160,7 +170,17 @@ export default function ResumesPage() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400 mb-3">{d.templateCode}</p>
+            <select
+              value={TEMPLATE_LABELS[d.templateCode] ? d.templateCode : "CLASSIC"}
+              onChange={(e) => changeTemplate(d.id, e.target.value)}
+              className="mb-3 w-full border border-gray-200 rounded px-1.5 py-1 text-xs text-slate-600 focus:outline-none focus:border-gray-400"
+            >
+              {TEMPLATE_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  테마: {TEMPLATE_LABELS[t]}
+                </option>
+              ))}
+            </select>
             <div className="mt-auto flex flex-wrap gap-1.5">
               <a
                 href={`#/r/${d.id}`}
