@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { logout } from "../api/client";
 
 interface JobPostingSummary {
@@ -20,9 +20,15 @@ interface RecentPostings {
   size: number;
 }
 
-interface ScrapItem {
+interface RawScrapItem extends JobPostingSummary {
+  scrappedAt: string;
   postingId: number;
 }
+
+type GridRow = Pick<
+  JobPostingSummary,
+  "id" | "siteName" | "company" | "position" | "career" | "tech" | "location" | "deadline" | "url"
+> & { savedAt?: string };
 
 const SITES = [
   { id: "", name: "전체" },
@@ -33,6 +39,14 @@ const SITES = [
 const SITE_BADGES: Record<string, string> = {
   saramin: "bg-blue-100 text-blue-700",
   jobkorea: "bg-green-100 text-green-700",
+};
+
+type SortKey = "recent" | "company" | "deadline";
+
+const SORT_OPTIONS: Record<SortKey, string> = {
+  recent: "최근 수집순",
+  company: "회사명순",
+  deadline: "마감 임박순",
 };
 
 async function fetchScraper<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -49,16 +63,47 @@ async function fetchScraper<T>(path: string, options: RequestInit = {}): Promise
   return res.json();
 }
 
+/** 마감일 문자열에서 가까운 날짜를 추정한다 (정렬용, 파싱 실패는 맨 뒤). */
+function deadlineRank(deadline: string | null): number {
+  if (!deadline) return Number.MAX_SAFE_INTEGER;
+  if (/오늘|금일|즉시/.test(deadline)) return -1;
+  if (/상시|채용시까지|채울\s*때까지|마감\s*없음/.test(deadline)) return Number.MAX_SAFE_INTEGER - 1;
+  const m = deadline.match(/(\d{2,4})[.\-/]\s*(\d{1,2})[.\-/]\s*(\d{1,2})/);
+  if (!m) {
+    const md = deadline.match(/(\d{1,2})\/(\d{1,2})/);
+    if (md) {
+      const year = new Date().getFullYear();
+      const t = new Date(year, Number(md[1]) - 1, Number(md[2])).getTime();
+      return Number.isNaN(t) ? Number.MAX_SAFE_INTEGER : t;
+    }
+    return Number.MAX_SAFE_INTEGER;
+  }
+  const y = m[1].length === 2 ? 2000 + Number(m[1]) : Number(m[1]);
+  const t = new Date(y, Number(m[2]) - 1, Number(m[3])).getTime();
+  return Number.isNaN(t) ? Number.MAX_SAFE_INTEGER : t;
+}
+
 export default function PostingsBrowsePage() {
+  const [view, setView] = useState<"all" | "scraps">("all");
   const [data, setData] = useState<RecentPostings | null>(null);
+  const [scraps, setScraps] = useState<RawScrapItem[]>([]);
   const [keyword, setKeyword] = useState("");
   const [site, setSite] = useState("");
   const [page, setPage] = useState(0);
+  const [sortKey, setSortKey] = useState<SortKey>("recent");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scrappedIds, setScrappedIds] = useState<Set<number>>(new Set());
 
   const SIZE = 20;
+
+  const loadScraps = useCallback(() =>
+    fetchScraper<{ scraps: RawScrapItem[] }>("/job-scrap")
+      .then((json) => {
+        setScraps(json.scraps);
+        setScrappedIds(new Set(json.scraps.map((s) => s.postingId)));
+      })
+      .catch(() => undefined), []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -80,10 +125,8 @@ export default function PostingsBrowsePage() {
   }, [load]);
 
   useEffect(() => {
-    fetchScraper<{ scraps: ScrapItem[] }>("/job-scrap")
-      .then((json) => setScrappedIds(new Set(json.scraps.map((s) => s.postingId))))
-      .catch(() => undefined);
-  }, []);
+    void loadScraps();
+  }, [loadScraps]);
 
   const toggleScrap = async (postingId: number) => {
     try {
@@ -92,18 +135,30 @@ export default function PostingsBrowsePage() {
       } else {
         await fetchScraper(`/job-scrap/${postingId}`, { method: "POST" });
       }
-      setScrappedIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(postingId)) next.delete(postingId);
-        else next.add(postingId);
-        return next;
-      });
+      await loadScraps();
+      if (view === "all") load();
     } catch {
       /* 무시 */
     }
   };
 
-  const applyNow = (p: JobPostingSummary) => {
+  const rows: GridRow[] = useMemo(() => {
+    if (view === "scraps") {
+      const list = scraps.map((s) => ({ ...s, savedAt: s.scrappedAt }));
+      if (sortKey === "company") {
+        return list.sort((a, b) => (a.company ?? "").localeCompare(b.company ?? "", "ko"));
+      }
+      if (sortKey === "deadline") {
+        return list.sort(
+          (a, b) => deadlineRank(a.deadline) - deadlineRank(b.deadline)
+        );
+      }
+      return list.sort((a, b) => (a.savedAt! < b.savedAt! ? 1 : -1));
+    }
+    return data?.items ?? [];
+  }, [view, scraps, data, sortKey]);
+
+  const applyNow = (p: GridRow) => {
     sessionStorage.setItem(
       "applicationPrefill",
       JSON.stringify({
@@ -122,51 +177,80 @@ export default function PostingsBrowsePage() {
     <div className="max-w-5xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
         <h1 className="text-lg font-bold text-slate-800">공고 탐색</h1>
-        <div className="flex items-center gap-2">
-          <input
-            value={keyword}
-            onChange={(e) => {
-              setKeyword(e.target.value);
-              setPage(0);
-            }}
-            onKeyDown={(e) => e.key === "Enter" && load()}
-            placeholder="회사명 / 직무 검색"
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-56 focus:outline-none focus:border-gray-500"
-          />
-          <button
-            onClick={load}
-            className="bg-slate-900 text-white rounded-lg px-3 py-1.5 text-sm font-semibold hover:bg-slate-800"
-          >
-            검색
-          </button>
-        </div>
+        {view === "all" && (
+          <div className="flex items-center gap-2">
+            <input
+              value={keyword}
+              onChange={(e) => {
+                setKeyword(e.target.value);
+                setPage(0);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && load()}
+              placeholder="회사명 / 직무 검색"
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-56 focus:outline-none focus:border-gray-500"
+            />
+            <button
+              onClick={load}
+              className="bg-slate-900 text-white rounded-lg px-3 py-1.5 text-sm font-semibold hover:bg-slate-800"
+            >
+              검색
+            </button>
+          </div>
+        )}
       </div>
 
       <p className="text-xs text-slate-400 mb-3">
-        스크래퍼가 수집한 공고를 한 곳에서 볼 수 있습니다. ★로 저장하고 [지원 등록]으로 바로 기록하세요.
+        스크래퍼가 수집한 공고와 내가 저장한 공고를 한 곳에서 관리합니다. ★로 저장하고 [지원 등록]으로 바로 기록하세요.
       </p>
 
-      <div className="flex gap-1.5 mb-4">
-        {SITES.map((s) => (
+      <div className="flex gap-2 mb-3 flex-wrap items-center">
+        <div className="flex rounded-lg border border-gray-300 overflow-hidden">
           <button
-            key={s.id}
-            onClick={() => {
-              setSite(s.id);
-              setPage(0);
-            }}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              site === s.id
-                ? "bg-slate-900 text-white"
-                : "bg-white border border-slate-200 text-slate-600 hover:border-slate-400"
-            }`}
+            onClick={() => setView("all")}
+            className={`px-3 py-1.5 text-xs font-medium ${view === "all" ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-gray-50"}`}
           >
-            {s.name}
+            전체 공고
           </button>
-        ))}
-        {data && (
-          <span className="ml-auto text-xs text-slate-400 self-center">
-            총 {data.total.toLocaleString()}건
-          </span>
+          <button
+            onClick={() => setView("scraps")}
+            className={`px-3 py-1.5 text-xs font-medium ${view === "scraps" ? "bg-amber-500 text-white" : "bg-white text-slate-600 hover:bg-gray-50"}`}
+          >
+            ★ 내 스크랩 ({scraps.length})
+          </button>
+        </div>
+
+        {view === "all" &&
+          SITES.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => {
+                setSite(s.id);
+                setPage(0);
+              }}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                site === s.id
+                  ? "bg-slate-900 text-white"
+                  : "bg-white border border-slate-200 text-slate-600 hover:border-slate-400"
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+
+        <select
+          value={sortKey}
+          onChange={(e) => setSortKey(e.target.value as SortKey)}
+          className="border border-gray-300 rounded px-2 py-1.5 text-xs text-slate-600 focus:outline-none focus:border-gray-500 ml-auto"
+        >
+          {(Object.keys(SORT_OPTIONS) as SortKey[]).map((k) => (
+            <option key={k} value={k}>
+              {view === "scraps" && k === "recent" ? "저장 최신순" : SORT_OPTIONS[k]}
+            </option>
+          ))}
+        </select>
+
+        {view === "all" && data && (
+          <span className="text-xs text-slate-400">총 {data.total.toLocaleString()}건</span>
         )}
       </div>
 
@@ -174,17 +258,31 @@ export default function PostingsBrowsePage() {
 
       {loading ? (
         <div className="text-center py-16 text-slate-400 text-sm">불러오는 중...</div>
-      ) : !data || data.items.length === 0 ? (
+      ) : rows.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
-          <p className="text-slate-500">조건에 맞는 공고가 없습니다.</p>
-          <a
-            href="/scraper/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-block text-sm text-blue-600 hover:underline"
-          >
-            스크래퍼에서 공고 수집하러 가기 →
-          </a>
+          {view === "scraps" ? (
+            <>
+              <p className="text-slate-500">스크랩한 공고가 없습니다.</p>
+              <button
+                onClick={() => setView("all")}
+                className="mt-2 text-sm text-blue-600 hover:underline"
+              >
+                전체 공고에서 ☆ 저장해 보세요 →
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-slate-500">조건에 맞는 공고가 없습니다.</p>
+              <a
+                href="/scraper/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-sm text-blue-600 hover:underline"
+              >
+                스크래퍼에서 공고 수집하러 가기 →
+              </a>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -197,12 +295,14 @@ export default function PostingsBrowsePage() {
                   <th className="px-3 py-2 font-semibold text-slate-600">직무 / 회사</th>
                   <th className="px-2 py-2 font-semibold text-slate-600 w-[70px]">경력</th>
                   <th className="px-2 py-2 font-semibold text-slate-600 w-[80px]">지역</th>
-                  <th className="px-2 py-2 font-semibold text-slate-600 w-[90px]">마감</th>
+                  <th className="px-2 py-2 font-semibold text-slate-600 w-[90px]">
+                    {view === "scraps" ? "저장일" : "마감"}
+                  </th>
                   <th className="px-2 py-2 w-[86px]"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {data.items.map((p) => (
+                {rows.map((p) => (
                   <tr
                     key={p.id}
                     onClick={() => p.url && window.open(p.url, "_blank")}
@@ -236,7 +336,13 @@ export default function PostingsBrowsePage() {
                     </td>
                     <td className="px-2 py-2 text-slate-600 text-xs">{p.career || "-"}</td>
                     <td className="px-2 py-2 text-slate-600 text-xs">{p.location || "-"}</td>
-                    <td className="px-2 py-2 text-slate-500 text-xs whitespace-nowrap">{p.deadline || "-"}</td>
+                    <td className="px-2 py-2 text-slate-500 text-xs whitespace-nowrap">
+                      {view === "scraps"
+                        ? p.savedAt
+                          ? new Date(p.savedAt).toLocaleDateString("ko-KR")
+                          : "-"
+                        : p.deadline || "-"}
+                    </td>
                     <td className="px-2 py-2 text-right">
                       <button
                         onClick={(e) => {
@@ -254,7 +360,7 @@ export default function PostingsBrowsePage() {
             </table>
           </div>
 
-          {totalPages > 1 && (
+          {view === "all" && totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-4">
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
