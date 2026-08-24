@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiGet, logout } from "../api/client";
 import type { ResumeView } from "../types/resume";
+import type { ResumeDocument } from "../types/document";
 import CrudSection, { type FieldDef } from "../components/CrudSection";
 import ProfileEditor from "../components/ProfileEditor";
 
@@ -122,14 +123,18 @@ const SECTIONS: SectionConfig[] = [
   },
 ];
 
-export default function EditPage() {
+export default function EditPage({ documentId }: { documentId?: number }) {
   const [view, setView] = useState<ResumeView | null>(null);
+  const [documents, setDocuments] = useState<ResumeDocument[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     apiGet<ResumeView>("/view")
       .then(setView)
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    apiGet<ResumeDocument[]>("/documents")
+      .then(setDocuments)
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -162,10 +167,32 @@ export default function EditPage() {
     <div className="min-h-screen bg-gray-100 py-6">
       <div className="max-w-3xl mx-auto px-4">
         <div className="flex justify-between items-center mb-5">
-          <h1 className="text-xl font-bold text-slate-800">이력서 편집</h1>
+          <div className="flex items-center gap-3">
+            <a
+              href="#/resumes"
+              className="px-2.5 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+              ← 목록
+            </a>
+            {documents.length > 0 && (
+              <select
+                value={documentId ?? documents[0]?.id}
+                onChange={(e) => {
+                  window.location.hash = `#/r/${e.target.value}/edit`;
+                }}
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-gray-500"
+              >
+                {documents.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.title}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
           <div className="flex gap-2">
             <a
-              href="#"
+              href={documentId ? `#/r/${documentId}` : "#/resumes"}
               className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
             >
               미리보기

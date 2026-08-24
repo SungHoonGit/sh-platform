@@ -46,11 +46,21 @@ export default function CrudSection({
 
   const visible = (f: FieldDef) => !f.showIf || form[f.showIf.key] === f.showIf.equals;
 
+  const scrollToForm = () =>
+    setTimeout(
+      () =>
+        document
+          .getElementById(`crud-form-${title}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+      60,
+    );
+
   const openNew = () => {
     setForm(Object.fromEntries(fields.map((f) => [f.key, ""])));
     setFileNames({});
     setEditing("new");
     setError(null);
+    scrollToForm();
   };
 
   const openEdit = (it: Item) => {
@@ -68,6 +78,7 @@ export default function CrudSection({
     );
     setEditing(String(it.id));
     setError(null);
+    scrollToForm();
   };
 
   const save = async () => {
@@ -191,7 +202,7 @@ export default function CrudSection({
       )}
 
       {showForm && (
-        <div className="mt-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
+        <div id={`crud-form-${title}`} className="mt-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {fields.filter(visible).map((f) => (
               <div

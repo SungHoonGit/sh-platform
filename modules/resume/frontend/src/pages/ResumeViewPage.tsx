@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiDownload, apiGet, fileDownloadPath } from "../api/client";
 import type { ResumeView } from "../types/resume";
+import type { SectionItem } from "../types/document";
 
 function period(start: string, end: string | null): string {
   const e = end ?? "현재";
@@ -45,8 +46,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export default function ResumeViewPage() {
+export default function ResumeViewPage({ documentId }: { documentId?: number }) {
   const [view, setView] = useState<ResumeView | null>(null);
+  const [sectionOrder, setSectionOrder] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,7 +57,22 @@ export default function ResumeViewPage() {
       .then(setView)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+    if (documentId) {
+      apiGet<{ id: number; sectionConfig: string }[]>("/documents")
+        .then((docs) => {
+          const doc = docs.find((d) => d.id === documentId);
+          if (!doc) return;
+          const config: SectionItem[] = JSON.parse(doc.sectionConfig);
+          setSectionOrder(
+            config
+              .filter((s) => s.included)
+              .sort((a, b) => a.order - b.order)
+              .map((s) => s.key),
+          );
+        })
+        .catch(() => undefined);
+    }
+  }, [documentId]);
 
   if (loading) {
     return <div className="p-10 text-center text-gray-500">불러오는 중...</div>;
@@ -88,7 +105,13 @@ export default function ResumeViewPage() {
       <div className="max-w-3xl mx-auto bg-white shadow-sm px-10 py-8 print:shadow-none print:px-0">
         <div className="flex justify-end gap-2 mb-4 print:hidden">
           <a
-            href="#edit"
+            href="#/resumes"
+            className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+          >
+            목록
+          </a>
+          <a
+            href={documentId ? `#/r/${documentId}/edit` : "#/resumes"}
             className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
           >
             편집
@@ -118,133 +141,168 @@ export default function ResumeViewPage() {
           </div>
         </header>
 
-        {view.careers.length > 0 && (
-          <Section title="경력">
-            {view.careers.map((c) => (
-              <article key={c.id} className="mb-5 last:mb-0">
-                <div className="flex justify-between items-baseline">
-                  <h3 className="font-bold">{c.company}</h3>
-                  <span className="text-sm text-gray-500">{period(c.startDate, c.endDate)}</span>
-                </div>
-                <p className="text-sm text-gray-600">{c.title}</p>
-                {c.description && <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{c.description}</p>}
-              </article>
-            ))}
-          </Section>
-        )}
-
-        {view.projects.length > 0 && (
-          <Section title="프로젝트">
-            {view.projects.map((pr) => (
-              <article key={pr.id} className="mb-5 last:mb-0">
-                <div className="flex justify-between items-baseline">
-                  <h3 className="font-bold">{pr.name}</h3>
-                  <span className="text-sm text-gray-500">{period(pr.startDate, pr.endDate)}</span>
-                </div>
-                {pr.role && <p className="text-sm text-gray-600">{pr.role}</p>}
-                {pr.techStack && (
-                  <p className="mt-1 flex flex-wrap gap-1">
-                    {pr.techStack.split(",").map((t) => (
-                      <span key={t.trim()} className="px-2 py-0.5 bg-gray-100 rounded text-xs">{t.trim()}</span>
+        {(() => {
+          const nodes: Record<string, React.ReactNode> = {
+            careers:
+              view.careers.length > 0 ? (
+                <Section title="경력">
+                  {view.careers.map((c) => (
+                    <article key={c.id} className="mb-5 last:mb-0">
+                      <div className="flex justify-between items-baseline">
+                        <h3 className="font-bold">{c.company}</h3>
+                        <span className="text-sm text-gray-500">{period(c.startDate, c.endDate)}</span>
+                      </div>
+                      <p className="text-sm text-gray-600">{c.title}</p>
+                      {c.description && (
+                        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{c.description}</p>
+                      )}
+                    </article>
+                  ))}
+                </Section>
+              ) : null,
+            projects:
+              view.projects.length > 0 ? (
+                <Section title="프로젝트">
+                  {view.projects.map((pr) => (
+                    <article key={pr.id} className="mb-5 last:mb-0">
+                      <div className="flex justify-between items-baseline">
+                        <h3 className="font-bold">{pr.name}</h3>
+                        <span className="text-sm text-gray-500">{period(pr.startDate, pr.endDate)}</span>
+                      </div>
+                      {pr.role && <p className="text-sm text-gray-600">{pr.role}</p>}
+                      {pr.techStack && (
+                        <p className="mt-1 flex flex-wrap gap-1">
+                          {pr.techStack.split(",").map((t) => (
+                            <span key={t.trim()} className="px-2 py-0.5 bg-gray-100 rounded text-xs">
+                              {t.trim()}
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                      {pr.description && (
+                        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{pr.description}</p>
+                      )}
+                      {pr.linkUrl && (
+                        <a href={pr.linkUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
+                          {pr.linkUrl}
+                        </a>
+                      )}
+                    </article>
+                  ))}
+                </Section>
+              ) : null,
+            educations:
+              view.educations.length > 0 ? (
+                <Section title="학력">
+                  {view.educations.map((ed) => (
+                    <article key={ed.id} className="mb-3 last:mb-0 flex justify-between items-baseline">
+                      <div>
+                        <span className="font-semibold">{ed.school}</span>
+                        {ed.major && (
+                          <span className="text-gray-600">
+                            {" "}
+                            · {ed.major}
+                            {ed.degree ? ` (${ed.degree})` : ""}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-500 shrink-0 ml-4">
+                        {period(ed.startDate, ed.endDate)}
+                        {ed.status ? ` · ${ed.status}` : ""}
+                      </span>
+                    </article>
+                  ))}
+                </Section>
+              ) : null,
+            skills:
+              view.skills.length > 0 ? (
+                <Section title="스킬">
+                  <div className="flex flex-wrap gap-2">
+                    {view.skills.map((s) => (
+                      <span key={s.id} className="px-2.5 py-1 bg-gray-100 rounded-full text-sm">
+                        {s.name}
+                        {s.level ? ` · ${s.level}` : ""}
+                      </span>
                     ))}
-                  </p>
-                )}
-                {pr.description && <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{pr.description}</p>}
-                {pr.linkUrl && (
-                  <a href={pr.linkUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
-                    {pr.linkUrl}
-                  </a>
-                )}
-              </article>
-            ))}
-          </Section>
-        )}
+                  </div>
+                </Section>
+              ) : null,
+            certificates:
+              view.certificates.length > 0 ? (
+                <Section title="자격증">
+                  <ul className="space-y-1.5">
+                    {view.certificates.map((c) => (
+                      <li key={c.id} className="flex justify-between items-baseline">
+                        <span>
+                          <span className="font-semibold">{c.name}</span>
+                          {c.issuer && <span className="text-gray-500 text-sm"> ({c.issuer})</span>}
+                        </span>
+                        <span className="text-sm text-gray-500 shrink-0 ml-4">{c.acquiredAt}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+              ) : null,
+            introductions:
+              view.introductions.length > 0 ? (
+                <Section title="자기소개">
+                  {view.introductions.map((it) => (
+                    <article key={it.id} className="mb-4 last:mb-0">
+                      <h3 className="font-semibold mb-1">{it.title}</h3>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">{it.content}</p>
+                    </article>
+                  ))}
+                </Section>
+              ) : null,
+            portfolioItems:
+              view.portfolioItems.length > 0 ? (
+                <Section title="포트폴리오">
+                  <ul className="space-y-2">
+                    {view.portfolioItems.map((pi) => (
+                      <li key={pi.id}>
+                        {pi.itemType === "FILE" && pi.filePath ? (
+                          <button
+                            onClick={() =>
+                              void apiDownload(fileDownloadPath(pi.filePath!), `${pi.title}`).catch(() =>
+                                alert("다운로드에 실패했습니다."),
+                              )
+                            }
+                            className="font-semibold text-blue-600 underline"
+                          >
+                            {pi.title}
+                          </button>
+                        ) : pi.linkUrl ? (
+                          <a
+                            href={pi.linkUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-semibold text-blue-600 underline"
+                          >
+                            {pi.title}
+                          </a>
+                        ) : (
+                          <span className="font-semibold">{pi.title}</span>
+                        )}
+                        {pi.description && <p className="text-sm text-gray-600">{pi.description}</p>}
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+              ) : null,
+          };
 
-        {view.educations.length > 0 && (
-          <Section title="학력">
-            {view.educations.map((ed) => (
-              <article key={ed.id} className="mb-3 last:mb-0 flex justify-between items-baseline">
-                <div>
-                  <span className="font-semibold">{ed.school}</span>
-                  {ed.major && <span className="text-gray-600"> · {ed.major}{ed.degree ? ` (${ed.degree})` : ""}</span>}
-                </div>
-                <span className="text-sm text-gray-500 shrink-0 ml-4">
-                  {period(ed.startDate, ed.endDate)}{ed.status ? ` · ${ed.status}` : ""}
-                </span>
-              </article>
-            ))}
-          </Section>
-        )}
-
-        {view.skills.length > 0 && (
-          <Section title="스킬">
-            <div className="flex flex-wrap gap-2">
-              {view.skills.map((s) => (
-                <span key={s.id} className="px-2.5 py-1 bg-gray-100 rounded-full text-sm">
-                  {s.name}
-                  {s.level ? ` · ${s.level}` : ""}
-                </span>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {view.certificates.length > 0 && (
-          <Section title="자격증">
-            <ul className="space-y-1.5">
-              {view.certificates.map((c) => (
-                <li key={c.id} className="flex justify-between items-baseline">
-                  <span>
-                    <span className="font-semibold">{c.name}</span>
-                    {c.issuer && <span className="text-gray-500 text-sm"> ({c.issuer})</span>}
-                  </span>
-                  <span className="text-sm text-gray-500 shrink-0 ml-4">{c.acquiredAt}</span>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        )}
-
-        {view.introductions.length > 0 && (
-          <Section title="자기소개">
-            {view.introductions.map((it) => (
-              <article key={it.id} className="mb-4 last:mb-0">
-                <h3 className="font-semibold mb-1">{it.title}</h3>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">{it.content}</p>
-              </article>
-            ))}
-          </Section>
-        )}
-
-        {view.portfolioItems.length > 0 && (
-          <Section title="포트폴리오">
-            <ul className="space-y-2">
-              {view.portfolioItems.map((pi) => (
-                <li key={pi.id}>
-                  {pi.itemType === "FILE" && pi.filePath ? (
-                    <button
-                      onClick={() =>
-                        void apiDownload(fileDownloadPath(pi.filePath!), `${pi.title}`).catch(() =>
-                          alert("다운로드에 실패했습니다."),
-                        )
-                      }
-                      className="font-semibold text-blue-600 underline"
-                    >
-                      {pi.title}
-                    </button>
-                  ) : pi.linkUrl ? (
-                    <a href={pi.linkUrl} target="_blank" rel="noreferrer" className="font-semibold text-blue-600 underline">
-                      {pi.title}
-                    </a>
-                  ) : (
-                    <span className="font-semibold">{pi.title}</span>
-                  )}
-                  {pi.description && <p className="text-sm text-gray-600">{pi.description}</p>}
-                </li>
-              ))}
-            </ul>
-          </Section>
-        )}
+          const defaultOrder = [
+            "careers",
+            "projects",
+            "educations",
+            "skills",
+            "certificates",
+            "introductions",
+            "portfolioItems",
+          ];
+          const order = sectionOrder ?? defaultOrder;
+          return order.map((key) => nodes[key] ?? null);
+        })()}
       </div>
     </div>
   );
