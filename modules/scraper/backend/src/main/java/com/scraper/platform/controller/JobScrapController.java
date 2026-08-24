@@ -26,7 +26,7 @@ public class JobScrapController {
 
     /**
      * 내 스크랩 목록을 조회한다.
-     * GET /api/v1/job-scrap
+     * GET /scraper/api/v1/job-scrap
      */
     @GetMapping
     @Operation(summary = "내 스크랩 목록", description = "로그인 사용자가 스크랩한 공고 목록을 최신순으로 반환합니다.")
@@ -40,7 +40,7 @@ public class JobScrapController {
 
     /**
      * 공고를 스크랩한다.
-     * POST /api/v1/job-scrap/{postingId}
+     * POST /scraper/api/v1/job-scrap/{postingId}
      */
     @PostMapping("/{postingId}")
     @Operation(summary = "공고 스크랩", description = "공고를 저장합니다. 이미 스크랩된 경우 무시됩니다.")

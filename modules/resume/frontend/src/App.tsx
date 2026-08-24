@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import CommonHeader from "./components/CommonHeader";
+import CommonHeader, { type Tab } from "./components/CommonHeader";
 import ResumesPage from "./pages/ResumesPage";
 import ResumeViewPage from "./pages/ResumeViewPage";
 import EditPage from "./pages/EditPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
+import PostingsBrowsePage from "./pages/PostingsBrowsePage";
 
 type Route =
   | { name: "resumes" }
   | { name: "view"; documentId: number }
   | { name: "edit"; documentId: number }
-  | { name: "applications" };
+  | { name: "applications" }
+  | { name: "postings" };
 
 function parseHash(): Route {
   const h = window.location.hash.replace(/^#/, "");
@@ -18,6 +20,7 @@ function parseHash(): Route {
   const editMatch = /^\/r\/(\d+)\/edit$/.exec(h);
   if (editMatch) return { name: "edit", documentId: Number(editMatch[1]) };
   if (h === "/applications") return { name: "applications" };
+  if (h === "/postings") return { name: "postings" };
   return { name: "resumes" };
 }
 
@@ -31,12 +34,18 @@ export default function App() {
   }, []);
 
   const loggedIn = Boolean(localStorage.getItem("accessToken"));
-  const tab = route.name === "applications" ? "applications" : "resumes";
+  const tab: Tab =
+    route.name === "applications"
+      ? "applications"
+      : route.name === "postings"
+        ? "postings"
+        : "resumes";
 
   let page;
   if (route.name === "view") page = <ResumeViewPage documentId={route.documentId} />;
   else if (route.name === "edit") page = <EditPage documentId={route.documentId} />;
   else if (route.name === "applications") page = <ApplicationsPage />;
+  else if (route.name === "postings") page = <PostingsBrowsePage />;
   else page = <ResumesPage />;
 
   return (

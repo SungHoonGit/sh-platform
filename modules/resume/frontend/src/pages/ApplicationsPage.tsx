@@ -63,7 +63,7 @@ const emptyForm = {
 
 async function fetchScraper<T>(path: string): Promise<T> {
   const token = localStorage.getItem("accessToken");
-  const res = await fetch(`/scraper/api/v1${path}`, {
+  const res = await fetch(`/scraper${path}`, {
     headers: { Authorization: `Bearer ${token ?? ""}` },
   });
   if (res.status === 401) {
@@ -100,6 +100,33 @@ export default function ApplicationsPage() {
       .then((json) => setScraps(json.scraps))
       .catch(() => setScrapError("스크랩 목록을 불러올 수 없습니다"));
   }, [load]);
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem("applicationPrefill");
+    if (!raw) return;
+    sessionStorage.removeItem("applicationPrefill");
+    try {
+      const p = JSON.parse(raw) as {
+        companyName?: string;
+        postingTitle?: string;
+        postingUrl?: string;
+        postingId?: number;
+      };
+      setEditingId(null);
+      setForm((prev) => ({
+        ...prev,
+        companyName: p.companyName ?? "",
+        postingTitle: p.postingTitle ?? "",
+        postingUrl: p.postingUrl ?? "",
+        postingId: p.postingId ?? null,
+        applyChannel: "PLATFORM",
+        status: "APPLIED",
+      }));
+      setShowForm(true);
+    } catch {
+      /* 무시 */
+    }
+  }, []);
 
   const counts: Record<string, number> = { ALL: items.length };
   for (const s of STATUS_ORDER) counts[s] = items.filter((a) => a.status === s).length;

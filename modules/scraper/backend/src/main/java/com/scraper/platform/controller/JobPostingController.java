@@ -4,7 +4,9 @@ import cn.idev.excel.EasyExcel;
 import cn.idev.excel.ExcelWriter;
 import cn.idev.excel.write.metadata.WriteSheet;
 import com.scraper.platform.api.dto.JobPostingResponse;
+import com.scraper.platform.api.dto.JobPostingSummary;
 import com.scraper.platform.api.dto.JobPostingVO;
+import com.scraper.platform.api.dto.RecentPostingsResponse;
 import com.scraper.platform.model.JobPosting;
 import com.scraper.platform.repository.JobPostingRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,6 +41,33 @@ import java.util.stream.Collectors;
 public class JobPostingController {
 
     private final JobPostingRepository jobPostingRepository;
+
+    /**
+     * 최근 수집 공고를 조회한다 (설정 무관, 모듈 간 브라우징용).
+     * GET /job-postings/recent?keyword=&siteName=&page=&size=
+     */
+    @GetMapping("/recent")
+    @Operation(summary = "최근 수집 공고 조회", description = "크롤러 설정과 무관하게 최근 수집된 전체 공고를 키워드/사이트로 필터링해 반환합니다.")
+    public ResponseEntity<RecentPostingsResponse> getRecent(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String siteName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        String kw = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
+        String site = (siteName != null && !siteName.isBlank()) ? siteName.trim() : null;
+        Page<JobPosting> result = jobPostingRepository.searchRecent(kw, site,
+                PageRequest.of(page, Math.min(size, 100),
+                        Sort.by(Sort.Direction.DESC, "crawledAt")
+                                .and(Sort.by(Sort.Direction.DESC, "createdAt"))));
+        List<JobPostingSummary> items = result.getContent().stream()
+                .map(j -> new JobPostingSummary(j.getId(), j.getSiteName(), j.getCompany(),
+                        j.getPosition(), j.getCareer(), j.getTech(), j.getLocation(),
+                        j.getDeadline(), j.getUrl(), j.getCrawledAt()))
+                .toList();
+        return ResponseEntity.ok(new RecentPostingsResponse(items, result.getTotalElements(),
+                page, size));
+    }
 
     @GetMapping
     @Operation(summary = "채용공고 목록 조회 (페이지네이션)")

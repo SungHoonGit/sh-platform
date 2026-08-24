@@ -41,6 +41,16 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
     @Query("SELECT MAX(j.crawledAt) FROM JobPosting j WHERE j.config.id = :configId")
     LocalDate findLastCrawledAt(@Param("configId") Long configId);
 
+    @Query("""
+            SELECT j FROM JobPosting j
+            WHERE (:keyword IS NULL OR LOWER(j.company) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(j.position) LIKE LOWER(CONCAT('%', :keyword, '%')))
+              AND (:siteName IS NULL OR j.siteName = :siteName)
+            """)
+    Page<JobPosting> searchRecent(@Param("keyword") String keyword,
+                                  @Param("siteName") String siteName,
+                                  Pageable pageable);
+
     @Query("SELECT DISTINCT j.crawledAt FROM JobPosting j WHERE j.config.id = :configId ORDER BY j.crawledAt DESC")
     List<LocalDate> findDistinctDatesByConfigId(@Param("configId") Long configId);
 

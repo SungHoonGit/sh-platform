@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { logout } from "../api/client";
 
-export type Tab = "resumes" | "applications";
+export type Tab = "resumes" | "postings" | "applications";
 
 export default function CommonHeader({
   tab,
@@ -16,7 +16,13 @@ export default function CommonHeader({
 
   const go = (t: Tab) => {
     setCurrent(t);
-    window.location.hash = t === "resumes" ? "#/resumes" : "#/applications";
+    window.location.hash = `#/${t}`;
+  };
+
+  const TAB_LABELS: Record<Tab, string> = {
+    resumes: "이력서 관리",
+    postings: "공고 탐색",
+    applications: "지원 관리",
   };
 
   const tabCls = (t: Tab) =>
@@ -33,12 +39,11 @@ export default function CommonHeader({
           SH Platform
         </a>
         <nav className="flex items-center gap-1">
-          <button onClick={() => go("resumes")} className={tabCls("resumes")}>
-            이력서 관리
-          </button>
-          <button onClick={() => go("applications")} className={tabCls("applications")}>
-            지원 관리
-          </button>
+          {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
+            <button key={t} onClick={() => go(t)} className={tabCls(t)}>
+              {TAB_LABELS[t]}
+            </button>
+          ))}
         </nav>
       </div>
       <div className="flex items-center gap-3">
