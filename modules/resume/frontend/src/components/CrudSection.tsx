@@ -4,12 +4,14 @@ import { apiDelete, apiPost, apiPut, apiUpload } from "../api/client";
 export interface FieldDef {
   key: string;
   label: string;
-  type?: "text" | "date" | "textarea" | "select" | "file";
+  type?: "text" | "date" | "textarea" | "select" | "file" | "check";
   options?: string[];
   accept?: string;
   required?: boolean;
   placeholder?: string;
   showIf?: { key: string; equals: string };
+  /** check 타입: 체크 시 이 key들을 비우고 잠근다 */
+  disablesOnCheck?: string[];
 }
 
 type Item = Record<string, unknown>;
@@ -46,6 +48,14 @@ export default function CrudSection({
 
   const visible = (f: FieldDef) => !f.showIf || form[f.showIf.key] === f.showIf.equals;
 
+  const enabled = (f: FieldDef) =>
+    !fields.some(
+      (c) =>
+        c.type === "check" &&
+        c.disablesOnCheck?.includes(f.key) &&
+        form[c.key] === "true",
+    );
+
   const scrollToForm = () =>
     setTimeout(
       () =>
@@ -76,6 +86,16 @@ export default function CrudSection({
           .map((f) => [f.key, "저장된 파일 있음"]),
       ),
     );
+    // check 필드: 대상 값이 비어 있으면 체크된 상태로 초기화 (예: 퇴사일 없음 = 재직 중)
+    const derived = Object.fromEntries(
+      fields
+        .filter((f) => f.type === "check" && f.disablesOnCheck?.length)
+        .map((f) => {
+          const v = (it as Item)[f.disablesOnCheck![0]];
+          return [f.key, v == null || String(v) === "" ? "true" : ""];
+        }),
+    );
+    setForm((prev) => ({ ...prev, ...derived }));
     setEditing(String(it.id));
     setError(null);
     scrollToForm();
@@ -92,6 +112,12 @@ export default function CrudSection({
     try {
       const payload: Record<string, unknown> = { ...fixedPayload };
       for (const f of fields) {
+        if (f.type === "check") {
+          if (form[f.key] === "true") {
+            f.disablesOnCheck?.forEach((k) => (payload[k] = null));
+          }
+          continue;
+        }
         if (!visible(f)) {
           payload[f.key] = null;
         } else {
@@ -209,24 +235,39 @@ export default function CrudSection({
                 key={f.key}
                 className={f.type === "textarea" || f.type === "file" ? "md:col-span-2" : ""}
               >
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  {f.label}
-                  {f.required && <span className="text-red-500 ml-0.5">*</span>}
-                </label>
-                {f.type === "textarea" ? (
+                {f.type !== "check" && (
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    {f.label}
+                    {f.required && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
+                )}
+                {f.type === "check" ? (
+                  <label className="flex items-center gap-1.5 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={form[f.key] === "true"}
+                      onChange={(e) => setForm({ ...form, [f.key]: e.target.checked ? "true" : "" })}
+                      className="w-4 h-4 accent-slate-900"
+                    />
+                    <span className="text-sm text-slate-700">{f.label}</span>
+                  </label>
+                ) : f.type === "textarea" ? (
                   <textarea
                     value={form[f.key] ?? ""}
                     onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
                     placeholder={f.placeholder}
                     rows={4}
-                    className={inputCls}
+                    disabled={!enabled(f)}
+                    className={`${inputCls} ${!enabled(f) ? "bg-gray-100" : ""}`}
                   />
                 ) : f.type === "select" ? (
                   <select
                     value={form[f.key] ?? ""}
                     onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                    className={inputCls}
+                    disabled={!enabled(f)}
+                    className={`${inputCls} ${!enabled(f) ? "bg-gray-100" : ""}`}
                   >
+                    {(f.options ?? []).length > 0 && <option value="">-- 선택 --</option>}
                     {(f.options ?? []).map((o) => (
                       <option key={o} value={o}>
                         {o}
@@ -258,7 +299,8 @@ export default function CrudSection({
                     value={form[f.key] ?? ""}
                     onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
                     placeholder={f.placeholder}
-                    className={inputCls}
+                    disabled={!enabled(f)}
+                    className={`${inputCls} ${!enabled(f) ? "bg-gray-100" : ""}`}
                   />
                 )}
               </div>

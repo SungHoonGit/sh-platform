@@ -5,6 +5,16 @@ import type { Profile } from "../types/resume";
 const inputCls =
   "w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gray-500";
 
+declare global {
+  interface Window {
+    daum?: {
+      Postcode: new (options: {
+        oncomplete: (data: { zonecode: string; roadAddress: string; jibunAddress: string }) => void;
+      }) => { open: () => void };
+    };
+  }
+}
+
 export default function ProfileEditor({
   profile,
   onChanged,
@@ -107,9 +117,29 @@ export default function ProfileEditor({
           <label className="block text-xs font-medium text-slate-600 mb-1">생년월일</label>
           <input type="date" value={form.birthDate} onChange={(e) => setVal("birthDate", e.target.value)} className={inputCls} />
         </div>
-        <div>
+        <div className="md:col-span-2">
           <label className="block text-xs font-medium text-slate-600 mb-1">주소</label>
-          <input value={form.address} onChange={(e) => setVal("address", e.target.value)} className={inputCls} />
+          <div className="flex gap-2">
+            <input value={form.address} onChange={(e) => setVal("address", e.target.value)} className={inputCls} />
+            <button
+              type="button"
+              onClick={() => {
+                if (!window.daum) {
+                  alert("주소 검색 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.");
+                  return;
+                }
+                new window.daum.Postcode({
+                  oncomplete: (data) => {
+                    const base = data.roadAddress || data.jibunAddress;
+                    setVal("address", `${data.zonecode} ${base}`);
+                  },
+                }).open();
+              }}
+              className="shrink-0 px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50"
+            >
+              주소 검색
+            </button>
+          </div>
         </div>
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-slate-600 mb-1">프로필 사진 (jpg/png)</label>

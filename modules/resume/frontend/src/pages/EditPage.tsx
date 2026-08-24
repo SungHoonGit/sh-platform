@@ -26,7 +26,8 @@ const SECTIONS: SectionConfig[] = [
       { key: "company", label: "회사명", required: true },
       { key: "title", label: "직무/직책" },
       { key: "startDate", label: "입사일", type: "date" },
-      { key: "endDate", label: "퇴사일", type: "date", placeholder: "재직 중이면 비움" },
+      { key: "employed", label: "재직 중", type: "check", disablesOnCheck: ["endDate"] },
+      { key: "endDate", label: "퇴사일", type: "date", placeholder: "재직 중이면 잠김" },
       { key: "description", label: "주요 업무", type: "textarea" },
     ],
   },
@@ -58,7 +59,7 @@ const SECTIONS: SectionConfig[] = [
       { key: "degree", label: "학위", placeholder: "예: 학사" },
       { key: "startDate", label: "입학일", type: "date" },
       { key: "endDate", label: "졸업일", type: "date" },
-      { key: "status", label: "상태", placeholder: "예: 졸업, 재학" },
+      { key: "status", label: "상태", type: "select", options: ["재학", "휴학", "졸업예정", "졸업", "수료"] },
     ],
   },
   {
