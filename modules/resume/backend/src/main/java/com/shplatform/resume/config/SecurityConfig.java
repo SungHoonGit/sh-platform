@@ -21,14 +21,18 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/health",
-                    "/actuator/health", "/actuator/info", "/actuator/prometheus", "/actuator/metrics",
-                    "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs-ui/**"
-                ).permitAll()
-                .anyRequest().authenticated()
-            )
+                .authorizeHttpRequests(auth -> auth
+                    .requestMatchers(
+                        "/health",
+                        "/actuator/health", "/actuator/info", "/actuator/prometheus", "/actuator/metrics",
+                        // Swagger UI 정적 에셋 (상대경로 참조라 백엔드 루트로 요청됨)
+                        "/swagger-ui*", "/swagger-ui/**",
+                        "/swagger-initializer.js", "/index.css",
+                        "/favicon-32x32.png", "/favicon-16x16.png",
+                        "/v3/api-docs/**", "/v3/swagger-config", "/api-docs-ui/**"
+                    ).permitAll()
+                    .anyRequest().authenticated()
+                )
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint(unauthorizedEntryPoint())
                 .accessDeniedHandler(forbiddenHandler())
