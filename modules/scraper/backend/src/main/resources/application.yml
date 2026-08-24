@@ -49,6 +49,9 @@ springdoc:
   swagger-ui:
     path: /api-docs-ui
     operationsSorter: method
+    # nginx prefix(/scraper/) 뒤에서 스펙을 올바르게 찾도록 절대경로 지정
+    url: ${SCRAPER_SWAGGER_URL:/scraper/v3/api-docs}
+    config-url: ${SCRAPER_SWAGGER_CONFIG_URL:/scraper/v3/api-docs/swagger-config}
 
 management:
   endpoints:

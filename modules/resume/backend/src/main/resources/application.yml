@@ -35,6 +35,9 @@ springdoc:
   swagger-ui:
     path: /api-docs-ui
     operationsSorter: method
+    # nginx prefix(/resume/) 뒤에서 스펙을 올바르게 찾도록 절대경로 지정
+    url: ${RESUME_SWAGGER_URL:/resume/v3/api-docs}
+    config-url: ${RESUME_SWAGGER_CONFIG_URL:/resume/v3/api-docs/swagger-config}
 
 management:
   endpoints:
