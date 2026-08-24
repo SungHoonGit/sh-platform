@@ -1,10 +1,39 @@
 import { useEffect, useState } from "react";
-import { apiGet } from "../api/client";
+import { apiDownload, apiGet, fileDownloadPath } from "../api/client";
 import type { ResumeView } from "../types/resume";
 
 function period(start: string, end: string | null): string {
   const e = end ?? "현재";
   return `${start} ~ ${e}`;
+}
+
+function ProfilePhoto({ photoUrl }: { photoUrl: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+    let url: string | null = null;
+    fetch(`/resume${photoUrl}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => (res.ok ? res.blob() : Promise.reject(new Error(String(res.status)))))
+      .then((blob) => {
+        url = URL.createObjectURL(blob);
+        setSrc(url);
+      })
+      .catch(() => setSrc(null));
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [photoUrl]);
+
+  if (!src) return null;
+  return (
+    <img
+      src={src}
+      alt="프로필 사진"
+      className="w-24 h-32 rounded-lg border border-gray-300 object-cover shrink-0 print:w-20 print:h-28"
+    />
+  );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -74,13 +103,18 @@ export default function ResumeViewPage() {
 
         {/* 인적사항 */}
         <header className="mb-8 pb-6 border-b border-gray-300">
-          <h1 className="text-3xl font-bold">{p?.name ?? "이름 미등록"}</h1>
-          {p?.headline && <p className="mt-1 text-gray-600">{p.headline}</p>}
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
-            {p?.email && <span>{p.email}</span>}
-            {p?.phone && <span>{p.phone}</span>}
-            {p?.address && <span>{p.address}</span>}
-            {p?.birthDate && <span>{p.birthDate}</span>}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">{p?.name ?? "이름 미등록"}</h1>
+              {p?.headline && <p className="mt-1 text-gray-600">{p.headline}</p>}
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
+                {p?.email && <span>{p.email}</span>}
+                {p?.phone && <span>{p.phone}</span>}
+                {p?.address && <span>{p.address}</span>}
+                {p?.birthDate && <span>{p.birthDate}</span>}
+              </div>
+            </div>
+            {p?.photoUrl && <ProfilePhoto photoUrl={p.photoUrl} />}
           </div>
         </header>
 
@@ -187,7 +221,18 @@ export default function ResumeViewPage() {
             <ul className="space-y-2">
               {view.portfolioItems.map((pi) => (
                 <li key={pi.id}>
-                  {pi.linkUrl ? (
+                  {pi.itemType === "FILE" && pi.filePath ? (
+                    <button
+                      onClick={() =>
+                        void apiDownload(fileDownloadPath(pi.filePath!), `${pi.title}`).catch(() =>
+                          alert("다운로드에 실패했습니다."),
+                        )
+                      }
+                      className="font-semibold text-blue-600 underline"
+                    >
+                      {pi.title}
+                    </button>
+                  ) : pi.linkUrl ? (
                     <a href={pi.linkUrl} target="_blank" rel="noreferrer" className="font-semibold text-blue-600 underline">
                       {pi.title}
                     </a>

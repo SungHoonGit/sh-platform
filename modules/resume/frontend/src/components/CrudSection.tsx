@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { apiDelete, apiPost, apiPut } from "../api/client";
+import { apiDelete, apiPost, apiPut, apiUpload } from "../api/client";
 
 export interface FieldDef {
   key: string;
   label: string;
-  type?: "text" | "date" | "textarea";
+  type?: "text" | "date" | "textarea" | "select" | "file";
+  options?: string[];
+  accept?: string;
   required?: boolean;
   placeholder?: string;
+  showIf?: { key: string; equals: string };
 }
 
 type Item = Record<string, unknown>;
@@ -36,11 +39,16 @@ export default function CrudSection({
 }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>({});
+  const [fileNames, setFileNames] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const visible = (f: FieldDef) => !f.showIf || form[f.showIf.key] === f.showIf.equals;
+
   const openNew = () => {
     setForm(Object.fromEntries(fields.map((f) => [f.key, ""])));
+    setFileNames({});
     setEditing("new");
     setError(null);
   };
@@ -51,12 +59,19 @@ export default function CrudSection({
         fields.map((f) => [f.key, it[f.key] == null ? "" : String(it[f.key])]),
       ),
     );
+    setFileNames(
+      Object.fromEntries(
+        fields
+          .filter((f) => f.type === "file" && it[f.key] != null && String(it[f.key]) !== "")
+          .map((f) => [f.key, "저장된 파일 있음"]),
+      ),
+    );
     setEditing(String(it.id));
     setError(null);
   };
 
   const save = async () => {
-    const missing = fields.find((f) => f.required && !form[f.key]?.trim());
+    const missing = fields.filter(visible).find((f) => f.required && !form[f.key]?.trim());
     if (missing) {
       setError(`${missing.label}은(는) 필수입니다.`);
       return;
@@ -65,7 +80,13 @@ export default function CrudSection({
     setError(null);
     try {
       const payload: Record<string, unknown> = { ...fixedPayload };
-      for (const f of fields) payload[f.key] = form[f.key]?.trim() === "" ? null : form[f.key];
+      for (const f of fields) {
+        if (!visible(f)) {
+          payload[f.key] = null;
+        } else {
+          payload[f.key] = form[f.key]?.trim() === "" ? null : form[f.key];
+        }
+      }
       if (editing === "new") await apiPost(endpoint, payload);
       else await apiPut(`${endpoint}/${editing}`, payload);
       setEditing(null);
@@ -74,6 +95,20 @@ export default function CrudSection({
       setError(e instanceof Error ? e.message : "저장에 실패했습니다.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const uploadFile = async (key: string, file: File) => {
+    setUploading(true);
+    setError(null);
+    try {
+      const res = await apiUpload<{ id: number; originalName: string }>("/files", file);
+      setForm((prev) => ({ ...prev, [key]: `/api/v1/files/${res.id}/download` }));
+      setFileNames((prev) => ({ ...prev, [key]: res.originalName }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "업로드에 실패했습니다.");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -158,8 +193,11 @@ export default function CrudSection({
       {showForm && (
         <div className="mt-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {fields.map((f) => (
-              <div key={f.key} className={f.type === "textarea" ? "md:col-span-2" : ""}>
+            {fields.filter(visible).map((f) => (
+              <div
+                key={f.key}
+                className={f.type === "textarea" || f.type === "file" ? "md:col-span-2" : ""}
+              >
                 <label className="block text-xs font-medium text-slate-600 mb-1">
                   {f.label}
                   {f.required && <span className="text-red-500 ml-0.5">*</span>}
@@ -172,6 +210,37 @@ export default function CrudSection({
                     rows={4}
                     className={inputCls}
                   />
+                ) : f.type === "select" ? (
+                  <select
+                    value={form[f.key] ?? ""}
+                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                    className={inputCls}
+                  >
+                    {(f.options ?? []).map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </select>
+                ) : f.type === "file" ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept={f.accept}
+                      disabled={uploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void uploadFile(f.key, file);
+                        e.target.value = "";
+                      }}
+                      className="text-sm text-slate-600 file:mr-2 file:px-2.5 file:py-1.5 file:text-xs file:border-0 file:bg-slate-900 file:text-white file:rounded hover:file:bg-slate-700"
+                    />
+                    {fileNames[f.key] && (
+                      <span className="text-xs text-green-700 truncate">
+                        {uploading ? "업로드 중..." : `✓ ${fileNames[f.key]}`}
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <input
                     type={f.type === "date" ? "date" : "text"}

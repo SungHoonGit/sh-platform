@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { apiPut } from "../api/client";
+import { useEffect, useState } from "react";
+import { apiPut, apiUpload } from "../api/client";
 import type { Profile } from "../types/resume";
 
 const inputCls =
@@ -23,7 +23,25 @@ export default function ProfileEditor({
   });
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setForm((prev) => ({ ...prev, photoUrl: profile?.photoUrl ?? "" }));
+  }, [profile?.photoUrl]);
+
+  const uploadPhoto = async (file: File) => {
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      await apiUpload("/profile/photo", file);
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "사진 업로드에 실패했습니다.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
 
   const setVal = (k: string, v: string) => {
     setSaved(false);
@@ -94,13 +112,24 @@ export default function ProfileEditor({
           <input value={form.address} onChange={(e) => setVal("address", e.target.value)} className={inputCls} />
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-slate-600 mb-1">프로필 사진 URL</label>
-          <input
-            value={form.photoUrl}
-            onChange={(e) => setVal("photoUrl", e.target.value)}
-            placeholder="(선택)"
-            className={inputCls}
-          />
+          <label className="block text-xs font-medium text-slate-600 mb-1">프로필 사진 (jpg/png)</label>
+          <div className="flex items-center gap-3">
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png"
+              disabled={photoBusy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void uploadPhoto(file);
+                e.target.value = "";
+              }}
+              className="text-sm text-slate-600 file:mr-2 file:px-2.5 file:py-1.5 file:text-xs file:border-0 file:bg-slate-900 file:text-white file:rounded hover:file:bg-slate-700"
+            />
+            {photoBusy && <span className="text-xs text-slate-500">업로드 중...</span>}
+            {form.photoUrl && !photoBusy && (
+              <span className="text-xs text-green-700">✓ 사진 등록됨</span>
+            )}
+          </div>
         </div>
       </div>
       <div className="mt-4 flex justify-end">

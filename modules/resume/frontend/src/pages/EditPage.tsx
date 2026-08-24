@@ -96,17 +96,29 @@ const SECTIONS: SectionConfig[] = [
     ],
   },
   {
-    title: "포트폴리오 링크",
+    title: "포트폴리오",
     endpoint: "/portfolio-items",
     listKey: "portfolioItems",
     titleKey: "title",
-    subtitleKeys: ["linkUrl"],
+    subtitleKeys: ["itemType", "linkUrl", "filePath"],
     fields: [
       { key: "title", label: "작업물 제목", required: true },
-      { key: "linkUrl", label: "URL", placeholder: "https://github.com/..." },
+      { key: "itemType", label: "유형", type: "select", options: ["LINK", "FILE"] },
+      {
+        key: "linkUrl",
+        label: "URL (LINK)",
+        placeholder: "https://github.com/...",
+        showIf: { key: "itemType", equals: "LINK" },
+      },
+      {
+        key: "filePath",
+        label: "첨부파일 (FILE) — pdf/pptx/docx/png/jpg, 10MB 이하",
+        type: "file",
+        accept: ".pdf,.pptx,.ppt,.docx,.png,.jpg,.jpeg",
+        showIf: { key: "itemType", equals: "FILE" },
+      },
       { key: "description", label: "설명", type: "textarea" },
     ],
-    fixedPayload: { itemType: "LINK" },
   },
 ];
 

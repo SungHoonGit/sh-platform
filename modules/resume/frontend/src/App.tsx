@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ResumeViewPage from "./pages/ResumeViewPage";
 import EditPage from "./pages/EditPage";
+import CommonHeader from "./components/CommonHeader";
 
 type Mode = "view" | "edit";
 
@@ -17,5 +18,12 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  return mode === "edit" ? <EditPage /> : <ResumeViewPage />;
+  const loggedIn = Boolean(localStorage.getItem("accessToken"));
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <CommonHeader loggedIn={loggedIn} />
+      <main className="flex-1">{mode === "edit" ? <EditPage /> : <ResumeViewPage />}</main>
+    </div>
+  );
 }
