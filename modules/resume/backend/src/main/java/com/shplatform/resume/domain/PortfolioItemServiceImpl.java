@@ -29,7 +29,7 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
     @Override
     @Transactional
     public PortfolioItemResponse createPortfolioItem(Long userId, PortfolioItemRequest request) {
-        validateLinkOnly(request);
+        validateTypePayload(request);
         var entity = ResumePortfolioItemEntity.create(userId);
         applyRequest(entity, request);
         return toResponse(portfolioItemRepository.save(entity));
@@ -38,7 +38,7 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
     @Override
     @Transactional
     public PortfolioItemResponse updatePortfolioItem(Long userId, Long itemId, PortfolioItemRequest request) {
-        validateLinkOnly(request);
+        validateTypePayload(request);
         var entity = getOwnedPortfolioItem(userId, itemId);
         applyRequest(entity, request);
         return toResponse(portfolioItemRepository.save(entity));
@@ -51,8 +51,9 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
         portfolioItemRepository.delete(entity);
     }
 
-    private void validateLinkOnly(PortfolioItemRequest request) {
-        if ("FILE".equals(request.itemType())) {
+    private void validateTypePayload(PortfolioItemRequest request) {
+        if ("FILE".equals(request.itemType())
+                && (request.filePath() == null || request.filePath().isBlank())) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
     }
@@ -69,7 +70,7 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
     private void applyRequest(ResumePortfolioItemEntity entity, PortfolioItemRequest request) {
         entity.setTitle(request.title());
         entity.setItemType(request.itemType());
-        entity.setFilePath(null);
+        entity.setFilePath(request.filePath());
         entity.setLinkUrl(request.linkUrl());
         entity.setDescription(request.description());
         entity.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 0);

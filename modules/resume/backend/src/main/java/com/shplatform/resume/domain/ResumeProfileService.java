@@ -25,4 +25,13 @@ public interface ResumeProfileService {
      * @return 저장된 인적사항
      */
     ProfileResponse upsertProfile(Long userId, ProfileRequest request);
+
+    /**
+     * (명령형) 프로필 사진 URL만 갱신한다. 사진 업로드 API에서 호출된다.
+     *
+     * @param userId   로그인 사용자 ID
+     * @param photoUrl 저장된 사진 경로
+     * @throws BusinessException NOT_FOUND 등록된 인적사항이 없을 때
+     */
+    void updatePhotoUrl(Long userId, String photoUrl);
 }

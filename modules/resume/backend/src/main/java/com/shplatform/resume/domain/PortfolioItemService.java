@@ -19,13 +19,13 @@ public interface PortfolioItemService {
     List<PortfolioItemResponse> getPortfolioItems(Long userId);
 
     /**
-     * (명령형) 포트폴리오 작업물을 추가한다. 파일 업로드는 Phase 5에서 지원 예정이며
-     * 현재는 LINK 타입만 허용한다.
+     * (명령형) 포트폴리오 작업물을 추가한다. FILE/LINK 타입을 지원하며
+     * FILE 타입은 사전에 파일 업로드 API로 저장된 경로가 필요하다.
      *
      * @param userId  로그인 사용자 ID
      * @param request 작업물 정보
      * @return 생성된 작업물
-     * @throws BusinessException INVALID_INPUT FILE 타입으로 요청했을 때
+     * @throws BusinessException INVALID_INPUT FILE 타입인데 filePath가 없을 때
      */
     PortfolioItemResponse createPortfolioItem(Long userId, PortfolioItemRequest request);
 
@@ -37,7 +37,7 @@ public interface PortfolioItemService {
      * @param request 수정할 작업물 정보
      * @return 수정된 작업물
      * @throws BusinessException NOT_FOUND 작업물이 없을 때, FORBIDDEN 다른 사용자의 작업물일 때,
-     *                          INVALID_INPUT FILE 타입으로 요청했을 때
+     *                          INVALID_INPUT FILE 타입인데 filePath가 없을 때
      */
     PortfolioItemResponse updatePortfolioItem(Long userId, Long itemId, PortfolioItemRequest request);
 

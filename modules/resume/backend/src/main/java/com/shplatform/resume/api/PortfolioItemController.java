@@ -40,10 +40,10 @@ public class PortfolioItemController {
     }
 
     /**
-     * (명령형) 포트폴리오 작업물을 추가한다. (현재 LINK 타입만 지원)
+     * (명령형) 포트폴리오 작업물을 추가한다. (FILE/LINK)
      */
     @PostMapping
-    @Operation(summary = "작업물 추가 (LINK)")
+    @Operation(summary = "작업물 추가 (FILE/LINK)")
     public ResponseEntity<ApiResponse<PortfolioItemResponse>> createPortfolioItem(
             @Valid @RequestBody PortfolioItemRequest request) {
         var response = portfolioItemService.createPortfolioItem(SecurityUtils.currentAccountId(), request);

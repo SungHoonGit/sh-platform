@@ -38,7 +38,7 @@ class PortfolioItemServiceImplTest {
 
     private PortfolioItemRequest linkRequest() {
         return new PortfolioItemRequest("포트폴리오 사이트", "LINK",
-                "https://portfolio.example.com", "개인 포트폴리오", 1);
+                null, "https://portfolio.example.com", "개인 포트폴리오", 1);
     }
 
     private ResumePortfolioItemEntity entity(Long userId) {
@@ -80,15 +80,34 @@ class PortfolioItemServiceImplTest {
     }
 
     @Test
-    @DisplayName("createPortfolioItem: FILE 타입이면 INVALID_INPUT 예외가 발생한다 (Phase 5 지원 예정)")
-    void createPortfolioItem_fileRejected() {
+    @DisplayName("createPortfolioItem: FILE 타입인데 filePath가 없으면 INVALID_INPUT 예외가 발생한다")
+    void createPortfolioItem_fileWithoutPathRejected() {
         var fileRequest = new PortfolioItemRequest("첨부파일", "FILE",
-                null, null, 1);
+                null, null, null, 1);
 
         assertThatThrownBy(() -> portfolioItemService.createPortfolioItem(USER_ID, fileRequest))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @DisplayName("createPortfolioItem: FILE 타입 작업물을 filePath와 함께 추가한다 (Phase 5)")
+    void createPortfolioItem_fileWithPathSuccess() {
+        given(portfolioItemRepository.save(any(ResumePortfolioItemEntity.class)))
+                .willAnswer(invocation -> {
+                    invocation.getArgument(0, ResumePortfolioItemEntity.class).setId(ITEM_ID);
+                    return invocation.getArgument(0);
+                });
+        var fileRequest = new PortfolioItemRequest("기획서", "FILE",
+                "6/202608/uuid.pptx", null, "서비스 기획서", 2);
+
+        portfolioItemService.createPortfolioItem(USER_ID, fileRequest);
+
+        ArgumentCaptor<ResumePortfolioItemEntity> captor = ArgumentCaptor.forClass(ResumePortfolioItemEntity.class);
+        then(portfolioItemRepository).should(times(1)).save(captor.capture());
+        assertThat(captor.getValue().getItemType()).isEqualTo("FILE");
+        assertThat(captor.getValue().getFilePath()).isEqualTo("6/202608/uuid.pptx");
     }
 
     @Test

@@ -33,6 +33,14 @@ public class ResumeProfileServiceImpl implements ResumeProfileService {
         return toResponse(profileRepository.save(entity));
     }
 
+    @Override
+    @Transactional
+    public void updatePhotoUrl(Long userId, String photoUrl) {
+        var entity = profileRepository.findByUserId(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        entity.setPhotoUrl(photoUrl);
+    }
+
     private void applyRequest(ResumeProfileEntity entity, ProfileRequest request) {
         entity.setName(request.name());
         entity.setEmail(request.email());
