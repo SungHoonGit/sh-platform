@@ -65,6 +65,13 @@ jobs:
             npm run build
             cd /home/ubuntu/sh-platform
 
+            # Resume Frontend build (backend JAR에 정적 리소스 포함)
+            cd modules/resume/frontend
+            rm -rf node_modules .vite || true
+            npm install
+            npm run build
+            cd /home/ubuntu/sh-platform
+
             # Backend builds
             ./gradlew :common:clean :common:build -q
             ./gradlew :modules:auth:backend:clean :modules:auth:backend:build -q

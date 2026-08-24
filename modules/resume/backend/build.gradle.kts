@@ -6,6 +6,15 @@ base {
     archivesName.set("sh-platform-resume")
 }
 
+val copyFrontendDist by tasks.registering(Copy::class) {
+    from("../frontend/dist")
+    into(layout.buildDirectory.dir("resources/main/static"))
+}
+
+tasks.processResources {
+    dependsOn(copyFrontendDist)
+}
+
 tasks.jar {
     enabled = false
 }
