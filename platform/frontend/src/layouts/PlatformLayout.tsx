@@ -4,7 +4,7 @@ import { LayoutDashboard, Search, FileText, Shield, Users, Building2, UserCircle
 const navItems = [
   { to: "/platform", icon: LayoutDashboard, label: "대시보드", end: true },
   { to: "/scraper/", icon: Search, label: "스크래퍼", external: true },
-  { to: "/platform/resume", icon: FileText, label: "이력서" },
+  { to: "/resume/", icon: FileText, label: "이력서", external: true },
 ];
 
 const accountItems = [

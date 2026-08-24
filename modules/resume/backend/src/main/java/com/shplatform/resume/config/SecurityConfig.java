@@ -25,6 +25,8 @@ public class SecurityConfig {
                     .requestMatchers(
                         "/health",
                         "/actuator/health", "/actuator/info", "/actuator/prometheus", "/actuator/metrics",
+                        // 프론트 정적 리소스 (JAR 내 dist)
+                        "/", "/index.html", "/favicon.svg", "/assets/**",
                         // Swagger UI 정적 에셋 (상대경로 참조라 백엔드 루트로 요청됨)
                         "/swagger-ui*", "/swagger-ui/**",
                         "/swagger-initializer.js", "/index.css",

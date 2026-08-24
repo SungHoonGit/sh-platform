@@ -12,9 +12,10 @@ const modules = [
   },
   {
     name: "이력서",
-    description: "이력서 관리",
+    description: "경력·프로젝트 관리 및 이력서 뷰",
     icon: FileText,
-    path: "/platform/resume",
+    path: "/resume/",
+    external: true,
     color: "bg-green-500",
   },
 ];

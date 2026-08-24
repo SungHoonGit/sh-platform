@@ -31,7 +31,7 @@ function App() {
             <Route element={<PlatformLayout />}>
               <Route path="/platform" element={<Dashboard />} />
               <Route path="/platform/scraper/*" element={<RedirectTo to="/scraper/" />} />
-              <Route path="/platform/resume/*" element={<div>이력서 모듈 (추후)</div>} />
+              <Route path="/platform/resume/*" element={<RedirectTo to="/resume/" />} />
               <Route path="/platform/admin" element={<AdminDashboard />} />
               <Route path="/platform/admin/users" element={<AdminUsers />} />
               <Route path="/platform/admin/tenants" element={<AdminTenants />} />
