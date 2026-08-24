@@ -61,8 +61,8 @@ sh-platform/
 | 포트 | 서비스 | Swagger | URL 프리픽스 |
 |------|--------|---------|-------------|
 | 8080 | auth | `/swagger-ui/` | `/api/*` |
-| 8081 | scraper | `/scraper/swagger-ui/` | `/scraper/*` |
-| 8082 | resume | `/resume/swagger-ui/` | `/resume/*` |
+| 8081 | scraper | `/scraper/api-docs-ui` | `/scraper/*` |
+| 8082 | resume | `/resume/api-docs-ui` | `/resume/*` |
 | 9090 | Prometheus | - | `/prometheus/` |
 | 3000 | Grafana | - | `/grafana/` |
 
