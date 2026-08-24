@@ -58,6 +58,12 @@ export default function ResumeViewPage() {
 
       <div className="max-w-3xl mx-auto bg-white shadow-sm px-10 py-8 print:shadow-none print:px-0">
         <div className="flex justify-end gap-2 mb-4 print:hidden">
+          <a
+            href="#edit"
+            className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+          >
+            편집
+          </a>
           <button
             onClick={() => window.print()}
             className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded hover:bg-gray-700"
