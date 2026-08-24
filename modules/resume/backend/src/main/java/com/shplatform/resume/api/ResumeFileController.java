@@ -25,7 +25,7 @@ import org.springframework.http.ContentDisposition;
 @RequestMapping("/api/v1/files")
 @RequiredArgsConstructor
 @Tag(name = "File", description = "파일 업로드/다운로드 API (Phase 5)")
-public class FileController {
+public class ResumeFileController {
 
     private final FileStorageService fileStorageService;
 
