@@ -268,6 +268,39 @@ export async function saveSiteConfig(
   });
 }
 
+// Job Scrap API (공고 스크랩/북마크)
+export interface ScrapItem {
+  id: number;
+  postingId: number;
+  siteName: string | null;
+  company: string;
+  position: string;
+  url: string | null;
+  career: string | null;
+  tech: string | null;
+  location: string | null;
+  deadline: string | null;
+  scrappedAt: string;
+}
+
+export async function fetchMyScraps(): Promise<ScrapItem[]> {
+  const json = await request<{ scraps: ScrapItem[]; total: number }>("/job-scrap");
+  return json.scraps || [];
+}
+
+export async function scrapPosting(postingId: number): Promise<void> {
+  await request(`/job-scrap/${postingId}`, { method: "POST" });
+}
+
+export async function unscrapPosting(postingId: number): Promise<void> {
+  await request(`/job-scrap/${postingId}`, { method: "DELETE" });
+}
+
+export async function isScrapped(postingId: number): Promise<boolean> {
+  const json = await request<{ scrapped: boolean }>(`/job-scrap/${postingId}`);
+  return json.scrapped;
+}
+
 // Job Postings API (DB 기반)
 export interface JobPostingItem {
   id: number;

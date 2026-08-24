@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { fetchCrawlers, executeCrawler, fetchJobPostings, downloadJobPostingsExcel, fetchCrawlLogsGrouped, deleteCrawlLog, type JobPostingItem } from "../api/scraper";
+import { fetchCrawlers, executeCrawler, fetchJobPostings, downloadJobPostingsExcel, fetchCrawlLogsGrouped, deleteCrawlLog, fetchMyScraps, scrapPosting, unscrapPosting, type JobPostingItem } from "../api/scraper";
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 
 const SITES = [
@@ -17,6 +17,7 @@ const SITE_TAB_COLORS: Record<string, string> = {
 };
 
 const COLUMNS: { key: string; label: string; w: string }[] = [
+  { key: "scrap", label: "", w: "w-[32px]" },
   { key: "site", label: "사이트", w: "w-[80px]" },
   { key: "position", label: "포지션", w: "w-auto" },
   { key: "company", label: "회사명", w: "w-[120px]" },
@@ -43,7 +44,25 @@ export default function Viewer() {
   const [page, setPage] = useState(0);
   const [currentSearchCriteria, setCurrentSearchCriteria] = useState<string>("");
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [scrappedIds, setScrappedIds] = useState<Set<number>>(new Set());
   const SIZE = 20;
+
+  useEffect(() => {
+    fetchMyScraps()
+      .then((scraps) => setScrappedIds(new Set(scraps.map((s) => s.postingId))))
+      .catch(() => undefined);
+  }, []);
+
+  const toggleScrap = async (postingId: number) => {
+    if (scrappedIds.has(postingId)) {
+      await unscrapPosting(postingId).catch(() => undefined);
+    } else {
+      await scrapPosting(postingId).catch(() => undefined);
+    }
+    fetchMyScraps()
+      .then((scraps) => setScrappedIds(new Set(scraps.map((s) => s.postingId))))
+      .catch(() => undefined);
+  };
 
   const executeMutation = useMutation({
     mutationFn: async (configId: number) => {
@@ -427,8 +446,8 @@ export default function Viewer() {
                     {COLUMNS.map((c) => (
                       <th
                         key={c.key}
-                        onClick={() => toggleSort(c.key)}
-                        className={`px-2 py-1.5 text-left font-bold text-slate-600 cursor-pointer hover:text-blue-600 select-none ${c.w}`}
+                        onClick={c.key === "scrap" ? undefined : () => toggleSort(c.key)}
+                        className={`px-2 py-1.5 text-left font-bold text-slate-600 select-none ${c.key === "scrap" ? "" : "cursor-pointer hover:text-blue-600"} ${c.w}`}
                       >
                         <span className="inline-flex items-center gap-0.5">
                           {c.label}
@@ -450,8 +469,20 @@ export default function Viewer() {
                       <tr
                         key={job.id}
                         onClick={() => job.url && window.open(job.url, "_blank")}
-                        className="hover:bg-blue-50/50 cursor-pointer transition-colors"
+                        className={`hover:bg-blue-50/50 cursor-pointer transition-colors ${scrappedIds.has(job.id) ? "bg-amber-50/40" : ""}`}
                       >
+                        <td className="px-2 py-1 text-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void toggleScrap(job.id);
+                            }}
+                            title={scrappedIds.has(job.id) ? "스크랩 해제" : "스크랩"}
+                            className={`text-base leading-none transition-transform hover:scale-125 ${scrappedIds.has(job.id) ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
+                          >
+                            {scrappedIds.has(job.id) ? "★" : "☆"}
+                          </button>
+                        </td>
                         <td className="px-2 py-1 text-slate-400">{no}</td>
                         <td className="px-2 py-1">
                           <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${siteDef?.color || "bg-slate-100 text-slate-600"}`}>
