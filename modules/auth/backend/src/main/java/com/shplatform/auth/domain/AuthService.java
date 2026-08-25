@@ -35,6 +35,7 @@ public interface AuthService {
      */
     void verifyCode(String email, String code, String purpose);
     TokenResponse login(LoginRequest request);
+    TokenResponse loginWithSession(LoginRequest request, String ip, String device);
     TokenResponse refresh(String refreshToken);
     void logout(String refreshToken);
     User getUser(Long userId);

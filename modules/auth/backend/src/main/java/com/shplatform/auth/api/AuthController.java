@@ -3,6 +3,7 @@ package com.shplatform.auth.api;
 import com.shplatform.auth.api.dto.*;
 import com.shplatform.auth.domain.AccountLinkService;
 import com.shplatform.auth.domain.AuthService;
+import com.shplatform.auth.domain.SessionService;
 import com.shplatform.auth.domain.TokenBlacklistService;
 import com.shplatform.auth.domain.User;
 import com.shplatform.auth.infrastructure.TokenProvider;
@@ -34,15 +35,18 @@ public class AuthController {
     private final AuthService authService;
     private final AccountLinkService accountLinkService;
     private final TokenBlacklistService blacklistService;
+    private final SessionService sessionService;
     private final TokenProvider tokenProvider;
 
     public AuthController(AuthService authService,
                           AccountLinkService accountLinkService,
                           TokenBlacklistService blacklistService,
+                          SessionService sessionService,
                           TokenProvider tokenProvider) {
         this.authService = authService;
         this.accountLinkService = accountLinkService;
         this.blacklistService = blacklistService;
+        this.sessionService = sessionService;
         this.tokenProvider = tokenProvider;
     }
 
@@ -67,9 +71,13 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "로그인", description = "email + password 로그인. access/refresh token 반환.")
     public ResponseEntity<ApiResponse<TokenResponse>> login(
-            @Valid @RequestBody LoginRequest request
+            @Valid @RequestBody LoginRequest request,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent,
+            @RequestHeader(value = "X-Forwarded-For", required = false) String xForwardedFor,
+            jakarta.servlet.http.HttpServletRequest httpRequest
     ) {
-        var tokens = authService.login(request);
+        String ip = xForwardedFor != null ? xForwardedFor.split(",")[0].trim() : httpRequest.getRemoteAddr();
+        var tokens = authService.loginWithSession(request, ip, userAgent);
         return ResponseEntity.ok(ApiResponse.success("로그인 성공", tokens));
     }
 
@@ -98,6 +106,7 @@ public class AuthController {
                 if (remainingSeconds > 0) {
                     blacklistService.addToBlacklist(accessToken, remainingSeconds);
                 }
+                sessionService.removeAllSessions(claims.userId());
             } catch (Exception e) {
                 log.debug("[LOGOUT] failed to blacklist token: {}", e.getMessage());
             }
