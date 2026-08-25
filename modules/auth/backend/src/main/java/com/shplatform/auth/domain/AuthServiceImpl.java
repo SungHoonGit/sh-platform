@@ -18,6 +18,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenService refreshTokenService;
     private final VerificationCodeRepository verificationCodeRepository;
     private final UserMapper userMapper;
     private final TokenProvider tokenProvider;
@@ -27,6 +28,7 @@ public class AuthServiceImpl implements AuthService {
 
     public AuthServiceImpl(UserRepository userRepository,
                            RefreshTokenRepository refreshTokenRepository,
+                           RefreshTokenService refreshTokenService,
                            VerificationCodeRepository verificationCodeRepository,
                            UserMapper userMapper,
                            TokenProvider tokenProvider,
@@ -35,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
                            SessionService sessionService) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.refreshTokenService = refreshTokenService;
         this.verificationCodeRepository = verificationCodeRepository;
         this.userMapper = userMapper;
         this.tokenProvider = tokenProvider;
@@ -151,19 +154,23 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public TokenResponse refresh(String refreshToken) {
-        var stored = refreshTokenRepository.findByToken(refreshToken)
-                .orElseThrow(() -> {
-                    log.warn("[AUTH] token refresh failed (token not found)");
-                    return new BusinessException(ErrorCode.TOKEN_INVALID);
-                });
-        if (stored.getExpiresAt().isBefore(LocalDateTime.now())) {
-            refreshTokenRepository.delete(stored);
-            log.warn("[AUTH] token refresh failed (token expired): userId={}", stored.getUserId());
-            throw new BusinessException(ErrorCode.TOKEN_EXPIRED);
+        Long userId = refreshTokenService.getUserId(refreshToken);
+        if (userId == null) {
+            log.warn("[AUTH] token refresh failed (token not found in Redis)");
+            var stored = refreshTokenRepository.findByToken(refreshToken).orElse(null);
+            if (stored != null) {
+                userId = stored.getUserId();
+                refreshTokenRepository.delete(stored);
+                log.info("[AUTH] migrated refresh token from MariaDB to Redis: userId={}", userId);
+            } else {
+                throw new BusinessException(ErrorCode.TOKEN_INVALID);
+            }
+        } else {
+            refreshTokenService.delete(refreshToken);
         }
-        var user = userRepository.findById(stored.getUserId())
+
+        var user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
-        refreshTokenRepository.delete(stored);
         log.info("[AUTH] token refresh success: userId={}", user.getId());
         return createTokens(user.getId(), user.getEmail(), user.getRole().name());
     }
@@ -251,14 +258,8 @@ public class AuthServiceImpl implements AuthService {
     private TokenResponse createTokens(Long userId, String email, String role) {
         var accessToken = tokenProvider.createAccessToken(userId, email, role);
         var refreshValue = tokenProvider.createRefreshToken();
-        var expiresAt = LocalDateTime.now()
-                .plusNanos(tokenProvider.getRefreshTokenExpiration() * 1_000_000);
 
-        var entity = new RefreshTokenEntity();
-        entity.setUserId(userId);
-        entity.setToken(refreshValue);
-        entity.setExpiresAt(expiresAt);
-        refreshTokenRepository.save(entity);
+        refreshTokenService.save(refreshValue, userId);
 
         return TokenResponse.of(accessToken, refreshValue, 3600);
     }
