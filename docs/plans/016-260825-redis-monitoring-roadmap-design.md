@@ -19,11 +19,18 @@
 | 로그인 이력(List + TTL) / 관리자 애널리틱스 API | ✅ |
 | 로그아웃 시 서버 자원 정리 (프론트 3앱 + 백엔드) | ✅ |
 
-### 발견된 결함 (오늘 CLI 점검 중 확인)
-**유령 세션(Ghost Session)**: 세션 Hash는 TTL로 자연 만료되지만
-`user:sessions:{userId}` Set에서 멤버 제거는 명시적 호출일 때만 일어남.
-→ Hash가 만료된 UUID가 Set에 잔존 → "활성 세션 수" 과대 계상,
-   max 도달 오판·관리자 화면 오류 유발 가능.
+### 발견된 결함 (2026-08-25 심야 재검증 후 성격 확정)
+
+**유령 세션(Ghost Session)**: `user:sessions:{userId}` Set에 Hash 없는 UUID 잔존.
+
+원인은 두 가지로 구분됨:
+1. **[관찰된 건] 수동 정리 잔여**: 장애 대응 중 `--scan --pattern "session:*"` DEL은 실행,
+   `DEL user:sessions:{id}` 미실행 → Hash만 삭제되고 Set 멤버 잔존. **운영 코드 결함 아님.**
+2. **[코드 경로] TTL 비대칭**: Set TTL은 로그인마다 갱신되지만 개별 Hash TTL은 독립 만료.
+   로그인 간격이 벌어지면 오래된 Hash가 먼저 죽어 Set에 좀비 누적.
+   (평시 삭제 경로는 removeSession/removeAllSessions 모두 쌍으로 동작하므로 즉발성 없음)
+
+→ 영향: 활성 세션 수 과대 계상(관리자 화면·한도 판정 오판). 저빌도 누적형 hardening 대상.
 
 ## 2. 설계
 
