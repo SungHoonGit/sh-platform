@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { Database, CalendarClock, FileText, Star, Briefcase, ArrowRight } from "lucide-react";
+import { Database, CalendarClock, FileText, Star, Briefcase, ArrowRight, Search, FileSignature } from "lucide-react";
 import {
   fetchCrawlStats,
   fetchMyApplications,
   fetchMyResumes,
   fetchMyScraps,
   type ApplicationDto,
+  type CrawlerDetail,
 } from "../api/dashboard";
 import { useAuth } from "../hooks/useAuth";
 
@@ -72,7 +73,8 @@ export default function Dashboard() {
   const recentApps = [...apps]
     .sort((a, b) => (b.appliedAt ?? "").localeCompare(a.appliedAt ?? ""))
     .slice(0, 5);
-  const recentScraps = (scrapsQ.data ?? []).slice(0, 4);
+  const recentScraps = (scrapsQ.data ?? []).slice(0, 6);
+  const crawlerList: CrawlerDetail[] = crawlQ.data?.details ?? [];
 
   const fmtDate = (iso: string | null) =>
     iso ? new Date(iso).toLocaleDateString("ko-KR", { month: "short", day: "numeric" }) : "-";
@@ -84,6 +86,36 @@ export default function Dashboard() {
           {user ? `안녕하세요, ${user.name}님` : "개요"}
         </h1>
         <p className="text-slate-500 mt-1 text-sm">플랫폼 전체 현황을 한눈에 봅니다</p>
+      </div>
+
+      {/* 모듈 바로가기 배너 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <a
+          href="/scraper/"
+          className="group bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-xl p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-4"
+        >
+          <div className="w-11 h-11 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
+            <Search size={22} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-base">스크래퍼</p>
+            <p className="text-blue-100 text-xs">채용공고 수집 · 검색 · 크롤링</p>
+          </div>
+          <ArrowRight size={18} className="ml-auto text-blue-200 group-hover:text-white transition-colors shrink-0" />
+        </a>
+        <a
+          href="/resume/"
+          className="group bg-gradient-to-br from-green-600 to-green-700 text-white rounded-xl p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-4"
+        >
+          <div className="w-11 h-11 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
+            <FileSignature size={22} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-base">이력서</p>
+            <p className="text-green-100 text-xs">이력서 관리 · 공고 탐색 · 지원 관리</p>
+          </div>
+          <ArrowRight size={18} className="ml-auto text-green-200 group-hover:text-white transition-colors shrink-0" />
+        </a>
       </div>
 
       {/* 현황 카드 */}
@@ -124,8 +156,45 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* 수집 현황 + 지원 현황 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 지원 현황 파이프라인 */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+              <CalendarClock size={16} className="text-slate-400" />
+              수집 현황
+            </h2>
+            <a href="/scraper/" className="text-xs text-blue-600 hover:text-blue-700 flex items-center">
+              뷰어 <ArrowRight size={12} />
+            </a>
+          </div>
+          {crawlerList.length === 0 ? (
+            <p className="text-sm text-slate-400 py-6 text-center">등록된 크롤러가 없습니다</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {crawlerList.map((c) => (
+                <div key={c.name} className="py-3 first:pt-0 last:pb-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-slate-700 truncate">{c.name}</span>
+                    <span className="text-xs text-slate-400 shrink-0 ml-3">
+                      {c.todayCount > 0 ? (
+                        <span className="text-blue-600 font-medium">+{c.todayCount}</span>
+                      ) : (
+                        <span>0</span>
+                      )}
+                      {" · "}
+                      <span>{c.total.toLocaleString()}</span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {c.schedule ? `cron: ${c.schedule.replace(/\n/g, " · ")}` : "스케줄 미설정"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-slate-800 flex items-center gap-2">
@@ -137,9 +206,7 @@ export default function Dashboard() {
             </a>
           </div>
           {apps.length === 0 ? (
-            <p className="text-sm text-slate-400 py-8 text-center">
-              아직 등록된 지원이 없습니다
-            </p>
+            <p className="text-sm text-slate-400 py-8 text-center">아직 등록된 지원이 없습니다</p>
           ) : (
             <div className="space-y-2.5">
               {STATUS_ORDER.map((s) => (
@@ -148,7 +215,10 @@ export default function Dashboard() {
                   <div className="flex-1 h-5 bg-slate-100 rounded-md overflow-hidden">
                     <div
                       className={`${STATUS_COLORS[s]} h-full rounded-md transition-all`}
-                      style={{ width: `${(statusCounts[s] / maxCount) * 100}%`, minWidth: statusCounts[s] > 0 ? "8px" : 0 }}
+                      style={{
+                        width: `${(statusCounts[s] / maxCount) * 100}%`,
+                        minWidth: statusCounts[s] > 0 ? "8px" : 0,
+                      }}
                     />
                   </div>
                   <span className="w-6 text-xs font-semibold text-slate-700 text-right shrink-0">
@@ -160,34 +230,19 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+      </div>
 
-        {/* 최근 활동 */}
+      {/* 최근 지원 + 최근 스크랩 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-slate-800">최근 지원</h2>
-            <a href="/resume/#/postings" className="text-xs text-blue-600 hover:text-blue-700 flex items-center">
-              공고 탐색 <ArrowRight size={12} />
+            <a href="/resume/#/applications" className="text-xs text-blue-600 hover:text-blue-700 flex items-center">
+              전체 보기 <ArrowRight size={12} />
             </a>
           </div>
           {recentApps.length === 0 ? (
-            <div className="py-4">
-              <p className="text-sm text-slate-400 text-center mb-4">최근 지원 이력이 없습니다</p>
-              {recentScraps.length > 0 && (
-                <>
-                  <p className="text-xs font-medium text-slate-500 mb-2 flex items-center gap-1">
-                    <Star size={12} className="text-amber-500" /> 최근 스크랩
-                  </p>
-                  <ul className="space-y-1.5">
-                    {recentScraps.map((s) => (
-                      <li key={s.id} className="text-sm text-slate-600 truncate">
-                        <span className="text-slate-400 text-xs mr-1.5">{s.siteName}</span>
-                        {s.company} · {s.position}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
+            <p className="text-sm text-slate-400 py-8 text-center">지원 이력이 없습니다</p>
           ) : (
             <ul className="divide-y divide-slate-100">
               {recentApps.map((a) => (
@@ -201,6 +256,31 @@ export default function Dashboard() {
                       {STATUS_LABELS[a.status] ?? a.status}
                     </span>
                     <p className="text-[11px] text-slate-400 mt-0.5">{fmtDate(a.appliedAt)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-slate-800">최근 스크랩</h2>
+            <a href="/resume/#/postings" className="text-xs text-blue-600 hover:text-blue-700 flex items-center">
+              공고 탐색 <ArrowRight size={12} />
+            </a>
+          </div>
+          {recentScraps.length === 0 ? (
+            <p className="text-sm text-slate-400 py-8 text-center">스크랩한 공고가 없습니다</p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {recentScraps.map((s) => (
+                <li key={s.id} className="py-2.5">
+                  <p className="text-sm font-medium text-slate-700 truncate">{s.company}</p>
+                  <p className="text-xs text-slate-500 truncate">{s.position}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {s.siteName && <span className="text-[11px] text-slate-400">{s.siteName}</span>}
+                    <span className="text-[11px] text-slate-400">{fmtDate(s.scrappedAt)}</span>
                   </div>
                 </li>
               ))}

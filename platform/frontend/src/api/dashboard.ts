@@ -28,14 +28,21 @@ export interface CrawlStats {
   totalPostings: number;
   todayPostings: number;
   lastCrawledAt: string | null;
+  details: CrawlerDetail[];
+}
+
+export interface CrawlerDetail {
+  name: string;
+  schedule: string;
+  total: number;
+  todayCount: number;
 }
 
 export async function fetchCrawlStats(): Promise<CrawlStats> {
   const crawlers = await getRaw<CrawlerDto[]>("/scraper/docs/crawlers");
   const withSchedule = crawlers.filter((c) => c.schedule && c.schedule.trim().length > 0);
-  const targets = crawlers.slice(0, 8);
   const stats = await Promise.all(
-    targets.map((c) =>
+    crawlers.map((c) =>
       getRaw<{ total: number; todayCount: number; lastCrawledAt: string | null }>(
         `/scraper/job-postings/stats?configId=${c.id}`
       ).catch(() => ({ total: 0, todayCount: 0, lastCrawledAt: null }))
@@ -52,6 +59,12 @@ export async function fetchCrawlStats(): Promise<CrawlStats> {
     totalPostings: stats.reduce((a, s) => a + s.total, 0),
     todayPostings: stats.reduce((a, s) => a + s.todayCount, 0),
     lastCrawledAt: latest,
+    details: crawlers.map((c, i) => ({
+      name: c.name,
+      schedule: c.schedule,
+      total: stats[i].total,
+      todayCount: stats[i].todayCount,
+    })),
   };
 }
 
