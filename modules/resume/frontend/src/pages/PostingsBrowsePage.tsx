@@ -80,7 +80,7 @@ function deadlineRank(deadline: string | null): number {
 function SortIcon({ state }: { state: "asc" | "desc" | null }) {
   if (state === "asc") return <ArrowUp size={11} className="inline ml-0.5 text-slate-700" />;
   if (state === "desc") return <ArrowDown size={11} className="inline ml-0.5 text-slate-700" />;
-  return <span className="inline ml-0.5 text-slate-300 text-[10px]"> grayscale</span>;
+  return null;
 }
 
 export default function PostingsBrowsePage() {
@@ -125,6 +125,10 @@ export default function PostingsBrowsePage() {
   useEffect(() => { void loadScraps(); }, [loadScraps]);
 
   const toggleScrap = async (postingId: number) => {
+    const next = new Set(scrappedIds);
+    if (next.has(postingId)) next.delete(postingId);
+    else next.add(postingId);
+    setScrappedIds(next);
     try {
       if (scrappedIds.has(postingId)) {
         await fetchScraper(`/job-scrap/${postingId}`, { method: "DELETE" });
@@ -132,11 +136,11 @@ export default function PostingsBrowsePage() {
         await fetchScraper(`/job-scrap/${postingId}`, { method: "POST" });
       }
       await loadScraps();
-      load();
-    } catch { /* 무시 */ }
+    } catch {
+      setScrappedIds(new Set(scrappedIds));
+    }
   };
 
-  /** 3단계 토글: asc → desc → 취소 */
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
       if (sortDir === "asc") { setSortKey(key); setSortDir("desc"); }
@@ -174,11 +178,11 @@ export default function PostingsBrowsePage() {
     return [...list].sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
-        case "company":   cmp = collator.compare(a.company, b.company); break;
-        case "position":  cmp = collator.compare(a.position, b.position); break;
-        case "career":    cmp = (a.career || "").localeCompare(b.career || "", "ko"); break;
-        case "location":  cmp = (a.location || "").localeCompare(b.location || "", "ko"); break;
-        case "deadline":  cmp = deadlineRank(a.deadline) - deadlineRank(b.deadline); break;
+        case "company":  cmp = collator.compare(a.company, b.company); break;
+        case "position": cmp = collator.compare(a.position, b.position); break;
+        case "career":   cmp = (a.career || "").localeCompare(b.career || "", "ko"); break;
+        case "location": cmp = (a.location || "").localeCompare(b.location || "", "ko"); break;
+        case "deadline": cmp = deadlineRank(a.deadline) - deadlineRank(b.deadline); break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -192,29 +196,26 @@ export default function PostingsBrowsePage() {
     window.location.hash = "#/applications";
   };
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / SIZE)) : 1;
-
-  const sortState = (key: SortKey): "asc" | "desc" | null =>
-    sortKey === key ? sortDir : null;
+  const totalPages = view === "all" && data ? Math.max(1, Math.ceil(data.total / SIZE)) : 1;
+  const sortState = (key: SortKey): "asc" | "desc" | null => sortKey === key ? sortDir : null;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <h1 className="text-lg font-bold text-slate-800 mb-1">공고 탐색</h1>
       <p className="text-xs text-slate-400 mb-4">
-        스크래퍼가 수집한 공고와 내가 저장한 공고를 한 곳에서 관리합니다. ★로 저장하고 [지원 등록]으로 바로 기록하세요.
+        스크래퍼가 수집한 공고와 내가 저장한 공고를 한 곳에서 관리합니다. ★로 저장하고 [지원]으로 바로 기록하세요.
       </p>
 
-      {/* 필터 바 */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <div className="flex rounded-lg border border-gray-300 overflow-hidden shrink-0">
           <button
-            onClick={() => { setView("all"); setSortKey(null); setSortDir(null); }}
+            onClick={() => { setView("all"); setSortKey(null); setSortDir(null); setSite(""); setPage(0); }}
             className={`px-3 py-1.5 text-xs font-medium ${view === "all" ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-gray-50"}`}
           >
             전체 공고
           </button>
           <button
-            onClick={() => { setView("scraps"); setSortKey(null); setSortDir(null); }}
+            onClick={() => { setView("scraps"); setSortKey(null); setSortDir(null); setSite(""); setPage(0); }}
             className={`px-3 py-1.5 text-xs font-medium ${view === "scraps" ? "bg-amber-500 text-white" : "bg-white text-slate-600 hover:bg-gray-50"}`}
           >
             ★ 내 스크랩 ({scraps.length})
@@ -284,24 +285,24 @@ export default function PostingsBrowsePage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-gray-200 text-left">
                 <tr>
-                  <th className="px-1 py-2 w-[30px]"></th>
-                  <th className="px-1 py-2 font-semibold text-slate-600 w-[52px]">사이트</th>
-                  <th className="px-2 py-2 font-semibold text-slate-600 w-[28%]">
+                  <th className="px-1 py-2 w-[28px]"></th>
+                  <th className="px-1 py-2 font-semibold text-slate-600 w-[48px]">사이트</th>
+                  <th className="px-2 py-2 font-semibold text-slate-600 w-[32%]">
                     <button onClick={() => toggleSort("position")} className="inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors">
                       직무 / 기술 <SortIcon state={sortState("position")} />
                     </button>
                   </th>
-                  <th className="px-1 py-2 font-semibold text-slate-600 w-[52px]">
+                  <th className="px-1 py-2 font-semibold text-slate-600 w-[48px]">
                     <button onClick={() => toggleSort("career")} className="inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors">
                       경력 <SortIcon state={sortState("career")} />
                     </button>
                   </th>
-                  <th className="px-2 py-2 font-semibold text-slate-600 w-[120px]">
+                  <th className="px-2 py-2 font-semibold text-slate-600 w-[110px]">
                     <button onClick={() => toggleSort("location")} className="inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors">
                       지역 <SortIcon state={sortState("location")} />
                     </button>
                   </th>
-                  <th className="px-2 py-2 font-semibold text-slate-600 w-[80px]">
+                  <th className="px-2 py-2 font-semibold text-slate-600 w-[68px]">
                     <button onClick={() => toggleSort("deadline")} className="inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors">
                       {view === "scraps" ? "저장일" : "마감"} <SortIcon state={sortState("deadline")} />
                     </button>
@@ -311,7 +312,7 @@ export default function PostingsBrowsePage() {
                       회사 <SortIcon state={sortState("company")} />
                     </button>
                   </th>
-                  <th className="px-1 py-2 w-[64px]"></th>
+                  <th className="px-1 py-2 w-[48px]"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -336,8 +337,8 @@ export default function PostingsBrowsePage() {
                       </span>
                     </td>
                     <td className="px-2 py-2">
-                      <div className="font-medium text-slate-800 truncate max-w-[300px]">{p.position}</div>
-                      {p.tech && <div className="text-[10px] text-blue-600 mt-0.5 truncate max-w-[300px]">{p.tech}</div>}
+                      <div className="font-medium text-slate-800 truncate max-w-[360px]">{p.position}</div>
+                      {p.tech && <div className="text-[10px] text-blue-600 mt-0.5 truncate max-w-[360px]">{p.tech}</div>}
                     </td>
                     <td className="px-1 py-2 text-slate-600 text-xs whitespace-nowrap">{p.career || "-"}</td>
                     <td className="px-2 py-2 text-slate-600 text-xs">
@@ -363,7 +364,7 @@ export default function PostingsBrowsePage() {
             </table>
           </div>
 
-          {totalPages > 1 && (
+          {view === "all" && totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-4">
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
