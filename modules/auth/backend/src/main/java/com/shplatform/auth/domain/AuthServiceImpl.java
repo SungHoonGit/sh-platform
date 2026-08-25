@@ -25,6 +25,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final SessionService sessionService;
+    private final LoginLogService loginLogService;
 
     public AuthServiceImpl(UserRepository userRepository,
                            RefreshTokenRepository refreshTokenRepository,
@@ -34,7 +35,8 @@ public class AuthServiceImpl implements AuthService {
                            TokenProvider tokenProvider,
                            PasswordEncoder passwordEncoder,
                            EmailService emailService,
-                           SessionService sessionService) {
+                           SessionService sessionService,
+                           LoginLogService loginLogService) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.refreshTokenService = refreshTokenService;
@@ -44,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.sessionService = sessionService;
+        this.loginLogService = loginLogService;
     }
 
     @Override
@@ -113,17 +116,21 @@ public class AuthServiceImpl implements AuthService {
     public TokenResponse login(LoginRequest request) {
         var entity = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> {
+                    loginLogService.logLogin(null, request.email(), null, null, false);
                     log.warn("[AUTH] login failed (user not found): email={}", request.email());
                     return new BusinessException(ErrorCode.UNAUTHORIZED);
                 });
         if (!passwordEncoder.matches(request.password(), entity.getPassword())) {
+            loginLogService.logLogin(entity.getId(), request.email(), null, null, false);
             log.warn("[AUTH] login failed (wrong password): email={}", request.email());
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         if (!entity.isEmailVerified()) {
+            loginLogService.logLogin(entity.getId(), request.email(), null, null, false);
             log.warn("[AUTH] login failed (email not verified): email={}", request.email());
             throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
+        loginLogService.logLogin(entity.getId(), request.email(), null, null, true);
         log.info("[AUTH] login success: email={}, userId={}, provider=LOCAL", request.email(), entity.getId());
         return createTokens(entity.getId(), entity.getEmail(), entity.getRole().name());
     }
@@ -133,19 +140,23 @@ public class AuthServiceImpl implements AuthService {
     public TokenResponse loginWithSession(LoginRequest request, String ip, String device) {
         var entity = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> {
+                    loginLogService.logLogin(null, request.email(), ip, device, false);
                     log.warn("[AUTH] login failed (user not found): email={}", request.email());
                     return new BusinessException(ErrorCode.UNAUTHORIZED);
                 });
         if (!passwordEncoder.matches(request.password(), entity.getPassword())) {
+            loginLogService.logLogin(entity.getId(), request.email(), ip, device, false);
             log.warn("[AUTH] login failed (wrong password): email={}", request.email());
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         if (!entity.isEmailVerified()) {
+            loginLogService.logLogin(entity.getId(), request.email(), ip, device, false);
             log.warn("[AUTH] login failed (email not verified): email={}", request.email());
             throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
 
         String sessionId = sessionService.createSession(entity.getId(), ip, device);
+        loginLogService.logLogin(entity.getId(), request.email(), ip, device, true);
         log.info("[AUTH] login success: email={}, userId={}, sessionId={}", request.email(), entity.getId(), sessionId);
 
         return createTokens(entity.getId(), entity.getEmail(), entity.getRole().name());
