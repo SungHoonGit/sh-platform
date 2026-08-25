@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { fetchCrawlers, executeCrawler, fetchJobPostings, downloadJobPostingsExcel, fetchCrawlLogsGrouped, deleteCrawlLog, fetchMyScraps, scrapPosting, unscrapPosting, type JobPostingItem } from "../api/scraper";
+import { jobPlanetQuery } from "../common/jobPlanet";
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 
 const SITES = [
@@ -497,7 +498,7 @@ export default function Viewer() {
                             <span className="truncate">{job.company || "-"}</span>
                             {job.company && (
                               <a
-                                href={`https://www.jobplanet.co.kr/search?query=${encodeURIComponent(job.company)}`}
+                                href={`https://www.jobplanet.co.kr/search?query=${encodeURIComponent(jobPlanetQuery(job.company))}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}

@@ -147,9 +147,12 @@ public class CompanyRatingService {
                         .build();
             }
 
+            // 검색용 정규화: 법인 형태 제거 (검색 실패 방지). 캐시 키는 원본명 유지.
+            String searchName = normalizeForSearch(companyName);
+
             // 잡플래닛 평점 수집
             try {
-                Double jobplanetScore = scrapeJobPlanet(companyName);
+                Double jobplanetScore = scrapeJobPlanet(searchName);
                 if (jobplanetScore != null) {
                     rating.setJobplanetScore(jobplanetScore);
                     log.info("JobPlanet score for {}: {}", companyName, jobplanetScore);
@@ -160,7 +163,7 @@ public class CompanyRatingService {
 
             // 잡코리아 평점 수집
             try {
-                Double jobkoreaScore = scrapeJobKorea(companyName);
+                Double jobkoreaScore = scrapeJobKorea(searchName);
                 if (jobkoreaScore != null) {
                     rating.setJobkoreaScore(jobkoreaScore);
                     log.info("JobKorea score for {}: {}", companyName, jobkoreaScore);
@@ -171,7 +174,7 @@ public class CompanyRatingService {
 
             // 사람인 평점 수집
             try {
-                Double saraminScore = scrapeSaramin(companyName);
+                Double saraminScore = scrapeSaramin(searchName);
                 if (saraminScore != null) {
                     rating.setSaraminScore(saraminScore);
                     log.info("Saramin score for {}: {}", companyName, saraminScore);
@@ -214,6 +217,18 @@ public class CompanyRatingService {
      * 잡플래닛에서 기업 평점을 수집한다.
      * curl을 사용하여 잡플래닛 기업 검색 페이지에서 평점 추출.
      */
+    /**
+     * 평점 검색용 회사명을 정규화한다.
+     * 법인 형태((주), ㈜, 주식회사 등)가 포함되면 채용사이트 검색이 실패하므로 제거한다.
+     */
+    private static String normalizeForSearch(String companyName) {
+        if (companyName == null) return null;
+        return companyName
+                .replaceAll("\\(주\\)|㈜|\\(株\\)|주식회사", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
     private Double scrapeJobPlanet(String companyName) {
         try {
             // 잡플래닛 기업 검색 API (비공식)

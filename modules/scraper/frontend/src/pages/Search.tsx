@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ExcelJS from "exceljs";
 import { realTimeSearch, fetchCompanyRatings, type SearchRequest, type SearchResponse, type CompanyRating } from "../api/scraper";
+import { jobPlanetQuery } from "../common/jobPlanet";
 import {
   REGIONS,
   DEFAULT_LOCATIONS,
@@ -473,7 +474,7 @@ export default function Search() {
                               <span className="truncate">{job.company || "-"}</span>
                               {job.company && (
                                 <a
-                                  href={`https://www.jobplanet.co.kr/search?query=${encodeURIComponent(job.company)}`}
+                                  href={`https://www.jobplanet.co.kr/search?query=${encodeURIComponent(jobPlanetQuery(job.company))}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
@@ -496,7 +497,7 @@ export default function Search() {
                           <td className="px-2 py-1.5">
                             {job.company ? (
                               <a
-                                href={`https://www.jobplanet.co.kr/search?query=${encodeURIComponent(job.company)}`}
+                                href={`https://www.jobplanet.co.kr/search?query=${encodeURIComponent(jobPlanetQuery(job.company))}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
