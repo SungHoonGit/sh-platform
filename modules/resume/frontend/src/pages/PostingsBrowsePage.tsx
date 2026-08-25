@@ -126,6 +126,9 @@ export default function PostingsBrowsePage() {
 
   const toggleScrap = async (postingId: number) => {
     const wasScrapped = scrappedIds.has(postingId);
+    if (wasScrapped && view === "scraps") {
+      if (!confirm("이 스크랩을 해제하시겠습니까?")) return;
+    }
     const nextIds = new Set(scrappedIds);
     if (wasScrapped) nextIds.delete(postingId);
     else nextIds.add(postingId);
