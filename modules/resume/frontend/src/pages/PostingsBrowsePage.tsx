@@ -27,7 +27,7 @@ interface RawScrapItem extends JobPostingSummary {
 }
 
 interface GridRow {
-  id: number;
+  postingId: number;
   siteName: string;
   company: string;
   position: string;
@@ -50,7 +50,7 @@ const SITE_BADGES: Record<string, string> = {
   jobkorea: "bg-green-100 text-green-700",
 };
 
-type SortKey = "company" | "position" | "deadline";
+type SortKey = "position" | "company" | "career" | "location" | "deadline";
 
 async function fetchScraper<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem("accessToken");
@@ -66,7 +66,6 @@ async function fetchScraper<T>(path: string, options: RequestInit = {}): Promise
   return res.json();
 }
 
-/** 마감일 문자열에서 가까운 날짜를 추정한다 (정렬용). */
 function deadlineRank(deadline: string | null): number {
   if (!deadline) return Number.MAX_SAFE_INTEGER;
   if (/오늘|금일|즉시/.test(deadline)) return -1;
@@ -78,6 +77,12 @@ function deadlineRank(deadline: string | null): number {
   return Number.isNaN(t) ? Number.MAX_SAFE_INTEGER : t;
 }
 
+function SortIcon({ state }: { state: "asc" | "desc" | null }) {
+  if (state === "asc") return <ArrowUp size={11} className="inline ml-0.5 text-slate-700" />;
+  if (state === "desc") return <ArrowDown size={11} className="inline ml-0.5 text-slate-700" />;
+  return <span className="inline ml-0.5 text-slate-300 text-[10px]"> grayscale</span>;
+}
+
 export default function PostingsBrowsePage() {
   const [view, setView] = useState<"all" | "scraps">("all");
   const [data, setData] = useState<RecentPostings | null>(null);
@@ -86,7 +91,7 @@ export default function PostingsBrowsePage() {
   const [site, setSite] = useState("");
   const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortAsc, setSortAsc] = useState(true);
+  const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scrappedIds, setScrappedIds] = useState<Set<number>>(new Set());
@@ -116,13 +121,8 @@ export default function PostingsBrowsePage() {
       .finally(() => setLoading(false));
   }, [page, keyword, site]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    void loadScraps();
-  }, [loadScraps]);
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void loadScraps(); }, [loadScraps]);
 
   const toggleScrap = async (postingId: number) => {
     try {
@@ -132,65 +132,70 @@ export default function PostingsBrowsePage() {
         await fetchScraper(`/job-scrap/${postingId}`, { method: "POST" });
       }
       await loadScraps();
-      if (view === "all") load();
-    } catch {
-      /* 무시 */
-    }
+      load();
+    } catch { /* 무시 */ }
   };
 
+  /** 3단계 토글: asc → desc → 취소 */
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
-      setSortAsc((v) => !v);
+      if (sortDir === "asc") { setSortKey(key); setSortDir("desc"); }
+      else if (sortDir === "desc") { setSortKey(null); setSortDir(null); }
+      else { setSortKey(key); setSortDir("asc"); }
     } else {
       setSortKey(key);
-      setSortAsc(true);
+      setSortDir("asc");
     }
   };
-
-  const SortIcon = ({ active, asc }: { active: boolean; asc: boolean }) =>
-    active ? (
-      asc ? (
-        <ArrowUp size={11} className="inline ml-0.5" />
-      ) : (
-        <ArrowDown size={11} className="inline ml-0.5" />
-      )
-    ) : null;
 
   const rows: GridRow[] = useMemo(() => {
     const list: GridRow[] =
       view === "scraps"
-        ? scraps.map((s) => ({ ...s, savedAt: s.scrappedAt }))
-        : (data?.items ?? []) as GridRow[];
-    if (!sortKey) {
-      if (view === "scraps") {
-        return list.sort((a, b) => (a.savedAt! < b.savedAt! ? 1 : -1));
-      }
+        ? scraps.map((s) => ({
+            postingId: s.postingId,
+            siteName: s.siteName,
+            company: s.company,
+            position: s.position,
+            career: s.career,
+            tech: s.tech,
+            location: s.location,
+            deadline: s.deadline,
+            url: s.url,
+            savedAt: s.scrappedAt,
+          }))
+        : (data?.items ?? []).map((i) => ({ ...i, postingId: i.id }));
+
+    if (!sortKey || !sortDir) {
+      if (view === "scraps") return list.sort((a, b) => (a.savedAt! < b.savedAt! ? 1 : -1));
       return list;
     }
+
+    const collator = new Intl.Collator("ko");
     return [...list].sort((a, b) => {
       let cmp = 0;
-      if (sortKey === "company") cmp = (a.company ?? "").localeCompare(b.company ?? "", "ko");
-      else if (sortKey === "position") cmp = (a.position ?? "").localeCompare(b.position ?? "", "ko");
-      else cmp = deadlineRank(a.deadline) - deadlineRank(b.deadline);
-      return sortAsc ? cmp : -cmp;
+      switch (sortKey) {
+        case "company":   cmp = collator.compare(a.company, b.company); break;
+        case "position":  cmp = collator.compare(a.position, b.position); break;
+        case "career":    cmp = (a.career || "").localeCompare(b.career || "", "ko"); break;
+        case "location":  cmp = (a.location || "").localeCompare(b.location || "", "ko"); break;
+        case "deadline":  cmp = deadlineRank(a.deadline) - deadlineRank(b.deadline); break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [view, scraps, data, sortKey, sortAsc]);
+  }, [view, scraps, data, sortKey, sortDir]);
 
   const applyNow = (p: GridRow) => {
     sessionStorage.setItem(
       "applicationPrefill",
-      JSON.stringify({
-        companyName: p.company,
-        postingTitle: p.position,
-        postingUrl: p.url,
-        postingId: p.id,
-      })
+      JSON.stringify({ companyName: p.company, postingTitle: p.position, postingUrl: p.url, postingId: p.postingId })
     );
     window.location.hash = "#/applications";
   };
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / SIZE)) : 1;
-  const active = (key: SortKey) => sortKey === key;
+
+  const sortState = (key: SortKey): "asc" | "desc" | null =>
+    sortKey === key ? sortDir : null;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
@@ -199,60 +204,56 @@ export default function PostingsBrowsePage() {
         스크래퍼가 수집한 공고와 내가 저장한 공고를 한 곳에서 관리합니다. ★로 저장하고 [지원 등록]으로 바로 기록하세요.
       </p>
 
-      {/* 필터 바: 탭 + 사이트 필터 + 건수 + 검색 */}
+      {/* 필터 바 */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <div className="flex rounded-lg border border-gray-300 overflow-hidden shrink-0">
           <button
-            onClick={() => setView("all")}
+            onClick={() => { setView("all"); setSortKey(null); setSortDir(null); }}
             className={`px-3 py-1.5 text-xs font-medium ${view === "all" ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-gray-50"}`}
           >
             전체 공고
           </button>
           <button
-            onClick={() => setView("scraps")}
+            onClick={() => { setView("scraps"); setSortKey(null); setSortDir(null); }}
             className={`px-3 py-1.5 text-xs font-medium ${view === "scraps" ? "bg-amber-500 text-white" : "bg-white text-slate-600 hover:bg-gray-50"}`}
           >
             ★ 내 스크랩 ({scraps.length})
           </button>
         </div>
 
-        {view === "all" &&
-          SITES.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => { setSite(s.id); setPage(0); }}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                site === s.id
-                  ? "bg-slate-900 text-white"
-                  : "bg-white border border-slate-200 text-slate-600 hover:border-slate-400"
-              }`}
-            >
-              {s.name}
-            </button>
-          ))}
+        {SITES.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => { setSite(s.id); setPage(0); }}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              site === s.id
+                ? "bg-slate-900 text-white"
+                : "bg-white border border-slate-200 text-slate-600 hover:border-slate-400"
+            }`}
+          >
+            {s.name}
+          </button>
+        ))}
 
-        {view === "all" && data && (
-          <span className="text-xs text-slate-400 shrink-0">총 {data.total.toLocaleString()}건</span>
-        )}
+        <span className="text-xs text-slate-400 shrink-0">
+          총 {view === "all" ? (data?.total ?? 0).toLocaleString() : scraps.length.toLocaleString()}건
+        </span>
 
-        {/* 검색 — 오른쪽 끝 */}
-        {view === "all" && (
-          <div className="flex items-center gap-1.5 ml-auto shrink-0">
-            <input
-              value={keyword}
-              onChange={(e) => { setKeyword(e.target.value); setPage(0); }}
-              onKeyDown={(e) => e.key === "Enter" && load()}
-              placeholder="회사명 / 직무 검색"
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-48 focus:outline-none focus:border-gray-500"
-            />
-            <button
-              onClick={load}
-              className="bg-slate-900 text-white rounded-lg px-3 py-1.5 text-sm font-semibold hover:bg-slate-800"
-            >
-              검색
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-1.5 ml-auto shrink-0">
+          <input
+            value={keyword}
+            onChange={(e) => { setKeyword(e.target.value); setPage(0); }}
+            onKeyDown={(e) => e.key === "Enter" && load()}
+            placeholder="회사명 / 직무 검색"
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-48 focus:outline-none focus:border-gray-500"
+          />
+          <button
+            onClick={load}
+            className="bg-slate-900 text-white rounded-lg px-3 py-1.5 text-sm font-semibold hover:bg-slate-800"
+          >
+            검색
+          </button>
+        </div>
       </div>
 
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
@@ -283,54 +284,62 @@ export default function PostingsBrowsePage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-gray-200 text-left">
                 <tr>
-                  <th className="px-2 py-2 w-[34px]"></th>
-                  <th className="px-2 py-2 font-semibold text-slate-600 w-[56px]">사이트</th>
-                  <th className="px-3 py-2 font-semibold text-slate-600 w-[30%]">
-                    <button onClick={() => toggleSort("position")} className={`inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors ${active("position") ? "text-slate-900" : ""}`}>
-                      직무 / 회사 <SortIcon active={active("position")} asc={sortAsc} />
+                  <th className="px-1 py-2 w-[30px]"></th>
+                  <th className="px-1 py-2 font-semibold text-slate-600 w-[52px]">사이트</th>
+                  <th className="px-2 py-2 font-semibold text-slate-600 w-[28%]">
+                    <button onClick={() => toggleSort("position")} className="inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors">
+                      직무 / 기술 <SortIcon state={sortState("position")} />
                     </button>
                   </th>
-                  <th className="px-2 py-2 font-semibold text-slate-600 w-[48px]">경력</th>
-                  <th className="px-2 py-2 font-semibold text-slate-600 w-[120px]">지역</th>
+                  <th className="px-1 py-2 font-semibold text-slate-600 w-[52px]">
+                    <button onClick={() => toggleSort("career")} className="inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors">
+                      경력 <SortIcon state={sortState("career")} />
+                    </button>
+                  </th>
+                  <th className="px-2 py-2 font-semibold text-slate-600 w-[120px]">
+                    <button onClick={() => toggleSort("location")} className="inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors">
+                      지역 <SortIcon state={sortState("location")} />
+                    </button>
+                  </th>
                   <th className="px-2 py-2 font-semibold text-slate-600 w-[80px]">
-                    <button onClick={() => toggleSort("deadline")} className={`inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors ${active("deadline") ? "text-slate-900" : ""}`}>
-                      {view === "scraps" ? "저장일" : "마감"} <SortIcon active={active("deadline")} asc={sortAsc} />
+                    <button onClick={() => toggleSort("deadline")} className="inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors">
+                      {view === "scraps" ? "저장일" : "마감"} <SortIcon state={sortState("deadline")} />
                     </button>
                   </th>
-                  <th className="px-2 py-2 font-semibold text-slate-600 w-[64px]">
-                    <button onClick={() => toggleSort("company")} className={`inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors ${active("company") ? "text-slate-900" : ""}`}>
-                      회사 <SortIcon active={active("company")} asc={sortAsc} />
+                  <th className="px-2 py-2 font-semibold text-slate-600 w-[70px]">
+                    <button onClick={() => toggleSort("company")} className="inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors">
+                      회사 <SortIcon state={sortState("company")} />
                     </button>
                   </th>
-                  <th className="px-2 py-2 w-[74px]"></th>
+                  <th className="px-1 py-2 w-[64px]"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {rows.map((p) => (
                   <tr
-                    key={p.id}
+                    key={p.postingId}
                     onClick={() => p.url && window.open(p.url, "_blank")}
-                    className={`hover:bg-blue-50/40 cursor-pointer transition-colors ${scrappedIds.has(p.id) ? "bg-amber-50/40" : ""}`}
+                    className={`hover:bg-blue-50/40 cursor-pointer transition-colors ${scrappedIds.has(p.postingId) ? "bg-amber-50/40" : ""}`}
                   >
-                    <td className="px-2 py-2 text-center">
+                    <td className="px-1 py-2 text-center">
                       <button
-                        onClick={(e) => { e.stopPropagation(); void toggleScrap(p.id); }}
-                        title={scrappedIds.has(p.id) ? "스크랩 해제" : "스크랩"}
-                        className={`text-base leading-none transition-transform hover:scale-125 ${scrappedIds.has(p.id) ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
+                        onClick={(e) => { e.stopPropagation(); void toggleScrap(p.postingId); }}
+                        title={scrappedIds.has(p.postingId) ? "스크랩 해제" : "스크랩"}
+                        className={`text-base leading-none transition-transform hover:scale-125 ${scrappedIds.has(p.postingId) ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
                       >
-                        {scrappedIds.has(p.id) ? "★" : "☆"}
+                        {scrappedIds.has(p.postingId) ? "★" : "☆"}
                       </button>
                     </td>
-                    <td className="px-2 py-2">
+                    <td className="px-1 py-2">
                       <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${SITE_BADGES[p.siteName] ?? "bg-slate-100 text-slate-600"}`}>
                         {p.siteName}
                       </span>
                     </td>
-                    <td className="px-3 py-2">
-                      <div className="font-medium text-slate-800 truncate max-w-[340px]">{p.position}</div>
-                      {p.tech && <div className="text-[10px] text-blue-600 mt-0.5 truncate max-w-[340px]">{p.tech}</div>}
+                    <td className="px-2 py-2">
+                      <div className="font-medium text-slate-800 truncate max-w-[300px]">{p.position}</div>
+                      {p.tech && <div className="text-[10px] text-blue-600 mt-0.5 truncate max-w-[300px]">{p.tech}</div>}
                     </td>
-                    <td className="px-2 py-2 text-slate-600 text-xs whitespace-nowrap">{p.career || "-"}</td>
+                    <td className="px-1 py-2 text-slate-600 text-xs whitespace-nowrap">{p.career || "-"}</td>
                     <td className="px-2 py-2 text-slate-600 text-xs">
                       <div className="line-clamp-2 leading-relaxed">{p.location || "-"}</div>
                     </td>
@@ -339,13 +348,13 @@ export default function PostingsBrowsePage() {
                         ? p.savedAt ? new Date(p.savedAt).toLocaleDateString("ko-KR") : "-"
                         : p.deadline || "-"}
                     </td>
-                    <td className="px-2 py-2 text-slate-700 text-xs truncate max-w-[100px]">{p.company}</td>
-                    <td className="px-2 py-2 text-right">
+                    <td className="px-2 py-2 text-slate-700 text-xs truncate max-w-[80px]">{p.company}</td>
+                    <td className="px-1 py-2 text-right">
                       <button
                         onClick={(e) => { e.stopPropagation(); applyNow(p); }}
-                        className="text-[11px] font-semibold text-slate-700 border border-gray-300 rounded px-2 py-1 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors whitespace-nowrap"
+                        className="text-[11px] font-semibold text-slate-700 border border-gray-300 rounded px-1.5 py-0.5 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors whitespace-nowrap"
                       >
-                        지원 등록
+                        지원
                       </button>
                     </td>
                   </tr>
@@ -354,7 +363,7 @@ export default function PostingsBrowsePage() {
             </table>
           </div>
 
-          {view === "all" && totalPages > 1 && (
+          {totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-4">
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
