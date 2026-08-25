@@ -124,7 +124,7 @@ export default function AccountSettings() {
   if (!me) return null;
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 max-w-2xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-800">계정 설정</h1>
         <p className="text-slate-500 mt-1">내 계정 정보와 로그인 수단을 관리합니다</p>
