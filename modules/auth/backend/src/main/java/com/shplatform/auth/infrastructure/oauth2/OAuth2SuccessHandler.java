@@ -1,7 +1,7 @@
 package com.shplatform.auth.infrastructure.oauth2;
 
-import com.shplatform.auth.infrastructure.RefreshTokenEntity;
-import com.shplatform.auth.infrastructure.RefreshTokenRepository;
+import com.shplatform.auth.domain.RefreshTokenService;
+import com.shplatform.auth.domain.SessionService;
 import com.shplatform.auth.infrastructure.TokenProvider;
 import com.shplatform.shared.config.CookieAuthorizationRequestRepository;
 import jakarta.servlet.ServletException;
@@ -10,7 +10,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,17 +23,20 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private static final Logger log = LoggerFactory.getLogger(OAuth2SuccessHandler.class);
 
     private final TokenProvider tokenProvider;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenService refreshTokenService;
+    private final SessionService sessionService;
     private final CookieAuthorizationRequestRepository authorizationRequestRepository;
 
     @Value("${oauth2.frontend-url:http://localhost:3000}")
     private String frontendUrl;
 
     public OAuth2SuccessHandler(TokenProvider tokenProvider,
-                                 RefreshTokenRepository refreshTokenRepository,
+                                 RefreshTokenService refreshTokenService,
+                                 SessionService sessionService,
                                  CookieAuthorizationRequestRepository authorizationRequestRepository) {
         this.tokenProvider = tokenProvider;
-        this.refreshTokenRepository = refreshTokenRepository;
+        this.refreshTokenService = refreshTokenService;
+        this.sessionService = sessionService;
         this.authorizationRequestRepository = authorizationRequestRepository;
     }
 
@@ -48,12 +50,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 oauth2User.getUserId(), oauth2User.getEmail(), oauth2User.getRole());
         String refreshToken = tokenProvider.createRefreshToken();
 
-        RefreshTokenEntity refreshTokenEntity = new RefreshTokenEntity();
-        refreshTokenEntity.setUserId(oauth2User.getUserId());
-        refreshTokenEntity.setToken(refreshToken);
-        refreshTokenEntity.setExpiresAt(LocalDateTime.now()
-                .plusNanos(tokenProvider.getRefreshTokenExpiration() * 1_000_000));
-        refreshTokenRepository.save(refreshTokenEntity);
+        refreshTokenService.save(refreshToken, oauth2User.getUserId());
+
+        String ip = request.getRemoteAddr();
+        String device = request.getHeader("User-Agent");
+        String sessionId = sessionService.createSession(oauth2User.getUserId(), ip, device);
 
         String returnUrl = request.getParameter("returnUrl");
         if (returnUrl == null || returnUrl.isBlank()) {
@@ -69,8 +70,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 + "&provider=" + encode(oauth2User.getUserInfo().getProvider())
                 + "&returnUrl=" + encode(returnUrl);
 
-        log.info("[OAUTH2] success redirect: userId={}, provider={}", oauth2User.getUserId(),
-                oauth2User.getUserInfo().getProvider());
+        log.info("[OAUTH2] success redirect: userId={}, provider={}, sessionId={}",
+                oauth2User.getUserId(), oauth2User.getUserInfo().getProvider(), sessionId);
 
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
