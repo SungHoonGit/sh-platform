@@ -1,38 +1,51 @@
-import { Outlet, useLocation, Link } from "react-router-dom";
-import CommonHeader from "./CommonHeader";
+import { Outlet, useLocation } from "react-router-dom";
+import { Search, CalendarPlus, FileText } from "lucide-react";
+import AppShell from "../shell/AppShell";
+import type { DrawerSection } from "../shell/SideDrawer";
+import { useAuth } from "../hooks/useAuth";
+import { useCrawlNotifications } from "./crawlNotifications";
+
+const drawerSections: DrawerSection[] = [
+  {
+    label: "데이터",
+    items: [{ label: "통합검색", href: "/" }],
+  },
+  {
+    label: "수집",
+    items: [
+      { label: "스케줄 등록", href: "/schedule" },
+      { label: "공고 뷰어", href: "/viewer" },
+    ],
+  },
+];
 
 export default function Layout() {
   const location = useLocation();
+  const { user, loading, logout } = useAuth();
+  const notifications = useCrawlNotifications();
+
   const isActive = (path: string) =>
     location.pathname === path || (path === "/" && location.pathname === "/search");
 
-  return (
-    <div className="h-screen flex flex-col">
-      <CommonHeader />
+  const subnavItems = [
+    { label: "통합검색", href: "/", icon: Search, active: isActive("/") },
+    { label: "스케줄 등록", href: "/schedule", icon: CalendarPlus, active: isActive("/schedule") },
+    { label: "뷰어", href: "/viewer", icon: FileText, active: isActive("/viewer") },
+  ];
 
-      <div className="bg-slate-800 border-b border-slate-700 px-5 flex items-center h-10 gap-4 shrink-0">
-        <Link
-          to="/"
-          className={`text-sm font-medium ${isActive("/") ? "text-blue-400" : "text-slate-300 hover:text-white"}`}
-        >
-          🔍 통합검색
-        </Link>
-        <Link
-          to="/schedule"
-          className={`text-sm font-medium ${isActive("/schedule") ? "text-blue-400" : "text-slate-300 hover:text-white"}`}
-        >
-          📅 스케줄등록
-        </Link>
-        <Link
-          to="/viewer"
-          className={`text-sm font-medium ${isActive("/viewer") ? "text-blue-400" : "text-slate-300 hover:text-white"}`}
-        >
-          📄 뷰어
-        </Link>
-      </div>
-      <main className="flex-1 overflow-hidden">
-        <Outlet />
-      </main>
-    </div>
+  return (
+    <AppShell
+      currentApp="scraper"
+      subnavItems={subnavItems}
+      drawerSections={drawerSections}
+      notifications={notifications}
+      user={user ? { name: user.name, email: user.email } : null}
+      authLoading={loading}
+      isAdmin={user?.role === "ADMIN"}
+      onLogout={logout}
+      mainClassName="flex-1 overflow-hidden"
+    >
+      <Outlet />
+    </AppShell>
   );
 }
