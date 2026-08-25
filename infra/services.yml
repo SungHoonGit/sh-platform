@@ -48,6 +48,9 @@ static_targets:
   - job: mysql
     comment: MariaDB (mysqld_exporter)
     targets: [localhost:9104]
+  - job: redis
+    comment: Redis (redis_exporter)
+    targets: [localhost:9121]
   - job: kakao-bot
     comment: Kakao Bot (prometheus_client)
     targets: [localhost:5002]
