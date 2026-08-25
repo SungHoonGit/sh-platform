@@ -94,6 +94,27 @@ APP_SESSION_PREVENT_DUPLICATE=false   # 초과 시 가장 오래된 세션 자�
 | 조회수/스크랩 랭킹 | ZSET | 공고별 스크랩 수 실시간 집계 → Viewer "인기" 배지 |
 | 크롤링 완료 알림 | Pub/Sub 또는 List 큐 | 프론트 SSE와 연계 검토 |
 
+#### C-audit. 감사 로그 이중 기록 (공공기관 스타일 증적)
+
+Redis 로그인 이력(List+TTL)은 실시간 판정 전용 — 리포트/증적으로는 부적합(TTL 소멸).
+**MariaDB 영속 테이블 병행 기록**으로 월간 SQL 추출 가능하게 함:
+
+```
+login_logs        : id, user_id, email, ip, user_agent, provider, success, created_at (MONTHLY 파티션)
+admin_audit_logs  : id, actor_user_id, action(role_change/force_logout/delete_user),
+                    target_user_id, before_value, after_value, ip, created_at
+```
+- 적용 지점: LoginLogService(로그인), AdminController/AdminService(권한변경·강제로그아웃)
+- 원칙: Redis=실시간 판정(hot) / MariaDB=증적·리포트(cold)
+
+#### C-kafka. Kafka 재평가 조건 (지금은 미도입)
+
+Kafka는 전송 배관일 뿐 저장소 대체 불가 — 도입해도 위 테이블은 필요.
+아래 조건 충족 시 설계 문서 작성 후 도입 검토:
+- [ ] 2개 이상 모듈이 동일 이벤트를 각각 소비해야 할 때
+- [ ] 크롤링 결과 폭주로 소비측 처리 지연이 실측될 때
+- [ ] MSA 간 동기 호출 결합도가 병목이 될 때
+
 ### Phase D — 안정성 강화
 
 1. **영속성**: `/etc/redis/redis.conf` — `appendonly yes` (AOF, everysec)
