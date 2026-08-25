@@ -192,8 +192,9 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.findByToken(refreshToken)
                 .ifPresent(entity -> {
                     refreshTokenRepository.delete(entity);
-                    log.info("[AUTH] logout: userId={}", entity.getUserId());
+                    log.info("[AUTH] logout(mariadb): userId={}", entity.getUserId());
                 });
+        refreshTokenService.delete(refreshToken);
     }
 
     @Override

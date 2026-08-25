@@ -36,6 +36,18 @@ export function useAuth(): AuthState {
   }, [token]);
 
   const logout = useCallback(() => {
+    const accessToken = localStorage.getItem("accessToken");
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (accessToken) {
+      fetch("/api/v1/auth/logout", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ refreshToken }),
+      }).catch(() => {});
+    }
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     window.location.replace("/");

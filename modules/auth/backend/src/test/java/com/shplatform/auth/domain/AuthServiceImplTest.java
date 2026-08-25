@@ -312,15 +312,17 @@ class AuthServiceImplTest {
         authService.logout("some-token");
 
         verify(refreshTokenRepository).delete(stored);
+        verify(refreshTokenService).delete("some-token");
     }
 
     @Test
-    void logout_shouldDoNothing_whenTokenNotExists() {
+    void logout_shouldDeleteRedisToken_whenNotInMariaDB() {
         when(refreshTokenRepository.findByToken(anyString())).thenReturn(Optional.empty());
 
-        authService.logout("unknown-token");
+        authService.logout("redis-only-token");
 
         verify(refreshTokenRepository, never()).delete(any());
+        verify(refreshTokenService).delete("redis-only-token");
     }
 
     // ──────────────────────────────────────────────

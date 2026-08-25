@@ -22,12 +22,16 @@ export async function fetchProfile(): Promise<UserProfile> {
 }
 
 export function logout() {
+  const accessToken = localStorage.getItem("accessToken");
   const refreshToken = localStorage.getItem("refreshToken");
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
   fetch("/api/v1/auth/logout", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({ refreshToken }),
   }).catch(() => {});
 }
