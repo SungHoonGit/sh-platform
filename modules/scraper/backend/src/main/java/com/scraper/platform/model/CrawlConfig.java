@@ -30,7 +30,8 @@ public class CrawlConfig {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(length = 100)
+    /** 크론 스케줄. 개행(\n)으로 여러 표현식 지원 */
+    @Column(length = 500)
     @Builder.Default
     private String schedule = "0 9 * * *";
 

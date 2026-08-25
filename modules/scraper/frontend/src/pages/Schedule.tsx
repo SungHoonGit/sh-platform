@@ -322,6 +322,10 @@ export default function Schedule() {
   };
 
   const addTimePair = () => {
+    if (timePairs.length >= 10) {
+      alert("시간은 최대 10개까지 추가할 수 있습니다.");
+      return;
+    }
     setTimePairs(prev => [...prev, { hour: 9, minute: 0 }]);
   };
 
