@@ -5,6 +5,7 @@ import com.shplatform.shared.exception.BusinessException;
 import com.shplatform.shared.exception.ErrorCode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -44,8 +45,8 @@ public class SessionService {
      * @return 세션 ID
      */
     public String createSession(Long userId, String ip, String device) {
-        Set<Object> existingSessions = redisRepository.getSetMembers(USER_SESSIONS_KEY_PREFIX + userId);
-        int currentCount = existingSessions != null ? existingSessions.size() : 0;
+        Set<Object> existingSessions = pruneAndGetActiveSessions(userId);
+        int currentCount = existingSessions.size();
 
         if (currentCount >= maxSessionsPerUser) {
             if (preventDuplicateLogin) {
@@ -126,22 +127,43 @@ public class SessionService {
     /**
      * 사용자의 활성 세션 수를 반환한다.
      *
+     * <p>조회 시 Hash가 만료된 유령 멤버를 Set에서 정리한 뒤 계수한다.
+     *
      * @param userId 사용자 ID
      * @return 활성 세션 수
      */
     public int getActiveSessionCount(Long userId) {
-        Long count = redisRepository.getSetSize(USER_SESSIONS_KEY_PREFIX + userId);
-        return count != null ? count.intValue() : 0;
+        return pruneAndGetActiveSessions(userId).size();
     }
 
     /**
      * 사용자의 활성 세션 목록을 반환한다.
      *
+     * <p>Hash가 만료된 유령 멤버는 Set에서 제거되며, 반환값은 null이 아니다.
+     *
      * @param userId 사용자 ID
      * @return 세션 ID 목록
      */
     public Set<Object> getActiveSessions(Long userId) {
-        return redisRepository.getSetMembers(USER_SESSIONS_KEY_PREFIX + userId);
+        return pruneAndGetActiveSessions(userId);
+    }
+
+    private Set<Object> pruneAndGetActiveSessions(Long userId) {
+        Set<Object> members = redisRepository.getSetMembers(USER_SESSIONS_KEY_PREFIX + userId);
+        if (members == null || members.isEmpty()) {
+            return Set.of();
+        }
+        Set<Object> active = new HashSet<>();
+        for (Object member : members) {
+            String sessionKey = SESSION_KEY_PREFIX + userId + ":" + member;
+            if (Boolean.TRUE.equals(redisRepository.hasKey(sessionKey))) {
+                active.add(member);
+            } else {
+                redisRepository.removeFromSet(USER_SESSIONS_KEY_PREFIX + userId, member);
+                log.info("[SESSION] pruned ghost session: userId={}, sessionId={}", userId, member);
+            }
+        }
+        return active;
     }
 
     private void removeOldestSession(Long userId, Set<Object> sessions) {

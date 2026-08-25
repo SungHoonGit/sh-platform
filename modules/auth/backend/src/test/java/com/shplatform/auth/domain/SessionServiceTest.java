@@ -48,6 +48,7 @@ class SessionServiceTest {
     @Test
     void createSession_shouldThrow_whenLimitReachedAndPreventDuplicate() {
         when(redisRepository.getSetMembers(USER_SESSIONS_KEY)).thenReturn(Set.<Object>of("existing"));
+        when(redisRepository.hasKey("session:1:existing")).thenReturn(true);
 
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> sessionService.createSession(1L, "127.0.0.1", "UA"));
@@ -60,6 +61,7 @@ class SessionServiceTest {
     void createSession_shouldEvictOldest_whenLimitReachedWithoutPreventDuplicate() {
         ReflectionTestUtils.setField(sessionService, "preventDuplicateLogin", false);
         when(redisRepository.getSetMembers(USER_SESSIONS_KEY)).thenReturn(Set.<Object>of("old-session"));
+        when(redisRepository.hasKey("session:1:old-session")).thenReturn(true);
         when(redisRepository.hashGet("session:1:old-session", "loginAt")).thenReturn("2026-01-01T10:00:00");
 
         String sessionId = sessionService.createSession(1L, "127.0.0.1", "UA");
@@ -67,6 +69,31 @@ class SessionServiceTest {
         assertNotNull(sessionId);
         verify(redisRepository).delete("session:1:old-session");
         verify(redisRepository).removeFromSet(USER_SESSIONS_KEY, "old-session");
+        verify(redisRepository).addToSet(eq(USER_SESSIONS_KEY), anyString());
+    }
+
+    @Test
+    void getActiveSessionCount_shouldPruneGhostMembers() {
+        when(redisRepository.getSetMembers(USER_SESSIONS_KEY))
+                .thenReturn(Set.<Object>of("alive", "ghost"));
+        when(redisRepository.hasKey("session:1:alive")).thenReturn(true);
+        when(redisRepository.hasKey("session:1:ghost")).thenReturn(false);
+
+        int count = sessionService.getActiveSessionCount(1L);
+
+        assertEquals(1, count);
+        verify(redisRepository).removeFromSet(USER_SESSIONS_KEY, "ghost");
+    }
+
+    @Test
+    void createSession_shouldIgnoreGhosts_whenCheckingLimit() {
+        when(redisRepository.getSetMembers(USER_SESSIONS_KEY)).thenReturn(Set.<Object>of("ghost"));
+        when(redisRepository.hasKey("session:1:ghost")).thenReturn(false);
+
+        String sessionId = sessionService.createSession(1L, "127.0.0.1", "UA");
+
+        assertNotNull(sessionId);
+        verify(redisRepository).removeFromSet(USER_SESSIONS_KEY, "ghost");
         verify(redisRepository).addToSet(eq(USER_SESSIONS_KEY), anyString());
     }
 }
