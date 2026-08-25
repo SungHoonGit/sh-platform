@@ -1,5 +1,6 @@
 package com.shplatform.shared.config;
 
+import com.shplatform.auth.domain.TokenBlacklistService;
 import com.shplatform.auth.infrastructure.TokenProvider;
 import com.shplatform.auth.infrastructure.oauth2.CustomOAuth2UserService;
 import com.shplatform.auth.infrastructure.oauth2.OAuth2FailureHandler;
@@ -34,6 +35,7 @@ public class SecurityConfig {
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final TokenProvider tokenProvider;
+    private final TokenBlacklistService blacklistService;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
@@ -64,12 +66,14 @@ public class SecurityConfig {
     private String githubClientSecret;
 
     public SecurityConfig(TokenProvider tokenProvider,
+                          TokenBlacklistService blacklistService,
                           CustomOAuth2UserService customOAuth2UserService,
                           OAuth2SuccessHandler oAuth2SuccessHandler,
                           OAuth2FailureHandler oAuth2FailureHandler,
                           RateLimiter rateLimiter,
                           CookieAuthorizationRequestRepository authorizationRequestRepository) {
         this.tokenProvider = tokenProvider;
+        this.blacklistService = blacklistService;
         this.customOAuth2UserService = customOAuth2UserService;
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
         this.oAuth2FailureHandler = oAuth2FailureHandler;
@@ -188,7 +192,7 @@ public class SecurityConfig {
             )
             .headers(headers -> headers.frameOptions(fo -> fo.sameOrigin()))
             .addFilterBefore(rateLimiter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(new JwtAuthenticationFilter(tokenProvider),
+            .addFilterBefore(new JwtAuthenticationFilter(tokenProvider, blacklistService),
                     UsernamePasswordAuthenticationFilter.class);
 
         List<String> providers = new ArrayList<>();

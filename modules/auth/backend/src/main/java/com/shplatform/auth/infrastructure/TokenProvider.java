@@ -80,7 +80,8 @@ public class TokenProvider {
             return new Claims(
                     Long.parseLong(claims.getSubject()),
                     claims.getStringClaim("email"),
-                    claims.getStringClaim("role")
+                    claims.getStringClaim("role"),
+                    claims.getExpirationTime().getTime()
             );
         } catch (Exception e) {
             throw new RuntimeException("Token validation failed", e);
@@ -131,5 +132,5 @@ public class TokenProvider {
         return Base64.getDecoder().decode(cleaned);
     }
 
-    public record Claims(Long userId, String email, String role) {}
+    public record Claims(Long userId, String email, String role, long exp) {}
 }
