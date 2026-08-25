@@ -28,6 +28,15 @@ const STATUS_COLORS: Record<string, string> = {
   REJECTED: "bg-red-400",
 };
 
+const STATUS_TEXT_COLORS: Record<string, string> = {
+  PREPARING: "text-slate-600 bg-slate-100",
+  APPLIED: "text-blue-700 bg-blue-100",
+  SCREEN_PASSED: "text-indigo-700 bg-indigo-100",
+  INTERVIEW: "text-violet-700 bg-violet-100",
+  OFFER: "text-emerald-700 bg-emerald-100",
+  REJECTED: "text-red-600 bg-red-100",
+};
+
 function StatCard({
   icon: Icon,
   label,
@@ -57,6 +66,31 @@ function StatCard({
   );
 }
 
+function fmtDate(iso: string | null) {
+  return iso ? new Date(iso).toLocaleDateString("ko-KR", { month: "short", day: "numeric" }) : "-";
+}
+
+function formatCron(expr: string | null): string {
+  if (!expr) return "미설정";
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length < 5) return expr;
+  const [min, hour, , , dow] = parts;
+
+  const dayMap: Record<string, string> = {
+    "0": "일", "1": "월", "2": "화", "3": "수", "4": "목", "5": "금", "6": "토",
+    "1-5": "월~금", "0,6": "주말",
+  };
+  const hourStr = hour === "*" ? "" : hour === "0" ? "오전 12시" : Number(hour) < 12 ? `오전 ${Number(hour)}시` : `오후 ${Number(hour) - 12}시`;
+  const minStr = min === "0" ? "정각" : min === "*" ? "" : `${min}분`;
+  const dowStr = dow === "*" ? "매일" : dayMap[dow] ?? `요일(${dow})`;
+
+  if (min !== "*" && hour !== "*" && dow === "*") return `${dowStr} ${hourStr}${minStr ? " " + minStr : ""}`;
+  if (min === "0" && hour !== "*") return `${dowStr} ${hourStr}`;
+  if (min !== "0" && hour !== "*") return `${dowStr} ${hourStr} ${minStr}`;
+  if (min === "*" && hour === "*") return "매시간";
+  return expr;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
 
@@ -75,9 +109,6 @@ export default function Dashboard() {
     .slice(0, 5);
   const recentScraps = (scrapsQ.data ?? []).slice(0, 6);
   const crawlerList: CrawlerDetail[] = crawlQ.data?.details ?? [];
-
-  const fmtDate = (iso: string | null) =>
-    iso ? new Date(iso).toLocaleDateString("ko-KR", { month: "short", day: "numeric" }) : "-";
 
   return (
     <div className="max-w-6xl mx-auto p-6 sm:p-8 space-y-6">
@@ -161,10 +192,12 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-slate-800 flex items-center gap-2">
-              <CalendarClock size={16} className="text-slate-400" />
+              <div className="w-7 h-7 bg-cyan-100 rounded-lg flex items-center justify-center">
+                <CalendarClock size={14} className="text-cyan-600" />
+              </div>
               수집 현황
             </h2>
-            <a href="/scraper/" className="text-xs text-blue-600 hover:text-blue-700 flex items-center">
+            <a href="/scraper/" className="text-xs text-cyan-600 hover:text-cyan-700 flex items-center font-medium">
               뷰어 <ArrowRight size={12} />
             </a>
           </div>
@@ -178,7 +211,7 @@ export default function Dashboard() {
                     <span className="text-sm font-medium text-slate-700 truncate">{c.name}</span>
                     <span className="text-xs text-slate-400 shrink-0 ml-3">
                       {c.todayCount > 0 ? (
-                        <span className="text-blue-600 font-medium">+{c.todayCount}</span>
+                        <span className="text-cyan-600 font-semibold">+{c.todayCount}</span>
                       ) : (
                         <span>0</span>
                       )}
@@ -187,7 +220,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400 truncate">
-                    {c.schedule ? `cron: ${c.schedule.replace(/\n/g, " · ")}` : "스케줄 미설정"}
+                    {formatCron(c.schedule)}
                   </p>
                 </div>
               ))}
@@ -198,10 +231,12 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-slate-800 flex items-center gap-2">
-              <Briefcase size={16} className="text-slate-400" />
+              <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <Briefcase size={14} className="text-indigo-600" />
+              </div>
               지원 현황
             </h2>
-            <a href="/resume/#/applications" className="text-xs text-blue-600 hover:text-blue-700 flex items-center">
+            <a href="/resume/#/applications" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center font-medium">
               관리 <ArrowRight size={12} />
             </a>
           </div>
@@ -236,8 +271,13 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-slate-800">최근 지원</h2>
-            <a href="/resume/#/applications" className="text-xs text-blue-600 hover:text-blue-700 flex items-center">
+            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+              <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <FileText size={14} className="text-indigo-600" />
+              </div>
+              지원 관리
+            </h2>
+            <a href="/resume/#/applications" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center font-medium">
               전체 보기 <ArrowRight size={12} />
             </a>
           </div>
@@ -252,7 +292,7 @@ export default function Dashboard() {
                     <p className="text-xs text-slate-400 truncate">{a.postingTitle}</p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <span className="inline-block px-2 py-0.5 rounded-full bg-slate-100 text-[11px] text-slate-600">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${STATUS_TEXT_COLORS[a.status] ?? "bg-slate-100 text-slate-600"}`}>
                       {STATUS_LABELS[a.status] ?? a.status}
                     </span>
                     <p className="text-[11px] text-slate-400 mt-0.5">{fmtDate(a.appliedAt)}</p>
@@ -265,9 +305,14 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-slate-800">최근 스크랩</h2>
-            <a href="/resume/#/postings" className="text-xs text-blue-600 hover:text-blue-700 flex items-center">
-              공고 탐색 <ArrowRight size={12} />
+            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+              <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Star size={14} className="text-amber-600" />
+              </div>
+              내 스크랩
+            </h2>
+            <a href="/resume/#/postings" className="text-xs text-amber-600 hover:text-amber-700 flex items-center font-medium">
+              전체 보기 <ArrowRight size={12} />
             </a>
           </div>
           {recentScraps.length === 0 ? (
@@ -276,11 +321,24 @@ export default function Dashboard() {
             <ul className="divide-y divide-slate-100">
               {recentScraps.map((s) => (
                 <li key={s.id} className="py-2.5">
-                  <p className="text-sm font-medium text-slate-700 truncate">{s.company}</p>
-                  <p className="text-xs text-slate-500 truncate">{s.position}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {s.siteName && <span className="text-[11px] text-slate-400">{s.siteName}</span>}
-                    <span className="text-[11px] text-slate-400">{fmtDate(s.scrappedAt)}</span>
+                  <div className="flex items-start gap-2">
+                    <span className="text-amber-400 text-sm mt-0.5 shrink-0">★</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-700 truncate">{s.company}</p>
+                      <p className="text-xs text-slate-500 truncate">{s.position}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {s.siteName && (
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            s.siteName === "saramin" ? "bg-blue-100 text-blue-700" :
+                            s.siteName === "jobkorea" ? "bg-green-100 text-green-700" :
+                            "bg-slate-100 text-slate-600"
+                          }`}>
+                            {s.siteName}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-slate-400">{fmtDate(s.scrappedAt)}</span>
+                      </div>
+                    </div>
                   </div>
                 </li>
               ))}
