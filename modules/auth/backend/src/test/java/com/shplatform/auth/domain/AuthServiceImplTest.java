@@ -27,11 +27,17 @@ class AuthServiceImplTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
     @Mock
+    private RefreshTokenService refreshTokenService;
+    @Mock
     private VerificationCodeRepository verificationCodeRepository;
     @Mock
     private TokenProvider tokenProvider;
     @Mock
     private EmailService emailService;
+    @Mock
+    private SessionService sessionService;
+    @Mock
+    private LoginLogService loginLogService;
 
     private UserMapper userMapper;
     private PasswordEncoder passwordEncoder;
@@ -42,8 +48,9 @@ class AuthServiceImplTest {
         userMapper = new UserMapper();
         passwordEncoder = new BCryptPasswordEncoder();
         authService = new AuthServiceImpl(
-                userRepository, refreshTokenRepository, verificationCodeRepository,
-                userMapper, tokenProvider, passwordEncoder, emailService
+                userRepository, refreshTokenRepository, refreshTokenService,
+                verificationCodeRepository, userMapper, tokenProvider,
+                passwordEncoder, emailService, sessionService, loginLogService
         );
     }
 
@@ -115,14 +122,13 @@ class AuthServiceImplTest {
         when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(entity));
         when(tokenProvider.createAccessToken(anyLong(), anyString(), anyString())).thenReturn("access-token");
         when(tokenProvider.createRefreshToken()).thenReturn("refresh-token");
-        when(tokenProvider.getRefreshTokenExpiration()).thenReturn(1_000_000_000L);
 
         var request = new LoginRequest("test@example.com", "CorrectPw1!");
         var result = authService.login(request);
 
         assertNotNull(result.accessToken());
         assertNotNull(result.refreshToken());
-        verify(refreshTokenRepository).save(any());
+        verify(refreshTokenService).save(eq("refresh-token"), eq(1L));
     }
 
     @Test
@@ -241,11 +247,7 @@ class AuthServiceImplTest {
 
     @Test
     void refresh_shouldSucceed_whenTokenValid() {
-        var stored = new RefreshTokenEntity();
-        stored.setUserId(1L);
-        stored.setToken("valid-refresh");
-        stored.setExpiresAt(LocalDateTime.now().plusDays(1));
-        when(refreshTokenRepository.findByToken(anyString())).thenReturn(Optional.of(stored));
+        when(refreshTokenService.getUserId("valid-refresh")).thenReturn(1L);
 
         var userEntity = new UserEntity();
         userEntity.setId(1L);
@@ -254,36 +256,47 @@ class AuthServiceImplTest {
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(userEntity));
         when(tokenProvider.createAccessToken(anyLong(), anyString(), anyString())).thenReturn("new-access");
         when(tokenProvider.createRefreshToken()).thenReturn("new-refresh");
-        when(tokenProvider.getRefreshTokenExpiration()).thenReturn(1_000_000_000L);
 
         var result = authService.refresh("valid-refresh");
 
         assertEquals("new-access", result.accessToken());
         assertEquals("new-refresh", result.refreshToken());
+        verify(refreshTokenService).delete("valid-refresh");
+        verify(refreshTokenService).save(eq("new-refresh"), eq(1L));
+    }
+
+    @Test
+    void refresh_shouldSucceed_whenTokenNotFoundInRedisButExistsInMariaDB() {
+        when(refreshTokenService.getUserId("old-refresh")).thenReturn(null);
+
+        var stored = new RefreshTokenEntity();
+        stored.setUserId(1L);
+        stored.setToken("old-refresh");
+        stored.setExpiresAt(LocalDateTime.now().plusDays(1));
+        when(refreshTokenRepository.findByToken("old-refresh")).thenReturn(Optional.of(stored));
+
+        var userEntity = new UserEntity();
+        userEntity.setId(1L);
+        userEntity.setEmail("test@example.com");
+        userEntity.setRole(UserRole.USER);
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(userEntity));
+        when(tokenProvider.createAccessToken(anyLong(), anyString(), anyString())).thenReturn("new-access");
+        when(tokenProvider.createRefreshToken()).thenReturn("new-refresh");
+
+        var result = authService.refresh("old-refresh");
+
+        assertEquals("new-access", result.accessToken());
         verify(refreshTokenRepository).delete(stored);
-        verify(refreshTokenRepository).save(any());
     }
 
     @Test
     void refresh_shouldThrow_whenTokenNotFound() {
-        when(refreshTokenRepository.findByToken(anyString())).thenReturn(Optional.empty());
+        when(refreshTokenService.getUserId("unknown-token")).thenReturn(null);
+        when(refreshTokenRepository.findByToken("unknown-token")).thenReturn(Optional.empty());
 
         var ex = assertThrows(BusinessException.class,
                 () -> authService.refresh("unknown-token"));
         assertEquals(ErrorCode.TOKEN_INVALID, ex.getErrorCode());
-    }
-
-    @Test
-    void refresh_shouldThrow_whenTokenExpired() {
-        var stored = new RefreshTokenEntity();
-        stored.setUserId(1L);
-        stored.setExpiresAt(LocalDateTime.now().minusMinutes(1));
-        when(refreshTokenRepository.findByToken(anyString())).thenReturn(Optional.of(stored));
-
-        var ex = assertThrows(BusinessException.class,
-                () -> authService.refresh("expired-token"));
-        assertEquals(ErrorCode.TOKEN_EXPIRED, ex.getErrorCode());
-        verify(refreshTokenRepository).delete(stored);
     }
 
     // ──────────────────────────────────────────────
