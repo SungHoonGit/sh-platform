@@ -1,116 +1,66 @@
-import { Outlet, NavLink } from "react-router-dom";
-import { LayoutDashboard, Search, FileText, Shield, Users, Building2, UserCircle, LogOut } from "lucide-react";
-
-const navItems = [
-  { to: "/platform", icon: LayoutDashboard, label: "대시보드", end: true },
-  { to: "/scraper/", icon: Search, label: "스크래퍼", external: true },
-  { to: "/resume/", icon: FileText, label: "이력서", external: true },
-];
-
-const accountItems = [
-  { to: "/platform/account", icon: UserCircle, label: "계정 설정" },
-];
-
-const adminItems = [
-  { to: "/platform/admin", icon: Shield, label: "관리자 대시보드", end: true },
-  { to: "/platform/admin/users", icon: Users, label: "사용자 관리" },
-  { to: "/platform/admin/tenants", icon: Building2, label: "테넌트 관리" },
-];
+import { Outlet, useLocation } from "react-router-dom";
+import AppShell from "../shell/AppShell";
+import type { DrawerSection } from "../shell/SideDrawer";
+import { useAuth } from "../hooks/useAuth";
 
 export default function PlatformLayout() {
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    window.location.replace("/");
-  };
+  const location = useLocation();
+  const { user, loading, logout } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+
+  const subnavItems = [
+    { label: "개요", href: "/platform", active: location.pathname === "/platform" },
+    ...(isAdmin
+      ? [{ label: "관리", href: "/platform/admin", active: location.pathname.startsWith("/platform/admin") }]
+      : []),
+  ];
+
+  const drawerSections: DrawerSection[] = [
+    {
+      label: "개인 서비스",
+      items: [
+        { label: "내 이력서", href: "/resume/" },
+        { label: "공고 탐색", href: "/resume/#/postings" },
+        { label: "지원 관리", href: "/resume/#/applications" },
+        { label: "계정 설정", href: "/platform/account" },
+      ],
+    },
+    ...(isAdmin
+      ? [
+          {
+            label: "관리",
+            items: [
+              { label: "사용자 관리", href: "/platform/admin/users" },
+              { label: "테넌트 관리", href: "/platform/admin/tenants" },
+            ],
+          },
+        ]
+      : []),
+    {
+      label: "개발자 링크",
+      items: [
+        { label: "Swagger · Auth", href: "/swagger-ui/index.html", external: true },
+        { label: "Swagger · Scraper", href: "/scraper/swagger-ui/index.html", external: true },
+        { label: "Swagger · Resume", href: "/resume/swagger-ui/index.html", external: true },
+        { label: "Javadoc", href: "/javadoc/", external: true },
+        { label: "테스트 리포트", href: "/test-reports/", external: true },
+        { label: "SchemaSpy", href: "/schemaSpy/", external: true },
+      ],
+    },
+  ];
 
   return (
-    <div className="flex h-screen bg-slate-100">
-      <aside className="w-64 bg-slate-900 text-white flex flex-col">
-        <div className="p-5 border-b border-slate-700">
-          <h1 className="text-xl font-bold">SH Platform</h1>
-          <p className="text-xs text-slate-400 mt-1">SaaS 플랫폼</p>
-        </div>
-
-        <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) =>
-            item.external ? (
-              <a
-                key={item.to}
-                href={item.to}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 transition-colors"
-              >
-                <item.icon size={18} />
-                {item.label}
-                <span className="ml-auto text-slate-500 text-xs">↗</span>
-              </a>
-            ) : (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                    isActive ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800"
-                  }`
-                }
-              >
-                <item.icon size={18} />
-                {item.label}
-              </NavLink>
-            )
-          )}
-
-          <div className="pt-4 mt-4 border-t border-slate-700">
-            <p className="px-3 text-xs font-medium text-slate-500 uppercase mb-2">관리</p>
-            {adminItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                    isActive ? "bg-amber-600 text-white" : "text-slate-300 hover:bg-slate-800"
-                  }`
-                }
-              >
-                <item.icon size={18} />
-                {item.label}
-              </NavLink>
-            ))}
-          </div>
-        </nav>
-
-        <div className="p-3 border-t border-slate-700">
-          {accountItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                  isActive ? "bg-slate-700 text-white" : "text-slate-300 hover:bg-slate-800"
-                }`
-              }
-            >
-              <item.icon size={18} />
-              {item.label}
-            </NavLink>
-          ))}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 transition-colors"
-          >
-            <LogOut size={18} />
-            로그아웃
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 overflow-auto">
-        <Outlet />
-      </main>
-    </div>
+    <AppShell
+      currentApp="platform"
+      subnavItems={subnavItems}
+      drawerSections={drawerSections}
+      user={user ? { name: user.name, email: user.email } : null}
+      authLoading={loading}
+      isAdmin={isAdmin}
+      onLogout={logout}
+      mainClassName="flex-1 overflow-auto bg-slate-50"
+    >
+      <Outlet />
+    </AppShell>
   );
 }
