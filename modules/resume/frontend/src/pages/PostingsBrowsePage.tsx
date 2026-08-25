@@ -125,12 +125,26 @@ export default function PostingsBrowsePage() {
   useEffect(() => { void loadScraps(); }, [loadScraps]);
 
   const toggleScrap = async (postingId: number) => {
-    const next = new Set(scrappedIds);
-    if (next.has(postingId)) next.delete(postingId);
-    else next.add(postingId);
-    setScrappedIds(next);
+    const wasScrapped = scrappedIds.has(postingId);
+    const nextIds = new Set(scrappedIds);
+    if (wasScrapped) nextIds.delete(postingId);
+    else nextIds.add(postingId);
+    setScrappedIds(nextIds);
+
+    if (wasScrapped) {
+      setScraps((prev) => prev.filter((s) => s.postingId !== postingId));
+    } else {
+      const posting = data?.items.find((i) => i.id === postingId);
+      if (posting) {
+        setScraps((prev) => [
+          { ...posting, postingId: posting.id, scrappedAt: new Date().toISOString() },
+          ...prev,
+        ]);
+      }
+    }
+
     try {
-      if (scrappedIds.has(postingId)) {
+      if (wasScrapped) {
         await fetchScraper(`/job-scrap/${postingId}`, { method: "DELETE" });
       } else {
         await fetchScraper(`/job-scrap/${postingId}`, { method: "POST" });
@@ -138,6 +152,7 @@ export default function PostingsBrowsePage() {
       await loadScraps();
     } catch {
       setScrappedIds(new Set(scrappedIds));
+      void loadScraps();
     }
   };
 
