@@ -4,6 +4,7 @@ import com.shplatform.auth.domain.RefreshTokenService;
 import com.shplatform.auth.domain.SessionService;
 import com.shplatform.auth.infrastructure.TokenProvider;
 import com.shplatform.shared.config.CookieAuthorizationRequestRepository;
+import com.shplatform.shared.exception.BusinessException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -50,11 +51,20 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 oauth2User.getUserId(), oauth2User.getEmail(), oauth2User.getRole());
         String refreshToken = tokenProvider.createRefreshToken();
 
-        refreshTokenService.save(refreshToken, oauth2User.getUserId());
-
         String ip = request.getRemoteAddr();
         String device = request.getHeader("User-Agent");
-        String sessionId = sessionService.createSession(oauth2User.getUserId(), ip, device);
+
+        String sessionId;
+        try {
+            sessionId = sessionService.createSession(oauth2User.getUserId(), ip, device);
+            refreshTokenService.save(refreshToken, oauth2User.getUserId());
+        } catch (BusinessException e) {
+            log.warn("[OAUTH2] login blocked: userId={}, reason={}",
+                    oauth2User.getUserId(), e.getErrorCode());
+            getRedirectStrategy().sendRedirect(request, response,
+                    frontendUrl + "/auth/error?message=" + encode("session_limit"));
+            return;
+        }
 
         String returnUrl = request.getParameter("returnUrl");
         if (returnUrl == null || returnUrl.isBlank()) {

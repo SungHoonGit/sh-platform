@@ -1,6 +1,8 @@
 package com.shplatform.auth.domain;
 
 import com.shplatform.shared.config.RedisRepository;
+import com.shplatform.shared.exception.BusinessException;
+import com.shplatform.shared.exception.ErrorCode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -48,7 +50,7 @@ public class SessionService {
         if (currentCount >= maxSessionsPerUser) {
             if (preventDuplicateLogin) {
                 log.warn("[SESSION] login blocked: userId={}, sessions={}", userId, currentCount);
-                throw new IllegalStateException("max_sessions_exceeded");
+                throw new BusinessException(ErrorCode.SESSION_LIMIT_EXCEEDED);
             } else {
                 log.info("[SESSION] removing oldest session: userId={}", userId);
                 removeOldestSession(userId, existingSessions);

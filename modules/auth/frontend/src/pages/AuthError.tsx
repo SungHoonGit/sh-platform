@@ -7,6 +7,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   access_denied: "사용자가 로그인을 거부했습니다.",
   invalid_request: "잘못된 요청입니다.",
   server_error: "서버 오류가 발생했습니다.",
+  session_limit: "다른 기기에서 로그인 중입니다. 해당 기기에서 로그아웃 후 다시 시도해주세요.",
 };
 
 export default function AuthError() {
