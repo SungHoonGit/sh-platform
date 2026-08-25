@@ -44,6 +44,7 @@ export default function Layout() {
       isAdmin={user?.role === "ADMIN"}
       onLogout={logout}
       mainClassName="flex-1 overflow-hidden"
+      basePath="/scraper"
     >
       <Outlet />
     </AppShell>

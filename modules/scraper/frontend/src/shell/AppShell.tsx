@@ -19,6 +19,8 @@ export default function AppShell({
   isAdmin,
   onLogout,
   mainClassName = "flex-1 overflow-auto",
+  /** 내부 라우트 프리픽스 (예: scraper는 "/scraper"). subnav/drawer href에 자동 적용 */
+  basePath = "",
   children,
 }: {
   currentApp: ShellApp;
@@ -29,11 +31,18 @@ export default function AppShell({
   authLoading?: boolean;
   isAdmin?: boolean;
   onLogout: () => void;
-  /** 페이지 스크롤 방식 (예: scraper 뷰어는 overflow-hidden) */
   mainClassName?: string;
+  basePath?: string;
   children: ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const withBase = (href?: string) => (href ? `${basePath}${href}` : undefined);
+  const prefixedSubnav = subnavItems.map((i) => ({ ...i, href: withBase(i.href) }));
+  const prefixedDrawer = drawerSections.map((s) => ({
+    ...s,
+    items: s.items.map((i) => ({ ...i, href: withBase(i.href) })),
+  }));
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
@@ -46,9 +55,9 @@ export default function AppShell({
         onLogout={onLogout}
         onToggleDrawer={() => setDrawerOpen((v) => !v)}
       />
-      <SubNav items={subnavItems} />
+      <SubNav items={prefixedSubnav} />
       <main className={mainClassName}>{children}</main>
-      <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} sections={drawerSections} />
+      <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} sections={prefixedDrawer} />
     </div>
   );
 }
