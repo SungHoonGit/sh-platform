@@ -9,6 +9,7 @@ import com.scraper.platform.api.dto.JobPostingVO;
 import com.scraper.platform.api.dto.RecentPostingsResponse;
 import com.scraper.platform.model.JobPosting;
 import com.scraper.platform.repository.JobPostingRepository;
+import com.shplatform.common.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
@@ -43,20 +44,21 @@ public class JobPostingController {
     private final JobPostingRepository jobPostingRepository;
 
     /**
-     * 최근 수집 공고를 조회한다 (설정 무관, 모듈 간 브라우징용).
+     * 최근 수집 공고를 조회한다 (본인 크롤러 설정으로 수집된 공고만).
      * GET /job-postings/recent?keyword=&siteName=&page=&size=
      */
     @GetMapping("/recent")
-    @Operation(summary = "최근 수집 공고 조회", description = "크롤러 설정과 무관하게 최근 수집된 전체 공고를 키워드/사이트로 필터링해 반환합니다.")
+    @Operation(summary = "최근 수집 공고 조회", description = "로그인 사용자의 크롤러 설정으로 수집된 공고를 키워드/사이트로 필터링해 반환합니다.")
     public ResponseEntity<RecentPostingsResponse> getRecent(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String siteName,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
+        Long accountId = SecurityUtils.currentAccountId();
         String kw = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
         String site = (siteName != null && !siteName.isBlank()) ? siteName.trim() : null;
-        Page<JobPosting> result = jobPostingRepository.searchRecent(kw, site,
+        Page<JobPosting> result = jobPostingRepository.searchRecent(accountId, kw, site,
                 PageRequest.of(page, Math.min(size, 100),
                         Sort.by(Sort.Direction.DESC, "crawledAt")
                                 .and(Sort.by(Sort.Direction.DESC, "createdAt"))));

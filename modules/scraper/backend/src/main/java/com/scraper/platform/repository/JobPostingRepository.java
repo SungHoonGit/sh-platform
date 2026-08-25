@@ -43,11 +43,13 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
 
     @Query("""
             SELECT j FROM JobPosting j
-            WHERE (:keyword IS NULL OR LOWER(j.company) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            WHERE j.config.accountId = :accountId
+              AND (:keyword IS NULL OR LOWER(j.company) LIKE LOWER(CONCAT('%', :keyword, '%'))
                    OR LOWER(j.position) LIKE LOWER(CONCAT('%', :keyword, '%')))
               AND (:siteName IS NULL OR j.siteName = :siteName)
             """)
-    Page<JobPosting> searchRecent(@Param("keyword") String keyword,
+    Page<JobPosting> searchRecent(@Param("accountId") Long accountId,
+                                  @Param("keyword") String keyword,
                                   @Param("siteName") String siteName,
                                   Pageable pageable);
 
