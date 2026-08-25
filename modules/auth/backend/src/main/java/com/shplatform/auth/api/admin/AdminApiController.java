@@ -18,11 +18,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/admin")
 @PreAuthorize("hasRole(\"ADMIN\")")
 @Tag(name = "Admin", description = "관리자 API - 사용자/테넌트 관리")
-public class AdminController {
+public class AdminApiController {
 
     private final AdminService adminService;
 
-    public AdminController(AdminService adminService) {
+    public AdminApiController(AdminService adminService) {
         this.adminService = adminService;
     }
 
