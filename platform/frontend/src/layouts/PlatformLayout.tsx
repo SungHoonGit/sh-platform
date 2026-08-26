@@ -27,13 +27,15 @@ export default function PlatformLayout() {
     },
     ...(isAdmin
       ? [
-          {
-            label: "관리",
-            items: [
-              { label: "사용자 관리", href: "/platform/admin/users" },
-              { label: "테넌트 관리", href: "/platform/admin/tenants" },
-            ],
-          },
+            {
+              label: "관리",
+              items: [
+                { label: "사용자 관리", href: "/platform/admin/users" },
+                { label: "테넌트 관리", href: "/platform/admin/tenants" },
+                { label: "감사 로그", href: "/platform/admin/audit" },
+                { label: "세션 관리", href: "/platform/admin/sessions" },
+              ],
+            },
         ]
       : []),
     {

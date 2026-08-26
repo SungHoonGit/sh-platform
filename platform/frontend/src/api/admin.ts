@@ -72,6 +72,28 @@ export interface PageResponse<T> {
   size: number;
 }
 
+export interface AuditLogItem {
+  id: number;
+  actorUserId: number;
+  action: string;
+  targetUserId: number | null;
+  beforeValue: string | null;
+  afterValue: string | null;
+  ip: string | null;
+  createdAt: string | null;
+}
+
+export interface SessionInfo {
+  userId: number;
+  activeCount: number;
+  sessionIds: string[];
+}
+
+export interface LoginAnalytics {
+  todaySuccessCount: number;
+  todayFailCount: number;
+}
+
 export const adminApi = {
   getStats: () => request<AdminStats>("/stats"),
   getUsers: (params?: { search?: string; role?: string; page?: number; size?: number }) => {
@@ -104,4 +126,16 @@ export const adminApi = {
     request<void>(`/tenants/${tenantId}/members/${userId}`, { method: "DELETE" }),
   updateMemberRole: (tenantId: number, userId: number, role: string) =>
     request<void>(`/tenants/${tenantId}/members/${userId}/role`, { method: "PUT", body: JSON.stringify({ role }) }),
+  getAuditLogs: (params?: { action?: string; actorUserId?: number; targetUserId?: number; page?: number; size?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.action) q.set("action", params.action);
+    if (params?.actorUserId != null) q.set("actorUserId", String(params.actorUserId));
+    if (params?.targetUserId != null) q.set("targetUserId", String(params.targetUserId));
+    q.set("page", String(params?.page ?? 0));
+    q.set("size", String(params?.size ?? 20));
+    return request<PageResponse<AuditLogItem>>(`/audit?${q}`);
+  },
+  getUserSessions: (userId: number) => request<SessionInfo>(`/sessions/${userId}`),
+  forceLogout: (userId: number) => request<void>(`/sessions/${userId}`, { method: "DELETE" }),
+  getAnalytics: () => request<LoginAnalytics>("/analytics"),
 };
