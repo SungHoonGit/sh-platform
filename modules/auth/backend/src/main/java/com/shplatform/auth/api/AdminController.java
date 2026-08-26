@@ -1,11 +1,13 @@
 package com.shplatform.auth.api;
 
 import com.shplatform.auth.api.dto.AdminAnalyticsResponse;
+import com.shplatform.auth.api.dto.AdminAuditLogResponse;
 import com.shplatform.auth.api.dto.AdminSessionResponse;
 import com.shplatform.auth.domain.LoginLogService;
 import com.shplatform.auth.domain.SessionService;
 import com.shplatform.auth.domain.AdminAuditService;
 import com.shplatform.auth.domain.TokenBlacklistService;
+import com.shplatform.auth.infrastructure.AdminAuditLogRepository;
 import com.shplatform.shared.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +15,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -27,15 +31,18 @@ public class AdminController {
     private final LoginLogService loginLogService;
     private final TokenBlacklistService blacklistService;
     private final AdminAuditService adminAuditService;
+    private final AdminAuditLogRepository adminAuditLogRepository;
 
     public AdminController(SessionService sessionService,
                            LoginLogService loginLogService,
                            TokenBlacklistService blacklistService,
-                           AdminAuditService adminAuditService) {
+                           AdminAuditService adminAuditService,
+                           AdminAuditLogRepository adminAuditLogRepository) {
         this.sessionService = sessionService;
         this.loginLogService = loginLogService;
         this.blacklistService = blacklistService;
         this.adminAuditService = adminAuditService;
+        this.adminAuditLogRepository = adminAuditLogRepository;
     }
 
     @GetMapping("/analytics")
@@ -79,5 +86,27 @@ public class AdminController {
                 ? loginLogService.getLogs(date)
                 : loginLogService.getTodayLogs();
         return ResponseEntity.ok(ApiResponse.success(logs));
+    }
+
+    @GetMapping("/audit")
+    @Operation(summary = "감사 로그 조회", description = "관리자 행위 감사 로그를 최신순으로 조회한다. action/actor/target 필터 가능.")
+    public ResponseEntity<ApiResponse<Page<AdminAuditLogResponse>>> getAuditLogs(
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) Long actorUserId,
+            @RequestParam(required = false) Long targetUserId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        var result = adminAuditLogRepository.search(action, actorUserId, targetUserId,
+                PageRequest.of(page, Math.min(size, 100)));
+        var items = result.getContent().stream()
+                .map(a -> new AdminAuditLogResponse(
+                        a.getId(), a.getActorUserId(), a.getAction(), a.getTargetUserId(),
+                        a.getBeforeValue(), a.getAfterValue(), a.getIp(),
+                        a.getCreatedAt() != null
+                                ? a.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                : null))
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(new org.springframework.data.domain.PageImpl<>(items, result.getPageable(), result.getTotalElements())));
     }
 }
