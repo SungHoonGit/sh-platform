@@ -29,6 +29,8 @@ class SearchServiceTest {
 
     @Mock
     private SiteDefinitionRepository siteDefinitionRepository;
+    @Mock
+    private com.scraper.platform.service.CompanyBlacklistService companyBlacklistService;
 
     @InjectMocks
     private SearchService searchService;
@@ -38,6 +40,7 @@ class SearchServiceTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(companyBlacklistService.normalizedNames(org.mockito.ArgumentMatchers.any())).thenReturn(java.util.Set.of());
         mockCrawler = new SiteCrawler() {
             @Override
             public String getSiteName() {

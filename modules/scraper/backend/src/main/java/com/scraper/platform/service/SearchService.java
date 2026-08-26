@@ -21,6 +21,7 @@ public class SearchService {
 
     private final SiteDefinitionRepository siteDefinitionRepository;
     private final CrawlerFactory crawlerFactory;
+    private final CompanyBlacklistService companyBlacklistService;
 
     private ExecutorService executorService = Executors.newFixedThreadPool(4);
 
@@ -101,7 +102,10 @@ public class SearchService {
             }
         }
 
-        List<Map<String, String>> filtered = filterJobs(allJobs, careerMin, careerMax, locations);
+                java.util.Set<String> blocked = resolveBlockedCompanies();
+        List<Map<String, String>> filtered = filterJobs(allJobs, careerMin, careerMax, locations).stream()
+                .filter(j -> !blocked.contains(CompanyBlacklistService.normalize(j.get("company"))))
+                .collect(Collectors.toList());
         Map<String, Integer> filteredCounts = new LinkedHashMap<>();
         for (Map.Entry<String, Integer> entry : siteCounts.entrySet()) {
             String sn = entry.getKey();
@@ -120,6 +124,15 @@ public class SearchService {
         log.info("Real-time search completed: {} raw, {} filtered in {}ms", allJobs.size(), filtered.size(), searchTime);
 
         return SearchResponse.of(filtered.size(), filtered, filteredCounts, searchTime, failedSites, companyNames);
+    }
+
+    private java.util.Set<String> resolveBlockedCompanies() {
+        try {
+            return companyBlacklistService.normalizedNames(
+                    com.shplatform.common.security.SecurityUtils.currentAccountId());
+        } catch (Exception e) {
+            return java.util.Set.of();   // 비인증 컨텍스트(테스트 등) 호환
+        }
     }
 
     private List<Map<String, String>> filterJobs(List<Map<String, String>> jobs, Integer careerMin, Integer careerMax, List<String> locations) {

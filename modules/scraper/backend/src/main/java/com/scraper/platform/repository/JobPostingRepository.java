@@ -51,6 +51,7 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
               AND (:keyword IS NULL OR LOWER(j.company) LIKE LOWER(CONCAT('%', :keyword, '%'))
                    OR LOWER(j.position) LIKE LOWER(CONCAT('%', :keyword, '%')))
               AND (:siteName IS NULL OR j.siteName = :siteName)
+              AND j.company NOT IN (SELECT b.companyNameNormalized FROM com.scraper.platform.model.CompanyBlacklist b WHERE b.accountId = :accountId)
             """)
     Page<JobPosting> searchRecent(@Param("accountId") Long accountId,
                                   @Param("keyword") String keyword,
