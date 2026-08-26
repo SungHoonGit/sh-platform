@@ -409,7 +409,7 @@ export interface BlacklistItem {
 
 async function blacklistReq(path: string, options?: RequestInit) {
   const token = localStorage.getItem("accessToken") ?? "";
-  const res = await fetch(`/scraper/api/v1/company-blacklist${path}`, {
+  const res = await fetch(`/scraper/company-blacklist${path}`, {
     ...options,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...options?.headers },
   });
