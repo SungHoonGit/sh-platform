@@ -35,6 +35,13 @@ const COLUMNS: { key: SortKey; label: string; w: string }[] = [
 
 export default function Search() {
   const navigate = useNavigate();
+  const [starred, setStarred] = useState<Set<string>>(new Set());
+  const [blacklisted, setBlacklisted] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    fetchBlacklist()
+      .then((list) => setBlacklisted(new Set(list.map((b) => b.companyNameNormalized))))
+      .catch(() => {});
+  }, []);
   const [keyword, setKeyword] = useState("");
   const [careerMin, setCareerMin] = useState(0);
   const [careerMax, setCareerMax] = useState(CAREER_TOTAL);
@@ -94,9 +101,7 @@ export default function Search() {
       .catch(() => {});
   }, []);
 
-  const [starred, setStarred] = useState<Set<string>>(new Set());
 
-  const [blacklisted, setBlacklisted] = useState<Set<string>>(new Set());
 
   const blockCompany = async (company: string) => {
     if (!company) return;
