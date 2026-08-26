@@ -94,7 +94,7 @@ APP_SESSION_PREVENT_DUPLICATE=false   # 초과 시 가장 오래된 세션 자�
 | 조회수/스크랩 랭킹 | ZSET | 공고별 스크랩 수 실시간 집계 → Viewer "인기" 배지 |
 | 크롤링 완료 알림 | Pub/Sub 또는 List 큐 | 프론트 SSE와 연계 검토 |
 
-#### C-audit. 감사 로그 이중 기록 (공공기관 스타일 증적)
+#### C-audit. 감사 로그 이중 기록 ✅ 완료 (`5488f2f`, 2026-08-26)
 
 Redis 로그인 이력(List+TTL)은 실시간 판정 전용 — 리포트/증적으로는 부적합(TTL 소멸).
 **MariaDB 영속 테이블 병행 기록**으로 월간 SQL 추출 가능하게 함:
