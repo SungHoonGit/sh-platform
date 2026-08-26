@@ -1,6 +1,7 @@
 package com.shplatform.auth.api.admin;
 
 import com.shplatform.auth.api.admin.dto.*;
+import com.shplatform.auth.domain.AdminAuditService;
 import com.shplatform.auth.domain.UserRole;
 import com.shplatform.auth.domain.tenant.*;
 import com.shplatform.auth.infrastructure.UserEntity;
@@ -21,13 +22,16 @@ public class AdminService {
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
     private final TenantMemberRepository memberRepository;
+    private final AdminAuditService adminAuditService;
 
     public AdminService(UserRepository userRepository,
                         TenantRepository tenantRepository,
-                        TenantMemberRepository memberRepository) {
+                        TenantMemberRepository memberRepository,
+                        AdminAuditService adminAuditService) {
         this.userRepository = userRepository;
         this.tenantRepository = tenantRepository;
         this.memberRepository = memberRepository;
+        this.adminAuditService = adminAuditService;
     }
 
     // ── 대시보드 ──
@@ -72,17 +76,22 @@ public class AdminService {
     }
 
     @Transactional
-    public void updateUserRole(Long id, UserRole role) {
+    public void updateUserRole(Long actorId, Long id, UserRole role) {
         var user = userRepository.findById(id)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        String beforeRole = user.getRole() != null ? user.getRole().name() : null;
         user.setRole(role);
         userRepository.save(user);
+        adminAuditService.record(actorId, AdminAuditService.ACTION_ROLE_CHANGE,
+                id, beforeRole, role.name(), null);
     }
 
     @Transactional
-    public void deleteUser(Long id) {
+    public void deleteUser(Long actorId, Long id) {
         var user = userRepository.findById(id)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        adminAuditService.record(actorId, AdminAuditService.ACTION_DELETE_USER,
+                id, user.getEmail(), null, null);
         userRepository.delete(user);
     }
 

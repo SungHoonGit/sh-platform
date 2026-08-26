@@ -1,6 +1,8 @@
 package com.shplatform.auth.domain;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shplatform.auth.infrastructure.LoginLogEntity;
+import com.shplatform.auth.infrastructure.LoginLogRepository;
 import com.shplatform.shared.config.RedisRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,14 +23,17 @@ public class LoginLogService {
 
     private final RedisRepository redisRepository;
     private final ObjectMapper objectMapper;
+    private final LoginLogRepository loginLogRepository;
 
-    public LoginLogService(RedisRepository redisRepository, ObjectMapper objectMapper) {
+    public LoginLogService(RedisRepository redisRepository, ObjectMapper objectMapper,
+                           LoginLogRepository loginLogRepository) {
         this.redisRepository = redisRepository;
         this.objectMapper = objectMapper;
+        this.loginLogRepository = loginLogRepository;
     }
 
     /**
-     * 로그인 이력을 기록한다.
+     * 로그인 이력을 기록한다. (Redis 실시간용 + MariaDB 감사용 이중 기록)
      *
      * @param userId  사용자 ID
      * @param email   이메일
@@ -56,7 +61,12 @@ public class LoginLogService {
 
             log.debug("[LOGIN_LOG] recorded: email={}, success={}", email, success);
         } catch (Exception e) {
-            log.warn("[LOGIN_LOG] failed to record: {}", e.getMessage());
+            log.warn("[LOGIN_LOG] failed to record (redis): {}", e.getMessage());
+        }
+        try {
+            loginLogRepository.save(LoginLogEntity.create(userId, email, ip, device, success));
+        } catch (Exception e) {
+            log.warn("[LOGIN_LOG] failed to record (db): {}", e.getMessage());
         }
     }
 

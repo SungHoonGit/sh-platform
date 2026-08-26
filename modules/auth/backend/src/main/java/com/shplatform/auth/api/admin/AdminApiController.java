@@ -4,6 +4,7 @@ import com.shplatform.auth.api.admin.dto.*;
 import com.shplatform.auth.domain.UserRole;
 import com.shplatform.auth.domain.tenant.TenantMemberRole;
 import com.shplatform.shared.dto.ApiResponse;
+import com.shplatform.common.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -57,14 +58,14 @@ public class AdminApiController {
     @Operation(summary = "사용자 역할 변경")
     public ResponseEntity<ApiResponse<Void>> updateUserRole(
             @PathVariable Long id, @RequestBody @Valid UpdateUserRequest request) {
-        adminService.updateUserRole(id, request.role());
+        adminService.updateUserRole(SecurityUtils.currentAccountId(), id, request.role());
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @DeleteMapping("/users/{id}")
     @Operation(summary = "사용자 삭제")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
-        adminService.deleteUser(id);
+        adminService.deleteUser(SecurityUtils.currentAccountId(), id);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 

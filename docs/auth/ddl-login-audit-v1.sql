@@ -1,20 +1,11 @@
--- 로컬 개발용 DB 초기화 스크립트
--- docker compose up 첫 실행 시 자동 실행 (이미지 볼륨 최초 생성 시에만)
--- 주의: 볼륨(mariadb-data)이 이미 존재하면 재실행되지 않음
-
-CREATE DATABASE IF NOT EXISTS scraper_platform
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS resume_platform
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- 로컬 사용자(sh_local)에 전체 권한
-GRANT ALL PRIVILEGES ON *.* TO 'sh_local'@'%';
-FLUSH PRIVILEGES;
 -- ============================================================================
--- auth 감사 로그 테이블 v1 (2026-08-25) — 원본: docs/auth/ddl-login-audit-v1.sql
+-- 감사 로그 테이블 v1 (2026-08-25)
+-- 적용 DB: sh_pass (auth)
+-- 원칙: Redis = 실시간 판정(hot, TTL 소멸) / MariaDB = 증적·리포트(cold, 영속)
+-- 참조: docs/plans/016-260825-redis-monitoring-roadmap-design.md §C-audit
 -- ============================================================================
-USE sh_pass;
 
+-- 로그인 이력 (성공/실패 전부)
 CREATE TABLE IF NOT EXISTS login_logs (
   id BIGINT AUTO_INCREMENT,
   user_id BIGINT NULL,
@@ -29,6 +20,7 @@ CREATE TABLE IF NOT EXISTS login_logs (
   KEY idx_login_logs_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 관리자 행위 감사 (권한 변경 / 강제 로그아웃 / 사용자 삭제)
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
   id BIGINT AUTO_INCREMENT,
   actor_user_id BIGINT NOT NULL,

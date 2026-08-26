@@ -4,8 +4,10 @@ import com.shplatform.auth.api.dto.AdminAnalyticsResponse;
 import com.shplatform.auth.api.dto.AdminSessionResponse;
 import com.shplatform.auth.domain.LoginLogService;
 import com.shplatform.auth.domain.SessionService;
+import com.shplatform.auth.domain.AdminAuditService;
 import com.shplatform.auth.domain.TokenBlacklistService;
 import com.shplatform.shared.dto.ApiResponse;
+import com.shplatform.common.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
@@ -24,13 +26,16 @@ public class AdminController {
     private final SessionService sessionService;
     private final LoginLogService loginLogService;
     private final TokenBlacklistService blacklistService;
+    private final AdminAuditService adminAuditService;
 
     public AdminController(SessionService sessionService,
                            LoginLogService loginLogService,
-                           TokenBlacklistService blacklistService) {
+                           TokenBlacklistService blacklistService,
+                           AdminAuditService adminAuditService) {
         this.sessionService = sessionService;
         this.loginLogService = loginLogService;
         this.blacklistService = blacklistService;
+        this.adminAuditService = adminAuditService;
     }
 
     @GetMapping("/analytics")
@@ -60,6 +65,8 @@ public class AdminController {
     @Operation(summary = "강제 로그아웃", description = "특정 사용자의 모든 세션을 삭제한다.")
     public ResponseEntity<ApiResponse<Void>> forceLogout(@PathVariable Long userId) {
         sessionService.removeAllSessions(userId);
+        adminAuditService.record(SecurityUtils.currentAccountId(),
+                AdminAuditService.ACTION_FORCE_LOGOUT, userId, null, null, null);
         return ResponseEntity.ok(ApiResponse.success("강제 로그아웃 완료", null));
     }
 
