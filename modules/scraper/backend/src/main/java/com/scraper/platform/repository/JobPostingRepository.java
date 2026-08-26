@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -36,14 +37,17 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
 
     long countByConfigId(Long configId);
 
+    Optional<JobPosting> findByDedupKeyAndCrawledAt(String dedupKey, java.time.LocalDate crawledAt);
+
     long countByConfigIdAndCrawledAt(Long configId, LocalDate crawledAt);
 
     @Query("SELECT MAX(j.crawledAt) FROM JobPosting j WHERE j.config.id = :configId")
     LocalDate findLastCrawledAt(@Param("configId") Long configId);
 
     @Query("""
-            SELECT j FROM JobPosting j
-            WHERE j.config.accountId = :accountId
+            SELECT j FROM JobPosting j LEFT JOIN j.config c
+            WHERE ((c IS NOT NULL AND c.accountId = :accountId)
+                OR j.savedByAccountId = :accountId)
               AND (:keyword IS NULL OR LOWER(j.company) LIKE LOWER(CONCAT('%', :keyword, '%'))
                    OR LOWER(j.position) LIKE LOWER(CONCAT('%', :keyword, '%')))
               AND (:siteName IS NULL OR j.siteName = :siteName)

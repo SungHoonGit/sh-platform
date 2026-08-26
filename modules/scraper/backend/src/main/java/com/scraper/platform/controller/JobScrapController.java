@@ -39,6 +39,21 @@ public class JobScrapController {
     }
 
     /**
+     * 실시간 검색결과를 저장하고 스크랩한다.
+     * POST /scraper/api/v1/job-scrap/live
+     */
+    @PostMapping("/live")
+    @Operation(summary = "실시간 검색결과 스크랩", description = "검색 결과를 DB에 저장(ID 부여)한 뒤 스크랩합니다.")
+    public ResponseEntity<java.util.Map<String, Object>> scrapLive(
+            @RequestBody com.scraper.platform.api.dto.LiveScrapRequest request) {
+        Long postingId = jobScrapService.scrapLive(SecurityUtils.currentAccountId(), request);
+        java.util.Map<String, Object> response = new LinkedHashMap<>();
+        response.put("postingId", postingId);
+        response.put("scrapped", true);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 공고를 스크랩한다.
      * POST /scraper/api/v1/job-scrap/{postingId}
      */

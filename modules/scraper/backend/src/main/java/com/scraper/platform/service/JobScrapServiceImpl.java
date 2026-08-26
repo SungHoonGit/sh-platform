@@ -37,6 +37,38 @@ public class JobScrapServiceImpl implements JobScrapService {
 
     @Override
     @Transactional
+    public Long scrapLive(Long userId, com.scraper.platform.api.dto.LiveScrapRequest request) {
+        String dedupKey = JobPosting.generateDedupKey(
+                request.company(), request.position(), request.location(), request.siteName());
+        java.time.LocalDate today = java.time.LocalDate.now();
+
+        JobPosting posting = jobPostingRepository.findByDedupKeyAndCrawledAt(dedupKey, today)
+                .orElseGet(() -> jobPostingRepository.save(JobPosting.builder()
+                        .siteName(request.siteName())
+                        .url(request.url())
+                        .company(request.company())
+                        .position(request.position())
+                        .career(request.career())
+                        .tech(request.tech())
+                        .location(request.location())
+                        .deadline(request.deadline())
+                        .dedupKey(dedupKey)
+                        .crawledAt(today)
+                        .savedByAccountId(userId)
+                        .build()));
+
+        if (jobScrapRepository.existsByUserIdAndPostingId(userId, posting.getId())) {
+            return posting.getId();
+        }
+        jobScrapRepository.save(JobScrap.builder()
+                .userId(userId)
+                .postingId(posting.getId())
+                .build());
+        return posting.getId();
+    }
+
+    @Override
+    @Transactional
     public void unscrap(Long userId, Long postingId) {
         jobScrapRepository.findByUserIdAndPostingId(userId, postingId)
                 .ifPresent(jobScrapRepository::delete);

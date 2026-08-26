@@ -86,6 +86,33 @@ export default function Search() {
     });
   }, [allJobs, activeSite, sortBy, sortDir]);
 
+  const [starred, setStarred] = useState<Set<string>>(new Set());
+
+  const toggleScrap = async (job: Record<string, string>) => {
+    const key = `${job.site}|${job.url}`;
+    if (starred.has(key)) return;
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) { alert("로그인이 필요합니다."); return; }
+      const res = await fetch("/scraper/api/v1/job-scrap/live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          siteName: job.site ?? "",
+          url: job.url ?? "",
+          company: job.company ?? "",
+          position: job.position || job.title || "",
+          career: job.career, tech: job.tech,
+          location: job.location, deadline: job.deadline,
+        }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      setStarred((prev) => new Set(prev).add(key));
+    } catch {
+      alert("스크랩에 실패했습니다.");
+    }
+  };
+
   const handleSort = (key: SortKey) => {
     if (sortBy === key && sortDir === "desc") {
       setSortBy(null);
@@ -436,6 +463,7 @@ export default function Search() {
                 <table className="w-full text-[12px] table-fixed">
                   <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                     <tr>
+                      <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[36px]">☆</th>
                       <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[40px]">#</th>
                       {COLUMNS.map((col) => (
                         <th key={col.key}
@@ -460,6 +488,17 @@ export default function Search() {
                         <tr key={i}
                           onClick={() => job.url && window.open(job.url, "_blank")}
                           className="hover:bg-blue-50/50 cursor-pointer transition-colors">
+                          <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => toggleScrap(job)}
+                              title="스크랩 (저장 후 지원관리에서 사용 가능)"
+                              className={`text-base leading-none transition-transform hover:scale-125 ${
+                                starred.has(`${job.site}|${job.url}`) ? "text-amber-400" : "text-slate-300 hover:text-amber-300"
+                              }`}
+                            >
+                              {starred.has(`${job.site}|${job.url}`) ? "★" : "☆"}
+                            </button>
+                          </td>
                           <td className="px-2 py-1.5 text-slate-400">{no}</td>
                           <td className="px-2 py-1.5">
                             <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${siteDef?.color || "bg-slate-100 text-slate-600"}`}>

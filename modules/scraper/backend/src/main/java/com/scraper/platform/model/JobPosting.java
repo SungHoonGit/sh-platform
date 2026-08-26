@@ -34,8 +34,14 @@ public class JobPosting {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "config_id", nullable = false)
+    @JoinColumn(name = "config_id")   // 실시간 검색 저장분은 config 없음 (nullable)
     private CrawlConfig config;
+
+    /**
+     * 실시간 검색에서 스크랩한 사용자 ID (크롤러 수집분은 null).
+     */
+    @Column(name = "saved_by_account_id")
+    private Long savedByAccountId;
 
     @Column(name = "site_name", length = 50, nullable = false)
     private String siteName;

@@ -19,6 +19,18 @@ public interface JobScrapService {
     void scrap(Long userId, Long postingId);
 
     /**
+     * (명령형) 실시간 검색결과를 저장하고 스크랩한다.
+     *
+     * <p>공고가 아직 DB에 없으면(오늘자 dedup 기준) 새로 저장한 뒤 스크랩한다.
+     * 저장된 공고의 소유자(savedByAccountId)는 요청 사용자이다.
+     *
+     * @param userId  로그인 사용자 ID
+     * @param request 검색 결과 항목
+     * @return 스크랩된 공고 ID
+     */
+    Long scrapLive(Long userId, com.scraper.platform.api.dto.LiveScrapRequest request);
+
+    /**
      * (명령형) 스크랩을 해제한다. 존재하지 않으면 무시한다.
      *
      * @param userId    로그인 사용자 ID
