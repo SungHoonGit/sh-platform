@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { EyeOff, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ExcelJS from "exceljs";
-import { realTimeSearch, fetchCompanyRatings, addBlacklist, fetchBlacklist, type SearchRequest, type SearchResponse, type CompanyRating } from "../api/scraper";
+import { realTimeSearch, fetchCompanyRatings, addBlacklist, fetchBlacklist, removeBlacklist, type BlacklistItem, type SearchRequest, type SearchResponse, type CompanyRating } from "../api/scraper";
 import { jobPlanetQuery, deadlineBadge, normCompany } from "../common/jobPlanet";
 import {
   REGIONS,
@@ -37,6 +37,20 @@ export default function Search() {
   const navigate = useNavigate();
   const [starred, setStarred] = useState<Set<string>>(new Set());
   const [blacklisted, setBlacklisted] = useState<Set<string>>(new Set());
+
+  const [showBl, setShowBl] = useState(false);
+  const [blItems, setBlItems] = useState<BlacklistItem[]>([]);
+  const loadBl = () => {
+    fetchBlacklist().then((l) => { setBlItems(l); setBlacklisted(new Set(l.map((b) => b.companyNameNormalized))); }).catch(() => {});
+    setShowBl(true);
+  };
+  const unblock = async (item: BlacklistItem) => {
+    try {
+      await removeBlacklist(item.id);
+      setBlItems((prev) => prev.filter((b) => b.id !== item.id));
+      setBlacklisted((prev) => { const n = new Set(prev); n.delete(item.companyNameNormalized); return n; });
+    } catch { alert("해제 실패"); }
+  };
   useEffect(() => {
     fetchBlacklist()
       .then((list) => setBlacklisted(new Set(list.map((b) => b.companyNameNormalized))))
@@ -93,7 +107,7 @@ export default function Search() {
       const cmp = getVal(a).localeCompare(getVal(b), "ko");
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [allJobs, activeSite, sortBy, sortDir]);
+  }, [allJobs, activeSite, sortBy, sortDir, blacklisted]);
 
   useEffect(() => {
     fetchBlacklist()
@@ -111,7 +125,6 @@ export default function Search() {
       await addBlacklist(company, reason);
       setBlacklisted((prev) => new Set(prev).add(normCompany(company)));
       alert("차단했습니다. 이 회사 공고는 더 이상 표시되지 않습니다.");
-      window.location.reload();
     } catch {
       alert("차단에 실패했습니다.");
     }
@@ -479,6 +492,39 @@ export default function Search() {
                 일부 사이트에서 오류 발생: {data.failedSites.join(", ")}
               </div>
             )}
+
+            {/* 블랙리스트 관리 */}
+            <div className="mx-5 mt-3">
+              <button
+                onClick={loadBl}
+                className="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white hover:bg-slate-50 text-slate-600"
+              >
+                차단 회사 관리{blItems.length > 0 ? ` (${blItems.length})` : ""}
+              </button>
+              {showBl && (
+                <div className="mt-2 bg-white border border-slate-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-slate-700">차단한 회사</p>
+                    <button onClick={() => setShowBl(false)} className="text-xs text-slate-400 hover:text-slate-600">닫기</button>
+                  </div>
+                  {blItems.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-3 text-center">차단한 회사가 없습니다. 결과 행의 EyeOff 아이콘으로 차단하세요.</p>
+                  ) : (
+                    <ul className="divide-y divide-slate-100">
+                      {blItems.map((b) => (
+                        <li key={b.id} className="flex items-center justify-between py-2">
+                          <span className="text-sm">
+                            {b.companyNameNormalized}
+                            {b.reason && <span className="text-xs text-slate-400 ml-2">— {b.reason}</span>}
+                          </span>
+                          <button onClick={() => unblock(b)} className="text-xs text-blue-600 hover:underline">해제</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* 테이블 */}
             <div className="flex-1 overflow-auto">
