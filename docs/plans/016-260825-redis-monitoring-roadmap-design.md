@@ -46,7 +46,7 @@ getActiveSessions()/getActiveSessionCount() 호출 시:
 - 대상: `SessionService.getActiveSessionCount`, `getActiveSessions`, `createSession`의 count 로직
 - Set 크기가 작아(≤max) 성능 영향 미미
 
-#### A-2. 기기별 로그아웃 (sessionId claim)
+#### A-2. 기기별 로그아웃 (sessionId claim) ✅ 완료 (`ba93930`, 2026-08-26)
 - accessToken claims에 `sessionId` 포함 → 로그아웃 시 해당 세션만 삭제
 - `JwtAuthenticationFilter`는 여전히 세션을 요청마다 검증하지 않음(현행 유지)
 - 변경 파일: TokenProvider, AuthServiceImpl.createTokens, OAuth2SuccessHandler, AuthController.logout
@@ -130,7 +130,7 @@ Kafka는 전송 배관일 뿐 저장소 대체 불가 — 도입해도 위 테�
 | A-1 | 유령 세션 lazy cleanup (+테스트) | 1h | 🔴 즉시 |
 | A-3 | .env 세션 정책 확정·재검증 | 10m | 🔴 즉시 |
 | B-1~3 | redis_exporter + Grafana 대시보드 + 알림 | 2~3h | 🟡 다음 세션 |
-| A-2 | sessionId claim 기기별 로그아웃 | 2h | 🟡 |
+| A-2 | sessionId claim 기기별 로그아웃 ✅ 완료(ba93930) | 2h | 🟡 |
 | D-1 | AOF 영속성 설정 | 30m | 🟡 |
 | C-* | 캐시/락/랭킹 (각각 별도 설계 후) | 기능별 | 🟢 수요 발생 시 |
 
