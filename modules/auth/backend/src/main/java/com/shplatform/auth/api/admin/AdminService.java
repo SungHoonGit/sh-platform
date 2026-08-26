@@ -77,9 +77,16 @@ public class AdminService {
 
     @Transactional
     public void updateUserRole(Long actorId, Long id, UserRole role) {
+        if (actorId.equals(id)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "자기 계정의 권한은 변경할 수 없습니다.");
+        }
         var user = userRepository.findById(id)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         String beforeRole = user.getRole() != null ? user.getRole().name() : null;
+        if (beforeRole != null && beforeRole.equals("ADMIN") && role != UserRole.ADMIN
+                && userRepository.countByRole(UserRole.ADMIN) <= 1) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "마지막 ADMIN 계정의 권한은 회수할 수 없습니다.");
+        }
         user.setRole(role);
         userRepository.save(user);
         adminAuditService.record(actorId, AdminAuditService.ACTION_ROLE_CHANGE,
@@ -88,6 +95,9 @@ public class AdminService {
 
     @Transactional
     public void deleteUser(Long actorId, Long id) {
+        if (actorId.equals(id)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "관리자 페이지에서 자기 계정을 삭제할 수 없습니다. 계정 설정을 이용하세요.");
+        }
         var user = userRepository.findById(id)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         adminAuditService.record(actorId, AdminAuditService.ACTION_DELETE_USER,

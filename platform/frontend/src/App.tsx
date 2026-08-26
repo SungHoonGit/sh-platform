@@ -9,6 +9,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminTenants from "./pages/admin/AdminTenants";
 import AdminAudit from "./pages/admin/AdminAudit";
 import AdminSessions from "./pages/admin/AdminSessions";
+import AdminRoles from "./pages/admin/AdminRoles";
 import AccountSettings from "./pages/AccountSettings";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ function App() {
               <Route path="/platform/scraper/*" element={<RedirectTo to="/scraper/" />} />
               <Route path="/platform/resume/*" element={<RedirectTo to="/resume/" />} />
               <Route path="/platform/admin" element={<AdminDashboard />} />
+              <Route path="/platform/admin/roles" element={<AdminRoles />} />
               <Route path="/platform/admin/users" element={<AdminUsers />} />
               <Route path="/platform/admin/tenants" element={<AdminTenants />} />
               <Route path="/platform/admin/audit" element={<AdminAudit />} />

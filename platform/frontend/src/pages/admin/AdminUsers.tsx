@@ -21,11 +21,13 @@ export default function AdminUsers() {
   const roleMutation = useMutation({
     mutationFn: ({ id, role }: { id: number; role: string }) => adminApi.updateUserRole(id, role),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }),
+    onError: () => alert("권한 변경 실패: 자기 계정 변경 또는 마지막 ADMIN 권한 회수는 허용되지 않습니다."),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => adminApi.deleteUser(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }),
+    onError: () => alert("삭제 실패: 자기 계정은 관리자 페이지에서 삭제할 수 없습니다."),
   });
 
   return (

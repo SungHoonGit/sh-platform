@@ -30,6 +30,7 @@ export default function PlatformLayout() {
             {
               label: "관리",
               items: [
+                { label: "권한 관리", href: "/platform/admin/roles" },
                 { label: "사용자 관리", href: "/platform/admin/users" },
                 { label: "테넌트 관리", href: "/platform/admin/tenants" },
                 { label: "감사 로그", href: "/platform/admin/audit" },
