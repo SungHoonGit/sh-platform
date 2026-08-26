@@ -13,6 +13,11 @@ on:
       - ".github/workflows/**"
   workflow_dispatch:
 
+# 같은 서버에 두 배포가 겹치면 node_modules/gradle 빌드가 상호 간섭한다 (2026-08-26 사례)
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
