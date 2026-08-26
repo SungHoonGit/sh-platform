@@ -396,3 +396,30 @@ export async function downloadJobPostingsExcel(
   document.body.removeChild(a);
   URL.revokeObjectURL(a.href);
 }
+
+// ── 회사 블랙리스트 ─────────────────────────────────────────────
+
+export interface BlacklistItem {
+  id: number;
+  accountId: number;
+  companyNameNormalized: string;
+  reason: string | null;
+  createdAt: string;
+}
+
+async function blacklistReq(path: string, options?: RequestInit) {
+  const token = localStorage.getItem("accessToken") ?? "";
+  const res = await fetch(`/scraper/api/v1/company-blacklist${path}`, {
+    ...options,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...options?.headers },
+  });
+  if (!res.ok) throw new Error(`BLACKLIST_${res.status}`);
+  const json = await res.json();
+  return json.data ?? json;
+}
+
+export const fetchBlacklist = () => blacklistReq("") as Promise<BlacklistItem[]>;
+export const addBlacklist = (companyName: string, reason?: string) =>
+  blacklistReq("", { method: "POST", body: JSON.stringify({ companyName, reason: reason || null }) }) as Promise<BlacklistItem>;
+export const removeBlacklist = (id: number) =>
+  blacklistReq(`/${id}`, { method: "DELETE" }) as Promise<void>;

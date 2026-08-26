@@ -44,3 +44,9 @@ export function deadlineBadge(deadline: string | null | undefined): string | nul
   if (n < 0) return "마감";
   return `D-${n}`;
 }
+
+/** 블랙리스트 키용 회사명 정규화 (백엔드 CompanyBlacklistService.normalize와 동일 규칙) */
+export function normCompany(s: string | null | undefined): string {
+  if (!s) return "";
+  return s.trim().toLowerCase().replace(/\(주\)|㈜|주식회사/g, "").replace(/\s+/g, "");
+}

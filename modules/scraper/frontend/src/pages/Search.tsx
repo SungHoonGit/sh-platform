@@ -1,8 +1,8 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ExcelJS from "exceljs";
-import { realTimeSearch, fetchCompanyRatings, type SearchRequest, type SearchResponse, type CompanyRating } from "../api/scraper";
-import { jobPlanetQuery, deadlineBadge } from "../common/jobPlanet";
+import { realTimeSearch, fetchCompanyRatings, addBlacklist, fetchBlacklist, type SearchRequest, type SearchResponse, type CompanyRating } from "../api/scraper";
+import { jobPlanetQuery, deadlineBadge, normCompany } from "../common/jobPlanet";
 import {
   REGIONS,
   DEFAULT_LOCATIONS,
@@ -53,7 +53,8 @@ export default function Search() {
   const allJobs = useMemo(() => {
     const jobs = data?.jobs ?? [];
     if (ratingsMap.size === 0) return jobs;
-    return jobs.map(j => {
+    const visible = jobs.filter((j) => !blacklisted.has(normCompany(j.company)));
+    return visible.map(j => {
       const rating = ratingsMap.get(j.company || "");
       if (rating && rating.averageScore != null) {
         return { ...j, companyScore: String(rating.averageScore) };
@@ -86,7 +87,29 @@ export default function Search() {
     });
   }, [allJobs, activeSite, sortBy, sortDir]);
 
+  useEffect(() => {
+    fetchBlacklist()
+      .then((list) => setBlacklisted(new Set(list.map((b) => b.companyNameNormalized))))
+      .catch(() => {});
+  }, []);
+
   const [starred, setStarred] = useState<Set<string>>(new Set());
+
+  const [blacklisted, setBlacklisted] = useState<Set<string>>(new Set());
+
+  const blockCompany = async (company: string) => {
+    if (!company) return;
+    const reason = window.prompt(`"${company}" 공고를 숨길까요?\n사유(선택):`) ?? "";
+    if (reason === null) return;
+    try {
+      await addBlacklist(company, reason);
+      setBlacklisted((prev) => new Set(prev).add(normCompany(company)));
+      alert("차단했습니다. 이 회사 공고는 더 이상 표시되지 않습니다.");
+      window.location.reload();
+    } catch {
+      alert("차단에 실패했습니다.");
+    }
+  };
 
   const toggleScrap = async (job: Record<string, string>) => {
     const key = `${job.site}|${job.url}`;
@@ -489,7 +512,14 @@ export default function Search() {
                           onClick={() => job.url && window.open(job.url, "_blank")}
                           className="hover:bg-blue-50/50 cursor-pointer transition-colors">
                           <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
-                            <button
+                              <button
+                            onClick={(e) => { e.stopPropagation(); blockCompany(job.company ?? ""); }}
+                            title="이 회사 공고 숨기기 (블랙리스트)"
+                            className="text-xs text-slate-300 hover:text-red-400 mr-1.5"
+                          >
+                            ⛔
+                          </button>
+<button
                               onClick={() => toggleScrap(job)}
                               title="스크랩 (저장 후 지원관리에서 사용 가능)"
                               className={`text-base leading-none transition-transform hover:scale-125 ${
