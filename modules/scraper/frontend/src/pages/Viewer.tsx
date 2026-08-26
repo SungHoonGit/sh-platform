@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { fetchCrawlers, executeCrawler, fetchJobPostings, downloadJobPostingsExcel, fetchCrawlLogsGrouped, deleteCrawlLog, fetchMyScraps, scrapPosting, unscrapPosting, type JobPostingItem } from "../api/scraper";
+import { deadlineBadge } from "../common/jobPlanet";
 import { jobPlanetQuery } from "../common/jobPlanet";
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 
@@ -517,7 +518,21 @@ export default function Viewer() {
                             <span className="text-[10px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded truncate block">{job.tech}</span>
                           ) : <span className="text-slate-300">-</span>}
                         </td>
-                        <td className="px-2 py-1 text-slate-400 truncate">{job.deadline || "-"}</td>
+                        <td className="px-2 py-1 text-slate-400 truncate">
+                          {(() => {
+                            const badge = deadlineBadge(job.deadline);
+                            if (badge) {
+                              return (
+                                <span className={`inline-block px-1 py-0.5 rounded text-[10px] font-bold ${
+                                  badge === "마감" ? "bg-slate-200 text-slate-500" : "bg-red-100 text-red-600"
+                                }`}>
+                                  {badge}
+                                </span>
+                              );
+                            }
+                            return job.deadline || "-";
+                          })()}
+                        </td>
                       </tr>
                     );
                   })}

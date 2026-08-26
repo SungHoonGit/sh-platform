@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ExcelJS from "exceljs";
 import { realTimeSearch, fetchCompanyRatings, type SearchRequest, type SearchResponse, type CompanyRating } from "../api/scraper";
-import { jobPlanetQuery } from "../common/jobPlanet";
+import { jobPlanetQuery, deadlineBadge } from "../common/jobPlanet";
 import {
   REGIONS,
   DEFAULT_LOCATIONS,
@@ -532,7 +532,21 @@ export default function Search() {
                               <span className="text-[10px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded truncate block">{job.tech}</span>
                             ) : <span className="text-slate-300">-</span>}
                           </td>
-                          <td className="px-2 py-1.5 text-slate-400 truncate">{job.deadline || "-"}</td>
+                          <td className="px-2 py-1.5 text-slate-400 truncate">
+                            {(() => {
+                              const badge = deadlineBadge(job.deadline);
+                              if (badge) {
+                                return (
+                                  <span className={`inline-block px-1 py-0.5 rounded text-[10px] font-bold ${
+                                    badge === "마감" ? "bg-slate-200 text-slate-500" : "bg-red-100 text-red-600"
+                                  }`}>
+                                    {badge}
+                                  </span>
+                                );
+                              }
+                              return job.deadline || "-";
+                            })()}
+                          </td>
                           <td className="px-2 py-1.5">
                             {job.company ? (
                               <a
