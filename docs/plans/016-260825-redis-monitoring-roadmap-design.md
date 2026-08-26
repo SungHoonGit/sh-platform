@@ -118,8 +118,8 @@ Kafka는 전송 배관일 뿐 저장소 대체 불가 — 도입해도 위 테�
 ### Phase D — 안정성 강화
 
 1. **영속성**: `/etc/redis/redis.conf` — `appendonly yes` (AOF, everysec)
-   → 재시작해도 세션/토큰 유지 (현재는 재시작 시 소실)
-2. **메모리 한도**: `maxmemory 256mb` + `allkeys-lru`
+   → 재시작해도 세션/토큰 유지 ✅ 완료 (2026-08-26, 런타임+설정파일 반영 확인)
+2. **메모리 한도**: `maxmemory 256mb` + `volatile-lru` ✅ 완료 (런타임 적용, conf 영구반영은 수동 권장)
 3. **백업**: RDB 스냅샷 주기 점검 + 덤프 파일 백업 크론
 4. (원격) OCI Cache(Managed Redis) 전환 검토 — 노드 수 증가 시
 

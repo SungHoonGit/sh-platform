@@ -150,6 +150,52 @@ redis-cli -a sh_redis_2026! MONITOR
 # 종료: Ctrl+C
 ```
 
+Grafana 연동(redis_exporter :9121 → Prometheus → 대시보드 11835)은
+`docs/plans/016-260825-redis-monitoring-roadmap-design.md` §B 완료 상태.
+
+## 7.5 영속성·메모리 운영 설정 (2026-08-26 적용 완료)
+
+### AOF (Append Only File) — 재시작해도 데이터 유지
+
+```bash
+# 런타임 즉시 적용 (재시작 불필요)
+redis-cli -a 'sh_redis_2026!' CONFIG SET appendonly yes
+
+# 설정파일 영구 반영 (재부팅 대비)
+sudo sed -i 's/^appendonly no/appendonly yes/' /etc/redis/redis.conf
+
+# 검증
+redis-cli -a 'sh_redis_2026!' INFO persistence | grep -E "aof_enabled|aof_last_write_status"
+sudo ls -lh /var/lib/redis/appendonlydir/
+```
+
+정상 상태:
+```
+aof_enabled:1
+aof_last_write_status:ok
+appendonlydir/ : appendonly.aof.1.base.rdb + appendonly.aof.1.incr.aof + manifest
+```
+
+### 메모리 상한·축출 정책
+
+```bash
+redis-cli -a 'sh_redis_2026!' CONFIG SET maxmemory 256mb
+redis-cli -a 'sh_redis_2026!' CONFIG SET maxmemory-policy volatile-lru
+```
+
+| 항목 | 값 | 이유 |
+|------|-----|------|
+| maxmemory | 256mb | 서버 여유 메모리 고정 상한 — Grafana 알림(80%) 기준선 |
+| policy | volatile-lru | 초과 시 **TTL 있는 키**부터 오래된 것 축출. 우리 키는 전부 TTL 보유 |
+
+> 주의: `CONFIG SET`만 하면 재시작 시 원복된다. 영구 반영은 `/etc/redis/redis.conf`의
+> `maxmemory` / `maxmemory-policy` 주석 해제 후 값을 수정할 것.
+
+### 데이터 소실 리스크 참고
+
+- AOF로 세션·토큰은 재시작 후에도 유지되지만, Redis를 "절대 안 날아가는 DB"로 쓰지 않는다.
+- 감사·증적 데이터(login_logs/admin_audit_logs)는 MariaDB에 이중 기록됨 (플랜 016 §C-audit).
+
 ## 8. 참고 자료
 
 - [Redis 공식 문서](https://redis.io/docs/)
