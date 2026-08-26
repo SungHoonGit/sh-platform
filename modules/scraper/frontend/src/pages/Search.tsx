@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { EyeOff, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ExcelJS from "exceljs";
 import { realTimeSearch, fetchCompanyRatings, addBlacklist, fetchBlacklist, type SearchRequest, type SearchResponse, type CompanyRating } from "../api/scraper";
@@ -486,7 +487,7 @@ export default function Search() {
                 <table className="w-full text-[12px] table-fixed">
                   <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                     <tr>
-                      <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[36px]">☆</th>
+                      <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[48px]"></th>
                       <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[40px]">#</th>
                       {COLUMNS.map((col) => (
                         <th key={col.key}
@@ -512,22 +513,26 @@ export default function Search() {
                           onClick={() => job.url && window.open(job.url, "_blank")}
                           className="hover:bg-blue-50/50 cursor-pointer transition-colors">
                           <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1.5">
                               <button
-                            onClick={(e) => { e.stopPropagation(); blockCompany(job.company ?? ""); }}
-                            title="이 회사 공고 숨기기 (블랙리스트)"
-                            className="text-xs text-slate-300 hover:text-red-400 mr-1.5"
-                          >
-                            ⛔
-                          </button>
-<button
-                              onClick={() => toggleScrap(job)}
-                              title="스크랩 (저장 후 지원관리에서 사용 가능)"
-                              className={`text-base leading-none transition-transform hover:scale-125 ${
-                                starred.has(`${job.site}|${job.url}`) ? "text-amber-400" : "text-slate-300 hover:text-amber-300"
-                              }`}
-                            >
-                              {starred.has(`${job.site}|${job.url}`) ? "★" : "☆"}
-                            </button>
+                                onClick={(e) => { e.stopPropagation(); blockCompany(job.company ?? ""); }}
+                                title="이 회사 공고 숨기기 (블랙리스트)"
+                                className="text-slate-300 hover:text-red-500 transition-colors"
+                              >
+                                <EyeOff size={13} />
+                              </button>
+                              <button
+                                onClick={() => toggleScrap(job)}
+                                title="스크랩 (저장 후 지원관리에서 사용 가능)"
+                                className="transition-colors"
+                              >
+                                <Star size={14} className={
+                                  starred.has(`${job.site}|${job.url}`)
+                                    ? "text-amber-400 fill-amber-400"
+                                    : "text-slate-300 hover:text-amber-400"
+                                } />
+                              </button>
+                            </div>
                           </td>
                           <td className="px-2 py-1.5 text-slate-400">{no}</td>
                           <td className="px-2 py-1.5">
