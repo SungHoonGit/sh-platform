@@ -132,7 +132,7 @@ public class AuthServiceImpl implements AuthService {
         }
         loginLogService.logLogin(entity.getId(), request.email(), null, null, true);
         log.info("[AUTH] login success: email={}, userId={}, provider=LOCAL", request.email(), entity.getId());
-        return createTokens(entity.getId(), entity.getEmail(), entity.getRole().name());
+        return createTokens(entity.getId(), entity.getEmail(), entity.getRole().name(), null);
     }
 
     @Override
@@ -159,13 +159,14 @@ public class AuthServiceImpl implements AuthService {
         loginLogService.logLogin(entity.getId(), request.email(), ip, device, true);
         log.info("[AUTH] login success: email={}, userId={}, sessionId={}", request.email(), entity.getId(), sessionId);
 
-        return createTokens(entity.getId(), entity.getEmail(), entity.getRole().name());
+        return createTokens(entity.getId(), entity.getEmail(), entity.getRole().name(), sessionId);
     }
 
     @Override
     @Transactional
     public TokenResponse refresh(String refreshToken) {
         Long userId = refreshTokenService.getUserId(refreshToken);
+        String sessionId = null;
         if (userId == null) {
             log.warn("[AUTH] token refresh failed (token not found in Redis)");
             var stored = refreshTokenRepository.findByToken(refreshToken).orElse(null);
@@ -177,13 +178,14 @@ public class AuthServiceImpl implements AuthService {
                 throw new BusinessException(ErrorCode.TOKEN_INVALID);
             }
         } else {
+            sessionId = refreshTokenService.getSessionId(refreshToken);
             refreshTokenService.delete(refreshToken);
         }
 
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
-        log.info("[AUTH] token refresh success: userId={}", user.getId());
-        return createTokens(user.getId(), user.getEmail(), user.getRole().name());
+        log.info("[AUTH] token refresh success: userId={}, sessionId={}", user.getId(), sessionId);
+        return createTokens(user.getId(), user.getEmail(), user.getRole().name(), sessionId);
     }
 
     @Override
@@ -267,11 +269,11 @@ public class AuthServiceImpl implements AuthService {
         log.info("[AUTH] account deleted: userId={}", userId);
     }
 
-    private TokenResponse createTokens(Long userId, String email, String role) {
-        var accessToken = tokenProvider.createAccessToken(userId, email, role);
+    private TokenResponse createTokens(Long userId, String email, String role, String sessionId) {
+        var accessToken = tokenProvider.createAccessToken(userId, email, role, sessionId);
         var refreshValue = tokenProvider.createRefreshToken();
 
-        refreshTokenService.save(refreshValue, userId);
+        refreshTokenService.save(refreshValue, userId, sessionId);
 
         return TokenResponse.of(accessToken, refreshValue, 3600);
     }

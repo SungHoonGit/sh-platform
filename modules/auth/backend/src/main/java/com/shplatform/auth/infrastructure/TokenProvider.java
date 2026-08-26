@@ -46,16 +46,18 @@ public class TokenProvider {
         this.publicKey = readPublicKey(publicKeyPem);
     }
 
-    public String createAccessToken(Long userId, String email, String role) {
+    public String createAccessToken(Long userId, String email, String role, String sessionId) {
         var now = Instant.now();
-        var claims = new JWTClaimsSet.Builder()
+        var builder = new JWTClaimsSet.Builder()
                 .subject(String.valueOf(userId))
                 .claim("email", email)
                 .claim("role", role)
                 .issueTime(Date.from(now))
-                .expirationTime(Date.from(now.plusMillis(accessTokenExpiration)))
-                .build();
-        return sign(claims);
+                .expirationTime(Date.from(now.plusMillis(accessTokenExpiration)));
+        if (sessionId != null && !sessionId.isBlank()) {
+            builder.claim("sessionId", sessionId);
+        }
+        return sign(builder.build());
     }
 
     public String createRefreshToken() {
@@ -81,7 +83,8 @@ public class TokenProvider {
                     Long.parseLong(claims.getSubject()),
                     claims.getStringClaim("email"),
                     claims.getStringClaim("role"),
-                    claims.getExpirationTime().getTime()
+                    claims.getExpirationTime().getTime(),
+                    claims.getStringClaim("sessionId")
             );
         } catch (Exception e) {
             throw new RuntimeException("Token validation failed", e);
@@ -132,5 +135,5 @@ public class TokenProvider {
         return Base64.getDecoder().decode(cleaned);
     }
 
-    public record Claims(Long userId, String email, String role, long exp) {}
+    public record Claims(Long userId, String email, String role, long exp, String sessionId) {}
 }

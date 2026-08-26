@@ -120,7 +120,7 @@ class AuthServiceImplTest {
         entity.setEmailVerified(true);
         entity.setRole(UserRole.USER);
         when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(entity));
-        when(tokenProvider.createAccessToken(anyLong(), anyString(), anyString())).thenReturn("access-token");
+        when(tokenProvider.createAccessToken(anyLong(), anyString(), anyString(), nullable(String.class))).thenReturn("access-token");
         when(tokenProvider.createRefreshToken()).thenReturn("refresh-token");
 
         var request = new LoginRequest("test@example.com", "CorrectPw1!");
@@ -128,7 +128,7 @@ class AuthServiceImplTest {
 
         assertNotNull(result.accessToken());
         assertNotNull(result.refreshToken());
-        verify(refreshTokenService).save(eq("refresh-token"), eq(1L));
+        verify(refreshTokenService).save(eq("refresh-token"), eq(1L), nullable(String.class));
     }
 
     @Test
@@ -254,7 +254,7 @@ class AuthServiceImplTest {
         userEntity.setEmail("test@example.com");
         userEntity.setRole(UserRole.USER);
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(userEntity));
-        when(tokenProvider.createAccessToken(anyLong(), anyString(), anyString())).thenReturn("new-access");
+        when(tokenProvider.createAccessToken(anyLong(), anyString(), anyString(), nullable(String.class))).thenReturn("new-access");
         when(tokenProvider.createRefreshToken()).thenReturn("new-refresh");
 
         var result = authService.refresh("valid-refresh");
@@ -262,7 +262,7 @@ class AuthServiceImplTest {
         assertEquals("new-access", result.accessToken());
         assertEquals("new-refresh", result.refreshToken());
         verify(refreshTokenService).delete("valid-refresh");
-        verify(refreshTokenService).save(eq("new-refresh"), eq(1L));
+        verify(refreshTokenService).save(eq("new-refresh"), eq(1L), nullable(String.class));
     }
 
     @Test
@@ -280,7 +280,7 @@ class AuthServiceImplTest {
         userEntity.setEmail("test@example.com");
         userEntity.setRole(UserRole.USER);
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(userEntity));
-        when(tokenProvider.createAccessToken(anyLong(), anyString(), anyString())).thenReturn("new-access");
+        when(tokenProvider.createAccessToken(anyLong(), anyString(), anyString(), nullable(String.class))).thenReturn("new-access");
         when(tokenProvider.createRefreshToken()).thenReturn("new-refresh");
 
         var result = authService.refresh("old-refresh");

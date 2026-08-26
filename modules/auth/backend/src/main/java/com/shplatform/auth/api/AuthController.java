@@ -106,7 +106,11 @@ public class AuthController {
                 if (remainingSeconds > 0) {
                     blacklistService.addToBlacklist(accessToken, remainingSeconds);
                 }
-                sessionService.removeAllSessions(claims.userId());
+                if (claims.sessionId() != null && !claims.sessionId().isBlank()) {
+                    sessionService.removeSession(claims.userId(), claims.sessionId());
+                } else {
+                    sessionService.removeAllSessions(claims.userId());
+                }
             } catch (Exception e) {
                 log.debug("[LOGOUT] failed to blacklist token: {}", e.getMessage());
             }

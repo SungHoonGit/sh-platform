@@ -47,17 +47,17 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                                         Authentication authentication) throws IOException, ServletException {
         CustomOAuth2User oauth2User = (CustomOAuth2User) authentication.getPrincipal();
 
-        String accessToken = tokenProvider.createAccessToken(
-                oauth2User.getUserId(), oauth2User.getEmail(), oauth2User.getRole());
         String refreshToken = tokenProvider.createRefreshToken();
-
         String ip = request.getRemoteAddr();
         String device = request.getHeader("User-Agent");
 
+        String accessToken;
         String sessionId;
         try {
             sessionId = sessionService.createSession(oauth2User.getUserId(), ip, device);
-            refreshTokenService.save(refreshToken, oauth2User.getUserId());
+            accessToken = tokenProvider.createAccessToken(
+                    oauth2User.getUserId(), oauth2User.getEmail(), oauth2User.getRole(), sessionId);
+            refreshTokenService.save(refreshToken, oauth2User.getUserId(), sessionId);
         } catch (BusinessException e) {
             log.warn("[OAUTH2] login blocked: userId={}, reason={}",
                     oauth2User.getUserId(), e.getErrorCode());

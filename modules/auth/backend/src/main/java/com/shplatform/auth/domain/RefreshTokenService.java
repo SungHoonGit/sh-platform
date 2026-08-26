@@ -25,13 +25,19 @@ public class RefreshTokenService {
     /**
      * Refresh Token을 Redis에 저장한다.
      *
-     * @param token   Refresh Token 값
-     * @param userId  사용자 ID
+     * <p>값은 {@code userId} 또는 기기 식별용으로 {@code userId:sessionId} 형태로 저장된다.
+     *
+     * @param token     Refresh Token 값
+     * @param userId    사용자 ID
+     * @param sessionId 세션 ID (없으면 null)
      */
-    public void save(String token, Long userId) {
+    public void save(String token, Long userId, String sessionId) {
         String key = REFRESH_TOKEN_PREFIX + token;
         long timeoutSeconds = refreshTokenExpirationMs / 1000;
-        redisRepository.set(key, String.valueOf(userId), timeoutSeconds, TimeUnit.SECONDS);
+        String value = sessionId != null && !sessionId.isBlank()
+                ? userId + ":" + sessionId
+                : String.valueOf(userId);
+        redisRepository.set(key, value, timeoutSeconds, TimeUnit.SECONDS);
         log.info("[REFRESH_TOKEN] saved: userId={}, expiresIn={}s", userId, timeoutSeconds);
     }
 
@@ -43,8 +49,24 @@ public class RefreshTokenService {
      */
     public Long getUserId(String token) {
         String key = REFRESH_TOKEN_PREFIX + token;
-        String userId = redisRepository.get(key);
-        return userId != null ? Long.parseLong(userId) : null;
+        String value = redisRepository.get(key);
+        if (value == null) return null;
+        int idx = value.indexOf(':');
+        return Long.parseLong(idx >= 0 ? value.substring(0, idx) : value);
+    }
+
+    /**
+     * Refresh Token에 묶인 세션 ID를 조회한다.
+     *
+     * @param token Refresh Token 값
+     * @return 세션 ID (레거시 값 또는 없으면 null)
+     */
+    public String getSessionId(String token) {
+        String key = REFRESH_TOKEN_PREFIX + token;
+        String value = redisRepository.get(key);
+        if (value == null) return null;
+        int idx = value.indexOf(':');
+        return idx >= 0 ? value.substring(idx + 1) : null;
     }
 
     /**
