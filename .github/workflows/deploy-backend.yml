@@ -7,6 +7,7 @@ on:
       - "common/**"
       - "modules/**"
       - "platform/**"
+      - "docs/**/*.sql"
       - "build.gradle.kts"
       - "settings.gradle.kts"
       - ".github/workflows/**"
