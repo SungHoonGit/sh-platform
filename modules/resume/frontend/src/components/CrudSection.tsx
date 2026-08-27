@@ -1,11 +1,18 @@
-import { useState } from "react";
-import { apiDelete, apiPost, apiPut, apiUpload } from "../api/client";
-import { SCHOOLS, type SchoolOption } from "../data/schools";
+import { useEffect, useRef, useState } from "react";
+import { apiDelete, apiGet, apiPost, apiPut, apiUpload } from "../api/client";
 
 export interface FieldDef {
   key: string;
   label: string;
-  type?: "text" | "date" | "textarea" | "select" | "file" | "check" | "school";
+  type?:
+    | "text"
+    | "date"
+    | "textarea"
+    | "select"
+    | "file"
+    | "check"
+    | "school"
+    | "major";
   options?: string[];
   accept?: string;
   required?: boolean;
@@ -21,11 +28,9 @@ type FormState = Record<string, string>;
 const inputCls =
   "w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gray-500";
 
-function filterSchools(query: string, type?: string): SchoolOption[] {
-  const q = query.trim().toLowerCase();
-  const byName = !q ? SCHOOLS : SCHOOLS.filter((s) => s.name.toLowerCase().includes(q));
-  if (!type) return byName;
-  return byName.filter((s) => s.type === type);
+interface Sug {
+  name: string;
+  type?: string;
 }
 
 export default function CrudSection({
@@ -55,6 +60,35 @@ export default function CrudSection({
   const [busy, setBusy] = useState(false);
   const [schoolOpen, setSchoolOpen] = useState(false);
   const [schoolQuery, setSchoolQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<Sug[]>([]);
+  const suggestField = useRef<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const fetchSuggestions = (query: string, type?: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      if (!query.trim()) {
+        setSuggestions([]);
+        return;
+      }
+      const path =
+        type === undefined
+          ? `/reference/majors/search?q=${encodeURIComponent(query)}`
+          : `/reference/schools/search?q=${encodeURIComponent(query)}&schoolType=${encodeURIComponent(type ?? "")}`;
+      try {
+        const res = await apiGet<Sug[]>(path);
+        setSuggestions(Array.isArray(res) ? res : []);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 200);
+  };
 
   const visible = (f: FieldDef) => !f.showIf || form[f.showIf.key] === f.showIf.equals;
 
@@ -243,7 +277,7 @@ export default function CrudSection({
             {fields.filter(visible).map((f) => (
               <div
                 key={f.key}
-                className={f.type === "textarea" || f.type === "file" || f.type === "school" ? "md:col-span-2" : ""}
+                className={f.type === "textarea" || f.type === "file" || f.type === "school" || f.type === "major" ? "md:col-span-2" : ""}
               >
                 {f.type !== "check" && (
                   <label className="block text-xs font-medium text-slate-600 mb-1">
@@ -303,32 +337,33 @@ export default function CrudSection({
                       </span>
                     )}
                   </div>
-                ) : f.type === "school" ? (
+                ) : f.type === "school" || f.type === "major" ? (
                   <div className="relative">
                     <input
                       type="text"
                       value={form[f.key] ?? ""}
-                      placeholder={f.placeholder ?? "학교명 입력 후 선택"}
+                      placeholder={f.placeholder ?? (f.type === "school" ? "학교명 입력 후 선택" : "전공명 입력 후 선택")}
                       onChange={(e) => {
                         const v = e.target.value;
-                        setForm((prev) => {
-                          const next = { ...prev, [f.key]: v };
-                          const picked = SCHOOLS.find((s) => s.name === v);
-                          if (picked && prev.schoolType !== picked.type) {
-                            next.schoolType = picked.type;
-                          }
-                          return next;
-                        });
+                        setForm((prev) => ({ ...prev, [f.key]: v }));
                         setSchoolQuery(v);
+                        suggestField.current = f.key;
+                        fetchSuggestions(
+                          v,
+                          f.type === "school" ? (form.schoolType || undefined) : undefined,
+                        );
                         setSchoolOpen(true);
                       }}
-                      onFocus={() => setSchoolOpen(true)}
+                      onFocus={() => {
+                        suggestField.current = f.key;
+                        setSchoolOpen(true);
+                      }}
                       onBlur={() => setTimeout(() => setSchoolOpen(false), 150)}
                       className={inputCls}
                     />
-                    {schoolOpen && (
+                    {schoolOpen && suggestField.current === f.key && (
                       <ul className="absolute z-20 mt-1 w-full max-h-48 overflow-auto bg-white border border-gray-200 rounded shadow-lg">
-                        {filterSchools(schoolQuery, form.schoolType || undefined).map((s) => (
+                        {suggestions.map((s) => (
                           <li key={s.name}>
                             <button
                               type="button"
@@ -336,20 +371,25 @@ export default function CrudSection({
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={() => {
                                 setForm((prev) => {
-                                  const next = { ...prev, [f.key]: s.name };
-                                  next.schoolType = s.type;
+                                  const next: FormState = { ...prev, [f.key]: s.name };
+                                  if (f.type === "school" && s.type) {
+                                    next.schoolType = s.type;
+                                  }
                                   return next;
                                 });
                                 setSchoolQuery("");
+                                setSuggestions([]);
                                 setSchoolOpen(false);
                               }}
                             >
                               <span>{s.name}</span>
-                              <span className="text-xs text-gray-400 shrink-0">{s.type}</span>
+                              {s.type && (
+                                <span className="text-xs text-gray-400 shrink-0">{s.type}</span>
+                              )}
                             </button>
                           </li>
                         ))}
-                        {filterSchools(schoolQuery, form.schoolType || undefined).length === 0 && (
+                        {suggestions.length === 0 && (
                           <li className="px-2.5 py-1.5 text-xs text-gray-400">
                             "{schoolQuery}" 를 직접 입력해 저장할 수 있습니다
                           </li>

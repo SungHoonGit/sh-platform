@@ -57,7 +57,7 @@ const SECTIONS: SectionConfig[] = [
     fields: [
       { key: "school", label: "학교명", required: true, type: "school", placeholder: "학교명 입력 후 선택" },
       { key: "schoolType", label: "학교 유형", type: "select", options: ["고등학교", "대학교", "대학원"] },
-      { key: "major", label: "전공" },
+      { key: "major", label: "전공", type: "major", placeholder: "전공명 입력 후 선택" },
       { key: "gpa", label: "학점", placeholder: "예: 3.9 / 4.5" },
       { key: "degree", label: "학위", placeholder: "예: 학사" },
       { key: "startDate", label: "입학일", type: "date" },
