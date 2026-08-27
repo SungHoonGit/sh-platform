@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiPut, apiUpload } from "../api/client";
 import type { Profile } from "../types/resume";
+import { ProfilePhoto } from "./templates/shared";
 
 const inputCls =
   "w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gray-500";
@@ -35,12 +36,20 @@ export default function ProfileEditor({
   const [busy, setBusy] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
   useEffect(() => {
     setForm((prev) => ({ ...prev, photoUrl: profile?.photoUrl ?? "" }));
   }, [profile?.photoUrl]);
 
   const uploadPhoto = async (file: File) => {
+    if (file.size > 1_048_576) {
+      setError("프로필 사진은 1MB 이하만 업로드할 수 있습니다.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setPreview(reader.result as string);
+    reader.readAsDataURL(file);
     setPhotoBusy(true);
     setError(null);
     try {
@@ -142,8 +151,16 @@ export default function ProfileEditor({
           </div>
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-slate-600 mb-1">프로필 사진 (jpg/png)</label>
+          <label className="block text-xs font-medium text-slate-600 mb-1">프로필 사진 (jpg/png, 1MB 이하)</label>
           <div className="flex items-center gap-3">
+            {preview ? (
+              <img src={preview} alt="미리보기" className="w-16 h-16 rounded-full object-cover border border-gray-200" />
+            ) : (
+              <ProfilePhoto
+                photoUrl={form.photoUrl || undefined}
+                className="w-16 h-16 rounded-full object-cover border border-gray-200"
+              />
+            )}
             <input
               type="file"
               accept=".jpg,.jpeg,.png"

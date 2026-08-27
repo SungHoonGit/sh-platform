@@ -72,6 +72,9 @@ public class ResumeProfileController {
         if (!IMAGE_EXTENSIONS.contains(ext)) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
+        if (file.getSize() > 1_048_576L) { // 프로필 사진은 1MB 이하
+            throw new BusinessException(ErrorCode.PAYLOAD_TOO_LARGE);
+        }
         var uploaded = fileStorageService.upload(SecurityUtils.currentAccountId(),
                 name, file.getContentType(), file.getBytes());
         resumeProfileService.updatePhotoUrl(SecurityUtils.currentAccountId(),

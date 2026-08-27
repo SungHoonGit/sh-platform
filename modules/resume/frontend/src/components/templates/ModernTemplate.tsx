@@ -1,5 +1,6 @@
 import type { ResumeView } from "../../types/resume";
 import { ProfilePhoto, period } from "./shared";
+import { apiDownload, fileDownloadPath } from "../../api/client";
 
 function SideSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -102,11 +103,26 @@ export default function ModernTemplate({
           <ul className="space-y-1.5">
             {view.portfolioItems.map((pi) => (
               <li key={pi.id} className="text-sm">
-                <span className="font-semibold text-slate-800">{pi.title}</span>
-                {pi.linkUrl && (
-                  <a href={pi.linkUrl} target="_blank" rel="noreferrer" className="ml-2 text-xs text-blue-600 underline">
-                    {pi.linkUrl}
-                  </a>
+                {pi.itemType === "FILE" && pi.filePath ? (
+                  <button
+                    onClick={() =>
+                      void apiDownload(fileDownloadPath(pi.filePath!), `${pi.title}`).catch(() =>
+                        alert("다운로드에 실패했습니다."),
+                      )
+                    }
+                    className="font-semibold text-slate-800 underline"
+                  >
+                    {pi.title} <span className="text-xs text-slate-400 not-italic">(첨부 다운로드)</span>
+                  </button>
+                ) : (
+                  <>
+                    <span className="font-semibold text-slate-800">{pi.title}</span>
+                    {pi.linkUrl && (
+                      <a href={pi.linkUrl} target="_blank" rel="noreferrer" className="ml-2 text-xs text-blue-600 underline">
+                        {pi.linkUrl}
+                      </a>
+                    )}
+                  </>
                 )}
                 {pi.description && <p className="text-xs text-gray-500">{pi.description}</p>}
               </li>
@@ -125,6 +141,7 @@ export default function ModernTemplate({
               <p className="font-semibold text-white">{ed.school}</p>
               <p className="text-slate-300">
                 {[ed.schoolType, ed.major, ed.degree].filter(Boolean).join(" · ")}
+                {ed.gpa ? ` · 학점 ${ed.gpa}` : ""}
               </p>
               <p className="text-slate-400">
                 {period(ed.startDate, ed.endDate)}

@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import type { ResumeView } from "../../types/resume";
 import { ProfilePhoto, period } from "./shared";
+import { apiDownload, fileDownloadPath } from "../../api/client";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -106,6 +107,7 @@ export default function SaraminTemplate({
                     <span className="font-semibold">{ed.school}</span>
                     <span className="text-gray-600 text-xs">
                       {[ed.schoolType, ed.major, ed.degree].filter(Boolean).join(" · ")}
+                      {ed.gpa ? ` · 학점 ${ed.gpa}` : ""}
                       {ed.status ? ` (${ed.status})` : ""}
                     </span>
                   </td>
@@ -170,11 +172,26 @@ export default function SaraminTemplate({
                 }`}>
                   {pi.itemType}
                 </span>
-                <span className="font-semibold">{pi.title}</span>
-                {pi.linkUrl && (
-                  <a href={pi.linkUrl} target="_blank" rel="noreferrer" className="ml-2 text-xs text-blue-600 underline">
-                    바로가기
-                  </a>
+                {pi.itemType === "FILE" && pi.filePath ? (
+                  <button
+                    onClick={() =>
+                      void apiDownload(fileDownloadPath(pi.filePath!), `${pi.title}`).catch(() =>
+                        alert("다운로드에 실패했습니다."),
+                      )
+                    }
+                    className="font-semibold text-blue-600 underline"
+                  >
+                    {pi.title} (첨부)
+                  </button>
+                ) : (
+                  <>
+                    <span className="font-semibold">{pi.title}</span>
+                    {pi.linkUrl && (
+                      <a href={pi.linkUrl} target="_blank" rel="noreferrer" className="ml-2 text-xs text-blue-600 underline">
+                        바로가기
+                      </a>
+                    )}
+                  </>
                 )}
                 {pi.description && <p className="text-xs text-gray-600 mt-0.5">{pi.description}</p>}
               </li>

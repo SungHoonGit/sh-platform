@@ -42,6 +42,9 @@ public class ResumeEducationEntity {
     @Column(name = "degree", length = 20)
     private String degree;
 
+    @Column(name = "gpa", length = 20)
+    private String gpa;
+
     @Column(name = "start_date")
     private LocalDate startDate;
 

@@ -28,6 +28,7 @@ export interface Education {
   schoolType: string | null;
   major: string | null;
   degree: string | null;
+  gpa: string | null;
   startDate: string;
   endDate: string | null;
   status: string | null;

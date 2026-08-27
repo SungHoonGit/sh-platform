@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
  * @param schoolType   학교 유형 (고등학교/대학교/대학원)
  * @param major        전공
  * @param degree       학위
+ * @param gpa          학점
  * @param startDate    입학일
  * @param endDate      졸업일
  * @param status       상태
@@ -24,6 +25,7 @@ public record EducationResponse(
         String schoolType,
         String major,
         String degree,
+        String gpa,
         LocalDate startDate,
         LocalDate endDate,
         String status,

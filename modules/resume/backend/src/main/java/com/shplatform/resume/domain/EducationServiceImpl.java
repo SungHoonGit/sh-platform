@@ -63,6 +63,7 @@ public class EducationServiceImpl implements EducationService {
         entity.setSchoolType(request.schoolType());
         entity.setMajor(request.major());
         entity.setDegree(request.degree());
+        entity.setGpa(request.gpa());
         entity.setStartDate(request.startDate());
         entity.setEndDate(request.endDate());
         entity.setStatus(request.status());
@@ -76,6 +77,7 @@ public class EducationServiceImpl implements EducationService {
                 entity.getSchoolType(),
                 entity.getMajor(),
                 entity.getDegree(),
+                entity.getGpa(),
                 entity.getStartDate(),
                 entity.getEndDate(),
                 entity.getStatus(),

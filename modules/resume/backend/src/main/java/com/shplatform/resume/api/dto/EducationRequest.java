@@ -12,6 +12,7 @@ import java.time.LocalDate;
  * @param schoolType   학교 유형 (고등학교/대학교/대학원)
  * @param major        전공
  * @param degree       학위
+ * @param gpa          학점 (예: 3.9 / 4.5)
  * @param startDate    입학일
  * @param endDate      졸업일
  * @param status       상태
@@ -22,6 +23,7 @@ public record EducationRequest(
         @Size(max = 20) String schoolType,
         @Size(max = 100) String major,
         @Size(max = 20) String degree,
+        @Size(max = 20) String gpa,
         LocalDate startDate,
         LocalDate endDate,
         @Size(max = 20) String status,

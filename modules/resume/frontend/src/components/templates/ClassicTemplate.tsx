@@ -78,6 +78,9 @@ export default function ClassicTemplate({
                 {ed.schoolType && (
                   <span className="text-gray-500 text-sm"> {" "}· {ed.schoolType}</span>
                 )}
+                {ed.gpa && (
+                  <span className="text-gray-500 text-sm"> {" "}· 학점 {ed.gpa}</span>
+                )}
                 {ed.major && (
                   <span className="text-gray-600">
                     {" "}

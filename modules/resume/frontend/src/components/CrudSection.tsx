@@ -21,10 +21,11 @@ type FormState = Record<string, string>;
 const inputCls =
   "w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gray-500";
 
-function filterSchools(query: string): SchoolOption[] {
+function filterSchools(query: string, type?: string): SchoolOption[] {
   const q = query.trim().toLowerCase();
-  if (!q) return SCHOOLS;
-  return SCHOOLS.filter((s) => s.name.toLowerCase().includes(q));
+  const byName = !q ? SCHOOLS : SCHOOLS.filter((s) => s.name.toLowerCase().includes(q));
+  if (!type) return byName;
+  return byName.filter((s) => s.type === type);
 }
 
 export default function CrudSection({
@@ -327,7 +328,7 @@ export default function CrudSection({
                     />
                     {schoolOpen && (
                       <ul className="absolute z-20 mt-1 w-full max-h-48 overflow-auto bg-white border border-gray-200 rounded shadow-lg">
-                        {filterSchools(schoolQuery).map((s) => (
+                        {filterSchools(schoolQuery, form.schoolType || undefined).map((s) => (
                           <li key={s.name}>
                             <button
                               type="button"
@@ -348,7 +349,7 @@ export default function CrudSection({
                             </button>
                           </li>
                         ))}
-                        {filterSchools(schoolQuery).length === 0 && (
+                        {filterSchools(schoolQuery, form.schoolType || undefined).length === 0 && (
                           <li className="px-2.5 py-1.5 text-xs text-gray-400">
                             "{schoolQuery}" 를 직접 입력해 저장할 수 있습니다
                           </li>
