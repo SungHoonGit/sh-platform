@@ -9,6 +9,7 @@ import java.time.LocalDate;
  * 학력 등록/수정 요청.
  *
  * @param school       학교명 (필수)
+ * @param schoolType   학교 유형 (고등학교/대학교/대학원)
  * @param major        전공
  * @param degree       학위
  * @param startDate    입학일
@@ -18,6 +19,7 @@ import java.time.LocalDate;
  */
 public record EducationRequest(
         @NotBlank @Size(max = 100) String school,
+        @Size(max = 20) String schoolType,
         @Size(max = 100) String major,
         @Size(max = 20) String degree,
         LocalDate startDate,

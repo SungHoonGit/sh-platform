@@ -124,7 +124,7 @@ export default function ModernTemplate({
             <div key={ed.id} className="mb-2 last:mb-0 text-xs">
               <p className="font-semibold text-white">{ed.school}</p>
               <p className="text-slate-300">
-                {[ed.major, ed.degree].filter(Boolean).join(" · ")}
+                {[ed.schoolType, ed.major, ed.degree].filter(Boolean).join(" · ")}
               </p>
               <p className="text-slate-400">
                 {period(ed.startDate, ed.endDate)}

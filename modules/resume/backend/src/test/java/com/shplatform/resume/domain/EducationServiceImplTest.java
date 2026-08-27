@@ -37,7 +37,7 @@ class EducationServiceImplTest {
     private EducationServiceImpl educationService;
 
     private EducationRequest request() {
-        return new EducationRequest("한국대학교", "컴퓨터공학", "BACHELOR",
+        return new EducationRequest("한국대학교", "대학교", "컴퓨터공학", "BACHELOR",
                 null, null, "GRADUATED", 1);
     }
 

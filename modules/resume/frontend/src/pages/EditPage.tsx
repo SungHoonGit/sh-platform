@@ -56,6 +56,7 @@ const SECTIONS: SectionConfig[] = [
     subtitleKeys: ["major"],
     fields: [
       { key: "school", label: "학교명", required: true },
+      { key: "schoolType", label: "학교 유형", type: "select", options: ["고등학교", "대학교", "대학원"] },
       { key: "major", label: "전공" },
       { key: "degree", label: "학위", placeholder: "예: 학사" },
       { key: "startDate", label: "입학일", type: "date" },

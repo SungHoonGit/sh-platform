@@ -25,6 +25,7 @@ export interface Career {
 export interface Education {
   id: number;
   school: string;
+  schoolType: string | null;
   major: string | null;
   degree: string | null;
   startDate: string;

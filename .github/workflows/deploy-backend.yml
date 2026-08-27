@@ -112,6 +112,7 @@ jobs:
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' resume_platform < docs/resume/ddl-resume-v1.sql
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' resume_platform < docs/resume/ddl-resume-v2.sql
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' resume_platform < docs/resume/ddl-resume-v3.sql
+            mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' resume_platform < docs/resume/ddl-resume-v4.sql
             # auth 감사 로그 테이블 (IF NOT EXISTS 라 매 배포 실행해도 무해)
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' sh_pass < docs/auth/ddl-login-audit-v1.sql
 

@@ -33,6 +33,9 @@ public class ResumeEducationEntity {
     @Column(name = "school", nullable = false, length = 100)
     private String school;
 
+    @Column(name = "school_type", length = 20)
+    private String schoolType;
+
     @Column(name = "major", length = 100)
     private String major;
 

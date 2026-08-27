@@ -60,6 +60,7 @@ public class EducationServiceImpl implements EducationService {
 
     private void applyRequest(ResumeEducationEntity entity, EducationRequest request) {
         entity.setSchool(request.school());
+        entity.setSchoolType(request.schoolType());
         entity.setMajor(request.major());
         entity.setDegree(request.degree());
         entity.setStartDate(request.startDate());
@@ -72,6 +73,7 @@ public class EducationServiceImpl implements EducationService {
         return new EducationResponse(
                 entity.getId(),
                 entity.getSchool(),
+                entity.getSchoolType(),
                 entity.getMajor(),
                 entity.getDegree(),
                 entity.getStartDate(),

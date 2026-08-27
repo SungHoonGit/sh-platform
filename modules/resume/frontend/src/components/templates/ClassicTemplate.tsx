@@ -75,6 +75,9 @@ export default function ClassicTemplate({
             <article key={ed.id} className="mb-3 last:mb-0 flex justify-between items-baseline">
               <div>
                 <span className="font-semibold">{ed.school}</span>
+                {ed.schoolType && (
+                  <span className="text-gray-500 text-sm"> {" "}· {ed.schoolType}</span>
+                )}
                 {ed.major && (
                   <span className="text-gray-600">
                     {" "}

@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
  *
  * @param id           학력 ID
  * @param school       학교명
+ * @param schoolType   학교 유형 (고등학교/대학교/대학원)
  * @param major        전공
  * @param degree       학위
  * @param startDate    입학일
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 public record EducationResponse(
         Long id,
         String school,
+        String schoolType,
         String major,
         String degree,
         LocalDate startDate,
