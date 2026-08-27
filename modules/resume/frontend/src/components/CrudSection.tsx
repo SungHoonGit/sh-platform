@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { apiDelete, apiPost, apiPut, apiUpload } from "../api/client";
+import { SCHOOLS, type SchoolOption } from "../data/schools";
 
 export interface FieldDef {
   key: string;
   label: string;
-  type?: "text" | "date" | "textarea" | "select" | "file" | "check";
+  type?: "text" | "date" | "textarea" | "select" | "file" | "check" | "school";
   options?: string[];
   accept?: string;
   required?: boolean;
@@ -19,6 +20,12 @@ type FormState = Record<string, string>;
 
 const inputCls =
   "w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gray-500";
+
+function filterSchools(query: string): SchoolOption[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return SCHOOLS;
+  return SCHOOLS.filter((s) => s.name.toLowerCase().includes(q));
+}
 
 export default function CrudSection({
   title,
@@ -45,6 +52,8 @@ export default function CrudSection({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [schoolOpen, setSchoolOpen] = useState(false);
+  const [schoolQuery, setSchoolQuery] = useState("");
 
   const visible = (f: FieldDef) => !f.showIf || form[f.showIf.key] === f.showIf.equals;
 
@@ -233,7 +242,7 @@ export default function CrudSection({
             {fields.filter(visible).map((f) => (
               <div
                 key={f.key}
-                className={f.type === "textarea" || f.type === "file" ? "md:col-span-2" : ""}
+                className={f.type === "textarea" || f.type === "file" || f.type === "school" ? "md:col-span-2" : ""}
               >
                 {f.type !== "check" && (
                   <label className="block text-xs font-medium text-slate-600 mb-1">
@@ -291,6 +300,60 @@ export default function CrudSection({
                       <span className="text-xs text-green-700 truncate">
                         {uploading ? "업로드 중..." : `✓ ${fileNames[f.key]}`}
                       </span>
+                    )}
+                  </div>
+                ) : f.type === "school" ? (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={form[f.key] ?? ""}
+                      placeholder={f.placeholder ?? "학교명 입력 후 선택"}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setForm((prev) => {
+                          const next = { ...prev, [f.key]: v };
+                          const picked = SCHOOLS.find((s) => s.name === v);
+                          if (picked && prev.schoolType !== picked.type) {
+                            next.schoolType = picked.type;
+                          }
+                          return next;
+                        });
+                        setSchoolQuery(v);
+                        setSchoolOpen(true);
+                      }}
+                      onFocus={() => setSchoolOpen(true)}
+                      onBlur={() => setTimeout(() => setSchoolOpen(false), 150)}
+                      className={inputCls}
+                    />
+                    {schoolOpen && (
+                      <ul className="absolute z-20 mt-1 w-full max-h-48 overflow-auto bg-white border border-gray-200 rounded shadow-lg">
+                        {filterSchools(schoolQuery).map((s) => (
+                          <li key={s.name}>
+                            <button
+                              type="button"
+                              className="w-full px-2.5 py-1.5 text-sm text-left hover:bg-gray-50 flex justify-between items-center"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setForm((prev) => {
+                                  const next = { ...prev, [f.key]: s.name };
+                                  next.schoolType = s.type;
+                                  return next;
+                                });
+                                setSchoolQuery("");
+                                setSchoolOpen(false);
+                              }}
+                            >
+                              <span>{s.name}</span>
+                              <span className="text-xs text-gray-400 shrink-0">{s.type}</span>
+                            </button>
+                          </li>
+                        ))}
+                        {filterSchools(schoolQuery).length === 0 && (
+                          <li className="px-2.5 py-1.5 text-xs text-gray-400">
+                            "{schoolQuery}" 를 직접 입력해 저장할 수 있습니다
+                          </li>
+                        )}
+                      </ul>
                     )}
                   </div>
                 ) : (
