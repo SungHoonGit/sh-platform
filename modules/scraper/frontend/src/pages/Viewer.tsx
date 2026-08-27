@@ -167,10 +167,6 @@ export default function Viewer() {
     );
   }, [jobs, searchKeyword]);
 
-  const displayJobs = (searchKeyword.trim() ? filteredJobs : jobs).filter((j: JobPostingItem) => !blacklisted.has(normCompany(j.company)));
-  const displayTotal = searchKeyword.trim() ? filteredJobs.length : total;
-  const displayTotalPages = searchKeyword.trim() ? Math.max(1, Math.ceil(filteredJobs.length / SIZE)) : totalPages;
-
   const [blacklisted, setBlacklisted] = useState<Set<string>>(new Set());
   const [showBl, setShowBl] = useState(false);
   const [blItems, setBlItems] = useState<BlacklistItem[]>([]);
@@ -201,6 +197,10 @@ export default function Viewer() {
       .then((list) => setBlacklisted(new Set(list.map((b) => b.companyNameNormalized))))
       .catch(() => {});
   }, []);
+
+  const displayJobs = (searchKeyword.trim() ? filteredJobs : jobs).filter((j: JobPostingItem) => !blacklisted.has(normCompany(j.company)));
+  const displayTotal = searchKeyword.trim() ? filteredJobs.length : total;
+  const displayTotalPages = searchKeyword.trim() ? Math.max(1, Math.ceil(filteredJobs.length / SIZE)) : totalPages;
 
   const toggleSort = (key: string) => {
     setPage(0);
