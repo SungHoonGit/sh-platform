@@ -9,10 +9,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -122,51 +126,26 @@ public class WantedCrawler implements SiteCrawler {
     }
 
     private String fetchWithCurl(String url) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(
-            "curl", "-s", "-L", "-w", "\n%{http_code}",
-            "--max-time", "30",
-            "--compressed",
-            "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "-H", "Accept: application/json, text/plain, */*",
-            "-H", "Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-            "-H", "Accept-Encoding: gzip, deflate, br",
-            "-H", "Referer: https://www.wanted.co.kr/",
-            "-H", "Origin: https://www.wanted.co.kr",
-            url
-        );
-        pb.redirectErrorStream(true);
-
-        Process process = pb.start();
-        byte[] bytes = process.getInputStream().readAllBytes();
-        boolean finished = process.waitFor(35, TimeUnit.SECONDS);
-
-        if (!finished) {
-            process.destroyForcibly();
-            throw new IOException("curl timed out for URL: " + url);
-        }
-
-        int exitCode = process.exitValue();
-        String output = new String(bytes, StandardCharsets.UTF_8);
-
-        if (exitCode != 0) {
-            log.error("curl failed with exit code {}: {}", exitCode, output.substring(0, Math.min(300, output.length())));
+        HttpRequest request = HttpRequest.newBuilder(URI.create(url))
+            .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            .header("Accept", "application/json, text/plain, */*")
+            .header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
+            .header("Accept-Encoding", "gzip, deflate, br")
+            .header("Referer", "https://www.wanted.co.kr/")
+            .header("Origin", "https://www.wanted.co.kr")
+            .timeout(Duration.ofSeconds(30))
+            .GET()
+            .build();
+        HttpResponse<String> resp = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build()
+            .send(request, HttpResponse.BodyHandlers.ofString());
+        log.info("Wanted HTTP status: {}", resp.statusCode());
+        if (resp.statusCode() != 200) {
+            log.warn("Wanted returned HTTP {}: {}", resp.statusCode(), resp.body().substring(0, Math.min(200, resp.body().length())));
             return null;
         }
-
-        // curl -w %{http_code}로 마지막 줄에서 상태 코드 추출
-        String[] lines = output.split("\n");
-        if (lines.length >= 2) {
-            String httpCode = lines[lines.length - 1].trim();
-            String body = output.substring(0, output.lastIndexOf("\n")).trim();
-            log.info("Wanted curl HTTP status: {}", httpCode);
-            if (!"200".equals(httpCode)) {
-                log.warn("Wanted curl returned HTTP {}: {}", httpCode, body.substring(0, Math.min(200, body.length())));
-                return null;
-            }
-            return body;
-        }
-
-        return output;
+        return resp.body();
     }
 
     private String buildUrl(Map<String, String> siteParams, int page, int perPage) {

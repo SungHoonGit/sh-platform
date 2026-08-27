@@ -9,7 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,7 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 /**
  * 잡코리아 공식 검색 API를 호출해 채용공고를 수집한다.
@@ -172,36 +175,23 @@ public class JobkoreaCrawler implements SiteCrawler {
     }
 
     private String fetchWithCurl(String body) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(
-            "curl", "-s", "-L",
-            "--max-time", "30",
-            "--compressed",
-            "-X", "POST",
-            "-H", "Content-Type: application/json",
-            "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "-H", "Accept-Language: ko-KR,ko;q=0.9",
-            "-H", "Accept: application/json",
-            "-H", "Referer: https://www.jobkorea.co.kr/Search/",
-            "-d", body,
-            API_URL
-        );
-        pb.redirectErrorStream(true);
-
-        Process process = pb.start();
-        byte[] bytes = process.getInputStream().readAllBytes();
-        boolean finished = process.waitFor(35, TimeUnit.SECONDS);
-
-        if (!finished) {
-            process.destroyForcibly();
-            throw new IOException("curl timed out for API: " + API_URL);
+        HttpRequest request = HttpRequest.newBuilder(URI.create(API_URL))
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            .header("Accept-Language", "ko-KR,ko;q=0.9")
+            .header("Accept", "application/json")
+            .header("Referer", "https://www.jobkorea.co.kr/Search/")
+            .timeout(Duration.ofSeconds(30))
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build();
+        HttpResponse<String> resp = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build()
+            .send(request, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() >= 400) {
+            throw new IOException("HTTP " + resp.statusCode() + " for API: " + API_URL);
         }
-
-        int exitCode = process.exitValue();
-        if (exitCode != 0) {
-            throw new IOException("curl failed with exit code " + exitCode + " for API: " + API_URL);
-        }
-
-        return new String(bytes, StandardCharsets.UTF_8);
+        return resp.body();
     }
 
     private List<Map<String, String>> parseJobs(JsonNode content, boolean careerFiltered, boolean locationFiltered, String location) {

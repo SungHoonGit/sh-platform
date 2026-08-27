@@ -13,10 +13,14 @@ import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -108,33 +112,22 @@ public class SaraminCrawler implements SiteCrawler {
     }
 
     private String fetchWithCurl(String url) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(
-            "curl", "-s", "-L",
-            "--max-time", "30",
-            "--compressed",
-            "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "-H", "Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-            "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "-H", "Accept-Encoding: gzip, deflate, br",
-            url
-        );
-        pb.redirectErrorStream(true);
-
-        Process process = pb.start();
-        byte[] bytes = process.getInputStream().readAllBytes();
-        boolean finished = process.waitFor(35, TimeUnit.SECONDS);
-
-        if (!finished) {
-            process.destroyForcibly();
-            throw new IOException("curl timed out for URL: " + url);
+        HttpRequest request = HttpRequest.newBuilder(URI.create(url))
+            .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            .header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+            .header("Accept-Encoding", "gzip, deflate, br")
+            .timeout(Duration.ofSeconds(30))
+            .GET()
+            .build();
+        HttpResponse<String> resp = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build()
+            .send(request, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() >= 400) {
+            throw new IOException("HTTP " + resp.statusCode() + " for URL: " + url);
         }
-
-        int exitCode = process.exitValue();
-        if (exitCode != 0) {
-            throw new IOException("curl failed with exit code " + exitCode + " for URL: " + url);
-        }
-
-        return new String(bytes, StandardCharsets.UTF_8);
+        return resp.body();
     }
 
     private String buildUrl(Map<String, String> params, int page) {

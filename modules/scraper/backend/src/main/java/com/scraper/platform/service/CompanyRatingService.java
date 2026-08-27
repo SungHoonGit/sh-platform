@@ -7,6 +7,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -235,26 +240,19 @@ public class CompanyRatingService {
             String searchUrl = "https://www.jobplanet.co.kr/companies?query=" + 
                     java.net.URLEncoder.encode(companyName, "UTF-8");
 
-            ProcessBuilder pb = new ProcessBuilder(
-                "curl", "-s", "-L",
-                "--max-time", "10",
-                "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                "-H", "Accept: application/json, text/plain, */*",
-                "-H", "Accept-Language: ko-KR,ko;q=0.9",
-                searchUrl
-            );
-            pb.redirectErrorStream(true);
+            HttpRequest request = HttpRequest.newBuilder(URI.create(searchUrl))
+                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+                .header("Accept", "application/json, text/plain, */*")
+                .header("Accept-Language", "ko-KR,ko;q=0.9")
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            HttpResponse<String> resp = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build()
+                .send(request, HttpResponse.BodyHandlers.ofString());
 
-            Process process = pb.start();
-            byte[] bytes = process.getInputStream().readAllBytes();
-            boolean finished = process.waitFor(15, java.util.concurrent.TimeUnit.SECONDS);
-
-            if (!finished) {
-                process.destroyForcibly();
-                return null;
-            }
-
-            String output = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+            String output = resp.body();
 
             // HTML에서 평점 추출 (정규식 사용)
             // 잡플래닛 기업 페이지에서 평점은 보통 "X.X" 형태로 표시
@@ -292,26 +290,19 @@ public class CompanyRatingService {
             String searchUrl = "https://www.jobkorea.co.kr/Search/?stext=" + 
                     java.net.URLEncoder.encode(companyName, "UTF-8");
 
-            ProcessBuilder pb = new ProcessBuilder(
-                "curl", "-s", "-L",
-                "--max-time", "10",
-                "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9",
-                "-H", "Accept-Language: ko-KR,ko;q=0.9",
-                searchUrl
-            );
-            pb.redirectErrorStream(true);
+            HttpRequest request = HttpRequest.newBuilder(URI.create(searchUrl))
+                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9")
+                .header("Accept-Language", "ko-KR,ko;q=0.9")
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            HttpResponse<String> resp = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build()
+                .send(request, HttpResponse.BodyHandlers.ofString());
 
-            Process process = pb.start();
-            byte[] bytes = process.getInputStream().readAllBytes();
-            boolean finished = process.waitFor(15, java.util.concurrent.TimeUnit.SECONDS);
-
-            if (!finished) {
-                process.destroyForcibly();
-                return null;
-            }
-
-            String output = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+            String output = resp.body();
 
             // 잡코리아는 기업 평점이 있는지 확인 필요
             // 현재는 평점 데이터가 공개적으로 보이지 않을 수 있음
@@ -334,26 +325,19 @@ public class CompanyRatingService {
             String searchUrl = "https://www.saramin.co.kr/zf_user/search?searchType=search&searchword=" + 
                     java.net.URLEncoder.encode(companyName, "UTF-8");
 
-            ProcessBuilder pb = new ProcessBuilder(
-                "curl", "-s", "-L",
-                "--max-time", "10",
-                "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9",
-                "-H", "Accept-Language: ko-KR,ko;q=0.9",
-                searchUrl
-            );
-            pb.redirectErrorStream(true);
+            HttpRequest request = HttpRequest.newBuilder(URI.create(searchUrl))
+                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9")
+                .header("Accept-Language", "ko-KR,ko;q=0.9")
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            HttpResponse<String> resp = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build()
+                .send(request, HttpResponse.BodyHandlers.ofString());
 
-            Process process = pb.start();
-            byte[] bytes = process.getInputStream().readAllBytes();
-            boolean finished = process.waitFor(15, java.util.concurrent.TimeUnit.SECONDS);
-
-            if (!finished) {
-                process.destroyForcibly();
-                return null;
-            }
-
-            String output = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+            String output = resp.body();
 
             // 사람인은 기업 평점이 있는지 확인 필요
             log.debug("Saramin search completed for {}, length: {}", companyName, output.length());
