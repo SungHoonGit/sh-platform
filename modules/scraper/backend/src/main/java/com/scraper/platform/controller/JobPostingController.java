@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 public class JobPostingController {
 
     private final JobPostingRepository jobPostingRepository;
+    private final com.scraper.platform.service.CompanyBlacklistService companyBlacklistService;
 
     /**
      * 최근 수집 공고를 조회한다 (본인 크롤러 설정으로 수집된 공고만).
@@ -102,6 +103,15 @@ public class JobPostingController {
 
         PageRequest pageRequest = PageRequest.of(page, size, sort);
 
+        // 블랙리스트 회사 제외 (개인 설정). 페이지 단위 후처리 필터 — 대량 데이터 시 Specification 통합 개선 여지
+        java.util.Set<String> blockedCompanies = java.util.Set.of();
+        try {
+            blockedCompanies = companyBlacklistService.normalizedNames(
+                    com.shplatform.common.security.SecurityUtils.currentAccountId());
+        } catch (Exception ignored) {
+            // 비인증 컨텍스트 호환
+        }
+
         LocalDate date = null;
         if (crawledAt != null && !crawledAt.isEmpty()) {
             try {
@@ -123,7 +133,20 @@ public class JobPostingController {
         }
 
         Page<JobPosting> postings;
-        if (runIdList != null && !runIdList.isEmpty()) {
+        if (!blockedCompanies.isEmpty()) {
+            // 블랙 필터가 있으면 전체 조회 후 메모리 필터 (분기 통합)
+            final Sort effectiveSort = sort;
+            final java.util.Set<String> blocked = blockedCompanies;
+            var all = jobPostingRepository.findByConfigId(configId, PageRequest.of(0, Integer.MAX_VALUE, effectiveSort));
+            var filtered = all.getContent().stream()
+                    .filter(j -> j.getCompany() == null
+                            || !blocked.contains(com.scraper.platform.service.CompanyBlacklistService.normalize(j.getCompany())))
+                    .toList();
+            int from = Math.min((int) pageRequest.getOffset(), filtered.size());
+            int to = Math.min(from + pageRequest.getPageSize(), filtered.size());
+            postings = new org.springframework.data.domain.PageImpl<>(
+                    filtered.subList(from, to), pageRequest, filtered.size());
+        } else if (runIdList != null && !runIdList.isEmpty()) {
             if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
                 postings = jobPostingRepository.findByConfigIdAndSiteNameAndCrawlLogIdIn(configId, siteName, runIdList, pageRequest);
             } else {

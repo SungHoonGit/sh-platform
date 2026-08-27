@@ -109,12 +109,6 @@ export default function Search() {
     });
   }, [allJobs, activeSite, sortBy, sortDir, blacklisted]);
 
-  useEffect(() => {
-    fetchBlacklist()
-      .then((list) => setBlacklisted(new Set(list.map((b) => b.companyNameNormalized))))
-      .catch(() => {});
-  }, []);
-
 
 
   const blockCompany = async (company: string) => {
