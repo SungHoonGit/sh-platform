@@ -83,7 +83,7 @@ export default function Search() {
       }
       return j;
     });
-  }, [data, ratingsMap]);
+  }, [data, ratingsMap, blacklisted]);
 
   const filteredJobs = useMemo(() => {
     const base = activeSite === "all" ? allJobs : allJobs.filter((j) => j.site === activeSite);
