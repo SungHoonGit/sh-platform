@@ -1,9 +1,10 @@
+import { EyeOff } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { fetchCrawlers, executeCrawler, fetchJobPostings, downloadJobPostingsExcel, fetchCrawlLogsGrouped, deleteCrawlLog, fetchMyScraps, scrapPosting, unscrapPosting, type JobPostingItem } from "../api/scraper";
-import { deadlineBadge } from "../common/jobPlanet";
-import { jobPlanetQuery } from "../common/jobPlanet";
+import { fetchCrawlers, executeCrawler, fetchJobPostings, downloadJobPostingsExcel, fetchCrawlLogsGrouped, deleteCrawlLog, fetchMyScraps, scrapPosting, unscrapPosting, fetchBlacklist, addBlacklist, removeBlacklist, type JobPostingItem, type BlacklistItem } from "../api/scraper";
+import { deadlineBadge, jobPlanetQuery, normCompany } from "../common/jobPlanet";
+
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 
 const SITES = [
@@ -166,9 +167,40 @@ export default function Viewer() {
     );
   }, [jobs, searchKeyword]);
 
-  const displayJobs = searchKeyword.trim() ? filteredJobs : jobs;
+  const displayJobs = (searchKeyword.trim() ? filteredJobs : jobs).filter((j: JobPostingItem) => !blacklisted.has(normCompany(j.company)));
   const displayTotal = searchKeyword.trim() ? filteredJobs.length : total;
   const displayTotalPages = searchKeyword.trim() ? Math.max(1, Math.ceil(filteredJobs.length / SIZE)) : totalPages;
+
+  const [blacklisted, setBlacklisted] = useState<Set<string>>(new Set());
+  const [showBl, setShowBl] = useState(false);
+  const [blItems, setBlItems] = useState<BlacklistItem[]>([]);
+  const loadBl = () => {
+    fetchBlacklist().then((l) => { setBlItems(l); setBlacklisted(new Set(l.map((b) => b.companyNameNormalized))); }).catch(() => {});
+    setShowBl(true);
+  };
+  const unblock = async (item: BlacklistItem) => {
+    try {
+      await removeBlacklist(item.id);
+      setBlItems((prev) => prev.filter((b) => b.id !== item.id));
+      setBlacklisted((prev) => { const n = new Set(prev); n.delete(item.companyNameNormalized); return n; });
+    } catch { alert("해제 실패"); }
+  };
+  const blockCompany = async (company: string) => {
+    if (!company) return;
+    const reason = window.prompt(`"${company}" 공고를 숨길까요?\n사유(선택):`) ?? "";
+    if (reason === null) return;
+    try {
+      await addBlacklist(company, reason);
+      setBlacklisted((prev) => new Set(prev).add(normCompany(company)));
+      alert("차단했습니다. 이 회사 공고는 더 이상 표시되지 않습니다.");
+    } catch { alert("차단에 실패했습니다."); }
+  };
+
+  useEffect(() => {
+    fetchBlacklist()
+      .then((list) => setBlacklisted(new Set(list.map((b) => b.companyNameNormalized))))
+      .catch(() => {});
+  }, []);
 
   const toggleSort = (key: string) => {
     setPage(0);
@@ -440,6 +472,38 @@ export default function Viewer() {
               <div className="text-[11px] mt-1">{searchKeyword ? "검색 결과가 없습니다" : "수동 수집을 실행해 보세요"}</div>
             </div>
           ) : (
+            <>
+            <div className="px-3 pt-3">
+              <button
+                onClick={loadBl}
+                className="px-2.5 py-1 border border-slate-300 rounded-lg text-[11px] bg-white hover:bg-slate-50 text-slate-600"
+              >
+                차단 회사 관리{blItems.length > 0 ? ` (${blItems.length})` : ""}
+              </button>
+              {showBl && (
+                <div className="mt-2 bg-white border border-slate-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-slate-700">차단한 회사</p>
+                    <button onClick={() => setShowBl(false)} className="text-xs text-slate-400 hover:text-slate-600">닫기</button>
+                  </div>
+                  {blItems.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-3 text-center">차단한 회사가 없습니다. 결과 행의 EyeOff 아이콘으로 차단하세요.</p>
+                  ) : (
+                    <ul className="divide-y divide-slate-100">
+                      {blItems.map((b) => (
+                        <li key={b.id} className="flex items-center justify-between py-2">
+                          <span className="text-sm">
+                            {b.companyNameNormalized}
+                            {b.reason && <span className="text-xs text-slate-400 ml-2">— {b.reason}</span>}
+                          </span>
+                          <button onClick={() => unblock(b)} className="text-xs text-blue-600 hover:underline">해제</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="p-3">
               <table className="w-full text-[12px] table-fixed">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
@@ -461,6 +525,7 @@ export default function Viewer() {
                         </span>
                       </th>
                     ))}
+                    <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[36px]"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -533,6 +598,15 @@ export default function Viewer() {
                             return job.deadline || "-";
                           })()}
                         </td>
+                        <td className="px-1 py-1 text-center">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); void blockCompany(job.company); }}
+                            title="이 회사 공고 숨기기"
+                            className="text-slate-300 hover:text-slate-600 transition-colors"
+                          >
+                            <EyeOff size={15} />
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -571,6 +645,7 @@ export default function Viewer() {
                 </div>
               )}
             </div>
+            </>
           )}
         </div>
       </div>
