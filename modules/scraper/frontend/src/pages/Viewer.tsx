@@ -486,12 +486,14 @@ export default function Viewer() {
               <table className="w-full text-[12px] table-fixed">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
+                    <th className="px-1 py-1.5 text-left font-bold text-slate-600 w-[30px]"></th>
+                    <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[32px]"></th>
                     <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[32px]">#</th>
-                    {COLUMNS.map((c) => (
+                    {COLUMNS.filter((c) => c.key !== "scrap").map((c) => (
                       <th
                         key={c.key}
-                        onClick={c.key === "scrap" ? undefined : () => toggleSort(c.key)}
-                        className={`px-2 py-1.5 text-left font-bold text-slate-600 select-none ${c.key === "scrap" ? "" : "cursor-pointer hover:text-blue-600"} ${c.w}`}
+                        onClick={() => toggleSort(c.key)}
+                        className={`px-2 py-1.5 text-left font-bold text-slate-600 select-none cursor-pointer hover:text-blue-600 ${c.w}`}
                       >
                         <span className="inline-flex items-center gap-0.5">
                           {c.label}
@@ -503,7 +505,6 @@ export default function Viewer() {
                         </span>
                       </th>
                     ))}
-                    <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[36px]"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -516,6 +517,15 @@ export default function Viewer() {
                         onClick={() => job.url && window.open(job.url, "_blank")}
                         className={`hover:bg-blue-50/50 cursor-pointer transition-colors ${scrappedIds.has(job.id) ? "bg-amber-50/40" : ""}`}
                       >
+                        <td className="px-1 py-1 text-center">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); void blockCompany(job.company); }}
+                            title="이 회사 공고 숨기기"
+                            className="text-slate-300 hover:text-slate-600 transition-colors"
+                          >
+                            <EyeOff size={15} />
+                          </button>
+                        </td>
                         <td className="px-2 py-1 text-center">
                           <button
                             onClick={(e) => {
@@ -575,15 +585,6 @@ export default function Viewer() {
                             }
                             return job.deadline || "-";
                           })()}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); void blockCompany(job.company); }}
-                            title="이 회사 공고 숨기기"
-                            className="text-slate-300 hover:text-slate-600 transition-colors"
-                          >
-                            <EyeOff size={15} />
-                          </button>
                         </td>
                       </tr>
                     );

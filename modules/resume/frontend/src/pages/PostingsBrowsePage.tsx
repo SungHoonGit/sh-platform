@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown, EyeOff } from "lucide-react";
 import { logout } from "../api/client";
+import BlacklistManagerModal from "../components/BlacklistManagerModal";
 
 interface JobPostingSummary {
   id: number;
@@ -66,6 +67,36 @@ async function fetchScraper<T>(path: string, options: RequestInit = {}): Promise
   return res.json();
 }
 
+interface BlacklistItem {
+  id: number;
+  accountId: number;
+  companyNameNormalized: string;
+  reason: string | null;
+  createdAt: string;
+}
+
+/** 블랙리스트 키용 회사명 정규화 (백엔드 CompanyBlacklistService.normalize와 동일 규칙) */
+function normCompany(s: string | null | undefined): string {
+  if (!s) return "";
+  return s.trim().toLowerCase().replace(/\(주\)|㈜|주식회사/g, "").replace(/\s+/g, "");
+}
+
+async function blacklistReq<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = localStorage.getItem("accessToken");
+  const res = await fetch(`/scraper/company-blacklist${path}`, {
+    ...options,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
+  });
+  if (res.status === 401) {
+    logout();
+    throw new Error("인증 만료");
+  }
+  if (!res.ok) throw new Error(await res.text());
+  if (res.status === 204) return undefined as T;
+  const json = await res.json();
+  return (json.data ?? json) as T;
+}
+
 function deadlineRank(deadline: string | null): number {
   if (!deadline) return Number.MAX_SAFE_INTEGER;
   if (/오늘|금일|즉시/.test(deadline)) return -1;
@@ -95,6 +126,9 @@ export default function PostingsBrowsePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scrappedIds, setScrappedIds] = useState<Set<number>>(new Set());
+  const [blacklisted, setBlacklisted] = useState<Set<string>>(new Set());
+  const [showBl, setShowBl] = useState(false);
+  const [blItems, setBlItems] = useState<BlacklistItem[]>([]);
 
   const SIZE = 20;
 
@@ -159,6 +193,36 @@ export default function PostingsBrowsePage() {
     }
   };
 
+  const loadBl = () => {
+    blacklistReq<BlacklistItem[]>("")
+      .then((l) => { setBlItems(l); setBlacklisted(new Set(l.map((b) => b.companyNameNormalized))); })
+      .catch(() => {});
+    setShowBl(true);
+  };
+  const unblock = async (item: BlacklistItem) => {
+    try {
+      await blacklistReq(`/${item.id}`, { method: "DELETE" });
+      setBlItems((prev) => prev.filter((b) => b.id !== item.id));
+      setBlacklisted((prev) => { const n = new Set(prev); n.delete(item.companyNameNormalized); return n; });
+    } catch { alert("해제 실패"); }
+  };
+  const blockCompany = async (company: string) => {
+    if (!company) return;
+    const reason = window.prompt(`"${company}" 공고를 숨길까요?\n사유(선택):`) ?? "";
+    if (reason === null) return;
+    try {
+      await blacklistReq<BlacklistItem>("", { method: "POST", body: JSON.stringify({ companyName: company, reason: reason || null }) });
+      setBlacklisted((prev) => new Set(prev).add(normCompany(company)));
+      alert("차단했습니다. 이 회사 공고는 더 이상 표시되지 않습니다.");
+    } catch { alert("차단에 실패했습니다."); }
+  };
+
+  useEffect(() => {
+    blacklistReq<BlacklistItem[]>("")
+      .then((list) => setBlacklisted(new Set(list.map((b) => b.companyNameNormalized))))
+      .catch(() => undefined);
+  }, []);
+
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
       if (sortDir === "asc") { setSortKey(key); setSortDir("desc"); }
@@ -187,13 +251,15 @@ export default function PostingsBrowsePage() {
           }))
         : (data?.items ?? []).map((i) => ({ ...i, postingId: i.id }));
 
+    const visible = list.filter((r) => !blacklisted.has(normCompany(r.company)));
+
     if (!sortKey || !sortDir) {
-      if (view === "scraps") return list.sort((a, b) => (a.savedAt! < b.savedAt! ? 1 : -1));
-      return list;
+      if (view === "scraps") return visible.sort((a, b) => (a.savedAt! < b.savedAt! ? 1 : -1));
+      return visible;
     }
 
     const collator = new Intl.Collator("ko");
-    return [...list].sort((a, b) => {
+    return [...visible].sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
         case "company":  cmp = collator.compare(a.company, b.company); break;
@@ -204,7 +270,7 @@ export default function PostingsBrowsePage() {
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [view, scraps, data, sortKey, sortDir]);
+  }, [view, scraps, data, sortKey, sortDir, blacklisted]);
 
   const applyNow = (p: GridRow) => {
     sessionStorage.setItem(
@@ -225,6 +291,13 @@ export default function PostingsBrowsePage() {
       </p>
 
       <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <button
+          onClick={loadBl}
+          className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 shrink-0"
+          title="차단한 회사 관리"
+        >
+          차단 회사 관리{blItems.length > 0 ? ` (${blItems.length})` : ""}
+        </button>
         <div className="flex rounded-lg border border-gray-300 overflow-hidden shrink-0">
           <button
             onClick={() => { setView("all"); setSortKey(null); setSortDir(null); setSite(""); setPage(0); }}
@@ -303,6 +376,7 @@ export default function PostingsBrowsePage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-gray-200 text-left">
                 <tr>
+                  <th className="px-1 py-2 w-[30px]"></th>
                   <th className="px-1 py-2 w-[28px]"></th>
                   <th className="px-1 py-2 font-semibold text-slate-600 w-[48px]">사이트</th>
                   <th className="px-2 py-2 font-semibold text-slate-600 w-[32%]">
@@ -340,6 +414,15 @@ export default function PostingsBrowsePage() {
                     onClick={() => p.url && window.open(p.url, "_blank")}
                     className={`hover:bg-blue-50/40 cursor-pointer transition-colors ${scrappedIds.has(p.postingId) ? "bg-amber-50/40" : ""}`}
                   >
+                    <td className="px-1 py-2 text-center">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); void blockCompany(p.company); }}
+                        title="이 회사 공고 숨기기"
+                        className="text-slate-300 hover:text-slate-600 transition-colors"
+                      >
+                        <EyeOff size={14} />
+                      </button>
+                    </td>
                     <td className="px-1 py-2 text-center">
                       <button
                         onClick={(e) => { e.stopPropagation(); void toggleScrap(p.postingId); }}
@@ -403,6 +486,13 @@ export default function PostingsBrowsePage() {
           )}
         </>
       )}
+
+      <BlacklistManagerModal
+        open={showBl}
+        items={blItems}
+        onClose={() => setShowBl(false)}
+        onUnblock={unblock}
+      />
     </div>
   );
 }
