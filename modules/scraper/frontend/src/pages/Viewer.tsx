@@ -6,6 +6,7 @@ import { fetchCrawlers, executeCrawler, fetchJobPostings, downloadJobPostingsExc
 import { deadlineBadge, jobPlanetQuery, normCompany } from "../common/jobPlanet";
 
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
+import BlacklistManagerModal from "../components/BlacklistManagerModal";
 
 const SITES = [
   { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700 border-blue-200" },
@@ -480,29 +481,6 @@ export default function Viewer() {
               >
                 차단 회사 관리{blItems.length > 0 ? ` (${blItems.length})` : ""}
               </button>
-              {showBl && (
-                <div className="mt-2 bg-white border border-slate-200 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-slate-700">차단한 회사</p>
-                    <button onClick={() => setShowBl(false)} className="text-xs text-slate-400 hover:text-slate-600">닫기</button>
-                  </div>
-                  {blItems.length === 0 ? (
-                    <p className="text-xs text-slate-400 py-3 text-center">차단한 회사가 없습니다. 결과 행의 EyeOff 아이콘으로 차단하세요.</p>
-                  ) : (
-                    <ul className="divide-y divide-slate-100">
-                      {blItems.map((b) => (
-                        <li key={b.id} className="flex items-center justify-between py-2">
-                          <span className="text-sm">
-                            {b.companyNameNormalized}
-                            {b.reason && <span className="text-xs text-slate-400 ml-2">— {b.reason}</span>}
-                          </span>
-                          <button onClick={() => unblock(b)} className="text-xs text-blue-600 hover:underline">해제</button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
             </div>
             <div className="p-3">
               <table className="w-full text-[12px] table-fixed">
@@ -649,6 +627,12 @@ export default function Viewer() {
           )}
         </div>
       </div>
+      <BlacklistManagerModal
+        open={showBl}
+        items={blItems}
+        onClose={() => setShowBl(false)}
+        onUnblock={unblock}
+      />
     </div>
   );
 }
