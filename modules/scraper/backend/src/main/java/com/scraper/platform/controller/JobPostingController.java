@@ -134,11 +134,34 @@ public class JobPostingController {
 
         Page<JobPosting> postings;
         if (!blockedCompanies.isEmpty()) {
-            // 블랙 필터가 있으면 전체 조회 후 메모리 필터 (분기 통합)
+            // 블랙 필터가 있으면 조건(날짜/run/사이트)에 맞는 전체를 조회한 뒤
+            // 블랙 회사를 메모리 필터로 제거하고 페이지로 자른다.
+            // (페이지 단위 후처리 — 대량 데이터 시 Specification 통합 개선 여지)
             final Sort effectiveSort = sort;
             final java.util.Set<String> blocked = blockedCompanies;
-            var all = jobPostingRepository.findByConfigId(configId, PageRequest.of(0, Integer.MAX_VALUE, effectiveSort));
-            var filtered = all.getContent().stream()
+            List<JobPosting> candidates;
+            if (runIdList != null && !runIdList.isEmpty()) {
+                if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+                    candidates = jobPostingRepository.findByConfigIdAndSiteNameAndCrawlLogIdIn(
+                            configId, siteName, runIdList, PageRequest.of(0, Integer.MAX_VALUE, effectiveSort)).getContent();
+                } else {
+                    candidates = jobPostingRepository.findByConfigIdAndCrawlLogIdIn(
+                            configId, runIdList, PageRequest.of(0, Integer.MAX_VALUE, effectiveSort)).getContent();
+                }
+            } else if (date != null && siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+                candidates = jobPostingRepository.findByConfigIdAndSiteNameAndCrawledAt(
+                        configId, siteName, date, PageRequest.of(0, Integer.MAX_VALUE, effectiveSort)).getContent();
+            } else if (date != null) {
+                candidates = jobPostingRepository.findByConfigIdAndCrawledAt(
+                        configId, date, PageRequest.of(0, Integer.MAX_VALUE, effectiveSort)).getContent();
+            } else if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
+                candidates = jobPostingRepository.findByConfigIdAndSiteName(
+                        configId, siteName, PageRequest.of(0, Integer.MAX_VALUE, effectiveSort)).getContent();
+            } else {
+                candidates = jobPostingRepository.findByConfigId(
+                        configId, PageRequest.of(0, Integer.MAX_VALUE, effectiveSort)).getContent();
+            }
+            var filtered = candidates.stream()
                     .filter(j -> j.getCompany() == null
                             || !blocked.contains(com.scraper.platform.service.CompanyBlacklistService.normalize(j.getCompany())))
                     .toList();
