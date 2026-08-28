@@ -5,8 +5,11 @@ import {
   fetchMyApplications,
   fetchMyResumes,
   fetchMyScraps,
+  deadlineBadge,
+  daysUntilDeadline,
   type ApplicationDto,
   type CrawlerDetail,
+  type ScrapItemDto,
 } from "../api/dashboard";
 import { useAuth } from "../hooks/useAuth";
 
@@ -107,7 +110,17 @@ export default function Dashboard() {
   const recentApps = [...apps]
     .sort((a, b) => (b.appliedAt ?? "").localeCompare(a.appliedAt ?? ""))
     .slice(0, 5);
-  const recentScraps = (scrapsQ.data ?? []).slice(0, 6);
+  const scraps: ScrapItemDto[] = scrapsQ.data ?? [];
+  const recentScraps = [...scraps]
+    .sort((a, b) => {
+      const da = daysUntilDeadline(a.deadline);
+      const db = daysUntilDeadline(b.deadline);
+      const ta = da == null ? Number.MAX_SAFE_INTEGER : da;
+      const tb = db == null ? Number.MAX_SAFE_INTEGER : db;
+      if (ta !== tb) return ta - tb;
+      return (b.scrappedAt ?? "").localeCompare(a.scrappedAt ?? "");
+    })
+    .slice(0, 6);
   const crawlerList: CrawlerDetail[] = crawlQ.data?.details ?? [];
 
   return (
@@ -334,6 +347,13 @@ export default function Dashboard() {
                             "bg-slate-100 text-slate-600"
                           }`}>
                             {s.siteName}
+                          </span>
+                        )}
+                        {deadlineBadge(s.deadline) && (
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            deadlineBadge(s.deadline) === "마감" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"
+                          }`}>
+                            {deadlineBadge(s.deadline)}
                           </span>
                         )}
                         <span className="text-[11px] text-slate-400">{fmtDate(s.scrappedAt)}</span>
