@@ -8,7 +8,9 @@
 ## 1. 개념
 ### 1.1 정의
 `packages/ui-shared`(별칭 `@sh-platform/ui`)는 모든 프론트가 **소스로 직접 참조**하는 공용 패키지입니다.
-- **전역 다이얼로그 오버라이드**: `window.alert/confirm/prompt`를 사이트 스타일의 커스텀 다이얼로그로 대체
+- **전역 다이얼로그 오버라이드**: `window.alert/confirm/prompt`를 사이트 스타일의 커스텀 UI로 대체
+  - `alert` / `confirm` → **우측 상단 토스트 스택** (여러 개 쌓임, alert는 4초 자동 소멸 + ✕)
+  - `prompt`(입력 필요) → **중앙 모달** 유지
 - **공용 컴포넌트**: `DialogHost`, `BlockConfirmDialog`, `BlacklistManagerModal`
 
 Spring의 `:common` Gradle 모듈(공용 라이브러리)과 같은 역할을 React 쪽에서 수행합니다.
@@ -79,9 +81,12 @@ initGlobalDialogs();
 `main.tsx`에서 `initGlobalDialogs()` 호출 후, 기존 코드의 `alert()/confirm()/prompt()`는 그대로 두면 됩니다.
 ```ts
 initGlobalDialogs();
-const ok = await confirm("정말 삭제할까요?"); // 커스텀 다이얼로그
-alert("저장되었습니다");                        // 커스텀 알림
+alert("저장되었습니다");           // 우측 상단 토스트 (4초 자동 소멸 + ✕)
+const ok = await confirm("정말 삭제할까요?"); // 우측 상단 토스트 + 취소/확인 버튼
+const name = await prompt("이름은?");         // 중앙 모달 (입력)
 ```
+- **alert/confirm은 토스트 스택**이라 여러 개가 우측 상단에 세로로 쌓입니다.
+- **prompt는 중앙 모달** (입력이 필요해서 토스트 부적합).
 
 ⚠️ **confirm/prompt는 Promise 반환으로 바뀜** — 반환값을 쓰는 코드는 반드시:
 ```ts

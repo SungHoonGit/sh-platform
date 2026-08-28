@@ -1,13 +1,13 @@
 /**
  * 전역 다이얼로그 요청 타입.
- * window.alert/confirm/prompt 를 오버라이드했을 때 하나씩 활성화되어 렌더링된다.
+ * window.alert/confirm/prompt 를 오버라이드했을 때 대기열에 쌓여 하나씩 렌더링된다.
  */
 export type DialogRequest =
   | { kind: "alert"; id: number; message: string; resolve: () => void }
   | { kind: "confirm"; id: number; message: string; resolve: (value: boolean) => void }
   | { kind: "prompt"; id: number; message: string; initial: string; resolve: (value: string | null) => void };
 
-let active: DialogRequest | null = null;
+let list: DialogRequest[] = [];
 const listeners = new Set<() => void>();
 let seq = 0;
 
@@ -16,7 +16,7 @@ function notify(): void {
 }
 
 /**
- * 활성 다이얼로그 변경을 구독한다.
+ * 다이얼로그 대기열 변경을 구독한다.
  *
  * @param fn 상태 변경 콜백
  * @return 구독 해제 함수
@@ -29,42 +29,42 @@ export function subscribe(fn: () => void): () => void {
 }
 
 /**
- * 현재 활성화된 다이얼로그 요청을 반환한다.
+ * 현재 대기열(표시 중 + 대기 중)의 다이얼로그 목록을 반환한다.
  *
- * @return 활성 요청 (없으면 null)
+ * @return 요청 배열
  */
-export function getActive(): DialogRequest | null {
-  return active;
+export function getList(): DialogRequest[] {
+  return list;
 }
 
 /**
- * 알림 다이얼로그를 띄운다.
+ * 알림 다이얼로그를 대기열에 추가한다.
  *
  * @param message 표시할 메시지
  * @return 사용자가 닫을 때 resolve 되는 Promise
  */
 export function showAlert(message: string): Promise<void> {
   return new Promise<void>((resolve) => {
-    active = { kind: "alert", id: ++seq, message, resolve };
+    list = [...list, { kind: "alert", id: ++seq, message, resolve }];
     notify();
   });
 }
 
 /**
- * 확인/취소 다이얼로그를 띄운다.
+ * 확인/취소 다이얼로그를 대기열에 추가한다.
  *
  * @param message 표시할 메시지
  * @return 사용자 선택 결과 (확인=true, 취소=false)
  */
 export function showConfirm(message: string): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
-    active = { kind: "confirm", id: ++seq, message, resolve };
+    list = [...list, { kind: "confirm", id: ++seq, message, resolve }];
     notify();
   });
 }
 
 /**
- * 입력 다이얼로그를 띄운다.
+ * 입력 다이얼로그를 대기열에 추가한다.
  *
  * @param message 안내 메시지
  * @param initial 초기 입력값
@@ -72,26 +72,25 @@ export function showConfirm(message: string): Promise<boolean> {
  */
 export function showPrompt(message: string, initial = ""): Promise<string | null> {
   return new Promise<string | null>((resolve) => {
-    active = { kind: "prompt", id: ++seq, message, initial, resolve };
+    list = [...list, { kind: "prompt", id: ++seq, message, initial, resolve }];
     notify();
   });
 }
 
 /**
- * 활성 다이얼로그를 닫고 결과를 resolve 한다.
+ * 특정 다이얼로그를 닫고 결과를 resolve 한다.
  *
- * @param value alert=무시 / confirm=boolean / prompt=string|string|null
+ * @param request 닫을 요청
+ * @param value alert=무시 / confirm=boolean / prompt=string|null
  */
-export function closeDialog(value?: unknown): void {
-  const cur = active;
-  active = null;
-  notify();
-  if (!cur) return;
-  if (cur.kind === "alert") {
-    cur.resolve();
-  } else if (cur.kind === "confirm") {
-    cur.resolve(value === true);
+export function closeDialog(request: DialogRequest, value?: unknown): void {
+  if (request.kind === "alert") {
+    request.resolve();
+  } else if (request.kind === "confirm") {
+    request.resolve(value === true);
   } else {
-    cur.resolve(typeof value === "string" ? value : null);
+    request.resolve(typeof value === "string" ? value : null);
   }
+  list = list.filter((r) => r !== request);
+  notify();
 }
