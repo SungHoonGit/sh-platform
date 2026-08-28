@@ -6,8 +6,7 @@ import { fetchCrawlers, executeCrawler, fetchJobPostings, downloadJobPostingsExc
 import { deadlineBadge, jobPlanetQuery, normCompany } from "../common/jobPlanet";
 
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
-import BlacklistManagerModal from "../components/BlacklistManagerModal";
-import BlockConfirmDialog from "../components/BlockConfirmDialog";
+import { BlockConfirmDialog, BlacklistManagerModal } from "@sh-platform/ui";
 
 const SITES = [
   { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700 border-blue-200" },
@@ -349,9 +348,9 @@ export default function Viewer() {
                               </button>
                               {canDelete && (
                                 <button
-                                  onClick={(e) => {
+                                  onClick={async (e) => {
                                     e.stopPropagation();
-                                    if (!confirm(`이 수집 이력을 삭제하시겠습니까?`)) return;
+                                    if (!(await confirm(`이 수집 이력을 삭제하시겠습니까?`))) return;
                                     run.logIds.forEach(id => deleteMutation.mutate(id));
                                   }}
                                   className="px-1.5 py-0.5 text-[10px] text-red-400 hover:text-red-600 hover:bg-red-50 rounded"

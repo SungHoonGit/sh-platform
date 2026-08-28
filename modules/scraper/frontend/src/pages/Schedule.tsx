@@ -376,8 +376,8 @@ export default function Schedule() {
     }, 100);
   };
 
-  const handleDelete = (c: any) => {
-    if (!confirm(`"${c.name}" 스케줄을 삭제하시겠습니까?`)) return;
+  const handleDelete = async (c: any) => {
+    if (!(await confirm(`"${c.name}" 스케줄을 삭제하시겠습니까?`))) return;
     deleteMutation.mutate(c.id);
   };
 

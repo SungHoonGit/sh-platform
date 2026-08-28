@@ -82,8 +82,8 @@ export default function AdminSessions() {
                 <p className="text-xs text-slate-400 mt-0.5">모든 기기 세션 삭제</p>
               </div>
               <button
-                onClick={() => {
-                  if (window.confirm(`사용자 #${data.userId}의 모든 세션을 삭제할까요?`)) {
+                onClick={async () => {
+                  if (await window.confirm(`사용자 #${data.userId}의 모든 세션을 삭제할까요?`)) {
                     logoutMutation.mutate(data.userId);
                   }
                 }}

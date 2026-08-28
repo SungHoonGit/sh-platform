@@ -107,8 +107,8 @@ export default function AdminUsers() {
                   </td>
                   <td className="px-4 py-3">
                     <button
-                      onClick={() => {
-                        if (confirm(`사용자 ${u.name}을(를) 삭제하시겠습니까?`))
+                      onClick={async () => {
+                        if (await confirm(`사용자 ${u.name}을(를) 삭제하시겠습니까?`))
                           deleteMutation.mutate(u.id);
                       }}
                       className="text-red-500 hover:text-red-700 p-1"

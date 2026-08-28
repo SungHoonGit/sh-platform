@@ -1,13 +1,20 @@
 import { useState } from "react";
-import { EyeOff, X } from "lucide-react";
 
-interface BlockConfirmDialogProps {
+export interface BlockConfirmDialogProps {
   open: boolean;
   company: string;
   onCancel: () => void;
   onConfirm: (reason: string) => void;
 }
 
+/**
+ * 회사 차단 확인용 공용 다이얼로그 (사유 입력 + 취소).
+ *
+ * @param open 열림 여부
+ * @param company 차단할 회사명
+ * @param onCancel 취소 콜백
+ * @param onConfirm 차단 확정 콜백 (사유 전달)
+ */
 export default function BlockConfirmDialog({ open, company, onCancel, onConfirm }: BlockConfirmDialogProps) {
   const [reason, setReason] = useState("");
 
@@ -28,12 +35,9 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm 
       <div className="absolute inset-0 bg-black/40" onClick={handleCancel} />
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <p className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <EyeOff size={16} className="text-slate-500" />
-            회사 차단
-          </p>
-          <button onClick={handleCancel} className="text-slate-400 hover:text-slate-600">
-            <X size={16} />
+          <p className="text-sm font-semibold text-slate-700">회사 차단</p>
+          <button onClick={handleCancel} className="text-slate-400 hover:text-slate-600 text-sm">
+            ✕
           </button>
         </div>
         <div className="px-4 py-4">

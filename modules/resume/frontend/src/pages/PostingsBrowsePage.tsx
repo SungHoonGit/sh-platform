@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { BlockConfirmDialog, BlacklistManagerModal } from "@sh-platform/ui";
 import { ArrowUp, ArrowDown, EyeOff } from "lucide-react";
 import { logout } from "../api/client";
-import BlacklistManagerModal from "../components/BlacklistManagerModal";
-import BlockConfirmDialog from "../components/BlockConfirmDialog";
 
 interface JobPostingSummary {
   id: number;
@@ -170,7 +169,7 @@ export default function PostingsBrowsePage() {
   const toggleScrap = async (postingId: number) => {
     const wasScrapped = scrappedIds.has(postingId);
     if (wasScrapped && view === "scraps") {
-      if (!confirm("이 스크랩을 해제하시겠습니까?")) return;
+      if (!(await confirm("이 스크랩을 해제하시겠습니까?"))) return;
     }
     const nextIds = new Set(scrappedIds);
     if (wasScrapped) nextIds.delete(postingId);

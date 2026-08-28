@@ -1,0 +1,13 @@
+{
+  "name": "@sh-platform/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "sh-platform MSA 공용 UI (전역 다이얼로그 오버라이드 + 공용 컴포넌트)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
+  }
+}

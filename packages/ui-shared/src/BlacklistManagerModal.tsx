@@ -1,19 +1,27 @@
-export interface BlacklistItem {
+export interface BlacklistItemLike {
   id: number;
-  accountId: number;
   companyNameNormalized: string;
-  reason: string | null;
-  createdAt: string;
+  reason?: string | null;
 }
 
-interface BlacklistManagerModalProps {
+export interface BlacklistManagerModalProps<T extends BlacklistItemLike> {
   open: boolean;
-  items: BlacklistItem[];
+  items: T[];
   onClose: () => void;
-  onUnblock: (item: BlacklistItem) => void;
+  onUnblock: (item: T) => void;
+  emptyHint?: string;
 }
 
-export default function BlacklistManagerModal({ open, items, onClose, onUnblock }: BlacklistManagerModalProps) {
+/**
+ * 차단 회사 목록 관리용 공용 모달.
+ *
+ * @param open 열림 여부
+ * @param items 차단 목록
+ * @param onClose 닫기 콜백
+ * @param onUnblock 해제 콜백
+ * @param emptyHint 빈 목록 안내 문구
+ */
+export default function BlacklistManagerModal<T extends BlacklistItemLike>({ open, items, onClose, onUnblock, emptyHint }: BlacklistManagerModalProps<T>) {
   if (!open) return null;
   return (
     <div
@@ -37,7 +45,7 @@ export default function BlacklistManagerModal({ open, items, onClose, onUnblock 
         <div className="flex-1 overflow-auto px-4 py-2">
           {items.length === 0 ? (
             <p className="text-xs text-slate-400 py-6 text-center">
-              차단한 회사가 없습니다. 결과 행의 EyeOff 아이콘으로 차단하세요.
+              {emptyHint ?? "차단한 회사가 없습니다."}
             </p>
           ) : (
             <ul className="divide-y divide-slate-100">

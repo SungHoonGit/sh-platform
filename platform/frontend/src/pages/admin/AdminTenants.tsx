@@ -105,9 +105,9 @@ export default function AdminTenants() {
                         <div className="flex gap-1">
                           <button onClick={(e) => { e.stopPropagation(); setSelectedId(t.id); }}
                                   className="text-blue-500 hover:text-blue-700 p-1"><Eye size={16} /></button>
-                          <button onClick={(e) => {
+                          <button onClick={async (e) => {
                             e.stopPropagation();
-                            if (confirm(`테넌트 ${t.name}을(를) 삭제하시겠습니까?`))
+                            if (await confirm(`테넌트 ${t.name}을(를) 삭제하시겠습니까?`))
                               deleteMutation.mutate(t.id);
                           }} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16} /></button>
                         </div>

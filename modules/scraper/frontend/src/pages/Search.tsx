@@ -12,8 +12,7 @@ import {
   CareerRangeSlider,
   LocationMultiSelect,
 } from "../components/SearchFilters";
-import BlacklistManagerModal from "../components/BlacklistManagerModal";
-import BlockConfirmDialog from "../components/BlockConfirmDialog";
+import { BlockConfirmDialog, BlacklistManagerModal } from "@sh-platform/ui";
 
 const SITES = [
   { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700 border-blue-200" },

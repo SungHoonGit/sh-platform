@@ -93,7 +93,7 @@ export default function AccountSettings() {
   };
 
   const handleUnlink = async (provider: string) => {
-    if (!window.confirm(`${PROVIDER_UI[provider]?.label} 로그인 연결을 해제하시겠습니까?`)) return;
+    if (!(await window.confirm(`${PROVIDER_UI[provider]?.label} 로그인 연결을 해제하시겠습니까?`))) return;
     setMessage("");
     setError("");
     try {

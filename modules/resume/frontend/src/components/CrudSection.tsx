@@ -197,7 +197,7 @@ export default function CrudSection({
   };
 
   const remove = async (id: number) => {
-    if (!window.confirm("이 항목을 삭제할까요?")) return;
+    if (!(await window.confirm("이 항목을 삭제할까요?"))) return;
     setBusy(true);
     setError(null);
     try {

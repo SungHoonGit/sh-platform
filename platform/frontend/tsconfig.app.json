@@ -20,7 +20,16 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "ignoreDeprecations": "6.0",
+
+    /* Paths */
+    "baseUrl": ".",
+    "paths": {
+      "@sh-platform/ui": ["../../packages/ui-shared/src/index.ts"],
+      "react": ["node_modules/@types/react"],
+      "react/*": ["node_modules/@types/react/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "../../packages/ui-shared/src"]
 }

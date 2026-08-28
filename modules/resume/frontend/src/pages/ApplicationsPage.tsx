@@ -174,7 +174,7 @@ export default function ApplicationsPage() {
   };
 
   const remove = async (id: number) => {
-    if (!window.confirm("이 지원 기록을 삭제할까요?")) return;
+    if (!(await window.confirm("이 지원 기록을 삭제할까요?"))) return;
     try {
       await apiDelete(`/applications/${id}`);
       load();

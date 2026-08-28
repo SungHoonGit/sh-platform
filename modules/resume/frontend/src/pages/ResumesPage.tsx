@@ -41,7 +41,7 @@ export default function ResumesPage() {
   };
 
   const remove = async (id: number, name: string) => {
-    if (!window.confirm(`'${name}' 을(를) 삭제할까요?`)) return;
+    if (!(await window.confirm(`'${name}' 을(를) 삭제할까요?`))) return;
     try {
       await apiDelete(`/documents/${id}`);
       load();
