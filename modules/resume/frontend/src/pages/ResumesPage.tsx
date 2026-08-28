@@ -96,7 +96,7 @@ export default function ResumesPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-5">
+      <div className="flex justify-between items-center mb-2">
         <h1 className="text-xl font-bold text-slate-800">이력서 관리</h1>
         <button
           onClick={() => setCreating((v) => !v)}
@@ -105,6 +105,10 @@ export default function ResumesPage() {
           {creating ? "취소" : "+ 새 이력서"}
         </button>
       </div>
+      <p className="text-xs text-slate-400 mb-4">
+        이력서는 항목 데이터(경력·학력·자기소개 등)를 <b className="text-slate-500">모든 이력서가 공유</b>하고,
+        각 이력서마다 <b className="text-slate-500">구성 섹션·순서·테마</b>를 다르게 편성합니다. 중복처럼 보여도 별도 서식입니다.
+      </p>
 
       {error && (
         <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
@@ -128,7 +132,7 @@ export default function ResumesPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">
-                불러오기 (선택)
+                구성 불러오기 (선택)
               </label>
               <select
                 value={fromId}
@@ -138,7 +142,7 @@ export default function ResumesPage() {
                 <option value="">빈 상태로 시작</option>
                 {documents.map((d) => (
                   <option key={d.id} value={String(d.id)}>
-                    '{d.title}' 편성 불러오기
+                    '{d.title}'의 구성(섹션·테마) 불러오기
                   </option>
                 ))}
               </select>

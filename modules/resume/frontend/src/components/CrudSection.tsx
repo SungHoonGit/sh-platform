@@ -41,6 +41,7 @@ export default function CrudSection({
   titleKey,
   subtitleKeys = [],
   fixedPayload = {},
+  inline = false,
   onChanged,
 }: {
   title: string;
@@ -50,6 +51,8 @@ export default function CrudSection({
   titleKey: string;
   subtitleKeys?: string[];
   fixedPayload?: Record<string, unknown>;
+  /** inline: 각 목록 행 자체가 편집 폼을 여는 방식 (자기소개 등) */
+  inline?: boolean;
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -209,6 +212,205 @@ export default function CrudSection({
 
   const showForm = editing !== null;
 
+  const renderForm = () => (
+    <div id={`crud-form-${title}`} className="mt-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {fields.filter(visible).map((f) => (
+          <div
+            key={f.key}
+            className={f.type === "textarea" || f.type === "file" || f.type === "school" || f.type === "major" ? "md:col-span-2" : ""}
+          >
+            {f.type !== "check" && (
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                {f.label}
+                {f.required && <span className="text-red-500 ml-0.5">*</span>}
+              </label>
+            )}
+            {f.type === "check" ? (
+              <label className="flex items-center gap-1.5 mt-1">
+                <input
+                  type="checkbox"
+                  checked={form[f.key] === "true"}
+                  onChange={(e) => setForm({ ...form, [f.key]: e.target.checked ? "true" : "" })}
+                  className="w-4 h-4 accent-slate-900"
+                />
+                <span className="text-sm text-slate-700">{f.label}</span>
+              </label>
+            ) : f.type === "textarea" ? (
+              <textarea
+                value={form[f.key] ?? ""}
+                onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                placeholder={f.placeholder}
+                rows={4}
+                disabled={!enabled(f)}
+                className={`${inputCls} ${!enabled(f) ? "bg-gray-100" : ""}`}
+              />
+            ) : f.type === "select" ? (
+              <select
+                value={form[f.key] ?? ""}
+                onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                disabled={!enabled(f)}
+                className={`${inputCls} ${!enabled(f) ? "bg-gray-100" : ""}`}
+              >
+                {(f.options ?? []).length > 0 && <option value="">-- 선택 --</option>}
+                {(f.options ?? []).map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            ) : f.type === "file" ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept={f.accept}
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void uploadFile(f.key, file);
+                    e.target.value = "";
+                  }}
+                  className="text-sm text-slate-600 file:mr-2 file:px-2.5 file:py-1.5 file:text-xs file:border-0 file:bg-slate-900 file:text-white file:rounded hover:file:bg-slate-700"
+                />
+                {fileNames[f.key] && (
+                  <span className="text-xs text-green-700 truncate">
+                    {uploading ? "업로드 중..." : `✓ ${fileNames[f.key]}`}
+                  </span>
+                )}
+              </div>
+            ) : f.type === "school" || f.type === "major" ? (
+              <div className="relative">
+                <input
+                  type="text"
+                  value={form[f.key] ?? ""}
+                  placeholder={f.placeholder ?? (f.type === "school" ? "학교명 입력 후 선택" : "전공명 입력 후 선택")}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setForm((prev) => ({ ...prev, [f.key]: v }));
+                    setSchoolQuery(v);
+                    suggestField.current = f.key;
+                    fetchSuggestions(
+                      v,
+                      f.type === "school" ? (form.schoolType || undefined) : undefined,
+                    );
+                    setSchoolOpen(true);
+                  }}
+                  onFocus={() => {
+                    suggestField.current = f.key;
+                    setSchoolOpen(true);
+                  }}
+                  onBlur={() => setTimeout(() => setSchoolOpen(false), 150)}
+                  className={inputCls}
+                />
+                {schoolOpen && suggestField.current === f.key && (
+                  <ul className="absolute z-20 mt-1 w-full max-h-48 overflow-auto bg-white border border-gray-200 rounded shadow-lg">
+                    {suggestions.map((s) => (
+                      <li key={s.name}>
+                        <button
+                          type="button"
+                          className="w-full px-2.5 py-1.5 text-sm text-left hover:bg-gray-50 flex justify-between items-center"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setForm((prev) => {
+                              const next: FormState = { ...prev, [f.key]: s.name };
+                              if (f.type === "school" && s.type) {
+                                next.schoolType = s.type;
+                              }
+                              return next;
+                            });
+                            setSchoolQuery("");
+                            setSuggestions([]);
+                            setSchoolOpen(false);
+                          }}
+                        >
+                          <span>{s.name}</span>
+                          {s.type && (
+                            <span className="text-xs text-gray-400 shrink-0">{s.type}</span>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                    {suggestions.length === 0 && (
+                      <li className="px-2.5 py-1.5 text-xs text-gray-400">
+                        "{schoolQuery}" 를 직접 입력해 저장할 수 있습니다
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </div>
+            ) : (
+              <input
+                type={f.type === "date" ? "date" : "text"}
+                value={form[f.key] ?? ""}
+                onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                placeholder={f.placeholder}
+                disabled={!enabled(f)}
+                className={`${inputCls} ${!enabled(f) ? "bg-gray-100" : ""}`}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 flex gap-2 justify-end">
+        <button
+          onClick={() => setEditing(null)}
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50"
+        >
+          취소
+        </button>
+        <button
+          onClick={save}
+          disabled={busy}
+          className="px-3 py-1.5 text-sm bg-slate-900 text-white rounded hover:bg-slate-700 disabled:opacity-50"
+        >
+          {busy ? "저장 중..." : "저장"}
+        </button>
+      </div>
+    </div>
+  );
+
+  const visibleSection = editing !== null && (
+    <div className="space-y-2">
+      {inline && editing === "new" && renderForm()}
+      {items.map((it) => (
+        <div key={String(it.id)} className="border border-gray-100 rounded-lg">
+          <div className="py-2.5 px-1 flex justify-between items-start gap-3">
+            <div className="min-w-0">
+              <p className="font-semibold text-sm text-slate-800 truncate">
+                {String(it[titleKey] ?? "")}
+              </p>
+              {subtitleKeys.map((k) =>
+                it[k] != null && String(it[k]) !== "" ? (
+                  <p key={k} className="text-xs text-slate-500 truncate">
+                    {String(it[k])}
+                  </p>
+                ) : null,
+              )}
+            </div>
+            {editing !== String(it.id) && (
+              <div className="shrink-0 flex gap-1.5">
+                <button
+                  onClick={() => openEdit(it)}
+                  className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  수정
+                </button>
+                <button
+                  onClick={() => remove(Number(it.id))}
+                  disabled={busy}
+                  className="px-2 py-1 text-xs border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-50"
+                >
+                  삭제
+                </button>
+              </div>
+            )}
+          </div>
+          {inline && editing === String(it.id) && renderForm()}
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <section className="mb-6 bg-white rounded-xl border border-slate-200 p-5">
       <div className="flex justify-between items-center mb-3">
@@ -230,202 +432,57 @@ export default function CrudSection({
         <p className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</p>
       )}
 
-      {items.length > 0 && (
-        <ul className="divide-y divide-gray-100">
-          {items.map((it) => (
-            <li key={String(it.id)} className="py-2.5 flex justify-between items-start gap-3">
-              <div className="min-w-0">
-                <p className="font-semibold text-sm text-slate-800 truncate">
-                  {String(it[titleKey] ?? "")}
-                </p>
-                {subtitleKeys.map((k) =>
-                  it[k] != null && String(it[k]) !== "" ? (
-                    <p key={k} className="text-xs text-slate-500 truncate">
-                      {String(it[k])}
+      {inline ? (
+        <>
+          {visibleSection}
+          {items.length === 0 && !showForm && (
+            <p className="text-sm text-slate-400">등록된 항목이 없습니다.</p>
+          )}
+        </>
+      ) : (
+        <>
+          {items.length > 0 && (
+            <ul className="divide-y divide-gray-100">
+              {items.map((it) => (
+                <li key={String(it.id)} className="py-2.5 flex justify-between items-start gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-slate-800 truncate">
+                      {String(it[titleKey] ?? "")}
                     </p>
-                  ) : null,
-                )}
-              </div>
-              {editing !== String(it.id) && (
-                <div className="shrink-0 flex gap-1.5">
-                  <button
-                    onClick={() => openEdit(it)}
-                    className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                  >
-                    수정
-                  </button>
-                  <button
-                    onClick={() => remove(Number(it.id))}
-                    disabled={busy}
-                    className="px-2 py-1 text-xs border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-50"
-                  >
-                    삭제
-                  </button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-      {items.length === 0 && !showForm && (
-        <p className="text-sm text-slate-400">등록된 항목이 없습니다.</p>
-      )}
-
-      {showForm && (
-        <div id={`crud-form-${title}`} className="mt-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {fields.filter(visible).map((f) => (
-              <div
-                key={f.key}
-                className={f.type === "textarea" || f.type === "file" || f.type === "school" || f.type === "major" ? "md:col-span-2" : ""}
-              >
-                {f.type !== "check" && (
-                  <label className="block text-xs font-medium text-slate-600 mb-1">
-                    {f.label}
-                    {f.required && <span className="text-red-500 ml-0.5">*</span>}
-                  </label>
-                )}
-                {f.type === "check" ? (
-                  <label className="flex items-center gap-1.5 mt-1">
-                    <input
-                      type="checkbox"
-                      checked={form[f.key] === "true"}
-                      onChange={(e) => setForm({ ...form, [f.key]: e.target.checked ? "true" : "" })}
-                      className="w-4 h-4 accent-slate-900"
-                    />
-                    <span className="text-sm text-slate-700">{f.label}</span>
-                  </label>
-                ) : f.type === "textarea" ? (
-                  <textarea
-                    value={form[f.key] ?? ""}
-                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                    placeholder={f.placeholder}
-                    rows={4}
-                    disabled={!enabled(f)}
-                    className={`${inputCls} ${!enabled(f) ? "bg-gray-100" : ""}`}
-                  />
-                ) : f.type === "select" ? (
-                  <select
-                    value={form[f.key] ?? ""}
-                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                    disabled={!enabled(f)}
-                    className={`${inputCls} ${!enabled(f) ? "bg-gray-100" : ""}`}
-                  >
-                    {(f.options ?? []).length > 0 && <option value="">-- 선택 --</option>}
-                    {(f.options ?? []).map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </select>
-                ) : f.type === "file" ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      accept={f.accept}
-                      disabled={uploading}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) void uploadFile(f.key, file);
-                        e.target.value = "";
-                      }}
-                      className="text-sm text-slate-600 file:mr-2 file:px-2.5 file:py-1.5 file:text-xs file:border-0 file:bg-slate-900 file:text-white file:rounded hover:file:bg-slate-700"
-                    />
-                    {fileNames[f.key] && (
-                      <span className="text-xs text-green-700 truncate">
-                        {uploading ? "업로드 중..." : `✓ ${fileNames[f.key]}`}
-                      </span>
+                    {subtitleKeys.map((k) =>
+                      it[k] != null && String(it[k]) !== "" ? (
+                        <p key={k} className="text-xs text-slate-500 truncate">
+                          {String(it[k])}
+                        </p>
+                      ) : null,
                     )}
                   </div>
-                ) : f.type === "school" || f.type === "major" ? (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={form[f.key] ?? ""}
-                      placeholder={f.placeholder ?? (f.type === "school" ? "학교명 입력 후 선택" : "전공명 입력 후 선택")}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setForm((prev) => ({ ...prev, [f.key]: v }));
-                        setSchoolQuery(v);
-                        suggestField.current = f.key;
-                        fetchSuggestions(
-                          v,
-                          f.type === "school" ? (form.schoolType || undefined) : undefined,
-                        );
-                        setSchoolOpen(true);
-                      }}
-                      onFocus={() => {
-                        suggestField.current = f.key;
-                        setSchoolOpen(true);
-                      }}
-                      onBlur={() => setTimeout(() => setSchoolOpen(false), 150)}
-                      className={inputCls}
-                    />
-                    {schoolOpen && suggestField.current === f.key && (
-                      <ul className="absolute z-20 mt-1 w-full max-h-48 overflow-auto bg-white border border-gray-200 rounded shadow-lg">
-                        {suggestions.map((s) => (
-                          <li key={s.name}>
-                            <button
-                              type="button"
-                              className="w-full px-2.5 py-1.5 text-sm text-left hover:bg-gray-50 flex justify-between items-center"
-                              onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => {
-                                setForm((prev) => {
-                                  const next: FormState = { ...prev, [f.key]: s.name };
-                                  if (f.type === "school" && s.type) {
-                                    next.schoolType = s.type;
-                                  }
-                                  return next;
-                                });
-                                setSchoolQuery("");
-                                setSuggestions([]);
-                                setSchoolOpen(false);
-                              }}
-                            >
-                              <span>{s.name}</span>
-                              {s.type && (
-                                <span className="text-xs text-gray-400 shrink-0">{s.type}</span>
-                              )}
-                            </button>
-                          </li>
-                        ))}
-                        {suggestions.length === 0 && (
-                          <li className="px-2.5 py-1.5 text-xs text-gray-400">
-                            "{schoolQuery}" 를 직접 입력해 저장할 수 있습니다
-                          </li>
-                        )}
-                      </ul>
-                    )}
-                  </div>
-                ) : (
-                  <input
-                    type={f.type === "date" ? "date" : "text"}
-                    value={form[f.key] ?? ""}
-                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                    placeholder={f.placeholder}
-                    disabled={!enabled(f)}
-                    className={`${inputCls} ${!enabled(f) ? "bg-gray-100" : ""}`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex gap-2 justify-end">
-            <button
-              onClick={() => setEditing(null)}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50"
-            >
-              취소
-            </button>
-            <button
-              onClick={save}
-              disabled={busy}
-              className="px-3 py-1.5 text-sm bg-slate-900 text-white rounded hover:bg-slate-700 disabled:opacity-50"
-            >
-              {busy ? "저장 중..." : "저장"}
-            </button>
-          </div>
-        </div>
+                  {editing !== String(it.id) && (
+                    <div className="shrink-0 flex gap-1.5">
+                      <button
+                        onClick={() => openEdit(it)}
+                        className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                      >
+                        수정
+                      </button>
+                      <button
+                        onClick={() => remove(Number(it.id))}
+                        disabled={busy}
+                        className="px-2 py-1 text-xs border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-50"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {items.length === 0 && !showForm && (
+            <p className="text-sm text-slate-400">등록된 항목이 없습니다.</p>
+          )}
+          {showForm && renderForm()}
+        </>
       )}
     </section>
   );
