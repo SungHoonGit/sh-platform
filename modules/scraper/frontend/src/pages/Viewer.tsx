@@ -7,6 +7,7 @@ import { deadlineBadge, jobPlanetQuery, normCompany } from "../common/jobPlanet"
 
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 import BlacklistManagerModal from "../components/BlacklistManagerModal";
+import BlockConfirmDialog from "../components/BlockConfirmDialog";
 
 const SITES = [
   { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700 border-blue-200" },
@@ -171,6 +172,8 @@ export default function Viewer() {
   const [blacklisted, setBlacklisted] = useState<Set<string>>(new Set());
   const [showBl, setShowBl] = useState(false);
   const [blItems, setBlItems] = useState<BlacklistItem[]>([]);
+  const [blockDialog, setBlockDialog] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const loadBl = () => {
     fetchBlacklist().then((l) => { setBlItems(l); setBlacklisted(new Set(l.map((b) => b.companyNameNormalized))); }).catch(() => {});
     setShowBl(true);
@@ -180,17 +183,22 @@ export default function Viewer() {
       await removeBlacklist(item.id);
       setBlItems((prev) => prev.filter((b) => b.id !== item.id));
       setBlacklisted((prev) => { const n = new Set(prev); n.delete(item.companyNameNormalized); return n; });
-    } catch { alert("해제 실패"); }
+    } catch { showNotice("해제 실패"); }
   };
-  const blockCompany = async (company: string) => {
+  const showNotice = (msg: string) => {
+    setNotice(msg);
+    window.setTimeout(() => setNotice(null), 3000);
+  };
+  const blockCompany = (company: string) => {
     if (!company) return;
-    const reason = window.prompt(`"${company}" 공고를 숨길까요?\n사유(선택):`) ?? "";
-    if (reason === null) return;
+    setBlockDialog(company);
+  };
+  const confirmBlock = async (company: string, reason: string) => {
     try {
-      await addBlacklist(company, reason);
+      await addBlacklist(company, reason || undefined);
       setBlacklisted((prev) => new Set(prev).add(normCompany(company)));
-      alert("차단했습니다. 이 회사 공고는 더 이상 표시되지 않습니다.");
-    } catch { alert("차단에 실패했습니다."); }
+      showNotice("차단했습니다. 이 회사 공고는 더 이상 표시되지 않습니다.");
+    } catch { showNotice("차단에 실패했습니다."); }
   };
 
   useEffect(() => {
@@ -481,6 +489,11 @@ export default function Viewer() {
               >
                 차단 회사 관리{blItems.length > 0 ? ` (${blItems.length})` : ""}
               </button>
+              {notice && (
+                <span className="ml-2 text-[11px] text-slate-600 bg-slate-100 px-2 py-1 rounded">
+                  {notice}
+                </span>
+              )}
             </div>
             <div className="p-3">
               <table className="w-full text-[12px] table-fixed">
@@ -633,6 +646,12 @@ export default function Viewer() {
         items={blItems}
         onClose={() => setShowBl(false)}
         onUnblock={unblock}
+      />
+      <BlockConfirmDialog
+        open={blockDialog !== null}
+        company={blockDialog ?? ""}
+        onCancel={() => setBlockDialog(null)}
+        onConfirm={(reason) => { const c = blockDialog; setBlockDialog(null); if (c) void confirmBlock(c, reason); }}
       />
     </div>
   );
