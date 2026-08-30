@@ -19,29 +19,29 @@ CREATE TABLE IF NOT EXISTS block_reasons (
 
 -- ---------- 시드 (멱등) ----------
 INSERT INTO block_reasons (name, sort_order, active)
-SELECT * FROM (SELECT '연봉·복지 협상 불가', 1, 1) AS t
+SELECT * FROM (SELECT '연봉·복지 협상 불가' AS name, 1 AS sort_order, 1 AS active) AS t
 WHERE NOT EXISTS (SELECT 1 FROM block_reasons WHERE name='연봉·복지 협상 불가');
 
 INSERT INTO block_reasons (name, sort_order, active)
-SELECT * FROM (SELECT '중복·재공고', 2, 1) AS t
+SELECT * FROM (SELECT '중복·재공고' AS name, 2 AS sort_order, 1 AS active) AS t
 WHERE NOT EXISTS (SELECT 1 FROM block_reasons WHERE name='중복·재공고');
 
 INSERT INTO block_reasons (name, sort_order, active)
-SELECT * FROM (SELECT '지역·근무지 불일치', 3, 1) AS t
+SELECT * FROM (SELECT '지역·근무지 불일치' AS name, 3 AS sort_order, 1 AS active) AS t
 WHERE NOT EXISTS (SELECT 1 FROM block_reasons WHERE name='지역·근무지 불일치');
 
 INSERT INTO block_reasons (name, sort_order, active)
-SELECT * FROM (SELECT '직무·기술스택 불일치', 4, 1) AS t
+SELECT * FROM (SELECT '직무·기술스택 불일치' AS name, 4 AS sort_order, 1 AS active) AS t
 WHERE NOT EXISTS (SELECT 1 FROM block_reasons WHERE name='직무·기술스택 불일치');
 
 INSERT INTO block_reasons (name, sort_order, active)
-SELECT * FROM (SELECT '경력·수준 불일치', 5, 1) AS t
+SELECT * FROM (SELECT '경력·수준 불일치' AS name, 5 AS sort_order, 1 AS active) AS t
 WHERE NOT EXISTS (SELECT 1 FROM block_reasons WHERE name='경력·수준 불일치');
 
 INSERT INTO block_reasons (name, sort_order, active)
-SELECT * FROM (SELECT '신뢰도·평판 이슈', 6, 1) AS t
+SELECT * FROM (SELECT '신뢰도·평판 이슈' AS name, 6 AS sort_order, 1 AS active) AS t
 WHERE NOT EXISTS (SELECT 1 FROM block_reasons WHERE name='신뢰도·평판 이슈');
 
 INSERT INTO block_reasons (name, sort_order, active)
-SELECT * FROM (SELECT '지원 하지 않음', 7, 1) AS t
+SELECT * FROM (SELECT '지원 하지 않음' AS name, 7 AS sort_order, 1 AS active) AS t
 WHERE NOT EXISTS (SELECT 1 FROM block_reasons WHERE name='지원 하지 않음');
