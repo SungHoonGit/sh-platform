@@ -16,7 +16,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -29,6 +28,9 @@ class CompanyBlacklistServiceTest {
 
     @Mock
     private BlockReasonRepository blockReasonRepository;
+
+    @Mock
+    private BlockReasonService blockReasonService;
 
     @InjectMocks
     private CompanyBlacklistService service;
@@ -48,7 +50,7 @@ class CompanyBlacklistServiceTest {
             given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = service.add(1L, "  (주)테스트 회사 ", "메모", List.of(1L, 2L));
+            var result = service.add(1L, "  (주)테스트 회사 ", "메모", List.of(1L, 2L), null);
 
             // then
             assertEquals("테스트회사", result.getCompanyNameNormalized());
@@ -73,7 +75,7 @@ class CompanyBlacklistServiceTest {
             given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = service.add(1L, "테스트 회사", null, List.of(3L));
+            var result = service.add(1L, "테스트 회사", null, List.of(3L), null);
 
             // then
             assertEquals(9L, result.getId());
@@ -90,11 +92,30 @@ class CompanyBlacklistServiceTest {
             given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = service.add(1L, "회사A", null, null);
+            var result = service.add(1L, "회사A", null, null, null);
 
             // then
             assertEquals("회사a", result.getCompanyNameNormalized());
             assertTrue(result.getBlockReasons().isEmpty());
+        }
+
+        @Test
+        @DisplayName("사용자 신규 카테고리는 마스터로 승격되어 함께 저장된다")
+        void add_shouldPromoteUserCategory() {
+            // given
+            var promoted = BlockReason.of("스타트업", "user", 20, true);
+            given(repository.findByAccountIdOrderByCreatedAtDesc(1L)).willReturn(List.of());
+            given(blockReasonService.ensureCategory("스타트업")).willReturn(promoted);
+            given(blockReasonRepository.findAllById(List.<Long>of())).willReturn(List.of());
+            given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
+
+            // when
+            var result = service.add(1L, "회사A", null, List.of(), List.of("스타트업"));
+
+            // then
+            assertEquals(1, result.getBlockReasons().size());
+            assertEquals("스타트업", result.getBlockReasons().get(0).getName());
+            verify(blockReasonService).ensureCategory("스타트업");
         }
     }
 }

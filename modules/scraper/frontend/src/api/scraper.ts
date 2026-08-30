@@ -427,10 +427,10 @@ async function blacklistReq(path: string, options?: RequestInit) {
 
 export const fetchBlacklist = () => blacklistReq("") as Promise<BlacklistItem[]>;
 export const fetchBlockCategories = () => blacklistReq("/reasons") as Promise<BlockCategory[]>;
-export const addBlacklist = (companyName: string, reasonIds?: number[], reason?: string) =>
+export const addBlacklist = (companyName: string, reasonIds?: number[], reason?: string, categoryNames?: string[]) =>
   blacklistReq("", {
     method: "POST",
-    body: JSON.stringify({ companyName, reasonIds: reasonIds ?? [], reason: reason || null }),
+    body: JSON.stringify({ companyName, reasonIds: reasonIds ?? [], reason: reason || null, categoryNames: categoryNames ?? [] }),
   }) as Promise<BlacklistItem>;
 export const removeBlacklist = (id: number) =>
   blacklistReq(`/${id}`, { method: "DELETE" }) as Promise<void>;

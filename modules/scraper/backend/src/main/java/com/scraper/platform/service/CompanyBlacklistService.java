@@ -21,16 +21,18 @@ public class CompanyBlacklistService {
 
     private final CompanyBlacklistRepository repository;
     private final BlockReasonRepository blockReasonRepository;
+    private final BlockReasonService blockReasonService;
 
     public List<CompanyBlacklist> list(Long accountId) {
         return repository.findByAccountIdOrderByCreatedAtDesc(accountId);
     }
 
-    /** 회사명을 정규화해 등록한다. 중복이면 사유를 갱신한다(멱등). */
+    /** 회사명을 정규화해 등록한다. 중복이면 카테고리를 갱신한다(멱등). */
     @Transactional
-    public CompanyBlacklist add(Long accountId, String companyNameRaw, String reason, List<Long> reasonIds) {
+    public CompanyBlacklist add(Long accountId, String companyNameRaw, String reason,
+                                List<Long> reasonIds, List<String> categoryNames) {
         String normalized = normalize(companyNameRaw);
-        var categories = resolveCategories(reasonIds);
+        var categories = resolveCategories(reasonIds, categoryNames);
         var existing = repository.findByAccountIdOrderByCreatedAtDesc(accountId).stream()
                 .filter(b -> b.getCompanyNameNormalized().equals(normalized))
                 .findFirst();
@@ -49,12 +51,21 @@ public class CompanyBlacklistService {
         return repository.save(saved);
     }
 
-    /** 이유 id 목록을 정렬순으로 실제 BlockReason 엔티티로 변환한다. */
-    private List<BlockReason> resolveCategories(List<Long> reasonIds) {
-        if (reasonIds == null || reasonIds.isEmpty()) {
-            return List.of();
+    /** 선택 id + 사용자 신규 입력 카테고리를 합쳐 정렬순 BlockReason 목록으로 변환한다. */
+    private List<BlockReason> resolveCategories(List<Long> reasonIds, List<String> categoryNames) {
+        var result = new java.util.ArrayList<BlockReason>();
+        if (reasonIds != null) {
+            result.addAll(blockReasonRepository.findAllById(reasonIds));
         }
-        return blockReasonRepository.findAllById(reasonIds).stream()
+        if (categoryNames != null) {
+            for (String name : categoryNames) {
+                if (name != null && !name.isBlank()) {
+                    result.add(blockReasonService.ensureCategory(name));
+                }
+            }
+        }
+        return result.stream()
+                .distinct()
                 .sorted((a, b) -> Integer.compare(a.getSortOrder(), b.getSortOrder()))
                 .toList();
     }

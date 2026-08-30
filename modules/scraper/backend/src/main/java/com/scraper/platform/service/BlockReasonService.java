@@ -41,4 +41,23 @@ public class BlockReasonService {
     public List<BlockReason> listAll() {
         return repository.findAllByActiveTrueOrderBySortOrderAsc();
     }
+
+    /**
+     * 사용자가 직접 입력한 카테고리를 마스터에 등록/반환한다(멱등).
+     * "이전에 입력했던 카테고리가 다음에도 제안되도록" 신규 텍스트를 block_reasons(user)로 승격시킨다.
+     *
+     * @param rawName 사용자 입력 카테고리명 (trim)
+     * @return 존재 시 기존, 없으면 신규 등록된 BlockReason
+     */
+    @Transactional
+    public BlockReason ensureCategory(String rawName) {
+        String name = rawName == null ? "" : rawName.trim();
+        if (name.isEmpty()) {
+            throw new IllegalArgumentException("category is blank");
+        }
+        return repository.findByName(name).orElseGet(() -> {
+            int next = repository.findTopByOrderBySortOrderDesc().map(BlockReason::getSortOrder).orElse(0);
+            return repository.save(BlockReason.of(name, "user", next + 10, true));
+        });
+    }
 }

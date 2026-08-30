@@ -13,4 +13,8 @@ public interface BlockReasonRepository extends JpaRepository<BlockReason, Long> 
     List<BlockReason> findTop20ByNameContainingAndActiveTrueOrderBySortOrderAsc(String name);
 
     List<BlockReason> findAllByActiveTrueOrderBySortOrderAsc();
+
+    java.util.Optional<BlockReason> findByName(String name);
+
+    java.util.Optional<BlockReason> findTopByOrderBySortOrderDesc();
 }

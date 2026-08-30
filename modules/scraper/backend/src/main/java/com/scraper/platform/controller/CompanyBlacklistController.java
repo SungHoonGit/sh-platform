@@ -27,7 +27,8 @@ public class CompanyBlacklistController {
     private final CompanyBlacklistService blacklistService;
     private final BlockReasonService blockReasonService;
 
-    public record AddRequest(@NotBlank String companyName, String reason, List<Long> reasonIds) {}
+    public record AddRequest(@NotBlank String companyName, String reason, List<Long> reasonIds,
+                             List<String> categoryNames) {}
 
     /** 차단 사유 마스터 응답 */
     public record BlockReasonResponse(Long id, String name, String category) {}
@@ -58,10 +59,10 @@ public class CompanyBlacklistController {
     }
 
     @PostMapping
-    @Operation(summary = "회사 차단", description = "중복 등록이면 카테고리를 갱신한다(멱등). reasonIds=선택 카테고리, reason=자유 메모.")
+    @Operation(summary = "회사 차단", description = "중복 등록이면 카테고리를 갱신한다(멱등). reasonIds=기존 카테고리, categoryNames=신규 입력(자동 마스터 승격), reason=자유 메모.")
     public ResponseEntity<ApiResponse<CompanyBlacklist>> add(@RequestBody AddRequest request) {
         var saved = blacklistService.add(SecurityUtils.currentAccountId(),
-                request.companyName(), request.reason(), request.reasonIds());
+                request.companyName(), request.reason(), request.reasonIds(), request.categoryNames());
         return ResponseEntity.ok(ApiResponse.success(saved));
     }
 
