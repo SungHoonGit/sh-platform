@@ -1,6 +1,7 @@
 package com.scraper.platform.controller;
 
 import com.scraper.platform.model.CompanyBlacklist;
+import com.scraper.platform.service.BlockReasonService;
 import com.scraper.platform.service.CompanyBlacklistService;
 import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
@@ -24,8 +25,22 @@ import java.util.Map;
 public class CompanyBlacklistController {
 
     private final CompanyBlacklistService blacklistService;
+    private final BlockReasonService blockReasonService;
 
     public record AddRequest(@NotBlank String companyName, String reason) {}
+
+    /** 차단 사유 마스터 응답 */
+    public record BlockReasonResponse(Long id, String name) {}
+
+    @GetMapping("/reasons/search")
+    @Operation(summary = "차단 사유 검색", description = "마스터에서 활성 사유를 검색해 자동완성/선택에 사용한다.")
+    public ResponseEntity<ApiResponse<List<BlockReasonResponse>>> searchReasons(
+            @RequestParam("q") String q) {
+        var response = blockReasonService.search(q).stream()
+                .map(r -> new BlockReasonResponse(r.getId(), r.getName()))
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
     @GetMapping
     @Operation(summary = "내 블랙리스트 목록")

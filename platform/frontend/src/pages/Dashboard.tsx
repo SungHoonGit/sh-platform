@@ -333,32 +333,32 @@ export default function Dashboard() {
           ) : (
             <ul className="divide-y divide-slate-100">
               {recentScraps.map((s) => (
-                <li key={s.id} className="py-2.5">
-                  <div className="flex items-start gap-2">
+                <li key={s.id} className="py-2.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex items-start gap-2">
                     <span className="text-amber-400 text-sm mt-0.5 shrink-0">★</span>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-700 truncate">{s.company}</p>
                       <p className="text-xs text-slate-500 truncate">{s.position}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {s.siteName && (
-                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                            s.siteName === "saramin" ? "bg-blue-100 text-blue-700" :
-                            s.siteName === "jobkorea" ? "bg-green-100 text-green-700" :
-                            "bg-slate-100 text-slate-600"
-                          }`}>
-                            {s.siteName}
-                          </span>
-                        )}
-                        {deadlineBadge(s.deadline) && (
-                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                            deadlineBadge(s.deadline) === "마감" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"
-                          }`}>
-                            {deadlineBadge(s.deadline)}
-                          </span>
-                        )}
-                        <span className="text-[11px] text-slate-400">{fmtDate(s.scrappedAt)}</span>
-                      </div>
+                      {deadlineBadge(s.deadline) && (
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold mt-1 ${
+                          deadlineBadge(s.deadline) === "마감" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"
+                        }`}>
+                          {deadlineBadge(s.deadline)}
+                        </span>
+                      )}
                     </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    {s.siteName && (
+                      <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
+                        s.siteName === "saramin" ? "bg-blue-100 text-blue-700" :
+                        s.siteName === "jobkorea" ? "bg-green-100 text-green-700" :
+                        "bg-slate-100 text-slate-600"
+                      }`}>
+                        {s.siteName}
+                      </span>
+                    )}
+                    <p className="text-[11px] text-slate-400 mt-0.5">{fmtDate(s.scrappedAt)}</p>
                   </div>
                 </li>
               ))}
