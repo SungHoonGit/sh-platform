@@ -39,16 +39,15 @@ public class CompanyBlacklistService {
         if (existing.isPresent()) {
             var b = existing.get();
             b.setReason(reason != null && !reason.isBlank() ? reason : null);
-            b.setBlockReasons(categories);
+            b.setBlockReasons(new java.util.ArrayList<>(categories));
             return repository.save(b);
         }
-        var saved = repository.save(CompanyBlacklist.builder()
+        return repository.save(CompanyBlacklist.builder()
                 .accountId(accountId)
                 .companyNameNormalized(normalized)
                 .reason(reason != null && !reason.isBlank() ? reason : null)
+                .blockReasons(new java.util.ArrayList<>(categories))
                 .build());
-        saved.setBlockReasons(categories);
-        return repository.save(saved);
     }
 
     /** 선택 id + 사용자 신규 입력 카테고리를 합쳐 정렬순 BlockReason 목록으로 변환한다. */
@@ -64,10 +63,10 @@ public class CompanyBlacklistService {
                 }
             }
         }
-        return result.stream()
+        return new java.util.ArrayList<>(result.stream()
                 .distinct()
                 .sorted((a, b) -> Integer.compare(a.getSortOrder(), b.getSortOrder()))
-                .toList();
+                .toList());
     }
 
     @Transactional
