@@ -131,6 +131,7 @@ export default function PostingsBrowsePage() {
   const [showBl, setShowBl] = useState(false);
   const [blItems, setBlItems] = useState<BlacklistItem[]>([]);
   const [blockDialog, setBlockDialog] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<BlacklistItem | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const SIZE = 20;
@@ -214,6 +215,13 @@ export default function PostingsBrowsePage() {
       setBlItems((prev) => prev.filter((b) => b.id !== item.id));
       setBlacklisted((prev) => { const n = new Set(prev); n.delete(item.companyNameNormalized); return n; });
     } catch { showNotice("해제 실패"); }
+  };
+  const confirmEdit = async (item: BlacklistItem, reasonIds: number[], categoryNames: string[]) => {
+    try {
+      const updated = await blacklistReq<BlacklistItem>(`/${item.id}`, { method: "PUT", body: JSON.stringify({ reasonIds, categoryNames }) });
+      setBlItems((prev) => prev.map((b) => (b.id === item.id ? { ...b, ...updated, blockReasons: updated.blockReasons } : b)));
+      showNotice("차단 카테고리를 수정했습니다.");
+    } catch { showNotice("수정에 실패했습니다."); }
   };
   const blockCompany = (company: string) => {
     if (!company) return;
@@ -507,12 +515,21 @@ export default function PostingsBrowsePage() {
         items={blItems}
         onClose={() => setShowBl(false)}
         onUnblock={unblock}
+        onEdit={(item) => setEditTarget(item)}
       />
       <BlockConfirmDialog
         open={blockDialog !== null}
         company={blockDialog ?? ""}
         onCancel={() => setBlockDialog(null)}
         onConfirm={(reason, reasonIds, categoryNames) => { const c = blockDialog; setBlockDialog(null); if (c) void confirmBlock(c, reason, reasonIds, categoryNames); }}
+      />
+      <BlockConfirmDialog
+        open={editTarget !== null}
+        company={editTarget?.companyNameNormalized ?? ""}
+        confirmLabel="수정"
+        initialTags={(editTarget?.blockReasons ?? []).map((r) => ({ id: r.id, name: r.name }))}
+        onCancel={() => setEditTarget(null)}
+        onConfirm={(_reason, reasonIds, categoryNames) => { const t = editTarget; setEditTarget(null); if (t) void confirmEdit(t, reasonIds, categoryNames); }}
       />
     </div>
   );

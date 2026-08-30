@@ -69,6 +69,19 @@ public class CompanyBlacklistService {
                 .toList());
     }
 
+    /** 기존 차단 항목의 카테고리를 교체한다(자유 메모는 보존). 본인 항목이 아니면 무시한다. */
+    @Transactional
+    public CompanyBlacklist update(Long accountId, Long id, List<Long> reasonIds, List<String> categoryNames) {
+        var categories = resolveCategories(reasonIds, categoryNames);
+        return repository.findById(id)
+                .filter(b -> b.getAccountId().equals(accountId))
+                .map(b -> {
+                    b.setBlockReasons(new java.util.ArrayList<>(categories));
+                    return repository.save(b);
+                })
+                .orElse(null);
+    }
+
     @Transactional
     public void remove(Long accountId, Long id) {
         repository.findById(id)

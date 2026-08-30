@@ -118,4 +118,51 @@ class CompanyBlacklistServiceTest {
             verify(blockReasonService).ensureCategory("스타트업");
         }
     }
+
+    @Nested
+    @DisplayName("update 메서드")
+    class Update {
+
+        @Test
+        @DisplayName("본인 항목의 카테고리를 교체하고 메모를 보존한다")
+        void update_shouldReplaceCategories() {
+            // given
+            var existing = CompanyBlacklist.builder()
+                    .id(9L).accountId(1L)
+                    .companyNameNormalized("테스트회사")
+                    .reason("기존 사유")
+                    .build();
+            var category = BlockReason.of("외국계", "company_type", 4, true);
+            given(repository.findById(9L)).willReturn(java.util.Optional.of(existing));
+            given(blockReasonRepository.findAllById(List.of(4L))).willReturn(List.of(category));
+            given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
+
+            // when
+            var result = service.update(1L, 9L, List.of(4L), null);
+
+            // then
+            assertEquals(9L, result.getId());
+            assertEquals("기존 사유", result.getReason());
+            assertEquals(1, result.getBlockReasons().size());
+            assertEquals("외국계", result.getBlockReasons().get(0).getName());
+            verify(repository).save(any(CompanyBlacklist.class));
+        }
+
+        @Test
+        @DisplayName("타인 항목이면 null을 반환한다")
+        void update_shouldIgnoreOtherOwner() {
+            // given
+            var other = CompanyBlacklist.builder()
+                    .id(9L).accountId(2L)
+                    .companyNameNormalized("다른유저")
+                    .build();
+            given(repository.findById(9L)).willReturn(java.util.Optional.of(other));
+
+            // when
+            var result = service.update(1L, 9L, List.of(4L), null);
+
+            // then
+            assertNull(result);
+        }
+    }
 }

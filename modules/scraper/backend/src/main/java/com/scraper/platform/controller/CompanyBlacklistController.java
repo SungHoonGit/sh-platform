@@ -30,6 +30,9 @@ public class CompanyBlacklistController {
     public record AddRequest(@NotBlank String companyName, String reason, List<Long> reasonIds,
                              List<String> categoryNames) {}
 
+    /** 기존 차단 항목 카테고리 수정 요청 (자유 메모는 보존) */
+    public record UpdateRequest(List<Long> reasonIds, List<String> categoryNames) {}
+
     /** 차단 사유 마스터 응답 */
     public record BlockReasonResponse(Long id, String name, String category) {}
 
@@ -63,6 +66,18 @@ public class CompanyBlacklistController {
     public ResponseEntity<ApiResponse<CompanyBlacklist>> add(@RequestBody AddRequest request) {
         var saved = blacklistService.add(SecurityUtils.currentAccountId(),
                 request.companyName(), request.reason(), request.reasonIds(), request.categoryNames());
+        return ResponseEntity.ok(ApiResponse.success(saved));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "차단 항목 수정", description = "기존 차단 항목의 카테고리를 교체한다(reasonIds=기존, categoryNames=신규 입력). 자유 메모는 보존한다.")
+    public ResponseEntity<ApiResponse<CompanyBlacklist>> update(@PathVariable Long id,
+                                                                @RequestBody UpdateRequest request) {
+        var saved = blacklistService.update(SecurityUtils.currentAccountId(), id,
+                request.reasonIds(), request.categoryNames());
+        if (saved == null) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntity.ok(ApiResponse.success(saved));
     }
 

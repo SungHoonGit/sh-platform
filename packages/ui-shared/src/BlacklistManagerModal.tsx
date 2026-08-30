@@ -10,6 +10,7 @@ export interface BlacklistManagerModalProps<T extends BlacklistItemLike> {
   items: T[];
   onClose: () => void;
   onUnblock: (item: T) => void;
+  onEdit?: (item: T) => void;
   emptyHint?: string;
 }
 
@@ -20,9 +21,10 @@ export interface BlacklistManagerModalProps<T extends BlacklistItemLike> {
  * @param items 차단 목록
  * @param onClose 닫기 콜백
  * @param onUnblock 해제 콜백
+ * @param onEdit 수정 콜백 (선택)
  * @param emptyHint 빈 목록 안내 문구
  */
-export default function BlacklistManagerModal<T extends BlacklistItemLike>({ open, items, onClose, onUnblock, emptyHint }: BlacklistManagerModalProps<T>) {
+export default function BlacklistManagerModal<T extends BlacklistItemLike>({ open, items, onClose, onUnblock, onEdit, emptyHint }: BlacklistManagerModalProps<T>) {
   if (!open) return null;
   return (
     <div
@@ -72,12 +74,22 @@ export default function BlacklistManagerModal<T extends BlacklistItemLike>({ ope
                     )}
                     {b.reason && <p className="text-xs text-slate-400 mt-1">— {b.reason}</p>}
                   </div>
-                  <button
-                    onClick={() => onUnblock(b)}
-                    className="text-xs text-blue-600 hover:underline shrink-0"
-                  >
-                    해제
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(b)}
+                        className="text-xs text-slate-500 hover:underline shrink-0"
+                      >
+                        수정
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onUnblock(b)}
+                      className="text-xs text-blue-600 hover:underline shrink-0"
+                    >
+                      해제
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

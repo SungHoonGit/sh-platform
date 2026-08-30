@@ -5,6 +5,8 @@ export interface BlockConfirmDialogProps {
   company: string;
   onCancel: () => void;
   onConfirm: (reason: string, reasonIds: number[], categoryNames: string[]) => void;
+  initialTags?: { id: number; name: string }[];
+  confirmLabel?: string;
 }
 
 interface Suggestion {
@@ -25,18 +27,20 @@ interface Tag {
  *
  * @param open 열림 여부
  * @param company 차단할 회사명
+ * @param initialTags 수정 모드에서 기존 카테고리를 미리 채우는 태그 목록
+ * @param confirmLabel 확인 버튼 라벨 (기본: 차단)
  * @param onCancel 취소 콜백
- * @param onConfirm 차단 확정 콜백 (자유메모, 선택한 기존 카테고리 id 목록, 신규 입력 카테고리명 목록)
+ * @param onConfirm 차단/수정 확정 콜백 (자유메모, 선택한 기존 카테고리 id 목록, 신규 입력 카테고리명 목록)
  */
-export default function BlockConfirmDialog({ open, company, onCancel, onConfirm }: BlockConfirmDialogProps) {
+export default function BlockConfirmDialog({ open, company, onCancel, onConfirm, initialTags, confirmLabel = "차단" }: BlockConfirmDialogProps) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggest, setShowSuggest] = useState(false);
-  const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<number | null>(null);
   const inFlightRef = useRef(0);
+  const prevOpenRef = useRef(false);
 
   const searchReasons = async (q: string): Promise<Suggestion[]> => {
     const token = localStorage.getItem("accessToken") ?? "";
@@ -49,14 +53,16 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm 
   };
 
   useEffect(() => {
-    if (!open) {
-      setTags([]);
+    if (open && !prevOpenRef.current) {
+      setTags((initialTags ?? []).map((t) => ({ id: t.id, name: t.name })));
       setInput("");
-      setReason("");
       setSuggestions([]);
       setShowSuggest(false);
-      return;
     }
+    prevOpenRef.current = open;
+  }, [open, initialTags]);
+
+  useEffect(() => {
     const q = input.trim();
     if (!q) {
       setSuggestions([]);
@@ -77,11 +83,7 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm 
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [input, open]);
-
-  useEffect(() => {
-    if (!open) { inFlightRef.current++; return; }
-  }, [open]);
+  }, [input]);
 
   if (!open) return null;
 
@@ -115,13 +117,12 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm 
   const handleConfirm = () => {
     const existingIds = tags.filter((t) => t.id != null).map((t) => t.id as number);
     const newNames = tags.filter((t) => t.id == null).map((t) => t.name);
-    onConfirm(reason.trim(), existingIds, newNames);
-    setReason("");
+    onConfirm("", existingIds, newNames);
     setTags([]);
+    setInput("");
   };
 
   const handleCancel = () => {
-    setReason("");
     setTags([]);
     setInput("");
     setShowSuggest(false);
@@ -177,20 +178,10 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm 
               </ul>
             )}
           </div>
-
-          <div className="mt-3">
-            <p className="text-xs text-slate-500 mb-1">메모(선택)</p>
-            <input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="간단한 메모를 남길 수 있어요"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
         </div>
         <div className="flex items-center justify-end gap-2 px-4 pb-4 border-t border-slate-100 pt-3">
           <button onClick={handleCancel} className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">취소</button>
-          <button onClick={handleConfirm} className="px-3 py-1.5 text-sm font-medium bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors">차단</button>
+          <button onClick={handleConfirm} className="px-3 py-1.5 text-sm font-medium bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors">{confirmLabel}</button>
         </div>
       </div>
     </div>
