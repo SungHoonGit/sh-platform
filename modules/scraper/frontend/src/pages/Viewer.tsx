@@ -192,9 +192,9 @@ export default function Viewer() {
     if (!company) return;
     setBlockDialog(company);
   };
-  const confirmBlock = async (company: string, reason: string) => {
+  const confirmBlock = async (company: string, reason: string, reasonIds: number[]) => {
     try {
-      await addBlacklist(company, reason || undefined);
+      await addBlacklist(company, reasonIds, reason || undefined);
       setBlacklisted((prev) => new Set(prev).add(normCompany(company)));
       showNotice("차단했습니다. 이 회사 공고는 더 이상 표시되지 않습니다.");
     } catch { showNotice("차단에 실패했습니다."); }
@@ -650,7 +650,7 @@ export default function Viewer() {
         open={blockDialog !== null}
         company={blockDialog ?? ""}
         onCancel={() => setBlockDialog(null)}
-        onConfirm={(reason) => { const c = blockDialog; setBlockDialog(null); if (c) void confirmBlock(c, reason); }}
+        onConfirm={(reason, reasonIds) => { const c = blockDialog; setBlockDialog(null); if (c) void confirmBlock(c, reason, reasonIds); }}
       />
     </div>
   );

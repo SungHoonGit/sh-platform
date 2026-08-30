@@ -1,6 +1,8 @@
 package com.scraper.platform.service;
 
+import com.scraper.platform.model.BlockReason;
 import com.scraper.platform.model.CompanyBlacklist;
+import com.scraper.platform.repository.BlockReasonRepository;
 import com.scraper.platform.repository.CompanyBlacklistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.util.Set;
 public class CompanyBlacklistService {
 
     private final CompanyBlacklistRepository repository;
+    private final BlockReasonRepository blockReasonRepository;
 
     public List<CompanyBlacklist> list(Long accountId) {
         return repository.findByAccountIdOrderByCreatedAtDesc(accountId);
@@ -25,21 +28,35 @@ public class CompanyBlacklistService {
 
     /** 회사명을 정규화해 등록한다. 중복이면 사유를 갱신한다(멱등). */
     @Transactional
-    public CompanyBlacklist add(Long accountId, String companyNameRaw, String reason) {
+    public CompanyBlacklist add(Long accountId, String companyNameRaw, String reason, List<Long> reasonIds) {
         String normalized = normalize(companyNameRaw);
+        var categories = resolveCategories(reasonIds);
         var existing = repository.findByAccountIdOrderByCreatedAtDesc(accountId).stream()
                 .filter(b -> b.getCompanyNameNormalized().equals(normalized))
                 .findFirst();
         if (existing.isPresent()) {
             var b = existing.get();
-            b.setReason(reason != null ? reason : b.getReason());
+            b.setReason(reason != null && !reason.isBlank() ? reason : null);
+            b.setBlockReasons(categories);
             return repository.save(b);
         }
-        return repository.save(CompanyBlacklist.builder()
+        var saved = repository.save(CompanyBlacklist.builder()
                 .accountId(accountId)
                 .companyNameNormalized(normalized)
-                .reason(reason)
+                .reason(reason != null && !reason.isBlank() ? reason : null)
                 .build());
+        saved.setBlockReasons(categories);
+        return repository.save(saved);
+    }
+
+    /** 이유 id 목록을 정렬순으로 실제 BlockReason 엔티티로 변환한다. */
+    private List<BlockReason> resolveCategories(List<Long> reasonIds) {
+        if (reasonIds == null || reasonIds.isEmpty()) {
+            return List.of();
+        }
+        return blockReasonRepository.findAllById(reasonIds).stream()
+                .sorted((a, b) -> Integer.compare(a.getSortOrder(), b.getSortOrder()))
+                .toList();
     }
 
     @Transactional

@@ -27,17 +27,26 @@ public class CompanyBlacklistController {
     private final CompanyBlacklistService blacklistService;
     private final BlockReasonService blockReasonService;
 
-    public record AddRequest(@NotBlank String companyName, String reason) {}
+    public record AddRequest(@NotBlank String companyName, String reason, List<Long> reasonIds) {}
 
     /** 차단 사유 마스터 응답 */
-    public record BlockReasonResponse(Long id, String name) {}
+    public record BlockReasonResponse(Long id, String name, String category) {}
+
+    @GetMapping("/reasons")
+    @Operation(summary = "차단 카테고리 전체", description = "활성 카테고리(회사유형/사유) 전체를 다중 선택 UI 초기 로드에 사용한다.")
+    public ResponseEntity<ApiResponse<List<BlockReasonResponse>>> listReasons() {
+        var response = blockReasonService.listAll().stream()
+                .map(r -> new BlockReasonResponse(r.getId(), r.getName(), r.getCategory()))
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
     @GetMapping("/reasons/search")
-    @Operation(summary = "차단 사유 검색", description = "마스터에서 활성 사유를 검색해 자동완성/선택에 사용한다.")
+    @Operation(summary = "차단 카테고리 검색", description = "마스터에서 활성 카테고리(회사유형/사유)를 검색해 자동완성/선택에 사용한다.")
     public ResponseEntity<ApiResponse<List<BlockReasonResponse>>> searchReasons(
             @RequestParam("q") String q) {
         var response = blockReasonService.search(q).stream()
-                .map(r -> new BlockReasonResponse(r.getId(), r.getName()))
+                .map(r -> new BlockReasonResponse(r.getId(), r.getName(), r.getCategory()))
                 .toList();
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -49,10 +58,10 @@ public class CompanyBlacklistController {
     }
 
     @PostMapping
-    @Operation(summary = "회사 차단", description = "중복 등록이면 사유를 갱신한다(멱등).")
+    @Operation(summary = "회사 차단", description = "중복 등록이면 카테고리를 갱신한다(멱등). reasonIds=선택 카테고리, reason=자유 메모.")
     public ResponseEntity<ApiResponse<CompanyBlacklist>> add(@RequestBody AddRequest request) {
         var saved = blacklistService.add(SecurityUtils.currentAccountId(),
-                request.companyName(), request.reason());
+                request.companyName(), request.reason(), request.reasonIds());
         return ResponseEntity.ok(ApiResponse.success(saved));
     }
 

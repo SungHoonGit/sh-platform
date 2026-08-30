@@ -27,6 +27,10 @@ public class BlockReason {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
+    /** 카테고리 구분: company_type(회사유형) / reason(사유) */
+    @Column(name = "category", nullable = false, length = 20)
+    private String category;
+
     /** 표시/정렬 순서. 낮을수록 먼저 노출. */
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;
@@ -35,9 +39,10 @@ public class BlockReason {
     @Column(name = "active", nullable = false)
     private Boolean active;
 
-    public static BlockReason of(String name, Integer sortOrder, Boolean active) {
+    public static BlockReason of(String name, String category, Integer sortOrder, Boolean active) {
         var e = new BlockReason();
         e.name = name;
+        e.category = category;
         e.sortOrder = sortOrder;
         e.active = active;
         return e;

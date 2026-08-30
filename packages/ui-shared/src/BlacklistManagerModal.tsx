@@ -2,6 +2,7 @@ export interface BlacklistItemLike {
   id: number;
   companyNameNormalized: string;
   reason?: string | null;
+  blockReasons?: { id: number; name: string; category: string }[];
 }
 
 export interface BlacklistManagerModalProps<T extends BlacklistItemLike> {
@@ -50,14 +51,30 @@ export default function BlacklistManagerModal<T extends BlacklistItemLike>({ ope
           ) : (
             <ul className="divide-y divide-slate-100">
               {items.map((b) => (
-                <li key={b.id} className="flex items-center justify-between py-2.5">
-                  <span className="text-sm">
-                    {b.companyNameNormalized}
-                    {b.reason && <span className="text-xs text-slate-400 ml-2">— {b.reason}</span>}
-                  </span>
+                <li key={b.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium text-slate-700">{b.companyNameNormalized}</span>
+                    {b.blockReasons && b.blockReasons.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {b.blockReasons.map((r) => (
+                          <span
+                            key={r.id}
+                            className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              r.category === "company_type"
+                                ? "bg-violet-100 text-violet-700"
+                                : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {r.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {b.reason && <p className="text-xs text-slate-400 mt-1">— {b.reason}</p>}
+                  </div>
                   <button
                     onClick={() => onUnblock(b)}
-                    className="text-xs text-blue-600 hover:underline"
+                    className="text-xs text-blue-600 hover:underline shrink-0"
                   >
                     해제
                   </button>

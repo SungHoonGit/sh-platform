@@ -399,11 +399,18 @@ export async function downloadJobPostingsExcel(
 
 // ── 회사 블랙리스트 ─────────────────────────────────────────────
 
+export interface BlockCategory {
+  id: number;
+  name: string;
+  category: string;
+}
+
 export interface BlacklistItem {
   id: number;
   accountId: number;
   companyNameNormalized: string;
   reason: string | null;
+  blockReasons?: BlockCategory[];
   createdAt: string;
 }
 
@@ -419,7 +426,11 @@ async function blacklistReq(path: string, options?: RequestInit) {
 }
 
 export const fetchBlacklist = () => blacklistReq("") as Promise<BlacklistItem[]>;
-export const addBlacklist = (companyName: string, reason?: string) =>
-  blacklistReq("", { method: "POST", body: JSON.stringify({ companyName, reason: reason || null }) }) as Promise<BlacklistItem>;
+export const fetchBlockCategories = () => blacklistReq("/reasons") as Promise<BlockCategory[]>;
+export const addBlacklist = (companyName: string, reasonIds?: number[], reason?: string) =>
+  blacklistReq("", {
+    method: "POST",
+    body: JSON.stringify({ companyName, reasonIds: reasonIds ?? [], reason: reason || null }),
+  }) as Promise<BlacklistItem>;
 export const removeBlacklist = (id: number) =>
   blacklistReq(`/${id}`, { method: "DELETE" }) as Promise<void>;

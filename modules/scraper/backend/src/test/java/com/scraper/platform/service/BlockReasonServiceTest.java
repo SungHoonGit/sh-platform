@@ -33,7 +33,7 @@ class BlockReasonServiceTest {
         @DisplayName("활성 사유를 이름으로 검색한다")
         void search_shouldReturnActiveReasons() {
             // given
-            var reason = BlockReason.of("연봉·복지 협상 불가", 1, true);
+            var reason = BlockReason.of("연봉·복지 협상 불가", "reason", 1, true);
             given(blockReasonRepository.findTop20ByNameContainingAndActiveTrueOrderBySortOrderAsc("연봉"))
                     .willReturn(List.of(reason));
 

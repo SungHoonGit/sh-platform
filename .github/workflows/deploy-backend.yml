@@ -109,6 +109,7 @@ jobs:
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-v5.sql
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-v6.sql
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-v7.sql
+            mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-v8.sql
             # resume DDL (IF NOT EXISTS 라 매 배포 실행해도 무해)
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' resume_platform < docs/resume/ddl-resume-v1.sql
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' resume_platform < docs/resume/ddl-resume-v2.sql
