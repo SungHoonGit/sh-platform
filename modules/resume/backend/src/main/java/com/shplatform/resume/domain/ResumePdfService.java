@@ -17,4 +17,17 @@ public interface ResumePdfService {
      * @return application/pdf 바이트 배열
      */
     byte[] generatePdf(Long userId, Long documentId);
+
+    /**
+     * (질의형) PDF 다운로드 파일명을 결정한다. 형식은 {@code "(테마명) 문서제목.pdf"}.
+     *
+     * <p>테마명은 templateCode 기준 한글 라벨(클래식/모던/사람인형)이고, 문서 제목은
+     * documentId에 해당하는 문서의 title을 사용한다. documentId가 없거나 문서를 찾지
+     * 못하면 CLASSIC·"이력서" 기본값을 쓴다.
+     *
+     * @param userId     소유자 사용자 ID
+     * @param documentId 문서 ID (null이면 기본값)
+     * @return 다운로드 파일명 (예: "(모던) 2026 포트폴리오 이력서.pdf")
+     */
+    String pdfFilename(Long userId, Long documentId);
 }

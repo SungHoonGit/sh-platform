@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,8 @@ public class ResumePdfServiceImpl implements ResumePdfService {
             "careers", "projects", "educations", "skills",
             "certificates", "introductions", "portfolioItems");
     private static final String DEFAULT_TEMPLATE_CODE = "CLASSIC";
+    private static final String DEFAULT_TITLE = "이력서";
+    private static final Map<String, String> THEME_LABELS = themeLabels();
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final ResumeViewService resumeViewService;
@@ -64,9 +67,9 @@ public class ResumePdfServiceImpl implements ResumePdfService {
         ResumePdfLayout layout = layouts.getOrDefault(option.templateCode(), layouts.get(DEFAULT_TEMPLATE_CODE));
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
              Document document = new Document(PageSize.A4, MARGIN_MM_18, MARGIN_MM_18, MARGIN_MM_16, MARGIN_MM_16)) {
-            PdfWriter.getInstance(document, bos);
+            PdfWriter writer = PdfWriter.getInstance(document, bos);
             document.open();
-            layout.render(document, view, option.sectionKeys(), userId);
+            layout.render(document, writer, view, option.sectionKeys(), userId);
             document.close();
             return bos.toByteArray();
         } catch (DocumentException | IOException e) {
@@ -74,25 +77,41 @@ public class ResumePdfServiceImpl implements ResumePdfService {
         }
     }
 
-    private record DocumentOption(List<String> sectionKeys, String templateCode) {
+    @Override
+    public String pdfFilename(Long userId, Long documentId) {
+        DocumentOption option = resolveDocumentOption(userId, documentId);
+        String theme = THEME_LABELS.getOrDefault(option.templateCode(), option.templateCode());
+        String title = option.title() == null || option.title().isBlank() ? DEFAULT_TITLE : option.title();
+        return "(" + theme + ") " + title + ".pdf";
     }
 
-    /** 문서 ID가 있으면 해당 문서의 sectionConfig/templateCode를 사용하고, 없으면 기본값을 쓴다. */
+    private record DocumentOption(List<String> sectionKeys, String templateCode, String title) {
+    }
+
+    private static Map<String, String> themeLabels() {
+        Map<String, String> labels = new LinkedHashMap<>();
+        labels.put("CLASSIC", "클래식");
+        labels.put("MODERN", "모던");
+        labels.put("SARAMIN", "사람인형");
+        return labels;
+    }
+
+    /** 문서 ID가 있으면 해당 문서의 sectionConfig/templateCode/제목을 사용하고, 없으면 기본값을 쓴다. */
     private DocumentOption resolveDocumentOption(Long userId, Long documentId) {
         if (documentId == null) {
-            return new DocumentOption(DEFAULT_SECTION_ORDER, DEFAULT_TEMPLATE_CODE);
+            return new DocumentOption(DEFAULT_SECTION_ORDER, DEFAULT_TEMPLATE_CODE, null);
         }
         DocumentResponse doc = resumeDocumentService.getDocuments(userId).stream()
                 .filter(d -> d.id().equals(documentId))
                 .findFirst()
                 .orElse(null);
         if (doc == null) {
-            return new DocumentOption(DEFAULT_SECTION_ORDER, DEFAULT_TEMPLATE_CODE);
+            return new DocumentOption(DEFAULT_SECTION_ORDER, DEFAULT_TEMPLATE_CODE, null);
         }
         List<String> keys = parseSectionKeys(doc.sectionConfig());
         String template = (doc.templateCode() == null || doc.templateCode().isBlank())
                 ? DEFAULT_TEMPLATE_CODE : doc.templateCode().toUpperCase();
-        return new DocumentOption(keys, template);
+        return new DocumentOption(keys, template, doc.title());
     }
 
     private List<String> parseSectionKeys(String sectionConfig) {

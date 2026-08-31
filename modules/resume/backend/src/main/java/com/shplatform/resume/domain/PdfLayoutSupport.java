@@ -1,8 +1,14 @@
 package com.shplatform.resume.domain;
 
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
 import com.lowagie.text.Font;
 import com.lowagie.text.Image;
+import com.lowagie.text.Rectangle;
+import com.lowagie.text.Element;
 import com.lowagie.text.pdf.BaseFont;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfWriter;
 import com.shplatform.resume.api.dto.ProfileResponse;
 import java.awt.Color;
 import java.io.IOException;
@@ -15,13 +21,20 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * PDF 레이아웃 공용 지원 — 폰트(정적 로드), 색, 날짜 포맷, 사진 로드, 문자열 유틸.
+ * PDF 레이아웃 공용 지원 — 폰트(정적 로드), 색, 날짜 포맷, 사진 로드, 페이지 공간, 문자열 유틸.
  * 테마 레이아웃 3종(클래식/모던/사람인형)이 같은 패키지에서 사용한다.
  */
 final class PdfLayoutSupport {
 
     static final float MARGIN_MM_18 = 51f;
     static final float MARGIN_MM_16 = 45f;
+
+    /** 사진 표준 프레임 (24×32mm, 모든 테마 공통). */
+    static final float PHOTO_W = 68f;
+    static final float PHOTO_H = 90.6f;
+
+    /** 섹션 시작 시 남은 공간이 이 값(포인트)보다 작으면 다음 페이지로 보낸다. */
+    static final float MIN_SECTION_SPACE = 70f;
 
     static final Color INK = new Color(0x0F172A);
     static final Color HEAD = new Color(0x1E293B);
@@ -75,6 +88,11 @@ final class PdfLayoutSupport {
         return font(Fonts.BOLD, size, color);
     }
 
+    /** 프로필 사진을 디스크에서 읽어 표준 프레임(24×32mm)에 맞춘다. 없거나 손상됐으면 null (설계: 사진 선택). */
+    static Image loadPhoto(ProfileResponse profile, Long userId, FileStorageService fileStorage) {
+        return loadPhoto(profile, userId, fileStorage, PHOTO_W, PHOTO_H);
+    }
+
     /** 프로필 사진을 디스크에서 읽어 지정 박스에 맞춘다. 없거나 손상됐으면 null (설계: 사진 선택). */
     static Image loadPhoto(ProfileResponse profile, Long userId, FileStorageService fileStorage,
                            float maxWidthPt, float maxHeightPt) {
@@ -93,6 +111,35 @@ final class PdfLayoutSupport {
             return image;
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    /**
+     * 모든 테마에 동일한 사진 프레임 셀을 만든다 (0.8pt 회색 테두리 + 2pt 패딩, 중앙 정렬).
+     * 사진이 없으면 null을 반환한다.
+     */
+    static PdfPCell photoCell(Image photo) {
+        if (photo == null) {
+            return null;
+        }
+        PdfPCell cell = new PdfPCell(photo);
+        cell.setBorder(Rectangle.BOX);
+        cell.setBorderWidth(0.8f);
+        cell.setBorderColor(BORDER);
+        cell.setPadding(2f);
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        return cell;
+    }
+
+    /**
+     * 섹션(제목+첫 줄)을 새로 시작할 공간이 부족하면 다음 페이지로 보낸다.
+     * 이렇게 하면 페이지 끝에 제목만 남거나 내용이 잘려 보이는 고아(orphan)를 막는다.
+     */
+    static void ensureRoom(Document document, PdfWriter writer, float neededPt) throws DocumentException {
+        float remaining = writer.getVerticalPosition(true) - document.bottomMargin();
+        if (remaining < neededPt) {
+            document.newPage();
         }
     }
 

@@ -40,12 +40,15 @@ public class ResumeViewController {
      * documentId가 지정되면 해당 문서의 섹션 편성(포함 여부·순서)을 반영한다.
      */
     @GetMapping("/pdf")
-    @Operation(summary = "이력서 PDF 다운로드", description = "이력서를 OpenPDF로 렌더링한 application/pdf를 반환한다. documentId 지정 시 섹션 편성을 반영한다.")
+    @Operation(summary = "이력서 PDF 다운로드",
+            description = "이력서를 OpenPDF로 렌더링한 application/pdf를 반환한다. documentId 지정 시 섹션 편성과 테마를 반영하고 파일명을 '(테마) 문서제목.pdf'로 내려준다.")
     public ResponseEntity<byte[]> getPdf(@RequestParam(required = false) Long documentId) {
-        byte[] pdf = resumePdfService.generatePdf(SecurityUtils.currentAccountId(), documentId);
+        Long userId = SecurityUtils.currentAccountId();
+        byte[] pdf = resumePdfService.generatePdf(userId, documentId);
+        String filename = resumePdfService.pdfFilename(userId, documentId);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionSupport.attachment("이력서.pdf"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionSupport.attachment(filename))
                 .body(pdf);
     }
 }

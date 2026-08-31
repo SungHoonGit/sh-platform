@@ -12,7 +12,6 @@ import static com.shplatform.resume.domain.PdfLayoutSupport.TEAL_DARK;
 import static com.shplatform.resume.domain.PdfLayoutSupport.WHITE;
 import static com.shplatform.resume.domain.PdfLayoutSupport.bold;
 import static com.shplatform.resume.domain.PdfLayoutSupport.joinNonBlank;
-import static com.shplatform.resume.domain.PdfLayoutSupport.loadPhoto;
 import static com.shplatform.resume.domain.PdfLayoutSupport.normalizeNewlines;
 import static com.shplatform.resume.domain.PdfLayoutSupport.nullIfBlank;
 import static com.shplatform.resume.domain.PdfLayoutSupport.periodOrEmpty;
@@ -29,6 +28,7 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.pdf.draw.LineSeparator;
 import com.shplatform.resume.api.dto.CareerResponse;
 import com.shplatform.resume.api.dto.CertificateResponse;
@@ -61,8 +61,8 @@ public class ModernPdfLayout implements ResumePdfLayout {
     }
 
     @Override
-    public void render(Document document, ResumeViewResponse view, List<String> sectionKeys, Long userId)
-            throws DocumentException {
+    public void render(Document document, PdfWriter writer, ResumeViewResponse view,
+                       List<String> sectionKeys, Long userId) throws DocumentException {
         PdfPTable page = new PdfPTable(2);
         page.setWidthPercentage(100f);
         page.setWidths(new float[]{30f, 70f});
@@ -112,17 +112,11 @@ public class ModernPdfLayout implements ResumePdfLayout {
         String name = profile != null && hasText(profile.name()) ? profile.name() : "(이름 미등록)";
 
         if (profile != null) {
-            Image photo = loadPhoto(profile, userId, fileStorageService, 72f, 72f);
-            if (photo != null) {
+            Image photo = PdfLayoutSupport.loadPhoto(profile, userId, fileStorageService);
+            PdfPCell photoCell = PdfLayoutSupport.photoCell(photo);
+            if (photoCell != null) {
                 PdfPTable photoBox = new PdfPTable(1);
                 photoBox.setHorizontalAlignment(Element.ALIGN_CENTER);
-                PdfPCell photoCell = new PdfPCell(photo);
-                photoCell.setBorder(Rectangle.BOX);
-                photoCell.setBorderWidth(1.4f);
-                photoCell.setBorderColor(SLATE_SUB);
-                photoCell.setHorizontalAlignment(Element.ALIGN_CENTER);
-                photoCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                photoCell.setPadding(2f);
                 photoBox.addCell(photoCell);
                 sidebar.addElement(photoBox);
             }

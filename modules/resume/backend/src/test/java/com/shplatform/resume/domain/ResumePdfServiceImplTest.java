@@ -57,6 +57,23 @@ class ResumePdfServiceImplTest {
     }
 
     @Test
+    @DisplayName("pdfFilename: 문서 theme/title로 '(테마) 문서제목.pdf'를 만든다")
+    void pdfFilename_usesThemeAndTitle() {
+        given(resumeDocumentService.getDocuments(USER_ID))
+                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "2026 포트폴리오", "MODERN", true, null, null, null)));
+
+        assertThat(resumePdfService.pdfFilename(USER_ID, DOCUMENT_ID)).isEqualTo("(모던) 2026 포트폴리오.pdf");
+    }
+
+    @Test
+    @DisplayName("pdfFilename: documentId가 없으면 '(클래식) 이력서.pdf' 기본값을 쓴다")
+    void pdfFilename_usesDefaultWhenNoDocument() {
+        assertThat(resumePdfService.pdfFilename(USER_ID, null)).isEqualTo("(클래식) 이력서.pdf");
+        given(resumeDocumentService.getDocuments(USER_ID)).willReturn(List.of());
+        assertThat(resumePdfService.pdfFilename(USER_ID, 999L)).isEqualTo("(클래식) 이력서.pdf");
+    }
+
+    @Test
     @DisplayName("generatePdf: 전체 항목이 있으면 유효한 PDF를 생성하고 내용이 포함된다")
     void generatePdf_buildsValidPdfWithContent() throws Exception {
         given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));

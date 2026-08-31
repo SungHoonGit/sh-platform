@@ -8,8 +8,8 @@ import static com.shplatform.resume.domain.PdfLayoutSupport.MUTED;
 import static com.shplatform.resume.domain.PdfLayoutSupport.RULE_LIGHT;
 import static com.shplatform.resume.domain.PdfLayoutSupport.SLATE_50;
 import static com.shplatform.resume.domain.PdfLayoutSupport.bold;
+import static com.shplatform.resume.domain.PdfLayoutSupport.ensureRoom;
 import static com.shplatform.resume.domain.PdfLayoutSupport.joinNonBlank;
-import static com.shplatform.resume.domain.PdfLayoutSupport.loadPhoto;
 import static com.shplatform.resume.domain.PdfLayoutSupport.normalizeNewlines;
 import static com.shplatform.resume.domain.PdfLayoutSupport.nullIfBlank;
 import static com.shplatform.resume.domain.PdfLayoutSupport.periodOrEmpty;
@@ -25,6 +25,7 @@ import com.lowagie.text.Paragraph;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.pdf.draw.LineSeparator;
 import com.shplatform.resume.api.dto.CareerResponse;
 import com.shplatform.resume.api.dto.CertificateResponse;
@@ -54,11 +55,12 @@ public class SaraminPdfLayout implements ResumePdfLayout {
     }
 
     @Override
-    public void render(Document document, ResumeViewResponse view, List<String> sectionKeys, Long userId)
-            throws DocumentException {
+    public void render(Document document, PdfWriter writer, ResumeViewResponse view,
+                       List<String> sectionKeys, Long userId) throws DocumentException {
         renderProfileBox(document, view.profile(), userId);
 
         for (String key : sectionKeys) {
+            ensureRoom(document, writer, PdfLayoutSupport.MIN_SECTION_SPACE);
             renderSection(document, key, view);
         }
     }
@@ -70,15 +72,19 @@ public class SaraminPdfLayout implements ResumePdfLayout {
         outer.setKeepTogether(true);
 
         Image photo = profile != null
-                ? loadPhoto(profile, userId, fileStorageService, 85f, 120f) : null;
+                ? PdfLayoutSupport.loadPhoto(profile, userId, fileStorageService) : null;
         PdfPCell photoSide = new PdfPCell();
         photoSide.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
         photoSide.setBorderColor(HEAD);
         photoSide.setBorderWidth(1.2f);
         photoSide.setPadding(8f);
         photoSide.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        if (photo != null) {
-            photoSide.addElement(photo);
+        PdfPCell photoCell = PdfLayoutSupport.photoCell(photo);
+        if (photoCell != null) {
+            PdfPTable photoBox = new PdfPTable(1);
+            photoBox.setWidthPercentage(100f);
+            photoBox.addCell(photoCell);
+            photoSide.addElement(photoBox);
         }
         outer.addCell(photoSide);
 
@@ -161,6 +167,8 @@ public class SaraminPdfLayout implements ResumePdfLayout {
         PdfPTable box = new PdfPTable(1);
         box.setWidthPercentage(100f);
         box.setSpacingBefore(10f);
+        box.setSpacingAfter(2f);
+        box.setKeepTogether(true);
 
         PdfPCell wrap = new PdfPCell();
         wrap.setBorder(Rectangle.BOX);

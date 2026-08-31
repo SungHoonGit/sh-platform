@@ -2,6 +2,7 @@ package com.shplatform.resume.domain;
 
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
+import com.lowagie.text.pdf.PdfWriter;
 import com.shplatform.resume.api.dto.ResumeViewResponse;
 import java.util.List;
 
@@ -20,10 +21,11 @@ public interface ResumePdfLayout {
      * 페이지 렌더를 실행한다.
      *
      * @param document    열려 있는 대상 문서
+     * @param writer      대상 문서의 PDF 라이터 (페이지 잔여 공간 계산용)
      * @param view        이력서 전체 뷰
      * @param sectionKeys 문서 편성(included + order)에 따라 정렬된 섹션 key 목록
      * @param userId      소유 사용자 ID (프로필 사진 로드용)
      */
-    void render(Document document, ResumeViewResponse view, List<String> sectionKeys, Long userId)
+    void render(Document document, PdfWriter writer, ResumeViewResponse view, List<String> sectionKeys, Long userId)
             throws DocumentException;
 }

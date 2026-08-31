@@ -6,11 +6,11 @@ import static com.shplatform.resume.domain.PdfLayoutSupport.HEAD;
 import static com.shplatform.resume.domain.PdfLayoutSupport.INK;
 import static com.shplatform.resume.domain.PdfLayoutSupport.MUTED;
 import static com.shplatform.resume.domain.PdfLayoutSupport.joinNonBlank;
-import static com.shplatform.resume.domain.PdfLayoutSupport.loadPhoto;
 import static com.shplatform.resume.domain.PdfLayoutSupport.normalizeNewlines;
 import static com.shplatform.resume.domain.PdfLayoutSupport.nullIfBlank;
 import static com.shplatform.resume.domain.PdfLayoutSupport.periodOrEmpty;
 import static com.shplatform.resume.domain.PdfLayoutSupport.regular;
+import static com.shplatform.resume.domain.PdfLayoutSupport.ensureRoom;
 import static com.shplatform.resume.domain.PdfLayoutSupport.bold;
 import static com.shplatform.resume.domain.PdfLayoutSupport.hasText;
 
@@ -23,6 +23,7 @@ import com.lowagie.text.Paragraph;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.pdf.draw.LineSeparator;
 import com.shplatform.resume.api.dto.CareerResponse;
 import com.shplatform.resume.api.dto.CertificateResponse;
@@ -51,8 +52,8 @@ public class ClassicPdfLayout implements ResumePdfLayout {
     }
 
     @Override
-    public void render(Document document, ResumeViewResponse view, List<String> sectionKeys, Long userId)
-            throws DocumentException {
+    public void render(Document document, PdfWriter writer, ResumeViewResponse view,
+                       List<String> sectionKeys, Long userId) throws DocumentException {
         ProfileResponse profile = view.profile();
         if (profile == null) {
             Paragraph spacer = new Paragraph(" ", regular(1f, INK));
@@ -62,6 +63,7 @@ public class ClassicPdfLayout implements ResumePdfLayout {
             renderHeader(document, profile, userId);
         }
         for (String key : sectionKeys) {
+            ensureRoom(document, writer, PdfLayoutSupport.MIN_SECTION_SPACE);
             renderSection(document, key, view);
         }
     }
@@ -96,15 +98,10 @@ public class ClassicPdfLayout implements ResumePdfLayout {
         }
         header.addCell(left);
 
-        Image photo = loadPhoto(profile, userId, fileStorageService, 68f, 90.6f);
-        if (photo != null) {
-            PdfPCell photoCell = new PdfPCell(photo);
-            photoCell.setBorder(Rectangle.BOX);
-            photoCell.setBorderWidth(0.8f);
-            photoCell.setBorderColor(PdfLayoutSupport.BORDER);
+        Image photo = PdfLayoutSupport.loadPhoto(profile, userId, fileStorageService);
+        PdfPCell photoCell = PdfLayoutSupport.photoCell(photo);
+        if (photoCell != null) {
             photoCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            photoCell.setVerticalAlignment(Element.ALIGN_TOP);
-            photoCell.setPadding(2f);
             header.addCell(photoCell);
         } else {
             header.addCell(emptyCell());
