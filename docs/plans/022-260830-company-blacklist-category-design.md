@@ -87,7 +87,7 @@ company_blacklist (기존)
 | 4 | 불변 리스트 병합 500 버그 수정(가변 ArrayList + 단일 save) | ✅ 배포 |
 | 5 | 자유 메모 UI 제거 + 차단 리스트 **수정**(PUT, 수정용 다이얼로그) | ✅ 배포 |
 | 6 | CSP에 다음 우편번호 CDN 허용 + 워크플로우 infra/** 트리거 | ✅ 배포 |
-| 7 | 데이터 마이닝: 카테고리별 차단 통계 대시보드 | ⏳ 예정 |
+| 7 | 데이터 마이닝: 카테고리별 차단 통계 (`GET /company-blacklist/stats` + 대시보드 차단 회사 유형/사유) | ✅ 배포 |
 
 ## 5. 테스트
 - `CompanyBlacklistServiceTest`: 등록(카테고리/중복 갱신/빈 목록/사용자 승격) + update(교체+메모보존/타인 ignored)

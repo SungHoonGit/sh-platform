@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Database, CalendarClock, FileText, Star, Briefcase, ArrowRight, Search, FileSignature } from "lucide-react";
+import { Database, CalendarClock, FileText, Star, Briefcase, ArrowRight, Search, FileSignature, EyeOff } from "lucide-react";
 import {
+  fetchBlockStats,
   fetchCrawlStats,
   fetchMyApplications,
   fetchMyResumes,
@@ -8,6 +9,7 @@ import {
   deadlineBadge,
   daysUntilDeadline,
   type ApplicationDto,
+  type BlockStatCategory,
   type CrawlerDetail,
   type ScrapItemDto,
 } from "../api/dashboard";
@@ -69,6 +71,41 @@ function StatCard({
   );
 }
 
+function CategoryBars({
+  items,
+  maxCount,
+  barColor,
+  emptyText,
+}: {
+  items: BlockStatCategory[];
+  maxCount: number;
+  barColor: string;
+  emptyText: string;
+}) {
+  if (items.length === 0) {
+    return <p className="text-sm text-slate-400 py-8 text-center">{emptyText}</p>;
+  }
+  return (
+    <div className="space-y-2.5">
+      {items.map((c) => (
+        <div key={c.id ?? c.name} className="flex items-center gap-3">
+          <span className="w-24 text-xs text-slate-500 shrink-0 truncate">{c.name}</span>
+          <div className="flex-1 h-5 bg-slate-100 rounded-md overflow-hidden">
+            <div
+              className={`${barColor} h-full rounded-md transition-all`}
+              style={{
+                width: `${(c.count / maxCount) * 100}%`,
+                minWidth: c.count > 0 ? "8px" : 0,
+              }}
+            />
+          </div>
+          <span className="w-6 text-xs font-semibold text-slate-700 text-right shrink-0">{c.count}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function fmtDate(iso: string | null) {
   return iso ? new Date(iso).toLocaleDateString("ko-KR", { month: "short", day: "numeric" }) : "-";
 }
@@ -101,6 +138,7 @@ export default function Dashboard() {
   const resumesQ = useQuery({ queryKey: ["dash-resumes"], queryFn: fetchMyResumes, retry: 1 });
   const appsQ = useQuery({ queryKey: ["dash-apps"], queryFn: fetchMyApplications, retry: 1 });
   const scrapsQ = useQuery({ queryKey: ["dash-scraps"], queryFn: fetchMyScraps, retry: 1 });
+  const blockQ = useQuery({ queryKey: ["dash-block"], queryFn: fetchBlockStats, retry: 1 });
 
   const apps: ApplicationDto[] = appsQ.data ?? [];
   const statusCounts = Object.fromEntries(
@@ -122,6 +160,11 @@ export default function Dashboard() {
     })
     .slice(0, 6);
   const crawlerList: CrawlerDetail[] = crawlQ.data?.details ?? [];
+  const blockStats = blockQ.data;
+  const companyTypes: BlockStatCategory[] = (blockStats?.categories ?? []).filter((c) => c.category === "company_type");
+  const blockReasons: BlockStatCategory[] = (blockStats?.categories ?? []).filter((c) => c.category !== "company_type");
+  const blockTypeMax = Math.max(1, ...companyTypes.map((c) => c.count));
+  const blockReasonMax = Math.max(1, ...blockReasons.map((c) => c.count));
 
   return (
     <div className="max-w-6xl mx-auto p-6 sm:p-8 space-y-6">
@@ -367,7 +410,63 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {(crawlQ.isError || resumesQ.isError || appsQ.isError || scrapsQ.isError) && (
+      {/* 차단 회사 통계 (데이터 마이닝) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+              <div className="w-7 h-7 bg-violet-100 rounded-lg flex items-center justify-center">
+                <EyeOff size={14} className="text-violet-600" />
+              </div>
+              차단 회사 유형
+            </h2>
+            <a href="/scraper/" className="text-xs text-violet-600 hover:text-violet-700 flex items-center font-medium">
+              관리 <ArrowRight size={12} />
+            </a>
+          </div>
+          {blockStats && blockStats.total === 0 ? (
+            <p className="text-sm text-slate-400 py-8 text-center">차단한 회사가 없습니다</p>
+          ) : (
+            <>
+              <CategoryBars
+                items={companyTypes}
+                maxCount={blockTypeMax}
+                barColor="bg-violet-500"
+                emptyText="회사유형이 등록된 차단이 없습니다"
+              />
+              <p className="text-[11px] text-slate-400 pt-3 border-t border-slate-100 mt-3">
+                차단 {blockStats?.total ?? 0}곳 · 카테고리 없음 {blockStats?.uncategorized ?? 0}곳
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+              <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center">
+                <EyeOff size={14} className="text-slate-500" />
+              </div>
+              차단 사유
+            </h2>
+            <a href="/scraper/" className="text-xs text-slate-500 hover:text-slate-700 flex items-center font-medium">
+              관리 <ArrowRight size={12} />
+            </a>
+          </div>
+          {blockStats && blockStats.total === 0 ? (
+            <p className="text-sm text-slate-400 py-8 text-center">차단한 회사가 없습니다</p>
+          ) : (
+            <CategoryBars
+              items={blockReasons}
+              maxCount={blockReasonMax}
+              barColor="bg-slate-400"
+              emptyText="등록된 차단 사유가 없습니다"
+            />
+          )}
+        </div>
+      </div>
+
+      {(crawlQ.isError || resumesQ.isError || appsQ.isError || scrapsQ.isError || blockQ.isError) && (
         <p className="text-xs text-slate-400 text-center">
           일부 데이터를 불러오지 못했습니다. 로그인 상태를 확인해 주세요.
         </p>

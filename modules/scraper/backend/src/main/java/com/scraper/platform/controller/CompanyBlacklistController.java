@@ -55,6 +55,13 @@ public class CompanyBlacklistController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/stats")
+    @Operation(summary = "차단 통계", description = "내 블랙리스트의 카테고리(회사유형/사유/사용자 입력)별 차단 수 집계. 대시보드 데이터 마이닝용.")
+    public ResponseEntity<ApiResponse<CompanyBlacklistService.BlockStatsResponse>> stats() {
+        return ResponseEntity.ok(ApiResponse.success(
+                blacklistService.stats(SecurityUtils.currentAccountId())));
+    }
+
     @GetMapping
     @Operation(summary = "내 블랙리스트 목록")
     public ResponseEntity<ApiResponse<List<CompanyBlacklist>>> list() {

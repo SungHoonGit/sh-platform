@@ -165,4 +165,82 @@ class CompanyBlacklistServiceTest {
             assertNull(result);
         }
     }
+
+    @Nested
+    @DisplayName("stats 메서드")
+    class Stats {
+
+        @Test
+        @DisplayName("카테고리별 사용 빈도와 카테고리 없는 수를 집계한다")
+        void stats_shouldAggregateByCategory() {
+            // given
+            var startUp = BlockReason.of("스타트업 X", "company_type", 1, true);
+            var regular = BlockReason.of("연봉·복지 협상 불가", "reason", 10, true);
+            var companyBh = CompanyBlacklist.builder()
+                    .id(1L).accountId(1L).companyNameNormalized("회사A")
+                    .blockReasons(new java.util.ArrayList<>(List.of(startUp, regular)))
+                    .build();
+            var companyB = CompanyBlacklist.builder()
+                    .id(2L).accountId(1L).companyNameNormalized("회사B")
+                    .blockReasons(new java.util.ArrayList<>(List.of(startUp)))
+                    .build();
+            var companyC = CompanyBlacklist.builder()
+                    .id(3L).accountId(1L).companyNameNormalized("회사C")
+                    .build();
+            given(repository.findByAccountIdOrderByCreatedAtDesc(1L))
+                    .willReturn(List.of(companyBh, companyB, companyC));
+
+            // when
+            var result = service.stats(1L);
+
+            // then
+            assertEquals(3, result.total());
+            assertEquals(1, result.uncategorized());
+            assertEquals(2, result.categories().size());
+            var first = result.categories().get(0);
+            assertEquals("스타트업 X", first.name());
+            assertEquals("company_type", first.category());
+            assertEquals(2, first.count());
+            var second = result.categories().get(1);
+            assertEquals("연봉·복지 협상 불가", second.name());
+            assertEquals(1, second.count());
+        }
+
+        @Test
+        @DisplayName("블랙리스트가 없으면 0과 빈 목록을 반환한다")
+        void stats_shouldHandleEmptyList() {
+            // given
+            given(repository.findByAccountIdOrderByCreatedAtDesc(1L)).willReturn(List.of());
+
+            // when
+            var result = service.stats(1L);
+
+            // then
+            assertEquals(0, result.total());
+            assertEquals(0, result.uncategorized());
+            assertTrue(result.categories().isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("normalizedNames 메서드")
+    class NormalizedNames {
+
+        @Test
+        @DisplayName("차단 회사의 정규화 이름 집합을 반환한다")
+        void normalizedNames_shouldReturnCompanySet() {
+            // given
+            var a = CompanyBlacklist.builder()
+                    .id(1L).accountId(1L).companyNameNormalized("회사a").build();
+            var b = CompanyBlacklist.builder()
+                    .id(2L).accountId(1L).companyNameNormalized("회사b").build();
+            given(repository.findByAccountIdOrderByCreatedAtDesc(1L)).willReturn(List.of(a, b));
+
+            // when
+            var result = service.normalizedNames(1L);
+
+            // then
+            assertEquals(java.util.Set.of("회사a", "회사b"), result);
+        }
+    }
 }

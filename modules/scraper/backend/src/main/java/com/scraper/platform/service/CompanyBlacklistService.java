@@ -95,6 +95,45 @@ public class CompanyBlacklistService {
                 .collect(java.util.stream.Collectors.toSet());
     }
 
+    /**
+     * (질의형) 내 블랙리스트의 카테고리별 차단 수를 집계한다 (데이터 마이닝).
+     * 카테고리는 blacklist_block_reason 연결 테이블로 코드화되어 있으므로 같은 카테고리의
+     * 선택 빈도를 그대로 집계한다. 카테고리 없는(레거시 자유 메모) 항목은 uncategorized로 집계한다.
+     *
+     * @param accountId 사용자 PK
+     * @return 전체 차단 수, 카테고리 없는 수, 카테고리별 사용 빈도(내림차순)
+     */
+    public BlockStatsResponse stats(Long accountId) {
+        var items = repository.findByAccountIdOrderByCreatedAtDesc(accountId);
+        var countByName = new java.util.HashMap<String, Integer>();
+        var reasonInfo = new java.util.HashMap<String, BlockStatsResponse.CategoryStat>();
+        long uncategorized = 0;
+        for (var item : items) {
+            if (item.getBlockReasons().isEmpty()) {
+                uncategorized++;
+                continue;
+            }
+            for (var reason : item.getBlockReasons()) {
+                countByName.merge(reason.getName(), 1, Integer::sum);
+                reasonInfo.putIfAbsent(reason.getName(),
+                        new BlockStatsResponse.CategoryStat(reason.getId(), reason.getName(), reason.getCategory(), 0));
+            }
+        }
+        var categories = reasonInfo.values().stream()
+                .map(stat -> new BlockStatsResponse.CategoryStat(
+                        stat.id(), stat.name(), stat.category(), countByName.getOrDefault(stat.name(), 0)))
+                .sorted(java.util.Comparator.comparingLong(BlockStatsResponse.CategoryStat::count).reversed()
+                        .thenComparing(BlockStatsResponse.CategoryStat::name))
+                .toList();
+        return new BlockStatsResponse(items.size(), uncategorized, categories);
+    }
+
+    /** 블랙리스트 통계 응답. categories = 블랙리스트에서 실제 사용된 카테고리 빈도. */
+    public record BlockStatsResponse(long total, long uncategorized, List<CategoryStat> categories) {
+        /** 단일 카테고리 사용 빈도. category = company_type / reason / user. */
+        public record CategoryStat(Long id, String name, String category, long count) {}
+    }
+
     /** JobPosting.normalize 와 동일 규칙 (소문자+공백제거). 법인 표기 변형도 흡수한다. */
     public static String normalize(String s) {
         if (s == null) return "";

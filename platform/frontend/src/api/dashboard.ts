@@ -83,6 +83,24 @@ export async function fetchMyScraps(): Promise<ScrapItemDto[]> {
   return json.scraps ?? [];
 }
 
+// ── 블랙리스트 (scraper) ────────────────────────────────────────
+
+export interface BlockStatCategory {
+  id: number | null;
+  name: string;
+  category: string;
+  count: number;
+}
+
+export interface BlockStats {
+  total: number;
+  uncategorized: number;
+  categories: BlockStatCategory[];
+}
+
+export const fetchBlockStats = () =>
+  getRaw<{ data: BlockStats }>("/scraper/company-blacklist/stats").then((j) => j.data);
+
 /**
  * 마감일 문자열을 파싱해 남은 일수를 반환한다.
  * 지원 형식: "2026-08-30", "~08/30", "08/30(월)", "08월30일" 등. 상시/채용시까지는 null.
