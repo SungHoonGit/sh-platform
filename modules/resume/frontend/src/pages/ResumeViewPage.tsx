@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiGet } from "../api/client";
+import { apiDownload, apiGet } from "../api/client";
 import type { ResumeView } from "../types/resume";
 import type { SectionItem } from "../types/document";
 import ClassicTemplate from "../components/templates/ClassicTemplate";
@@ -84,8 +84,18 @@ export default function ResumeViewPage({ documentId }: { documentId?: number }) 
           편집
         </a>
         <button
-          onClick={() => window.print()}
+          onClick={() => {
+            apiDownload("/view/pdf", "resume.pdf").catch((e) => {
+              if (e.message !== "UNAUTHORIZED") alert(`PDF 다운로드 실패: ${e.message}`);
+            });
+          }}
           className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded hover:bg-gray-700"
+        >
+          PDF 다운로드
+        </button>
+        <button
+          onClick={() => window.print()}
+          className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
         >
           PDF로 인쇄
         </button>

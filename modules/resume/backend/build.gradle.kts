@@ -32,6 +32,7 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("com.github.librepdf:openpdf:1.3.30")
     
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client")
     
