@@ -16,10 +16,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Base64;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -45,8 +45,16 @@ class ResumePdfServiceImplTest {
     @Mock
     private FileStorageService fileStorageService;
 
-    @InjectMocks
     private ResumePdfServiceImpl resumePdfService;
+
+    @BeforeEach
+    void setUp() {
+        resumePdfService = new ResumePdfServiceImpl(
+                resumeViewService, resumeDocumentService,
+                new ClassicPdfLayout(fileStorageService),
+                new ModernPdfLayout(fileStorageService),
+                new SaraminPdfLayout(fileStorageService));
+    }
 
     @Test
     @DisplayName("generatePdf: 전체 항목이 있으면 유효한 PDF를 생성하고 내용이 포함된다")
@@ -113,6 +121,57 @@ class ResumePdfServiceImplTest {
         assertThat(text).contains("포트폴리오");
         assertThat(text).doesNotContain("자격증");
         assertThat(text).doesNotContain("스킬");
+    }
+
+    @Test
+    @DisplayName("generatePdf: MODERN 문서는 사이드바(연락처·스킬)와 메인(경력)을 함께 렌더링한다")
+    void generatePdf_modernTemplateRendersSidebarAndMain() throws Exception {
+        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
+        given(resumeDocumentService.getDocuments(USER_ID))
+                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "모던", "MODERN", true, null, null, null)));
+
+        byte[] pdf = resumePdfService.generatePdf(USER_ID, DOCUMENT_ID);
+
+        String text = extractText(pdf);
+        assertThat(text).contains("홍길동");
+        assertThat(text).contains("연락처");
+        assertThat(text).contains("이메일");
+        assertThat(text).contains("경력");
+        assertThat(text).contains("네이버");
+        assertThat(text).contains("스킬");
+        assertThat(text).contains("한남대학교");
+    }
+
+    @Test
+    @DisplayName("generatePdf: SARAMIN 문서는 연락처 라벨 표와 회사명/직무/기간 경력 표를 렌더링한다")
+    void generatePdf_saraminTemplateRendersProfileTableAndCareerTable() throws Exception {
+        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
+        given(resumeDocumentService.getDocuments(USER_ID))
+                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "사람인형", "SARAMIN", true, null, null, null)));
+
+        byte[] pdf = resumePdfService.generatePdf(USER_ID, DOCUMENT_ID);
+
+        String text = extractText(pdf);
+        assertThat(text).contains("이메일");
+        assertThat(text).contains("test@example.com");
+        assertThat(text).contains("회사명");
+        assertThat(text).contains("직무");
+        assertThat(text).contains("기간");
+        assertThat(text).contains("한남대학교");
+        assertThat(text).contains("홍길동");
+    }
+
+    @Test
+    @DisplayName("generatePdf: 알 수 없는 템플릿 코드는 클래식 레이아웃으로 폴백한다")
+    void generatePdf_unknownTemplateFallsBackToClassic() throws Exception {
+        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
+        given(resumeDocumentService.getDocuments(USER_ID))
+                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "기타", "CUSTOM", true, null, null, null)));
+
+        byte[] pdf = resumePdfService.generatePdf(USER_ID, DOCUMENT_ID);
+
+        assertThat(extractText(pdf)).contains("경력");
+        assertThat(extractText(pdf)).contains("홍길동");
     }
 
     @Test
