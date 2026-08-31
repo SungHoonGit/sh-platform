@@ -134,8 +134,10 @@ Kafka는 전송 배관일 뿐 저장소 대체 불가 — 도입해도 위 테�
 | D-1 | AOF 영속성 설정 ✅ 완료 (appendonly yes 반영 확인) | 30m | 🟡 |
 | C-* | 캐시/락/랭킹 (각각 별도 설계 후) | 기능별 | 🟢 수요 발생 시 |
 
-> **남은 검증 (서버, SSH로 직접 확인)**: A-1 유령 제거 → `GET /api/v1/admin/sessions/{userId}` 호출 시 Hash 없는 Set 멤버가 자동 SREM되는지.
-> A-2 기기별 로그아웃 → PC 로그아웃 시 해당 sessionId만 `user:sessions:{id}`에서 삭제되고 다른 기기 세션 유지되는지.
+> **서버 검증 완료 (2026-08-31)**: A-1 — `SADD user:sessions:2 fake-ghost` 주입 후 관리 API
+> `GET /api/v1/admin/sessions/{userId}` 호출로 유령 멤버 자동 SREM 확인 (SMEMBERS 빈 배열).
+> A-2 — 로그아웃 시 accessToken의 sessionId에 해당하는 세션만 `user:sessions`에서 삭제되고
+> 다른 유저/기기 세션은 유지되는 것 확인 (기기별 격리 동작).
 
 ## 4. 참고 자료
 - redis_exporter: https://github.com/oliver006/redis_exporter
