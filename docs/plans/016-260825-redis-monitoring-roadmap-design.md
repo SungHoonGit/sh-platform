@@ -127,12 +127,15 @@ Kafka는 전송 배관일 뿐 저장소 대체 불가 — 도입해도 위 테�
 
 | 단계 | 내용 | 예상 공수 | 우선순위 |
 |------|------|-----------|----------|
-| A-1 | 유령 세션 lazy cleanup (+테스트) | 1h | 🔴 즉시 |
-| A-3 | .env 세션 정책 확정·재검증 | 10m | 🔴 즉시 |
-| B-1~3 | redis_exporter + Grafana 대시보드 + 알림 | 2~3h | 🟡 다음 세션 |
-| A-2 | sessionId claim 기기별 로그아웃 ✅ 완료(ba93930) | 2h | 🟡 |
-| D-1 | AOF 영속성 설정 | 30m | 🟡 |
+| A-1 | 유령 세션 lazy cleanup (+테스트) ✅ 완료(`09e66ea`) | 1h | 🔴 즉시 |
+| A-3 | .env 세션 정책 확정·재검증 ✅ 완료 (APP_SESSION_MAX_PER_USER/PREVENT_DUPLICATE 반영) | 10m | 🔴 즉시 |
+| B-1~3 | redis_exporter + Grafana 대시보드 + 알림 ✅ 완료 (exporter 08-25 / 대시보드·알림 08-26) | 2~3h | 🟡 |
+| A-2 | sessionId claim 기기별 로그아웃 ✅ 완료(`ba93930`) | 2h | 🟡 |
+| D-1 | AOF 영속성 설정 ✅ 완료 (appendonly yes 반영 확인) | 30m | 🟡 |
 | C-* | 캐시/락/랭킹 (각각 별도 설계 후) | 기능별 | 🟢 수요 발생 시 |
+
+> **남은 검증 (서버, SSH로 직접 확인)**: A-1 유령 제거 → `GET /api/v1/admin/sessions/{userId}` 호출 시 Hash 없는 Set 멤버가 자동 SREM되는지.
+> A-2 기기별 로그아웃 → PC 로그아웃 시 해당 sessionId만 `user:sessions:{id}`에서 삭제되고 다른 기기 세션 유지되는지.
 
 ## 4. 참고 자료
 - redis_exporter: https://github.com/oliver006/redis_exporter
