@@ -67,14 +67,55 @@ export async function apiDownload(path: string, fallbackName = "download"): Prom
   if (res.status === 401) throw new Error("UNAUTHORIZED");
   if (!res.ok) throw new Error(`API_ERROR_${res.status}`);
   const disposition = res.headers.get("Content-Disposition") ?? "";
-  const match = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(disposition);
-  const name = match ? decodeURIComponent(match[1].replace(/"/g, "")) : fallbackName;
+  const name = parseDownloadName(disposition) ?? fallbackName;
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement("a");
   a.href = url;
   a.download = name;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function parseDownloadName(disposition: string): string | null {
+  const rfc5987 = /filename\*=(?:UTF-8''|")?([^";]+)/i.exec(disposition);
+  if (rfc5987) {
+    try {
+      return decodeURIComponent(rfc5987[1].trim());
+    } catch {
+      // 잘못된 퍼센트 인코딩이면 아래 폴백으로
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(disposition);
+  if (!plain) return null;
+  return decodeEncodedWord(plain[1].trim());
+}
+
+function decodeEncodedWord(value: string): string {
+  const m = /=\?([^?]+)\?([bq])\?([^?]*)\?=/i.exec(value);
+  if (!m) return value;
+  const encoding = m[2].toLowerCase();
+  const body = m[3];
+  try {
+    if (encoding === "q") {
+      const bytes: number[] = [];
+      for (let i = 0; i < body.length; i++) {
+        if (body[i] === "_") {
+          bytes.push(0x20);
+        } else if (body[i] === "=" && i + 2 < body.length) {
+          bytes.push(parseInt(body.slice(i + 1, i + 3), 16));
+          i += 2;
+        } else {
+          bytes.push(body.charCodeAt(i));
+        }
+      }
+      return new TextDecoder("utf-8").decode(new Uint8Array(bytes));
+    }
+    const binary = atob(body);
+    const bytes = Array.from(binary, (c) => c.charCodeAt(0));
+    return new TextDecoder("utf-8").decode(new Uint8Array(bytes));
+  } catch {
+    return value;
+  }
 }
 
 export function fileDownloadPath(filePath: string): string {

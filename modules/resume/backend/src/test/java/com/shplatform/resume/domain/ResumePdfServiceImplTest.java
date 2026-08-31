@@ -4,6 +4,7 @@ import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import com.shplatform.resume.api.dto.CareerResponse;
 import com.shplatform.resume.api.dto.CertificateResponse;
+import com.shplatform.resume.api.dto.DocumentResponse;
 import com.shplatform.resume.api.dto.EducationResponse;
 import com.shplatform.resume.api.dto.IntroductionResponse;
 import com.shplatform.resume.api.dto.PortfolioItemResponse;
@@ -13,6 +14,7 @@ import com.shplatform.resume.api.dto.ResumeViewResponse;
 import com.shplatform.resume.api.dto.SkillResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.Base64;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,16 +24,26 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class ResumePdfServiceImplTest {
 
     private static final Long USER_ID = 1L;
+    private static final Long DOCUMENT_ID = 100L;
+
+    /** 1x1 투명 PNG — 프로필 사진 렌더 검증용. */
+    private static final byte[] ONE_PX_PNG = Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==");
 
     @Mock
     private ResumeViewService resumeViewService;
+    @Mock
+    private ResumeDocumentService resumeDocumentService;
+    @Mock
+    private FileStorageService fileStorageService;
 
     @InjectMocks
     private ResumePdfServiceImpl resumePdfService;
@@ -39,9 +51,9 @@ class ResumePdfServiceImplTest {
     @Test
     @DisplayName("generatePdf: 전체 항목이 있으면 유효한 PDF를 생성하고 내용이 포함된다")
     void generatePdf_buildsValidPdfWithContent() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView());
+        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
 
-        byte[] pdf = resumePdfService.generatePdf(USER_ID);
+        byte[] pdf = resumePdfService.generatePdf(USER_ID, null);
 
         assertThat(new String(pdf, 0, 8, StandardCharsets.US_ASCII)).startsWith("%PDF");
         assertThat(pdf).hasSizeGreaterThan(1_000);
@@ -59,7 +71,7 @@ class ResumePdfServiceImplTest {
                 .willReturn(new ResumeViewResponse(null, List.of(), List.of(), List.of(),
                         List.of(), List.of(), List.of(), List.of(), null));
 
-        byte[] pdf = resumePdfService.generatePdf(USER_ID);
+        byte[] pdf = resumePdfService.generatePdf(USER_ID, null);
 
         assertThat(new String(pdf, 0, 8, StandardCharsets.US_ASCII)).startsWith("%PDF");
         assertThat(pdf).hasSizeGreaterThan(500);
@@ -69,17 +81,69 @@ class ResumePdfServiceImplTest {
     @Test
     @DisplayName("generatePdf: 날짜가 null인 재직중 경력도 오류 없이 렌더링된다")
     void generatePdf_nullDatesRenderedSafely() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView());
+        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
 
-        byte[] pdf = resumePdfService.generatePdf(USER_ID);
+        byte[] pdf = resumePdfService.generatePdf(USER_ID, null);
 
         assertThat(extractText(pdf)).contains("현재");
     }
 
-    private ResumeViewResponse fullView() {
-        ProfileResponse profile = new ProfileResponse(
-                10L, "홍길동", "test@example.com", "010-1234-5678", "대전 서구",
-                LocalDate.of(1996, 1, 15), null, "백엔드 개발자", null, null);
+    @Test
+    @DisplayName("generatePdf: 문서 sectionConfig가 지정되면 포함 섹션만 그 순서대로 렌더링한다")
+    void generatePdf_respectsDocumentSectionConfig() throws Exception {
+        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
+        String config = """
+                [
+                  {"key":"careers","included":true,"order":1},
+                  {"key":"projects","included":true,"order":2},
+                  {"key":"educations","included":false,"order":3},
+                  {"key":"skills","included":false,"order":4},
+                  {"key":"certificates","included":false,"order":5},
+                  {"key":"introductions","included":false,"order":6},
+                  {"key":"portfolioItems","included":true,"order":7}
+                ]""";
+        given(resumeDocumentService.getDocuments(USER_ID))
+                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "제출용", "CLASSIC", true, config, null, null)));
+
+        byte[] pdf = resumePdfService.generatePdf(USER_ID, DOCUMENT_ID);
+
+        String text = extractText(pdf);
+        assertThat(text).contains("경력");
+        assertThat(text).contains("프로젝트");
+        assertThat(text).contains("포트폴리오");
+        assertThat(text).doesNotContain("자격증");
+        assertThat(text).doesNotContain("스킬");
+    }
+
+    @Test
+    @DisplayName("generatePdf: 프로필 사진 파일을 읽어 임베드하고 유효한 PDF를 생성한다")
+    void generatePdf_includesProfilePhoto() throws Exception {
+        ProfileResponse withPhoto = profile("/api/v1/files/42/download");
+        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(withPhoto));
+        given(fileStorageService.download(USER_ID, 42L))
+                .willReturn(new FileStorageService.DownloadedFile("photo.png", "image/png", ONE_PX_PNG));
+
+        byte[] pdf = resumePdfService.generatePdf(USER_ID, null);
+
+        assertThat(new String(pdf, 0, 8, StandardCharsets.US_ASCII)).startsWith("%PDF");
+        verify(fileStorageService).download(eq(USER_ID), eq(42L));
+    }
+
+    @Test
+    @DisplayName("generatePdf: 사진 파일이 없어도(NOT_FOUND) PDF 생성이 실패하지 않는다")
+    void generatePdf_photoMissingStillGenerates() throws Exception {
+        ProfileResponse withPhoto = profile("/api/v1/files/999/download");
+        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(withPhoto));
+        given(fileStorageService.download(USER_ID, 999L))
+                .willThrow(new com.shplatform.common.exception.BusinessException(
+                        com.shplatform.common.exception.ErrorCode.NOT_FOUND));
+
+        byte[] pdf = resumePdfService.generatePdf(USER_ID, null);
+
+        assertThat(new String(pdf, 0, 8, StandardCharsets.US_ASCII)).startsWith("%PDF");
+    }
+
+    private ResumeViewResponse fullView(ProfileResponse profile) {
         CareerResponse career = new CareerResponse(
                 1L, "네이버", "백엔드 개발자", LocalDate.of(2022, 3, 1), null,
                 "검색 서비스 API 개발", 0, null, null);
@@ -104,6 +168,12 @@ class ResumePdfServiceImplTest {
         return new ResumeViewResponse(profile, List.of(career, oldCareer), List.of(education),
                 List.of(skill, skill2), List.of(cert), List.of(project), List.of(intro),
                 List.of(portfolio), null);
+    }
+
+    private ProfileResponse profile(String photoUrl) {
+        return new ProfileResponse(
+                10L, "홍길동", "test@example.com", "010-1234-5678", "대전 서구",
+                LocalDate.of(1996, 1, 15), photoUrl, "백엔드 개발자", null, null);
     }
 
     private String extractText(byte[] pdf) throws Exception {

@@ -7,7 +7,6 @@ import com.shplatform.resume.domain.FileStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -19,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.ContentDisposition;
 
 @RestController
 @RequestMapping("/api/v1/files")
@@ -50,12 +48,9 @@ public class ResumeFileController {
     public ResponseEntity<byte[]> download(@PathVariable Long id) {
         var downloaded = fileStorageService.download(SecurityUtils.currentAccountId(), id);
         String contentType = downloaded.contentType() != null ? downloaded.contentType() : "application/octet-stream";
-        ContentDisposition disposition = ContentDisposition.attachment()
-                .filename(downloaded.originalName(), StandardCharsets.UTF_8)
-                .build();
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionSupport.attachment(downloaded.originalName()))
                 .body(downloaded.data());
     }
 }

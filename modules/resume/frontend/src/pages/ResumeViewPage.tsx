@@ -85,19 +85,14 @@ export default function ResumeViewPage({ documentId }: { documentId?: number }) 
         </a>
         <button
           onClick={() => {
-            apiDownload("/view/pdf", "resume.pdf").catch((e) => {
+            const url = documentId ? `/view/pdf?documentId=${documentId}` : "/view/pdf";
+            apiDownload(url, "resume.pdf").catch((e) => {
               if (e.message !== "UNAUTHORIZED") alert(`PDF 다운로드 실패: ${e.message}`);
             });
           }}
           className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded hover:bg-gray-700"
         >
           PDF 다운로드
-        </button>
-        <button
-          onClick={() => window.print()}
-          className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
-        >
-          PDF로 인쇄
         </button>
       </div>
 
