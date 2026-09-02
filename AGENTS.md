@@ -3,10 +3,10 @@
 이 파일은 AI 코딩 에이전트(opencode, cursor, copilot 등)가 프로젝트 규칙을 자동 인식하도록 합니다.
 이 파일을 수정하면 AI 모델이 다음 세션부터 변경된 규칙을 따릅니다.
 
-> **⚠️ 진행 중인 작업**: 이력서 **Phase 9 공유 링크** 구현 완료(설계 024, DDL v8+ShareService+ShareController+프론트, 로컬 테스트 통과) — 커밋 대기. 배포 후 `/share/{token}` 호출 검증 필요.
+> **⚠️ 진행 중인 작업**: 이력서 **Phase 9 공유 링크** 구현·배포·검증 완료(설계 024). 실검증서 공개 뷰 500(`UnexpectedRollbackException`) — `getPublicView`/`resolve`의 `@Transactional(readOnly=true)` 제거로 해결(`95ae899`). 공개 뷰/PDF 200, revoke 후 404, 과거 만료일 생성 거부(`@Future`) 확인. 실사용자 최종 확인만 남음.
 > **세션 시작 시 반드시 `docs/daily/2026-09-02-work-log.md`를 먼저 읽고 이어서 작업할 것.**
-> 최근 완료: 공유 링크 백엔드/프론트 구현 + 회사 pull 반영(12커밋) + 배포 검증(0926) — 블랙리스트 stats/PUT·이력서 PDF·CSP(script-src t1.daumcdn.net) 서버 확인, 데이터 마이닝(6515184)·학교/전공 마스터(056420b)·Redis 검증(5832bb2)·이력서 PDF(023).
-> 다음: Phase 9 커밋/푸시 → 배포 → `/share/{token}` 만료·해제 검증, 이력서 PDF 개선분 실사용자 최종 확인.
+> 최근 완료: 공유 링크 구현/배포/검증 완료 + 회사 pull 반영(12커밋) + 배포 검증(0926) — 블랙리스트 stats/PUT·이력서 PDF·CSP 서버 확인, 데이터 마이닝(6515184)·학교/전공 마스터(056420b)·Redis 검증(5832bb2)·이력서 PDF(023).
+> 다음: 공유 링크 실사용자 최종 확인(`/resume/#/s/{token}`), 이력서 PDF 개선분 실사용자 최종 확인.
 
 ---
 
