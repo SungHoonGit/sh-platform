@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiDelete, apiGet, apiPost, apiPut } from "../api/client";
-import type { ResumeDocument } from "../types/document";
+import type { ResumeDocument, ShareLink } from "../types/document";
 import { TEMPLATE_LABELS, TEMPLATE_OPTIONS } from "../components/templates/shared";
 
 export default function ResumesPage() {
@@ -10,10 +10,28 @@ export default function ResumesPage() {
   const [title, setTitle] = useState("");
   const [fromId, setFromId] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [shareTokens, setShareTokens] = useState<Record<number, string>>({});
+  const [shareBusy, setShareBusy] = useState<number | null>(null);
+
+  const shareUrl = (token: string) =>
+    `${window.location.origin}/resume/#/s/${token}`;
 
   const load = useCallback(() => {
     apiGet<ResumeDocument[]>("/documents")
-      .then(setDocuments)
+      .then((docs) => {
+        setDocuments(docs);
+        Promise.all(
+          docs.map((d) =>
+            apiGet<ShareLink | null>(`/documents/${d.id}/share`).catch(() => null),
+          ),
+        ).then((links) => {
+          const tokens: Record<number, string> = {};
+          links.forEach((l, i) => {
+            if (l) tokens[docs[i].id] = l.token;
+          });
+          setShareTokens(tokens);
+        });
+      })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
 
@@ -69,6 +87,44 @@ export default function ResumesPage() {
       load();
     } catch {
       setError("테마 변경에 실패했습니다.");
+    }
+  };
+
+  const createShare = async (id: number) => {
+    if (shareBusy !== null) return;
+    setShareBusy(id);
+    try {
+      const link = await apiPost<ShareLink>(`/documents/${id}/share`, {});
+      setShareTokens((prev) => ({ ...prev, [id]: link.token }));
+    } catch {
+      setError("공유 링크 생성에 실패했습니다.");
+    } finally {
+      setShareBusy(null);
+    }
+  };
+
+  const revokeShare = async (id: number) => {
+    if (!(await window.confirm("공유 링크를 해제할까요? 이미 공유된 링크는 더 이상 동작하지 않습니다."))) return;
+    setShareBusy(id);
+    try {
+      await apiDelete(`/documents/${id}/share`);
+      setShareTokens((prev) => {
+        const { [id]: _, ...rest } = prev;
+        return rest;
+      });
+    } catch {
+      setError("공유 해제에 실패했습니다.");
+    } finally {
+      setShareBusy(null);
+    }
+  };
+
+  const copyShare = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(shareUrl(token));
+      alert("공유 링크가 복사되었습니다.");
+    } catch {
+      setError("링크 복사에 실패했습니다.");
     }
   };
 
@@ -185,6 +241,43 @@ export default function ResumesPage() {
                 </option>
               ))}
             </select>
+            {shareTokens[d.id] ? (
+              <div className="mb-3 p-2 bg-green-50 border border-green-100 rounded text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="shrink-0 px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-medium rounded">
+                    공유 중
+                  </span>
+                  <input
+                    readOnly
+                    value={shareUrl(shareTokens[d.id])}
+                    onClick={(e) => e.currentTarget.select()}
+                    className="flex-1 min-w-0 border border-green-200 rounded bg-white px-1.5 py-0.5 text-[11px] text-slate-600 focus:outline-none"
+                  />
+                  <button
+                    disabled={shareBusy === d.id}
+                    onClick={() => copyShare(shareTokens[d.id])}
+                    className="shrink-0 px-2 py-0.5 border border-green-300 text-green-700 rounded hover:bg-green-50"
+                  >
+                    복사
+                  </button>
+                  <button
+                    disabled={shareBusy === d.id}
+                    onClick={() => revokeShare(d.id)}
+                    className="shrink-0 px-2 py-0.5 border border-green-200 text-green-600 rounded hover:bg-green-50"
+                  >
+                    해제
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                disabled={shareBusy !== null}
+                onClick={() => createShare(d.id)}
+                className="mb-3 w-full px-2.5 py-1 text-xs border border-dashed border-gray-300 text-slate-500 rounded hover:bg-gray-50"
+              >
+                {shareBusy === d.id ? "생성 중..." : "공유 링크 만들기"}
+              </button>
+            )}
             <div className="mt-auto flex flex-wrap gap-1.5">
               <a
                 href={`#/r/${d.id}`}

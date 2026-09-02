@@ -7,6 +7,7 @@ import ResumeViewPage from "./pages/ResumeViewPage";
 import EditPage from "./pages/EditPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import PostingsBrowsePage from "./pages/PostingsBrowsePage";
+import ShareViewPage from "./pages/ShareViewPage";
 import { apiGet } from "./api/client";
 import { useAuth } from "./hooks/useAuth";
 
@@ -15,7 +16,8 @@ type Route =
   | { name: "view"; documentId: number }
   | { name: "edit"; documentId: number }
   | { name: "applications" }
-  | { name: "postings" };
+  | { name: "postings" }
+  | { name: "share"; token: string };
 
 function parseHash(): Route {
   const h = window.location.hash.replace(/^#/, "");
@@ -23,6 +25,8 @@ function parseHash(): Route {
   if (viewMatch) return { name: "view", documentId: Number(viewMatch[1]) };
   const editMatch = /^\/r\/(\d+)\/edit$/.exec(h);
   if (editMatch) return { name: "edit", documentId: Number(editMatch[1]) };
+  const shareMatch = /^\/s\/([A-Za-z0-9-]+)$/.exec(h);
+  if (shareMatch) return { name: "share", token: shareMatch[1] };
   if (h === "/applications") return { name: "applications" };
   if (h === "/postings") return { name: "postings" };
   return { name: "resumes" };
@@ -89,6 +93,7 @@ export default function App() {
   ];
 
   let page;
+  if (route.name === "share") return <ShareViewPage token={route.token} />;
   if (route.name === "view") page = <ResumeViewPage documentId={route.documentId} />;
   else if (route.name === "edit") page = <EditPage documentId={route.documentId} />;
   else if (route.name === "applications") page = <ApplicationsPage />;

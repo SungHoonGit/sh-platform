@@ -31,7 +31,9 @@ public class SecurityConfig {
                         "/swagger-ui*", "/swagger-ui/**",
                         "/swagger-initializer.js", "/index.css",
                         "/favicon-32x32.png", "/favicon-16x16.png",
-                        "/v3/api-docs/**", "/v3/swagger-config", "/api-docs-ui/**"
+                        "/v3/api-docs/**", "/v3/swagger-config", "/api-docs-ui/**",
+                        // 공유 이력서 공개 조회
+                        "/share/**"
                     ).permitAll()
                     .anyRequest().authenticated()
                 )

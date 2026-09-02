@@ -8,11 +8,13 @@
 
 ---
 
-## 1. 배경 및 이유
-
-- 채용 공고에 이력서를 첨부하거나 지인에게 검토를 받을 때 **로그인 요구 없이 보여주는** URL이 필요하다.
+## 1. 배경 및 이유- 채용 공고에 이력서를 첨부하거나 지인에게 검토를 받을 때 **로그인 요구 없이 보여주는** URL이 필요하다.
 - 기존 `GET /api/v1/view`, `GET /api/v1/view/pdf`는 JWT 인증 필수 → 공유 불가.
 - 잡코리아/사람인도 "비공개" 이력서 화면 링크가 있으며, read-only + 만료 설정이 표준이다.
+
+> **구현 상태(2026-09-02)**: Phase 9 백엔드 + 프론트 구현 완료, 로컬 테스트(11건) 통과, 커밋 대기. 상세 구현 사항은 `docs/daily/2026-09-02-work-log.md` 참고.
+
+
 
 ## 2. 요구 사항
 
@@ -31,7 +33,20 @@
 
 ## 3. 설계
 
-### 3.1 데이터 모델
+### 3.2 데이터 모델 (구현)
+
+```sql
+CREATE TABLE IF NOT EXISTS resume_share_links (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    document_id   BIGINT NOT NULL,
+    token         VARCHAR(64) NOT NULL,
+    expires_at    DATETIME NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_resume_share_links_token (token),
+    UNIQUE KEY uq_resume_share_links_document (document_id),
+    INDEX idx_resume_share_links_document (document_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
 
 ```sql
 CREATE TABLE IF NOT EXISTS resume_share_links (
@@ -69,24 +84,26 @@ CREATE TABLE IF NOT EXISTS resume_share_links (
 ### 3.4 프론트
 
 ```
-/resume/#/share/{token}   → 공유 전용 뷰 (기존 ResumeView 컴포넌트 재사용, 편집 버튼/헤더 숨김)
-/resume/#/documents       → 문서 카드에 "공유" 토글 + 링크 복사 버튼 (현 ResumesPage 확장)
+/resume/#/s/{token}        → 공유 전용 뷰 (ShareViewPage: AppShell 없이 public, 편집/로그인 불필요)
+/resume/#/resumes          → 문서 카드에 "공유 링크 만들기" 토글 + 링크 복사/해제 버튼 (ResumesPage 확장)
 ```
 
-- 공유 페이지는 레이아웃(테마) 폰엔드에서 렌더, PDF 버튼은 `/share/{token}/pdf`로.
+- 공유 페이지는 백엔드 `GET /resume/share/{token}` 응답의 document(테마·섹션 편성) + view를 받아 기존 템플릿 컴포넌트로 렌더.
+- PDF 버튼은 `GET /resume/share/{token}/pdf`로 다운로드 (Content-Disposition 서버측 파일명).
+- 공개 전용 API 헬퍼: `client.ts`의 `apiGetShare`/`apiDownloadShare` (인증 헤더 없이 `/resume/share` 진입).
 
 ## 4. 구현 계획
 
 | 단계 | 내용 | 산출물 |
 |------|------|--------|
-| 1 | DDL v8: `resume_share_links` 테이블 + 배포 워크플로우 DDL 라인 | `docs/resume/ddl-resume-v8.sql` |
-| 2 | Entity/Repository + support | `ResumeShareLinkEntity`, `ResumeShareLinkRepository` |
-| 3 | 도메인: `ResumeShareService` (create/get/revoke/resolve) + 소유자 검증 | `domain/ResumeShareService(+Impl)` |
-| 4 | 조립 확장: `ResumeViewService.getShareView(documentId)` (섹션 편성 반영 재사용) | `ResumeViewServiceImpl` |
-| 5 | API: 공유 관리 3종(`POST/GET/DELETE documents/{id}/share`) | `DocumentsController` 확장 + DTO |
-| 6 | 공개: `ShareController` (`GET /share/{token}`, `GET /share/{token}/pdf`) + whitelist + noindex | `api/ShareController` + security 설정 |
-| 7 | 테스트: 생성/중복/만료/해제/타소유자 FORBIDDEN/공개 조회·PDF | `ResumeShareServiceTest`, `ShareControllerTest` |
-| 8 | 프론트: 공유 토글+링크 복사 (ResumesPage), 공유 뷰 (`/share/{token}`) | `ResumesPage.tsx`, `SharePage.tsx` |
+| 1 | DDL v8: `resume_share_links` 테이블 + 배포 워크플로우 DDL 라인 | `docs/resume/ddl-resume-v8.sql` ✅ |
+| 2 | Entity/Repository + support | `ResumeShareLinkEntity`, `ResumeShareLinkRepository` ✅ |
+| 3 | 도메인: `ResumeShareService` (create/get/revoke/resolve/getPublicView) + 소유자 검증 | `domain/ResumeShareService(+Impl)` ✅ |
+| 4 | 공개 뷰 조립: 기존 `ResumeViewService.getMyResumeView` + 문서 메타 재사용 (별도 조립 메서드 추가 없이 서비스 조합) | `ResumeShareServiceImpl.getPublicView` ✅ |
+| 5 | API: 공유 관리 3종(`POST/GET/DELETE documents/{id}/share`) | `DocumentsController` 확장 + DTO ✅ |
+| 6 | 공개: `ShareController` (`GET /share/{token}`, `GET /share/{token}/pdf`) + whitelist + noindex | `api/ShareController` + security 설정 ✅ |
+| 7 | 테스트: 생성/재발급/조회/해제/만료/타소유자 NOT_FOUND/공개 조회·PDF | `ResumeShareServiceImplTest` (11건) ✅ |
+| 8 | 프론트: 공유 토글+링크 복사 (ResumesPage), 공유 뷰 (`ShareViewPage`) | `ResumesPage.tsx`, `ShareViewPage.tsx` ✅ |
 
 ## 5. 참고 자료
 

@@ -1,4 +1,5 @@
 const API_BASE = "/resume/api/v1";
+const SHARE_BASE = "/resume/share";
 
 interface ApiResponse<T> {
   code: string;
@@ -128,6 +129,45 @@ export function apiPut<T>(path: string, body: unknown): Promise<T> {
 
 export function apiDelete<T = null>(path: string): Promise<T> {
   return request<T>("DELETE", path);
+}
+
+/**
+ * 공개 공유 엔드포인트 조회 (인증 없이 접근). path는 "/{token}" 형태여야 한다.
+ */
+export async function apiGetShare<T>(path: string): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${SHARE_BASE}${path}`, {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch {
+    throw new Error("NETWORK_ERROR");
+  }
+  if (res.status === 404) throw new Error("NOT_FOUND");
+  if (!res.ok) throw new Error(`API_ERROR_${res.status}`);
+  const json: ApiResponse<T> = await res.json();
+  return json.data;
+}
+
+/**
+ * 공개 공유 이력서 PDF 다운로드 (인증 없이 접근).
+ */
+export async function apiDownloadShare(path: string, fallbackName = "download"): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${SHARE_BASE}${path}`);
+  } catch {
+    throw new Error("NETWORK_ERROR");
+  }
+  if (!res.ok) throw new Error(`API_ERROR_${res.status}`);
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const name = parseDownloadName(disposition) ?? fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export function logout(): void {

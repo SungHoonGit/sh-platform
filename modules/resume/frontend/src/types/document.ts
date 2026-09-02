@@ -13,3 +13,10 @@ export interface ResumeDocument {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ShareLink {
+  documentId: number;
+  token: string;
+  expiresAt: string | null;
+  createdAt: string;
+}
