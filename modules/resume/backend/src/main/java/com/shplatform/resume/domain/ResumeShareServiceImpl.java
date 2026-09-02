@@ -49,7 +49,6 @@ public class ResumeShareServiceImpl implements ResumeShareService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<ResolvedShare> resolve(String token) {
         if (token == null || token.isBlank()) {
             return Optional.empty();
@@ -60,7 +59,6 @@ public class ResumeShareServiceImpl implements ResumeShareService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public ShareViewResponse getPublicView(String token) {
         ResolvedShare resolved = resolve(token)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
