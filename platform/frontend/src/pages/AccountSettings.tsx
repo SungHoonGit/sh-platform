@@ -28,6 +28,7 @@ export default function AccountSettings() {
   const [newPassword, setNewPassword] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchMe();
@@ -55,10 +56,29 @@ export default function AccountSettings() {
     e.preventDefault();
     setMessage("");
     setError("");
-    if (newPassword !== confirmPassword) {
-      setError("비밀번호가 일치하지 않습니다");
+
+    if (me?.passwordSet && !currentPassword) {
+      setError("현재 비밀번호를 입력해주세요");
       return;
     }
+    if (newPassword.length < 8 || newPassword.length > 20) {
+      setError("비밀번호는 8~20자여야 합니다");
+      return;
+    }
+    if (!/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*()]/.test(newPassword)) {
+      setError("비밀번호는 영문·숫자·특수문자를 각각 하나 이상 포함해야 합니다");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("새 비밀번호가 일치하지 않습니다");
+      return;
+    }
+    if (me?.passwordSet && currentPassword === newPassword) {
+      setError("새 비밀번호는 현재 비밀번호와 달라야 합니다");
+      return;
+    }
+
+    setSaving(true);
     try {
       const res = me?.passwordSet
         ? await fetch("/api/v1/auth/password", {
@@ -85,10 +105,14 @@ export default function AccountSettings() {
         fetchMe();
       } else {
         const data = await res.json();
-        setError(data.message || "비밀번호 저장 실패");
+        const msg = data.message || (me?.passwordSet ? "비밀번호 변경에 실패했습니다" : "비밀번호 설정에 실패했습니다");
+        setError(msg);
+        if (me?.passwordSet) setCurrentPassword("");
       }
     } catch {
       setError("오류가 발생했습니다");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -234,9 +258,10 @@ export default function AccountSettings() {
           </div>
           <button
             type="submit"
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors"
+            disabled={saving}
+            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium rounded-lg text-sm transition-colors"
           >
-            저장
+            {saving ? "저장 중..." : "저장"}
           </button>
         </form>
       </div>

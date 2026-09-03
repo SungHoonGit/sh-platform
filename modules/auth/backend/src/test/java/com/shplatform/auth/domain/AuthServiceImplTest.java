@@ -426,7 +426,7 @@ class AuthServiceImplTest {
         var request = new ChangePasswordRequest("WrongPw!", "NewPw1@34");
         var ex = assertThrows(BusinessException.class,
                 () -> authService.changePassword(1L, request));
-        assertEquals(ErrorCode.UNAUTHORIZED, ex.getErrorCode());
+        assertEquals(ErrorCode.WRONG_CURRENT_PASSWORD, ex.getErrorCode());
     }
 
     @Test

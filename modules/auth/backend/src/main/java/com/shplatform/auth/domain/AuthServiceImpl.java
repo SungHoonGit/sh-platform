@@ -233,7 +233,7 @@ public class AuthServiceImpl implements AuthService {
         }
         if (!passwordEncoder.matches(request.currentPassword(), entity.getPassword())) {
             log.warn("[AUTH] change password failed (wrong password): userId={}", userId);
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+            throw new BusinessException(ErrorCode.WRONG_CURRENT_PASSWORD);
         }
         entity.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(entity);
