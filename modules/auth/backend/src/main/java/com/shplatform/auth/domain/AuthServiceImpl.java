@@ -261,7 +261,7 @@ public class AuthServiceImpl implements AuthService {
         if (entity.getProvider().equals("LOCAL")) {
             if (password == null || !passwordEncoder.matches(password, entity.getPassword())) {
                 log.warn("[AUTH] delete account failed (wrong password): userId={}", userId);
-            throw new BusinessException(ErrorCode.CURRENT_PASSWORD_MISMATCH);
+                throw new BusinessException(ErrorCode.WRONG_CURRENT_PASSWORD);
             }
         }
         refreshTokenRepository.deleteByUserId(userId);
