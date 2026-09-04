@@ -140,7 +140,7 @@ export default function ModernTemplate({
             <div key={ed.id} className="mb-2 last:mb-0 text-xs">
               <p className="font-semibold text-white">{ed.school}</p>
               <p className="text-slate-300">
-                {[ed.schoolType, ed.major, ed.degree].filter(Boolean).join(" · ")}
+                {[ed.schoolType, ed.major, ed.degree].filter(Boolean).filter((_, i) => i > 0 || (ed.school != null && ed.schoolType != null && !ed.school.endsWith(ed.schoolType))).join(" · ")}
                 {ed.gpa ? ` · 학점 ${ed.gpa}` : ""}
               </p>
               <p className="text-slate-400">

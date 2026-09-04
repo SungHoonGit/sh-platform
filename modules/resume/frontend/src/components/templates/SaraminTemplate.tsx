@@ -106,7 +106,7 @@ export default function SaraminTemplate({
                   <td className="py-1.5">
                     <span className="font-semibold">{ed.school}</span>
                     <span className="text-gray-600 text-xs">
-                      {[ed.schoolType, ed.major, ed.degree].filter(Boolean).join(" · ")}
+                      {[ed.schoolType, ed.major, ed.degree].filter(Boolean).filter((_, i) => i > 0 || (ed.school != null && ed.schoolType != null && !ed.school.endsWith(ed.schoolType))).join(" · ")}
                       {ed.gpa ? ` · 학점 ${ed.gpa}` : ""}
                       {ed.status ? ` (${ed.status})` : ""}
                     </span>

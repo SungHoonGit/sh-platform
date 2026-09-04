@@ -182,10 +182,10 @@ export default function ClassicTemplate({
             <h1 className="text-3xl font-bold">{p?.name ?? "이름 미등록"}</h1>
             {p?.headline && <p className="mt-1 text-gray-600">{p.headline}</p>}
             <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-500">
-              {p?.email && <span>{p.email}</span>}
-              {p?.phone && <span>{p.phone}</span>}
-              {p?.address && <span>{p.address}</span>}
-              {p?.birthDate && <span>{p.birthDate}</span>}
+              {p?.email && <span className="whitespace-nowrap">{p.email}</span>}
+              {p?.phone && <span className="whitespace-nowrap">{p.phone}</span>}
+              {p?.address && <span className="whitespace-nowrap">{p.address}</span>}
+              {p?.birthDate && <span className="whitespace-nowrap">{p.birthDate}</span>}
             </div>
           </div>
           {p?.photoUrl && (
