@@ -75,7 +75,7 @@ export default function ClassicTemplate({
               <article key={ed.id} className="mb-2 last:mb-0 flex justify-between items-baseline">
               <div>
                 <span className="font-semibold">{ed.school}</span>
-                {ed.schoolType && (
+                {ed.schoolType && !ed.school.endsWith(ed.schoolType) && (
                   <span className="text-gray-500 text-sm"> {" "}· {ed.schoolType}</span>
                 )}
                 {ed.gpa && (
@@ -181,7 +181,7 @@ export default function ClassicTemplate({
           <div>
             <h1 className="text-3xl font-bold">{p?.name ?? "이름 미등록"}</h1>
             {p?.headline && <p className="mt-1 text-gray-600">{p.headline}</p>}
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
+            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-500">
               {p?.email && <span>{p.email}</span>}
               {p?.phone && <span>{p.phone}</span>}
               {p?.address && <span>{p.address}</span>}
