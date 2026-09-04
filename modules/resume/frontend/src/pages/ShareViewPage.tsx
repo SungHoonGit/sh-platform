@@ -64,12 +64,6 @@ export default function ShareViewPage({ token }: { token: string }) {
 
       <div className="max-w-3xl mx-auto mb-4 flex justify-end items-center gap-2 print:hidden">
         <span className="mr-auto text-sm text-slate-500">{data.title}</span>
-        <a
-          href={`#/s/${token}`}
-          className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
-        >
-          공유된 이력서
-        </a>
         <button
           onClick={() =>
             apiDownloadShare(`/${token}/pdf`, `${data.title}.pdf`).catch((e) =>

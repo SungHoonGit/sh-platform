@@ -82,7 +82,10 @@ public class SaraminPdfLayout implements ResumePdfLayout {
         PdfPCell photoCell = PdfLayoutSupport.photoCell(photo);
         if (photoCell != null) {
             PdfPTable photoBox = new PdfPTable(1);
-            photoBox.setWidthPercentage(100f);
+            photoBox.setHorizontalAlignment(Element.ALIGN_CENTER);
+            photoBox.setLockedWidth(true);
+            photoBox.setTotalWidth(photo.getScaledWidth() + 4f);
+            photoBox.setWidths(new float[]{photo.getScaledWidth()});
             photoBox.addCell(photoCell);
             photoSide.addElement(photoBox);
         }
@@ -248,31 +251,39 @@ public class SaraminPdfLayout implements ResumePdfLayout {
         for (EducationResponse it : items) {
             PdfPTable row = new PdfPTable(2);
             row.setWidthPercentage(100f);
-            row.setWidths(new float[]{24f, 76f});
+            row.setWidths(new float[]{70f, 30f});
+            row.setKeepTogether(true);
 
-            PdfPCell periodCell = borderedData(new Paragraph(
-                    periodOrEmpty(it.startDate(), it.endDate()), regular(9.5f, MUTED)));
-            PdfPCell detailCell = new PdfPCell();
-            detailCell.setBorder(Rectangle.BOTTOM);
-            detailCell.setBorderColor(RULE_LIGHT);
-            detailCell.setBorderWidth(0.4f);
-            detailCell.setPadding(3f);
-            detailCell.setVerticalAlignment(Element.ALIGN_TOP);
+            PdfPCell mainCell = new PdfPCell();
+            mainCell.setBorder(Rectangle.BOTTOM);
+            mainCell.setBorderColor(RULE_LIGHT);
+            mainCell.setBorderWidth(0.4f);
+            mainCell.setPadding(3f);
+            mainCell.setVerticalAlignment(Element.ALIGN_TOP);
 
-            detailCell.addElement(new Paragraph(
-                    it.school() == null ? " " : it.school(), bold(10f, BODY)));
+            mainCell.addElement(new Paragraph(
+                    it.school() == null ? " " : it.school(), bold(11f, BODY)));
+
             String sub = joinNonBlank(" · ",
-                    nullIfBlank(it.schoolType()),
                     nullIfBlank(it.major()),
-                    nullIfBlank(it.degree()),
+                    hasText(it.degree()) ? it.degree() : null,
                     hasText(it.gpa()) ? "학점 " + it.gpa() : null,
                     nullIfBlank(it.status()));
             if (hasText(sub)) {
-                detailCell.addElement(new Paragraph(sub, regular(9f, MUTED)));
+                mainCell.addElement(new Paragraph(sub, regular(9f, MUTED)));
             }
 
+            PdfPCell periodCell = new PdfPCell(new Paragraph(
+                    periodOrEmpty(it.startDate(), it.endDate()), regular(9f, FAINT)));
+            periodCell.setBorder(Rectangle.BOTTOM);
+            periodCell.setBorderColor(RULE_LIGHT);
+            periodCell.setBorderWidth(0.4f);
+            periodCell.setPadding(3f);
+            periodCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            periodCell.setVerticalAlignment(Element.ALIGN_TOP);
+
+            row.addCell(mainCell);
             row.addCell(periodCell);
-            row.addCell(detailCell);
             cell.addElement(row);
         }
     }
@@ -332,6 +343,9 @@ public class SaraminPdfLayout implements ResumePdfLayout {
         }
         boolean first = true;
         for (ProjectResponse it : items) {
+            if (!hasProjectContent(it)) {
+                continue;
+            }
             if (!first) {
                 cell.addElement(new Paragraph(new Chunk(
                         new LineSeparator(0.5f, 100f, BORDER, Element.ALIGN_LEFT, 0))));
@@ -437,6 +451,12 @@ public class SaraminPdfLayout implements ResumePdfLayout {
         cell.setPadding(4f);
         cell.setVerticalAlignment(Element.ALIGN_TOP);
         return cell;
+    }
+
+    /** 이름·역할·설명·기술스택·링크가 모두 비어 있으면 렌더에서 제외한다(빈 프로젝트 사각항목 방지). */
+    private boolean hasProjectContent(ProjectResponse it) {
+        return hasText(it.name()) || hasText(it.role()) || hasText(it.description())
+                || hasText(it.techStack()) || hasText(it.linkUrl());
     }
 
     private Paragraph spacer(float height) {

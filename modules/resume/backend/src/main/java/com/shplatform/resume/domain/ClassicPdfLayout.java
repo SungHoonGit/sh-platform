@@ -114,7 +114,9 @@ public class ClassicPdfLayout implements ResumePdfLayout {
     private void renderSection(Document document, String key, ResumeViewResponse view) throws DocumentException {
         switch (key) {
             case "careers" -> renderGroup(document, "경력", view.careers(), (d, it) -> renderCareer(d, it));
-            case "projects" -> renderGroup(document, "프로젝트", view.projects(), (d, it) -> renderProject(d, it));
+            case "projects" -> renderGroup(document, "프로젝트",
+                        view.projects().stream().filter(ClassicPdfLayout::hasProjectContent).toList(),
+                        (d, it) -> renderProject(d, it));
             case "educations" -> renderGroup(document, "학력", view.educations(), (d, it) -> renderEducation(d, it));
             case "skills" -> renderGroup(document, "스킬", view.skills(), (d, it) -> renderSkill(d, it));
             case "certificates" ->
@@ -213,6 +215,11 @@ public class ClassicPdfLayout implements ResumePdfLayout {
             link.setSpacingAfter(8f);
             document.add(link);
         }
+    }
+
+    private static boolean hasProjectContent(ProjectResponse it) {
+        return hasText(it.name()) || hasText(it.role()) || hasText(it.description())
+                || hasText(it.techStack()) || hasText(it.linkUrl());
     }
 
     private void renderIntroduction(Document document, IntroductionResponse item) throws DocumentException {

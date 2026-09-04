@@ -117,6 +117,9 @@ public class ModernPdfLayout implements ResumePdfLayout {
             if (photoCell != null) {
                 PdfPTable photoBox = new PdfPTable(1);
                 photoBox.setHorizontalAlignment(Element.ALIGN_CENTER);
+                photoBox.setLockedWidth(true);
+                photoBox.setTotalWidth(photo.getScaledWidth() + 4f);
+                photoBox.setWidths(new float[]{photo.getScaledWidth()});
                 photoBox.addCell(photoCell);
                 sidebar.addElement(photoBox);
             }
@@ -254,6 +257,9 @@ public class ModernPdfLayout implements ResumePdfLayout {
                 if (isNotEmpty(view.projects())) {
                     addMainTitle(main, "프로젝트");
                     for (ProjectResponse it : view.projects()) {
+                        if (!hasProjectContent(it)) {
+                            continue;
+                        }
                         mainProject(main, it);
                     }
                 }
@@ -386,6 +392,11 @@ public class ModernPdfLayout implements ResumePdfLayout {
 
     private boolean isNotEmpty(List<?> items) {
         return items != null && !items.isEmpty();
+    }
+
+    private static boolean hasProjectContent(ProjectResponse it) {
+        return hasText(it.name()) || hasText(it.role()) || hasText(it.description())
+                || hasText(it.techStack()) || hasText(it.linkUrl());
     }
 
     private PdfPCell emptyCell() {
