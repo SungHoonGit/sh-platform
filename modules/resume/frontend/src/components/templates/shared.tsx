@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 export function period(start: string, end: string | null): string {
-  return `${start} ~ ${end ?? "현재"}`;
+  return `${start ?? ""} ~ ${end ?? "현재"}`;
 }
 
 export const SECTION_LABELS: Record<string, string> = {

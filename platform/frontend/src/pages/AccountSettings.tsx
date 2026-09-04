@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface MeResponse {
   id: number;
@@ -29,6 +29,7 @@ export default function AccountSettings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const currentPasswordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchMe();
@@ -108,6 +109,8 @@ export default function AccountSettings() {
         const msg = data.message || (me?.passwordSet ? "비밀번호 변경에 실패했습니다" : "비밀번호 설정에 실패했습니다");
         setError(msg);
         if (me?.passwordSet) setCurrentPassword("");
+        currentPasswordRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        currentPasswordRef.current?.focus();
       }
     } catch {
       setError("오류가 발생했습니다");
@@ -227,6 +230,7 @@ export default function AccountSettings() {
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-1.5">현재 비밀번호</label>
               <input
+                ref={currentPasswordRef}
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}

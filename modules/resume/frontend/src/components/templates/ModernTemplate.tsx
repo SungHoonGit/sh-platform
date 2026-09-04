@@ -15,7 +15,7 @@ function SideSection({ title, children }: { title: string; children: React.React
 
 function MainSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-7 break-inside-avoid">
+    <section className="mb-4 break-inside-avoid">
       <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3 print:text-sm">
         <span className="w-1 h-4 bg-teal-600 rounded print:h-3" />
         {title}
@@ -49,7 +49,7 @@ export default function ModernTemplate({
               </div>
               {c.title && <p className="text-sm text-teal-700 font-medium">{c.title}</p>}
               {c.description && (
-                <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-gray-600">{c.description}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm leading-normal text-gray-600">{c.description}</p>
               )}
             </article>
           ))}
@@ -75,7 +75,7 @@ export default function ModernTemplate({
                 </p>
               )}
               {pr.description && (
-                <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-gray-600">{pr.description}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm leading-normal text-gray-600">{pr.description}</p>
               )}
               {pr.linkUrl && (
                 <a href={pr.linkUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline">
@@ -92,7 +92,7 @@ export default function ModernTemplate({
           {view.introductions.map((it) => (
             <article key={it.id} className="mb-3 last:mb-0">
               <h3 className="font-semibold text-sm text-slate-800 mb-0.5">{it.title}</h3>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-600">{it.content}</p>
+              <p className="whitespace-pre-wrap text-sm leading-normal text-gray-600">{it.content}</p>
             </article>
           ))}
         </MainSection>
@@ -140,7 +140,7 @@ export default function ModernTemplate({
             <div key={ed.id} className="mb-2 last:mb-0 text-xs">
               <p className="font-semibold text-white">{ed.school}</p>
               <p className="text-slate-300">
-                {[ed.schoolType, ed.major, ed.degree].filter(Boolean).join(" · ")}
+                {[ed.schoolType, ed.major, ed.degree].filter(Boolean).filter((_, i) => i > 0 || (ed.school != null && ed.schoolType != null && !ed.school.endsWith(ed.schoolType))).join(" · ")}
                 {ed.gpa ? ` · 학점 ${ed.gpa}` : ""}
               </p>
               <p className="text-slate-400">

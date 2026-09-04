@@ -5,7 +5,7 @@ import { apiDownload, fileDownloadPath } from "../../api/client";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-6 break-inside-avoid border border-gray-300 rounded-sm">
+    <section className="mb-4 break-inside-avoid border border-gray-300 rounded-sm">
       <h2 className="bg-slate-100 px-4 py-2 text-sm font-bold text-slate-800 border-b border-gray-300">
         ■ {title}
       </h2>
@@ -58,7 +58,7 @@ export default function SaraminTemplate({
               {view.careers
                 .filter((c) => c.description)
                 .map((c) => (
-                  <li key={c.id} className="text-xs leading-relaxed text-gray-700 whitespace-pre-wrap">
+                  <li key={c.id} className="text-xs leading-normal text-gray-700 whitespace-pre-wrap">
                     ▸ [{c.company}] {c.description}
                   </li>
                 ))}
@@ -82,7 +82,7 @@ export default function SaraminTemplate({
                 <p className="mt-0.5 text-[11px] text-gray-500">사용기술: {pr.techStack}</p>
               )}
               {pr.description && (
-                <p className="mt-1 text-xs leading-relaxed text-gray-700 whitespace-pre-wrap">{pr.description}</p>
+                <p className="mt-1 text-xs leading-normal text-gray-700 whitespace-pre-wrap">{pr.description}</p>
               )}
               {pr.linkUrl && (
                 <a href={pr.linkUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline">
@@ -106,7 +106,7 @@ export default function SaraminTemplate({
                   <td className="py-1.5">
                     <span className="font-semibold">{ed.school}</span>
                     <span className="text-gray-600 text-xs">
-                      {[ed.schoolType, ed.major, ed.degree].filter(Boolean).join(" · ")}
+                      {[ed.schoolType, ed.major, ed.degree].filter(Boolean).filter((_, i) => i > 0 || (ed.school != null && ed.schoolType != null && !ed.school.endsWith(ed.schoolType))).join(" · ")}
                       {ed.gpa ? ` · 학점 ${ed.gpa}` : ""}
                       {ed.status ? ` (${ed.status})` : ""}
                     </span>
@@ -156,7 +156,7 @@ export default function SaraminTemplate({
           {view.introductions.map((it) => (
             <article key={it.id} className="mb-3 last:mb-0 pb-3 border-b border-dashed border-gray-200 last:border-0 last:pb-0">
               <h3 className="font-semibold text-sm mb-1">{it.title}</h3>
-              <p className="whitespace-pre-wrap text-xs leading-relaxed text-gray-700">{it.content}</p>
+              <p className="whitespace-pre-wrap text-xs leading-normal text-gray-700">{it.content}</p>
             </article>
           ))}
         </Section>
@@ -204,7 +204,7 @@ export default function SaraminTemplate({
   return (
     <>
       {/* 상단 프로필 박스 */}
-      <header className="mb-6 border-2 border-slate-800 rounded-sm p-5 flex gap-5 print:p-4 print:mb-4">
+      <header className="mb-4 border-2 border-slate-800 rounded-sm p-5 flex gap-5 print:p-4 print:mb-4">
         {p?.photoUrl && (
           <ProfilePhoto
             photoUrl={p.photoUrl}
