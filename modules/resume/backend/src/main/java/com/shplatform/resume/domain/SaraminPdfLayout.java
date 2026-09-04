@@ -166,8 +166,8 @@ public class SaraminPdfLayout implements ResumePdfLayout {
     private void box(Document document, String title, BoxContent body) throws DocumentException {
         PdfPTable box = new PdfPTable(1);
         box.setWidthPercentage(100f);
-        box.setSpacingBefore(10f);
-        box.setSpacingAfter(2f);
+box.setSpacingBefore(6f);
+box.setSpacingAfter(2f);
         box.setKeepTogether(true);
 
         PdfPCell wrap = new PdfPCell();
@@ -225,8 +225,8 @@ public class SaraminPdfLayout implements ResumePdfLayout {
             if (hasText(it.description())) {
                 Paragraph desc = new Paragraph(
                         "· " + normalizeNewlines(it.description()), regular(9.5f, BODY));
-                desc.setLeading(13f);
-                desc.setSpacingBefore(5f);
+                desc.setLeading(11f);
+                desc.setSpacingBefore(3f);
                 cell.addElement(desc);
             }
         }
@@ -356,7 +356,7 @@ public class SaraminPdfLayout implements ResumePdfLayout {
             }
             if (hasText(it.description())) {
                 Paragraph desc = new Paragraph(normalizeNewlines(it.description()), regular(9.5f, BODY));
-                desc.setLeading(13f);
+                desc.setLeading(11f);
                 desc.setSpacingBefore(2f);
                 cell.addElement(desc);
             }
@@ -380,7 +380,7 @@ public class SaraminPdfLayout implements ResumePdfLayout {
             }
             Paragraph body = new Paragraph(normalizeNewlines(it.content() == null ? "" : it.content()),
                     regular(9.5f, BODY));
-            body.setLeading(13f);
+            body.setLeading(11f);
             body.setSpacingAfter(8f);
             cell.addElement(body);
         }
@@ -410,8 +410,8 @@ public class SaraminPdfLayout implements ResumePdfLayout {
             }
             if (hasText(it.description())) {
                 Paragraph desc = new Paragraph(normalizeNewlines(it.description()), regular(9.5f, BODY));
-                desc.setLeading(13f);
-                desc.setSpacingAfter(4f);
+                desc.setLeading(11f);
+                desc.setSpacingAfter(3f);
                 cell.addElement(desc);
             }
         }

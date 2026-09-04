@@ -124,14 +124,14 @@ public class ModernPdfLayout implements ResumePdfLayout {
 
         Paragraph nameP = new Paragraph(name, bold(16f, WHITE));
         nameP.setAlignment(Element.ALIGN_CENTER);
-        nameP.setSpacingBefore(profile != null ? 10f : 0f);
+        nameP.setSpacingBefore(profile != null ? 4f : 0f);
         nameP.setSpacingAfter(3f);
         sidebar.addElement(nameP);
 
         if (profile != null && hasText(profile.headline())) {
             Paragraph headline = new Paragraph(profile.headline(), regular(9.5f, TEAL));
             headline.setAlignment(Element.ALIGN_CENTER);
-            headline.setSpacingAfter(12f);
+            headline.setSpacingAfter(6f);
             sidebar.addElement(headline);
         }
 
@@ -148,7 +148,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
 
     private void addSideLabel(PdfPCell cell, String label) throws DocumentException {
         Paragraph title = new Paragraph(label, bold(9f, PdfLayoutSupport.FAINT));
-        title.setSpacingBefore(12f);
+        title.setSpacingBefore(6f);
         title.setSpacingAfter(3f);
         cell.addElement(title);
         cell.addElement(new Paragraph(new Chunk(
@@ -282,8 +282,8 @@ public class ModernPdfLayout implements ResumePdfLayout {
         PdfPTable bar = new PdfPTable(2);
         bar.setWidthPercentage(100f);
         bar.setWidths(new float[]{0.6f, 99.4f});
-        bar.setSpacingBefore(12f);
-        bar.setSpacingAfter(6f);
+        bar.setSpacingBefore(6f);
+        bar.setSpacingAfter(3f);
 
         PdfPCell accent = new PdfPCell();
         accent.setBackgroundColor(TEAL);
@@ -378,7 +378,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
 
     private Paragraph paragraphBody(String text, float spacingAfter) {
         Paragraph body = new Paragraph(text, regular(10.5f, BODY));
-        body.setLeading(15f);
+        body.setLeading(12.5f);
         body.setSpacingAfter(spacingAfter);
         body.setKeepTogether(true);
         return body;

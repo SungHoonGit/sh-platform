@@ -145,8 +145,8 @@ public class ClassicPdfLayout implements ResumePdfLayout {
 
     private void addSectionTitle(Document document, String title) throws DocumentException {
         Paragraph section = new Paragraph(title, bold(13f, HEAD));
-        section.setSpacingBefore(14f);
-        section.setSpacingAfter(5f);
+        section.setSpacingBefore(8f);
+        section.setSpacingAfter(3f);
         section.setKeepTogether(true);
         document.add(section);
         document.add(new Chunk(new LineSeparator(0.9f, 100f, HEAD, Element.ALIGN_LEFT, 0)));
@@ -249,7 +249,7 @@ public class ClassicPdfLayout implements ResumePdfLayout {
     /** 본문 문단. 개행 보존, 문단 간 여백(스페이싱) 적용. */
     private Paragraph bodyParagraph(String text, float spacingAfter) {
         Paragraph body = new Paragraph(text, regular(10.5f, BODY));
-        body.setLeading(15f);
+        body.setLeading(12.5f);
         body.setSpacingAfter(spacingAfter);
         body.setKeepTogether(true);
         return body;
@@ -261,7 +261,7 @@ public class ClassicPdfLayout implements ResumePdfLayout {
         row.setWidthPercentage(100f);
         row.setWidths(new float[]{7f, 3f});
         row.setKeepTogether(true);
-        row.setSpacingBefore(2f);
+        row.setSpacingBefore(1f);
 
         PdfPCell left = emptyCell();
         left.addElement(new Paragraph(main.isEmpty() ? " " : main, bold(11f, HEAD)));
