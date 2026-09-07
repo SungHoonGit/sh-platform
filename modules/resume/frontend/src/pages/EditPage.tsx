@@ -149,6 +149,8 @@ export default function EditPage({ documentId }: { documentId?: number }) {
   const [templateCode, setTemplateCode] = useState("CLASSIC");
   const [sectionItems, setSectionItems] = useState<SectionItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  const [overKey, setOverKey] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<ResumeView>("/view")
@@ -210,6 +212,19 @@ export default function EditPage({ documentId }: { documentId?: number }) {
     const other = next[target];
     next[idx] = { ...other, order: cur.order };
     next[target] = { ...cur, order: other.order };
+    persistSections(next);
+  };
+
+  const reorderSections = (draggedKey: string, targetKey: string) => {
+    if (!sectionItems || draggedKey === targetKey) return;
+    const sorted = [...sectionItems].sort((a, b) => a.order - b.order);
+    const dragged = sorted.find((s) => s.key === draggedKey);
+    if (!dragged) return;
+    const rest = sorted.filter((s) => s.key !== draggedKey);
+    const targetIndex = rest.findIndex((s) => s.key === targetKey);
+    if (targetIndex < 0) return;
+    rest.splice(targetIndex, 0, dragged);
+    const next = rest.map((s, i) => ({ ...s, order: i + 1 }));
     persistSections(next);
   };
 
@@ -351,14 +366,37 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                 .sort((a, b) => a.order - b.order)
                 .map((s, i, arr) => {
                   const visible = orderedSections.includes(s.key);
+                  const dragging = dragKey === s.key;
+                  const isOver = overKey === s.key;
                   return (
                     <li
                       key={s.key}
+                      draggable
+                      onDragStart={() => setDragKey(s.key)}
+                      onDragEnd={() => {
+                        setDragKey(null);
+                        setOverKey(null);
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setOverKey(s.key);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragKey) reorderSections(dragKey, s.key);
+                        setDragKey(null);
+                        setOverKey(null);
+                      }}
                       className={`flex items-center gap-1 rounded px-1 py-1 ${
                         visible ? "hover:bg-gray-50" : "opacity-50"
-                      }`}
+                      } ${dragging ? "bg-blue-50 opacity-80" : ""} ${
+                        isOver ? "outline outline-1 outline-blue-400" : ""
+                      } cursor-grab active:cursor-grabbing`}
                     >
-                      <div className="flex flex-col">
+                      <div
+                        className="flex flex-col"
+                        title="드래그로 순서 변경 가능"
+                      >
                         <button
                           onClick={() => moveSection(s.key, -1)}
                           disabled={i === 0}
@@ -403,8 +441,8 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                 })}
             </ul>
             <p className="mt-3 text-[11px] text-slate-400 leading-snug">
-              섹션 표시/순서를 바꾸면 이 이력서의 미리보기·PDF에만 적용됩니다. 항목 데이터는
-              모든 이력서가 공유합니다.
+              항목을 드래그하거나 ▲▼ 버튼으로 순서를 바꾸고, "보임/숨김"으로 표시 여부를 조절할 수
+              있습니다. 이 이력서의 미리보기·PDF에만 적용되며 항목 데이터는 모든 이력서가 공유합니다.
             </p>
           </aside>
         </div>
