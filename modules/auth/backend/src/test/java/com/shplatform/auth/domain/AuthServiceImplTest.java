@@ -531,7 +531,7 @@ class AuthServiceImplTest {
 
         var ex = assertThrows(BusinessException.class,
                 () -> authService.deleteAccount(1L, "WrongPw!"));
-        assertEquals(ErrorCode.UNAUTHORIZED, ex.getErrorCode());
+        assertEquals(ErrorCode.WRONG_CURRENT_PASSWORD, ex.getErrorCode());
     }
 
     @Test
