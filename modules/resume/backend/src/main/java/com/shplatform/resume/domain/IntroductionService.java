@@ -46,4 +46,13 @@ public interface IntroductionService {
      * @throws BusinessException NOT_FOUND 항목이 없을 때, FORBIDDEN 다른 사용자의 항목일 때
      */
     void deleteIntroduction(Long userId, Long introductionId);
+
+    /**
+     * (명령형) 자기소개 항목의 표시 순서를 재정렬한다.
+     *
+     * @param userId         로그인 사용자 ID
+     * @param orderedIds     새 표시 순서대로 나열한 자기소개 항목 ID 목록
+     * @throws BusinessException FORBIDDEN 본인 소유가 아닌 항목 ID가 포함된 경우
+     */
+    void reorderIntroductions(Long userId, List<Long> orderedIds);
 }

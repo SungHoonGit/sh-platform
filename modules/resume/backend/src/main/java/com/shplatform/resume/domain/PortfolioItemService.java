@@ -49,4 +49,13 @@ public interface PortfolioItemService {
      * @throws BusinessException NOT_FOUND 작업물이 없을 때, FORBIDDEN 다른 사용자의 작업물일 때
      */
     void deletePortfolioItem(Long userId, Long itemId);
+
+    /**
+     * (명령형) 포트폴리오 작업물의 표시 순서를 재정렬한다.
+     *
+     * @param userId     로그인 사용자 ID
+     * @param orderedIds 새 표시 순서대로 나열한 작업물 ID 목록
+     * @throws BusinessException FORBIDDEN 본인 소유가 아닌 작업물 ID가 포함된 경우
+     */
+    void reorderPortfolioItems(Long userId, List<Long> orderedIds);
 }

@@ -4,6 +4,7 @@ import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
 import com.shplatform.resume.api.dto.PortfolioItemRequest;
 import com.shplatform.resume.api.dto.PortfolioItemResponse;
+import com.shplatform.resume.api.dto.ReorderRequest;
 import com.shplatform.resume.domain.PortfolioItemService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -69,6 +70,16 @@ public class PortfolioItemController {
     @Operation(summary = "작업물 삭제")
     public ResponseEntity<Void> deletePortfolioItem(@PathVariable Long id) {
         portfolioItemService.deletePortfolioItem(SecurityUtils.currentAccountId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * (명령형) 포트폴리오 작업물의 표시 순서를 재정렬한다.
+     */
+    @PutMapping("/reorder")
+    @Operation(summary = "작업물 표시 순서 재정렬")
+    public ResponseEntity<Void> reorderPortfolioItems(@Valid @RequestBody ReorderRequest request) {
+        portfolioItemService.reorderPortfolioItems(SecurityUtils.currentAccountId(), request.ids());
         return ResponseEntity.noContent().build();
     }
 }

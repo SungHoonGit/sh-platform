@@ -46,4 +46,13 @@ public interface EducationService {
      * @throws BusinessException NOT_FOUND 학력이 없을 때, FORBIDDEN 다른 사용자의 학력일 때
      */
     void deleteEducation(Long userId, Long educationId);
+
+    /**
+     * (명령형) 학력의 표시 순서를 재정렬한다.
+     *
+     * @param userId      로그인 사용자 ID
+     * @param orderedIds 새 표시 순서대로 나열한 학력 ID 목록
+     * @throws BusinessException FORBIDDEN 본인 소유가 아닌 학력 ID가 포함된 경우
+     */
+    void reorderEducations(Long userId, List<Long> orderedIds);
 }

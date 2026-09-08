@@ -4,6 +4,7 @@ import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
 import com.shplatform.resume.api.dto.CareerRequest;
 import com.shplatform.resume.api.dto.CareerResponse;
+import com.shplatform.resume.api.dto.ReorderRequest;
 import com.shplatform.resume.domain.CareerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -69,6 +70,16 @@ public class CareerController {
     @Operation(summary = "경력 삭제")
     public ResponseEntity<Void> deleteCareer(@PathVariable Long id) {
         careerService.deleteCareer(SecurityUtils.currentAccountId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * (명령형) 경력의 표시 순서를 재정렬한다.
+     */
+    @PutMapping("/reorder")
+    @Operation(summary = "경력 표시 순서 재정렬")
+    public ResponseEntity<Void> reorderCareers(@Valid @RequestBody ReorderRequest request) {
+        careerService.reorderCareers(SecurityUtils.currentAccountId(), request.ids());
         return ResponseEntity.noContent().build();
     }
 }

@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +49,26 @@ public class ProjectServiceImpl implements ProjectService {
     public void deleteProject(Long userId, Long projectId) {
         var entity = getOwnedProject(userId, projectId);
         projectRepository.delete(entity);
+    }
+
+    @Override
+    @Transactional
+    public void reorderProjects(Long userId, List<Long> orderedIds) {
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            return;
+        }
+        var owned = projectRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        Map<Long, ResumeProjectEntity> byId = owned.stream()
+                .collect(Collectors.toMap(ResumeProjectEntity::getId, e -> e));
+        int order = 1;
+        for (Long id : orderedIds) {
+            var entity = byId.get(id);
+            if (entity == null) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+            entity.setDisplayOrder(order++);
+        }
+        projectRepository.saveAll(owned);
     }
 
     private ResumeProjectEntity getOwnedProject(Long userId, Long projectId) {

@@ -46,4 +46,13 @@ public interface SkillService {
      * @throws BusinessException NOT_FOUND 스킬이 없을 때, FORBIDDEN 다른 사용자의 스킬일 때
      */
     void deleteSkill(Long userId, Long skillId);
+
+    /**
+     * (명령형) 스킬의 표시 순서를 재정렬한다.
+     *
+     * @param userId      로그인 사용자 ID
+     * @param orderedIds 새 표시 순서대로 나열한 스킬 ID 목록
+     * @throws BusinessException FORBIDDEN 본인 소유가 아닌 스킬 ID가 포함된 경우
+     */
+    void reorderSkills(Long userId, List<Long> orderedIds);
 }

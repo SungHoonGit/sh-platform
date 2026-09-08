@@ -46,4 +46,13 @@ public interface ProjectService {
      * @throws BusinessException NOT_FOUND 프로젝트가 없을 때, FORBIDDEN 다른 사용자의 프로젝트일 때
      */
     void deleteProject(Long userId, Long projectId);
+
+    /**
+     * (명령형) 프로젝트의 표시 순서를 재정렬한다.
+     *
+     * @param userId     로그인 사용자 ID
+     * @param orderedIds 새 표시 순서대로 나열한 프로젝트 ID 목록
+     * @throws BusinessException FORBIDDEN 본인 소유가 아닌 프로젝트 ID가 포함된 경우
+     */
+    void reorderProjects(Long userId, List<Long> orderedIds);
 }

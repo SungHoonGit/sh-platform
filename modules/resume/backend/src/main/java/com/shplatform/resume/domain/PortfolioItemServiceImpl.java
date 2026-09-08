@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +51,26 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
     public void deletePortfolioItem(Long userId, Long itemId) {
         var entity = getOwnedPortfolioItem(userId, itemId);
         portfolioItemRepository.delete(entity);
+    }
+
+    @Override
+    @Transactional
+    public void reorderPortfolioItems(Long userId, List<Long> orderedIds) {
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            return;
+        }
+        var owned = portfolioItemRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        Map<Long, ResumePortfolioItemEntity> byId = owned.stream()
+                .collect(Collectors.toMap(ResumePortfolioItemEntity::getId, e -> e));
+        int order = 1;
+        for (Long id : orderedIds) {
+            var entity = byId.get(id);
+            if (entity == null) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+            entity.setDisplayOrder(order++);
+        }
+        portfolioItemRepository.saveAll(owned);
     }
 
     private void validateTypePayload(PortfolioItemRequest request) {

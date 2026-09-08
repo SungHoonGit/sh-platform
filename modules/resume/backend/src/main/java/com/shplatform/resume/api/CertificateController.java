@@ -4,6 +4,7 @@ import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
 import com.shplatform.resume.api.dto.CertificateRequest;
 import com.shplatform.resume.api.dto.CertificateResponse;
+import com.shplatform.resume.api.dto.ReorderRequest;
 import com.shplatform.resume.domain.CertificateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -69,6 +70,16 @@ public class CertificateController {
     @Operation(summary = "자격증 삭제")
     public ResponseEntity<Void> deleteCertificate(@PathVariable Long id) {
         certificateService.deleteCertificate(SecurityUtils.currentAccountId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * (명령형) 자격증의 표시 순서를 재정렬한다.
+     */
+    @PutMapping("/reorder")
+    @Operation(summary = "자격증 표시 순서 재정렬")
+    public ResponseEntity<Void> reorderCertificates(@Valid @RequestBody ReorderRequest request) {
+        certificateService.reorderCertificates(SecurityUtils.currentAccountId(), request.ids());
         return ResponseEntity.noContent().build();
     }
 }

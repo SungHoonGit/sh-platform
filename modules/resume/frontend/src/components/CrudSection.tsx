@@ -61,6 +61,9 @@ export default function CrudSection({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const [dropPos, setDropPos] = useState<"before" | "after" | null>(null);
   const [schoolOpen, setSchoolOpen] = useState(false);
   const [schoolQuery, setSchoolQuery] = useState("");
   const [suggestions, setSuggestions] = useState<Sug[]>([]);
@@ -208,6 +211,49 @@ export default function CrudSection({
     } finally {
       setBusy(false);
     }
+  };
+
+  const persistOrder = async (next: Item[]) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiPut(`${endpoint}/reorder`, { ids: next.map((it) => Number(it.id)) });
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "순서 저장에 실패했습니다.");
+    } finally {
+      setBusy(false);
+      setDragId(null);
+      setOverId(null);
+      setDropPos(null);
+    }
+  };
+
+  const moveItem = (it: Item, dir: -1 | 1) => {
+    const idx = items.findIndex((x) => String(x.id) === String(it.id));
+    const target = idx + dir;
+    if (idx < 0 || target < 0 || target >= items.length) return;
+    const next = [...items];
+    const cur = next[idx];
+    const other = next[target];
+    next[idx] = other;
+    next[target] = cur;
+    void persistOrder(next);
+  };
+
+  const reorderItems = (draggedId: string, targetId: string, pos: "before" | "after") => {
+    const from = items.findIndex((x) => String(x.id) === draggedId);
+    if (from < 0) return;
+    const rest = items.filter((x) => String(x.id) !== draggedId);
+    const targetIndex = rest.findIndex((x) => String(x.id) === targetId);
+    if (targetIndex < 0) return;
+    const dragged = items[from];
+    const insertAt = pos === "after" ? targetIndex + 1 : targetIndex;
+    rest.splice(insertAt, 0, dragged);
+    setDragId(null);
+    setOverId(null);
+    setDropPos(null);
+    void persistOrder(rest);
   };
 
   const showForm = editing !== null;
@@ -369,13 +415,79 @@ export default function CrudSection({
     </div>
   );
 
-  const visibleSection = editing !== null && (
+  const orderControls = (it: Item, i: number) => (
+    <div className="shrink-0 flex items-center gap-0.5">
+      <div className="flex flex-col" title="드래그나 ▲▼로 순서 변경">
+        <button
+          onClick={() => moveItem(it, -1)}
+          disabled={i === 0 || busy}
+          title="위로"
+          className="text-[10px] text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 leading-none py-0.5"
+        >
+          ▲
+        </button>
+        <button
+          onClick={() => moveItem(it, 1)}
+          disabled={i === items.length - 1 || busy}
+          title="아래로"
+          className="text-[10px] text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 leading-none py-0.5"
+        >
+          ▼
+        </button>
+      </div>
+      <span
+        draggable
+        onDragStart={() => {
+          setDragId(String(it.id));
+          setOverId(null);
+          setDropPos(null);
+        }}
+        onDragEnd={() => {
+          setDragId(null);
+          setOverId(null);
+          setDropPos(null);
+        }}
+        className="px-1 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing select-none"
+        title="드래그로 순서 변경"
+      >
+        ⋮⋮
+      </span>
+    </div>
+  );
+
+  const rowDragProps = (it: Item) => ({
+    onDragOver: (e: React.DragEvent) => {
+      e.preventDefault();
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pos: "before" | "after" =
+        e.clientY < rect.top + rect.height / 2 ? "before" : "after";
+      setOverId(String(it.id));
+      setDropPos(pos);
+    },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault();
+      if (dragId && dropPos) reorderItems(dragId, String(it.id), dropPos);
+    },
+  });
+
+  const isOverRow = (it: Item) =>
+    overId === String(it.id) &&
+    (dropPos === "after" ? "border-b-2 border-blue-400" : "border-t-2 border-blue-400");
+
+  const itemList = (
     <div className="space-y-2">
       {inline && editing === "new" && renderForm()}
-      {items.map((it) => (
-        <div key={String(it.id)} className="border border-gray-100 rounded-lg">
-          <div className="py-2.5 px-1 flex justify-between items-start gap-3">
-            <div className="min-w-0">
+      {items.map((it, i) => (
+        <div
+          key={String(it.id)}
+          {...rowDragProps(it)}
+          className={`border border-gray-100 rounded-lg ${
+            overId === String(it.id) ? isOverRow(it) : ""
+          }`}
+        >
+          <div className="py-2.5 px-1 flex justify-between items-start gap-2">
+            {orderControls(it, i)}
+            <div className="min-w-0 flex-1">
               <p className="font-semibold text-sm text-slate-800 truncate">
                 {String(it[titleKey] ?? "")}
               </p>
@@ -434,7 +546,7 @@ export default function CrudSection({
 
       {inline ? (
         <>
-          {visibleSection}
+          {itemList}
           {items.length === 0 && !showForm && (
             <p className="text-sm text-slate-400">등록된 항목이 없습니다.</p>
           )}
@@ -443,9 +555,16 @@ export default function CrudSection({
         <>
           {items.length > 0 && (
             <ul className="divide-y divide-gray-100">
-              {items.map((it) => (
-                <li key={String(it.id)} className="py-2.5 flex justify-between items-start gap-3">
-                  <div className="min-w-0">
+              {items.map((it, i) => (
+                <li
+                  key={String(it.id)}
+                  {...rowDragProps(it)}
+                  className={`py-2.5 flex justify-between items-start gap-2 ${
+                    overId === String(it.id) ? isOverRow(it) : ""
+                  }`}
+                >
+                  {orderControls(it, i)}
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-sm text-slate-800 truncate">
                       {String(it[titleKey] ?? "")}
                     </p>

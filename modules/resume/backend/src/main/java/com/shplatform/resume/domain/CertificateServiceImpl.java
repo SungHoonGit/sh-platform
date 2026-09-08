@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +49,26 @@ public class CertificateServiceImpl implements CertificateService {
     public void deleteCertificate(Long userId, Long certificateId) {
         var entity = getOwnedCertificate(userId, certificateId);
         certificateRepository.delete(entity);
+    }
+
+    @Override
+    @Transactional
+    public void reorderCertificates(Long userId, List<Long> orderedIds) {
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            return;
+        }
+        var owned = certificateRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        Map<Long, ResumeCertificateEntity> byId = owned.stream()
+                .collect(Collectors.toMap(ResumeCertificateEntity::getId, e -> e));
+        int order = 1;
+        for (Long id : orderedIds) {
+            var entity = byId.get(id);
+            if (entity == null) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+            entity.setDisplayOrder(order++);
+        }
+        certificateRepository.saveAll(owned);
     }
 
     private ResumeCertificateEntity getOwnedCertificate(Long userId, Long certificateId) {

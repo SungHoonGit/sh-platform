@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +49,26 @@ public class EducationServiceImpl implements EducationService {
     public void deleteEducation(Long userId, Long educationId) {
         var entity = getOwnedEducation(userId, educationId);
         educationRepository.delete(entity);
+    }
+
+    @Override
+    @Transactional
+    public void reorderEducations(Long userId, List<Long> orderedIds) {
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            return;
+        }
+        var owned = educationRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        Map<Long, ResumeEducationEntity> byId = owned.stream()
+                .collect(Collectors.toMap(ResumeEducationEntity::getId, e -> e));
+        int order = 1;
+        for (Long id : orderedIds) {
+            var entity = byId.get(id);
+            if (entity == null) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+            entity.setDisplayOrder(order++);
+        }
+        educationRepository.saveAll(owned);
     }
 
     private ResumeEducationEntity getOwnedEducation(Long userId, Long educationId) {

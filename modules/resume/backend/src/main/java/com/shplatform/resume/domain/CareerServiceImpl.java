@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +50,26 @@ public class CareerServiceImpl implements CareerService {
     public void deleteCareer(Long userId, Long careerId) {
         var entity = getOwnedCareer(userId, careerId);
         careerRepository.delete(entity);
+    }
+
+    @Override
+    @Transactional
+    public void reorderCareers(Long userId, List<Long> orderedIds) {
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            return;
+        }
+        var owned = careerRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        Map<Long, ResumeCareerEntity> byId = owned.stream()
+                .collect(Collectors.toMap(ResumeCareerEntity::getId, e -> e));
+        int order = 1;
+        for (Long id : orderedIds) {
+            var entity = byId.get(id);
+            if (entity == null) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+            entity.setDisplayOrder(order++);
+        }
+        careerRepository.saveAll(owned);
     }
 
     private ResumeCareerEntity getOwnedCareer(Long userId, Long careerId) {

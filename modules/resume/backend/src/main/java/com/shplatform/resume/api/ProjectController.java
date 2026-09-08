@@ -4,6 +4,7 @@ import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
 import com.shplatform.resume.api.dto.ProjectRequest;
 import com.shplatform.resume.api.dto.ProjectResponse;
+import com.shplatform.resume.api.dto.ReorderRequest;
 import com.shplatform.resume.domain.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -69,6 +70,16 @@ public class ProjectController {
     @Operation(summary = "프로젝트 삭제")
     public ResponseEntity<Void> deleteProject(@PathVariable Long id) {
         projectService.deleteProject(SecurityUtils.currentAccountId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * (명령형) 프로젝트의 표시 순서를 재정렬한다.
+     */
+    @PutMapping("/reorder")
+    @Operation(summary = "프로젝트 표시 순서 재정렬")
+    public ResponseEntity<Void> reorderProjects(@Valid @RequestBody ReorderRequest request) {
+        projectService.reorderProjects(SecurityUtils.currentAccountId(), request.ids());
         return ResponseEntity.noContent().build();
     }
 }

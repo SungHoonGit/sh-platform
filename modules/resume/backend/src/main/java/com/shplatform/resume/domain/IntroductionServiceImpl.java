@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +49,26 @@ public class IntroductionServiceImpl implements IntroductionService {
     public void deleteIntroduction(Long userId, Long introductionId) {
         var entity = getOwnedIntroduction(userId, introductionId);
         introductionRepository.delete(entity);
+    }
+
+    @Override
+    @Transactional
+    public void reorderIntroductions(Long userId, List<Long> orderedIds) {
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            return;
+        }
+        var owned = introductionRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        Map<Long, ResumeIntroductionEntity> byId = owned.stream()
+                .collect(Collectors.toMap(ResumeIntroductionEntity::getId, e -> e));
+        int order = 1;
+        for (Long id : orderedIds) {
+            var entity = byId.get(id);
+            if (entity == null) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+            entity.setDisplayOrder(order++);
+        }
+        introductionRepository.saveAll(owned);
     }
 
     private ResumeIntroductionEntity getOwnedIntroduction(Long userId, Long introductionId) {

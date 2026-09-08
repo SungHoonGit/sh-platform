@@ -112,4 +112,37 @@ class IntroductionServiceImplTest {
 
         then(introductionRepository).should(times(1)).delete(existing);
     }
+
+    @Test
+    @DisplayName("reorderIntroductions: 전달된 id 순서대로 displayOrder를 재지정한다")
+    void reorderIntroductions_success() {
+        var first = entity(USER_ID);
+        first.setId(601L);
+        first.setDisplayOrder(1);
+        var second = entity(USER_ID);
+        second.setId(602L);
+        second.setDisplayOrder(2);
+        given(introductionRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+                .willReturn(List.of(first, second));
+        given(introductionRepository.saveAll(any()))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        introductionService.reorderIntroductions(USER_ID, List.of(602L, 601L));
+
+        assertThat(first.getDisplayOrder()).isEqualTo(2);
+        assertThat(second.getDisplayOrder()).isEqualTo(1);
+        then(introductionRepository).should(times(1)).saveAll(List.of(first, second));
+    }
+
+    @Test
+    @DisplayName("reorderIntroductions: 본인 소유가 아닌 항목 id가 포함되면 FORBIDDEN 예외가 발생한다")
+    void reorderIntroductions_forbidden() {
+        given(introductionRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+                .willReturn(List.of(entity(USER_ID)));
+
+        assertThatThrownBy(() -> introductionService.reorderIntroductions(USER_ID, List.of(999L)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+    }
 }

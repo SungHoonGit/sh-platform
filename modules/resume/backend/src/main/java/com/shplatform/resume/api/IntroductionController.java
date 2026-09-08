@@ -4,6 +4,7 @@ import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
 import com.shplatform.resume.api.dto.IntroductionRequest;
 import com.shplatform.resume.api.dto.IntroductionResponse;
+import com.shplatform.resume.api.dto.ReorderRequest;
 import com.shplatform.resume.domain.IntroductionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -69,6 +70,16 @@ public class IntroductionController {
     @Operation(summary = "자기소개 항목 삭제")
     public ResponseEntity<Void> deleteIntroduction(@PathVariable Long id) {
         introductionService.deleteIntroduction(SecurityUtils.currentAccountId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * (명령형) 자기소개 항목의 표시 순서를 재정렬한다.
+     */
+    @PutMapping("/reorder")
+    @Operation(summary = "자기소개 표시 순서 재정렬")
+    public ResponseEntity<Void> reorderIntroductions(@Valid @RequestBody ReorderRequest request) {
+        introductionService.reorderIntroductions(SecurityUtils.currentAccountId(), request.ids());
         return ResponseEntity.noContent().build();
     }
 }

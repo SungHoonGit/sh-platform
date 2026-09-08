@@ -4,6 +4,7 @@ import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
 import com.shplatform.resume.api.dto.EducationRequest;
 import com.shplatform.resume.api.dto.EducationResponse;
+import com.shplatform.resume.api.dto.ReorderRequest;
 import com.shplatform.resume.domain.EducationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -69,6 +70,16 @@ public class EducationController {
     @Operation(summary = "학력 삭제")
     public ResponseEntity<Void> deleteEducation(@PathVariable Long id) {
         educationService.deleteEducation(SecurityUtils.currentAccountId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * (명령형) 학력의 표시 순서를 재정렬한다.
+     */
+    @PutMapping("/reorder")
+    @Operation(summary = "학력 표시 순서 재정렬")
+    public ResponseEntity<Void> reorderEducations(@Valid @RequestBody ReorderRequest request) {
+        educationService.reorderEducations(SecurityUtils.currentAccountId(), request.ids());
         return ResponseEntity.noContent().build();
     }
 }

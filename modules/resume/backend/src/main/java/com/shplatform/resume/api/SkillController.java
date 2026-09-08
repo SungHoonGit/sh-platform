@@ -2,6 +2,7 @@ package com.shplatform.resume.api;
 
 import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
+import com.shplatform.resume.api.dto.ReorderRequest;
 import com.shplatform.resume.api.dto.SkillRequest;
 import com.shplatform.resume.api.dto.SkillResponse;
 import com.shplatform.resume.domain.SkillService;
@@ -69,6 +70,16 @@ public class SkillController {
     @Operation(summary = "스킬 삭제")
     public ResponseEntity<Void> deleteSkill(@PathVariable Long id) {
         skillService.deleteSkill(SecurityUtils.currentAccountId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * (명령형) 스킬의 표시 순서를 재정렬한다.
+     */
+    @PutMapping("/reorder")
+    @Operation(summary = "스킬 표시 순서 재정렬")
+    public ResponseEntity<Void> reorderSkills(@Valid @RequestBody ReorderRequest request) {
+        skillService.reorderSkills(SecurityUtils.currentAccountId(), request.ids());
         return ResponseEntity.noContent().build();
     }
 }

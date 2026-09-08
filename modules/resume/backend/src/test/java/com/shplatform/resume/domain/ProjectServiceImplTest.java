@@ -112,4 +112,37 @@ class ProjectServiceImplTest {
 
         then(projectRepository).should(times(1)).delete(existing);
     }
+
+    @Test
+    @DisplayName("reorderProjects: 전달된 id 순서대로 displayOrder를 재지정한다")
+    void reorderProjects_success() {
+        var first = entity(USER_ID);
+        first.setId(501L);
+        first.setDisplayOrder(1);
+        var second = entity(USER_ID);
+        second.setId(502L);
+        second.setDisplayOrder(2);
+        given(projectRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+                .willReturn(List.of(first, second));
+        given(projectRepository.saveAll(any()))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        projectService.reorderProjects(USER_ID, List.of(502L, 501L));
+
+        assertThat(first.getDisplayOrder()).isEqualTo(2);
+        assertThat(second.getDisplayOrder()).isEqualTo(1);
+        then(projectRepository).should(times(1)).saveAll(List.of(first, second));
+    }
+
+    @Test
+    @DisplayName("reorderProjects: 본인 소유가 아닌 프로젝트 id가 포함되면 FORBIDDEN 예외가 발생한다")
+    void reorderProjects_forbidden() {
+        given(projectRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+                .willReturn(List.of(entity(USER_ID)));
+
+        assertThatThrownBy(() -> projectService.reorderProjects(USER_ID, List.of(999L)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+    }
 }

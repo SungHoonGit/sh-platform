@@ -151,6 +151,7 @@ export default function EditPage({ documentId }: { documentId?: number }) {
   const [error, setError] = useState<string | null>(null);
   const [dragKey, setDragKey] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
+  const [dropPos, setDropPos] = useState<"before" | "after" | null>(null);
 
   useEffect(() => {
     apiGet<ResumeView>("/view")
@@ -215,7 +216,7 @@ export default function EditPage({ documentId }: { documentId?: number }) {
     persistSections(next);
   };
 
-  const reorderSections = (draggedKey: string, targetKey: string) => {
+  const reorderSections = (draggedKey: string, targetKey: string, pos: "before" | "after") => {
     if (!sectionItems || draggedKey === targetKey) return;
     const sorted = [...sectionItems].sort((a, b) => a.order - b.order);
     const dragged = sorted.find((s) => s.key === draggedKey);
@@ -223,7 +224,8 @@ export default function EditPage({ documentId }: { documentId?: number }) {
     const rest = sorted.filter((s) => s.key !== draggedKey);
     const targetIndex = rest.findIndex((s) => s.key === targetKey);
     if (targetIndex < 0) return;
-    rest.splice(targetIndex, 0, dragged);
+    const insertAt = pos === "after" ? targetIndex + 1 : targetIndex;
+    rest.splice(insertAt, 0, dragged);
     const next = rest.map((s, i) => ({ ...s, order: i + 1 }));
     persistSections(next);
   };
@@ -372,25 +374,39 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                     <li
                       key={s.key}
                       draggable
-                      onDragStart={() => setDragKey(s.key)}
+                      onDragStart={() => {
+                        setDragKey(s.key);
+                        setOverKey(null);
+                        setDropPos(null);
+                      }}
                       onDragEnd={() => {
                         setDragKey(null);
                         setOverKey(null);
+                        setDropPos(null);
                       }}
                       onDragOver={(e) => {
                         e.preventDefault();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const pos: "before" | "after" =
+                          e.clientY < rect.top + rect.height / 2 ? "before" : "after";
                         setOverKey(s.key);
+                        setDropPos(pos);
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
-                        if (dragKey) reorderSections(dragKey, s.key);
+                        if (dragKey && dropPos) reorderSections(dragKey, s.key, dropPos);
                         setDragKey(null);
                         setOverKey(null);
+                        setDropPos(null);
                       }}
-                      className={`flex items-center gap-1 rounded px-1 py-1 ${
+                      className={`relative flex items-center gap-1 rounded px-1 py-1 ${
                         visible ? "hover:bg-gray-50" : "opacity-50"
                       } ${dragging ? "bg-blue-50 opacity-80" : ""} ${
-                        isOver ? "outline outline-1 outline-blue-400" : ""
+                        isOver
+                          ? dropPos === "after"
+                            ? "outline outline-1 outline-blue-400 border-b-2 border-blue-400"
+                            : "outline outline-1 outline-blue-400 border-t-2 border-blue-400"
+                          : ""
                       } cursor-grab active:cursor-grabbing`}
                     >
                       <div
