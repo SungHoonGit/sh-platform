@@ -26,6 +26,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
   if (res.status === 401) throw new Error("UNAUTHORIZED");
   if (!res.ok) throw new Error(`API_ERROR_${res.status}`);
+  if (res.status === 204 || res.headers.get("Content-Length") === "0") return undefined as T;
   const json: ApiResponse<T> = await res.json();
   return json.data;
 }
