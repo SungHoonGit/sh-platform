@@ -5,6 +5,7 @@ import com.shplatform.common.security.SecurityUtils;
 import com.shplatform.resume.api.dto.DocumentCreateRequest;
 import com.shplatform.resume.api.dto.DocumentResponse;
 import com.shplatform.resume.api.dto.DocumentUpdateRequest;
+import com.shplatform.resume.api.dto.ReorderRequest;
 import com.shplatform.resume.api.dto.ShareLinkCreateRequest;
 import com.shplatform.resume.api.dto.ShareLinkResponse;
 import com.shplatform.resume.domain.ResumeDocumentService;
@@ -74,6 +75,16 @@ public class DocumentsController {
     public ResponseEntity<ApiResponse<Void>> markPrimary(@PathVariable Long id) {
         documentService.markPrimary(SecurityUtils.currentAccountId(), id);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    /**
+     * (명령형) 문서 목록의 표시 순서를 재정렬한다.
+     */
+    @PutMapping("/reorder")
+    @Operation(summary = "문서 목록 표시 순서 재정렬")
+    public ResponseEntity<Void> reorderDocuments(@Valid @RequestBody ReorderRequest request) {
+        documentService.reorderDocuments(SecurityUtils.currentAccountId(), request.ids());
+        return ResponseEntity.noContent().build();
     }
 
     /**

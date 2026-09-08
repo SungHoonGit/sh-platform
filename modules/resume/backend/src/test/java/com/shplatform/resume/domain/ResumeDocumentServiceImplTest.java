@@ -22,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class ResumeDocumentServiceImplTest {
@@ -36,14 +37,16 @@ class ResumeDocumentServiceImplTest {
     private ResumeDocumentServiceImpl documentService;
 
     private ResumeDocumentEntity entity(Long id, String title, boolean primary) {
-        return ResumeDocumentEntity.create(USER_ID, title, "CLASSIC", primary,
+        ResumeDocumentEntity entity = ResumeDocumentEntity.create(USER_ID, title, "CLASSIC", primary,
                 ResumeDocumentServiceImpl.DEFAULT_SECTION_CONFIG);
+        entity.updateDisplayOrder(id == null ? 1 : id.intValue());
+        return entity;
     }
 
     @Test
     @DisplayName("getDocuments: 문서가 없으면 기본 문서를 자동 생성한다")
     void getDocuments_empty_createsDefault() {
-        given(documentRepository.findByUserIdOrderByCreatedAtAsc(USER_ID)).willReturn(List.of());
+        given(documentRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID)).willReturn(List.of());
         given(documentRepository.save(any(ResumeDocumentEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
@@ -56,13 +59,14 @@ class ResumeDocumentServiceImplTest {
                 ArgumentCaptor.forClass(ResumeDocumentEntity.class);
         then(documentRepository).should(times(1)).save(captor.capture());
         assertThat(captor.getValue().getTitle()).isEqualTo("내 이력서");
+        assertThat(captor.getValue().getDisplayOrder()).isEqualTo(1);
     }
 
     @Test
     @DisplayName("getDocuments: 기존 문서가 있으면 그대로 반환한다")
     void getDocuments_existing() {
         var doc = entity(DOC_ID, "내 이력서", true);
-        given(documentRepository.findByUserIdOrderByCreatedAtAsc(USER_ID)).willReturn(List.of(doc));
+        given(documentRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID)).willReturn(List.of(doc));
 
         var responses = documentService.getDocuments(USER_ID);
 
@@ -156,7 +160,7 @@ class ResumeDocumentServiceImplTest {
         var other = entity(20L, "기존대표", true);
         given(documentRepository.findByIdAndUserId(DOC_ID, USER_ID))
                 .willReturn(Optional.of(target));
-        given(documentRepository.findByUserIdOrderByCreatedAtAsc(USER_ID))
+        given(documentRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
                 .willReturn(List.of(target, other));
 
         documentService.markPrimary(USER_ID, DOC_ID);
@@ -177,5 +181,46 @@ class ResumeDocumentServiceImplTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @DisplayName("reorderDocuments: 전달된 id 순서대로 displayOrder를 재지정한다")
+    void reorderDocuments_success() {
+        var first = entity(DOC_ID, "첫 번째", true);
+        ReflectionTestUtils.setField(first, "id", DOC_ID);
+        first.updateDisplayOrder(2);
+        var second = entity(20L, "두 번째", false);
+        ReflectionTestUtils.setField(second, "id", 20L);
+        second.updateDisplayOrder(1);
+        given(documentRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+                .willReturn(List.of(first, second));
+        given(documentRepository.saveAll(any()))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        documentService.reorderDocuments(USER_ID, List.of(DOC_ID, 20L));
+
+        assertThat(first.getDisplayOrder()).isEqualTo(1);
+        assertThat(second.getDisplayOrder()).isEqualTo(2);
+        then(documentRepository).should(times(1)).saveAll(List.of(first, second));
+    }
+
+    @Test
+    @DisplayName("reorderDocuments: 본인 소유가 아닌 문서 id가 포함되면 FORBIDDEN 예외가 발생한다")
+    void reorderDocuments_forbidden() {
+        given(documentRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+                .willReturn(List.of(entity(DOC_ID, "내 이력서", true)));
+
+        assertThatThrownBy(() -> documentService.reorderDocuments(USER_ID, List.of(999L)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+    }
+
+    @Test
+    @DisplayName("reorderDocuments: 빈 목록이면 아무 것도 하지 않는다")
+    void reorderDocuments_empty() {
+        documentService.reorderDocuments(USER_ID, List.of());
+
+        then(documentRepository).should(times(0)).saveAll(any());
     }
 }

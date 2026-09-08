@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ResumeDocumentRepository extends JpaRepository<ResumeDocumentEntity, Long> {
 
-    List<ResumeDocumentEntity> findByUserIdOrderByCreatedAtAsc(Long userId);
+    List<ResumeDocumentEntity> findByUserIdOrderByDisplayOrderAscIdAsc(Long userId);
 
     Optional<ResumeDocumentEntity> findByIdAndUserId(Long id, Long userId);
 

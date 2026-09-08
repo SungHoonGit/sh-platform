@@ -194,7 +194,7 @@ class ResumeShareServiceImplTest {
         var owner = ResumeDocumentEntity.create(USER_ID, "내 이력서", "CLASSIC", true, "[]");
         var saved = link(DOC_ID, null);
         var docResponse = new DocumentResponse(
-                DOC_ID, "내 이력서", "CLASSIC", true, "[]", null, null);
+                DOC_ID, "내 이력서", "CLASSIC", true, 1, "[]", null, null);
         var view = new ResumeViewResponse(null, null, null, null, null, null, null, null, null);
         given(shareLinkRepository.findByToken(TOKEN)).willReturn(Optional.of(saved));
         given(documentRepository.findById(DOC_ID)).willReturn(Optional.of(owner));

@@ -44,7 +44,7 @@ class ResumePdfMultiPageTest {
                     new ModernPdfLayout(fileStorageService),
                     new SaraminPdfLayout(fileStorageService));
             given(resumeDocumentService.getDocuments(USER_ID))
-                    .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "대용량", theme, true, null, null, null)));
+                    .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "대용량", theme, true, 1, null, null, null)));
 
             byte[] pdf = service.generatePdf(USER_ID, DOCUMENT_ID);
             String text = extract(pdf);

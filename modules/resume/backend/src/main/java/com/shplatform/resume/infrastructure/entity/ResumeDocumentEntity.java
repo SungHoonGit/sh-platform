@@ -40,6 +40,10 @@ public class ResumeDocumentEntity {
     @Column(name = "is_primary", nullable = false)
     private boolean primary;
 
+    /** 목록 표시 순서 (1부터, 낮을수록 위) */
+    @Column(name = "display_order", nullable = false)
+    private Integer displayOrder = 0;
+
     /** 섹션 편성 JSON 배열 ([{"key","included","order"}, ...]) */
     @Lob
     @Column(name = "section_config", nullable = false)
@@ -82,6 +86,10 @@ public class ResumeDocumentEntity {
 
     public void updateSectionConfig(String sectionConfig) {
         this.sectionConfig = sectionConfig;
+    }
+
+    public void updateDisplayOrder(int displayOrder) {
+        this.displayOrder = displayOrder;
     }
 
     public void markPrimary() {

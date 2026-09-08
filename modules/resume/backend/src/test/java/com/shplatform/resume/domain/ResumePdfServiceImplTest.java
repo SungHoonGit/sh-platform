@@ -60,7 +60,7 @@ class ResumePdfServiceImplTest {
     @DisplayName("pdfFilename: 문서 theme/title로 '(테마) 문서제목.pdf'를 만든다")
     void pdfFilename_usesThemeAndTitle() {
         given(resumeDocumentService.getDocuments(USER_ID))
-                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "2026 포트폴리오", "MODERN", true, null, null, null)));
+                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "2026 포트폴리오", "MODERN", true, 1, null, null, null)));
 
         assertThat(resumePdfService.pdfFilename(USER_ID, DOCUMENT_ID)).isEqualTo("(모던) 2026 포트폴리오.pdf");
     }
@@ -128,7 +128,7 @@ class ResumePdfServiceImplTest {
                   {"key":"portfolioItems","included":true,"order":7}
                 ]""";
         given(resumeDocumentService.getDocuments(USER_ID))
-                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "제출용", "CLASSIC", true, config, null, null)));
+                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "제출용", "CLASSIC", true, 1, config, null, null)));
 
         byte[] pdf = resumePdfService.generatePdf(USER_ID, DOCUMENT_ID);
 
@@ -145,7 +145,7 @@ class ResumePdfServiceImplTest {
     void generatePdf_modernTemplateRendersSidebarAndMain() throws Exception {
         given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
         given(resumeDocumentService.getDocuments(USER_ID))
-                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "모던", "MODERN", true, null, null, null)));
+                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "모던", "MODERN", true, 1, null, null, null)));
 
         byte[] pdf = resumePdfService.generatePdf(USER_ID, DOCUMENT_ID);
 
@@ -164,7 +164,7 @@ class ResumePdfServiceImplTest {
     void generatePdf_saraminTemplateRendersProfileTableAndCareerTable() throws Exception {
         given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
         given(resumeDocumentService.getDocuments(USER_ID))
-                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "사람인형", "SARAMIN", true, null, null, null)));
+                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "사람인형", "SARAMIN", true, 1, null, null, null)));
 
         byte[] pdf = resumePdfService.generatePdf(USER_ID, DOCUMENT_ID);
 
@@ -183,7 +183,7 @@ class ResumePdfServiceImplTest {
     void generatePdf_unknownTemplateFallsBackToClassic() throws Exception {
         given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
         given(resumeDocumentService.getDocuments(USER_ID))
-                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "기타", "CUSTOM", true, null, null, null)));
+                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "기타", "CUSTOM", true, 1, null, null, null)));
 
         byte[] pdf = resumePdfService.generatePdf(USER_ID, DOCUMENT_ID);
 

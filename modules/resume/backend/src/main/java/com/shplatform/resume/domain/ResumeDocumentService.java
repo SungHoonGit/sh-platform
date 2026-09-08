@@ -15,7 +15,7 @@ public interface ResumeDocumentService {
      * 자동 생성한 뒤 반환한다 — 기존 사용자 마이그레이션 역할을 겸한다.
      *
      * @param userId 로그인 사용자 ID
-     * @return 문서 목록 (생성순)
+     * @return 문서 목록 (표시 순서)
      */
     List<DocumentResponse> getDocuments(Long userId);
 
@@ -61,4 +61,13 @@ public interface ResumeDocumentService {
      *                          INVALID_INPUT 유일한 문서를 삭제하려 할 때
      */
     void deleteDocument(Long userId, Long documentId);
+
+    /**
+     * (명령형) 문서 목록의 표시 순서를 재정렬한다.
+     *
+     * @param userId     로그인 사용자 ID
+     * @param orderedIds 새 순서대로 정렬된 문서 ID 목록
+     * @throws BusinessException FORBIDDEN 본인 소유가 아닌 문서 ID가 포함된 때
+     */
+    void reorderDocuments(Long userId, List<Long> orderedIds);
 }

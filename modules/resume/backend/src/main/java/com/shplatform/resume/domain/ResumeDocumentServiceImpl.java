@@ -10,7 +10,9 @@ import com.shplatform.resume.api.dto.DocumentUpdateRequest;
 import com.shplatform.resume.infrastructure.entity.ResumeDocumentEntity;
 import com.shplatform.resume.infrastructure.repository.ResumeDocumentRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,9 +45,12 @@ public class ResumeDocumentServiceImpl implements ResumeDocumentService {
     @Override
     @Transactional
     public List<DocumentResponse> getDocuments(Long userId) {
-        List<ResumeDocumentEntity> documents = documentRepository.findByUserIdOrderByCreatedAtAsc(userId);
+        List<ResumeDocumentEntity> documents =
+                documentRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
         if (documents.isEmpty()) {
-            return List.of(toResponse(documentRepository.save(defaultDocument(userId))));
+            var defaultDoc = defaultDocument(userId);
+            defaultDoc.updateDisplayOrder(1);
+            return List.of(toResponse(documentRepository.save(defaultDoc)));
         }
         return documents.stream().map(this::toResponse).toList();
     }
@@ -58,6 +63,13 @@ public class ResumeDocumentServiceImpl implements ResumeDocumentService {
             sectionConfig = getOwnedDocument(userId, request.fromDocumentId()).getSectionConfig();
         }
         var entity = ResumeDocumentEntity.create(userId, request.title(), "CLASSIC", false, sectionConfig);
+        List<ResumeDocumentEntity> owned =
+                documentRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        int nextOrder = owned.stream()
+                .mapToInt(ResumeDocumentEntity::getDisplayOrder)
+                .max()
+                .orElse(0) + 1;
+        entity.updateDisplayOrder(nextOrder);
         return toResponse(documentRepository.save(entity));
     }
 
@@ -98,8 +110,28 @@ public class ResumeDocumentServiceImpl implements ResumeDocumentService {
         documentRepository.delete(entity);
     }
 
+    @Override
+    @Transactional
+    public void reorderDocuments(Long userId, List<Long> orderedIds) {
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            return;
+        }
+        var owned = documentRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        Map<Long, ResumeDocumentEntity> byId = owned.stream()
+                .collect(Collectors.toMap(ResumeDocumentEntity::getId, e -> e));
+        int order = 1;
+        for (Long id : orderedIds) {
+            var entity = byId.get(id);
+            if (entity == null) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+            entity.updateDisplayOrder(order++);
+        }
+        documentRepository.saveAll(owned);
+    }
+
     private void markPrimaryInternal(Long userId, ResumeDocumentEntity target) {
-        documentRepository.findByUserIdOrderByCreatedAtAsc(userId)
+        documentRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId)
                 .forEach(doc -> doc.unmarkPrimary());
         target.markPrimary();
     }
@@ -141,6 +173,7 @@ public class ResumeDocumentServiceImpl implements ResumeDocumentService {
                 entity.getTitle(),
                 entity.getTemplateCode(),
                 entity.isPrimary(),
+                entity.getDisplayOrder(),
                 entity.getSectionConfig(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

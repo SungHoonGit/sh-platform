@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
  * @param title         문서 제목
  * @param templateCode  템플릿 코드
  * @param primary       대표 문서 여부
+ * @param displayOrder  목록 표시 순서
  * @param sectionConfig 섹션 편성 JSON 문자열
  * @param createdAt     생성 시각
  * @param updatedAt     수정 시각
@@ -18,6 +19,7 @@ public record DocumentResponse(
         String title,
         String templateCode,
         boolean primary,
+        Integer displayOrder,
         String sectionConfig,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

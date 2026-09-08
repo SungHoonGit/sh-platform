@@ -12,6 +12,10 @@ export default function ResumesPage() {
   const [busy, setBusy] = useState(false);
   const [shareTokens, setShareTokens] = useState<Record<number, string>>({});
   const [shareBusy, setShareBusy] = useState<number | null>(null);
+  const [dragId, setDragId] = useState<number | null>(null);
+  const [overId, setOverId] = useState<number | null>(null);
+  const [dropPos, setDropPos] = useState<"before" | "after" | null>(null);
+  const [orderBusy, setOrderBusy] = useState(false);
 
   const shareUrl = (token: string) =>
     `${window.location.origin}/resume/#/s/${token}`;
@@ -79,6 +83,49 @@ export default function ResumesPage() {
     } catch {
       setError("대표 지정에 실패했습니다.");
     }
+  };
+
+  const persistOrder = async (next: ResumeDocument[]) => {
+    setOrderBusy(true);
+    try {
+      await apiPut("/documents/reorder", { ids: next.map((d) => d.id) });
+      load();
+    } catch {
+      setError("순서 저장에 실패했습니다.");
+    } finally {
+      setOrderBusy(false);
+      setDragId(null);
+      setOverId(null);
+      setDropPos(null);
+    }
+  };
+
+  const moveDocument = (d: ResumeDocument, dir: -1 | 1) => {
+    if (!documents || orderBusy) return;
+    const idx = documents.findIndex((x) => x.id === d.id);
+    const target = idx + dir;
+    if (idx < 0 || target < 0 || target >= documents.length) return;
+    const next = [...documents];
+    const cur = next[idx];
+    const other = next[target];
+    next[idx] = other;
+    next[target] = cur;
+    void persistOrder(next);
+  };
+
+  const reorderDocuments = (draggedId: number, targetId: number, pos: "before" | "after") => {
+    if (!documents) return;
+    const from = documents.findIndex((x) => x.id === draggedId);
+    if (from < 0) return;
+    const rest = documents.filter((x) => x.id !== draggedId);
+    const targetIndex = rest.findIndex((x) => x.id === targetId);
+    if (targetIndex < 0) return;
+    const dragged = documents[from];
+    rest.splice(pos === "after" ? targetIndex + 1 : targetIndex, 0, dragged);
+    setDragId(null);
+    setOverId(null);
+    setDropPos(null);
+    void persistOrder(rest);
   };
 
   const changeTemplate = async (id: number, templateCode: string) => {
@@ -164,6 +211,7 @@ export default function ResumesPage() {
       <p className="text-xs text-slate-400 mb-4">
         이력서는 항목 데이터(경력·학력·자기소개 등)를 <b className="text-slate-500">모든 이력서가 공유</b>하고,
         각 이력서마다 <b className="text-slate-500">구성 섹션·순서·테마</b>를 다르게 편성합니다. 중복처럼 보여도 별도 서식입니다.
+        카드의 ▲▼ 버튼이나 ⋮⋮ 드래그로 <b className="text-slate-500">목록 표시 순서</b>를 바꿀 수 있습니다.
       </p>
 
       {error && (
@@ -217,12 +265,69 @@ export default function ResumesPage() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {documents.map((d) => (
-          <div
-            key={d.id}
-            className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between gap-2 mb-2">
+        {documents.map((d, i) => {
+          const isOver = overId === d.id && dragId !== d.id;
+          return (
+            <div
+              key={d.id}
+              onDragOver={(e) => {
+                if (dragId == null || dragId === d.id) return;
+                e.preventDefault();
+                const rect = e.currentTarget.getBoundingClientRect();
+                const pos: "before" | "after" =
+                  e.clientY < rect.top + rect.height / 2 ? "before" : "after";
+                setOverId(d.id);
+                setDropPos(pos);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragId != null && dropPos) reorderDocuments(dragId, d.id, dropPos);
+              }}
+              className={`bg-white rounded-xl p-4 flex flex-col hover:shadow-md transition-shadow ${
+                isOver
+                  ? `border border-blue-400 ${dropPos === "after" ? "border-b-4" : "border-t-4"}`
+                  : "border border-slate-200"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                  <button
+                    onClick={() => moveDocument(d, -1)}
+                    disabled={i === 0 || orderBusy}
+                    title="위로"
+                    className="px-0.5 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 leading-none"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    onClick={() => moveDocument(d, 1)}
+                    disabled={i === documents.length - 1 || orderBusy}
+                    title="아래로"
+                    className="px-0.5 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 leading-none"
+                  >
+                    ▼
+                  </button>
+                  <span
+                    draggable
+                    onDragStart={() => {
+                      setDragId(d.id);
+                      setOverId(null);
+                      setDropPos(null);
+                    }}
+                    onDragEnd={() => {
+                      setDragId(null);
+                      setOverId(null);
+                      setDropPos(null);
+                    }}
+                    className="px-1 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing select-none"
+                    title="드래그로 표시 순서 변경"
+                  >
+                    ⋮⋮
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-300">#{i + 1}</span>
+              </div>
+              <div className="flex items-start justify-between gap-2 mb-2">
               <h2 className="font-semibold text-slate-800 truncate">{d.title}</h2>
               {d.primary && (
                 <span className="shrink-0 px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-medium rounded">
@@ -307,7 +412,8 @@ export default function ResumesPage() {
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {documents.length === 0 && (
