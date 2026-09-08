@@ -42,6 +42,7 @@ export default function CrudSection({
   subtitleKeys = [],
   fixedPayload = {},
   inline = false,
+  sectionDragActive = false,
   onChanged,
 }: {
   title: string;
@@ -53,6 +54,8 @@ export default function CrudSection({
   fixedPayload?: Record<string, unknown>;
   /** inline: 각 목록 행 자체가 편집 폼을 여는 방식 (자기소개 등) */
   inline?: boolean;
+  /** 상위(EditPage)에서 섹션 카드 드래그가 진행 중일 때, 항목 드래그 표시를 비활성화 */
+  sectionDragActive?: boolean;
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -457,6 +460,7 @@ export default function CrudSection({
 
   const rowDragProps = (it: Item) => ({
     onDragOver: (e: React.DragEvent) => {
+      if (sectionDragActive) return;
       e.preventDefault();
       const rect = e.currentTarget.getBoundingClientRect();
       const pos: "before" | "after" =
@@ -465,6 +469,7 @@ export default function CrudSection({
       setDropPos(pos);
     },
     onDrop: (e: React.DragEvent) => {
+      if (sectionDragActive) return;
       e.preventDefault();
       if (dragId && dropPos) reorderItems(dragId, String(it.id), dropPos);
     },
@@ -481,9 +486,11 @@ export default function CrudSection({
         <div
           key={String(it.id)}
           {...rowDragProps(it)}
-          className={`border border-gray-100 rounded-lg ${
-            overId === String(it.id) ? isOverRow(it) : ""
-          }`}
+          className={
+            overId === String(it.id)
+              ? `rounded-lg border ${isOverRow(it)}`
+              : "rounded-lg border border-gray-100"
+          }
         >
           <div className="py-2.5 px-1 flex justify-between items-start gap-2">
             {orderControls(it, i)}

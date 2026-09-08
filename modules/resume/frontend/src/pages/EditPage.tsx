@@ -334,8 +334,58 @@ export default function EditPage({ documentId }: { documentId?: number }) {
 
             {orderedSections.map((key) => {
               const cfg = SECTIONS.find((s) => s.key === key)!;
+              const draggingSection = dragKey === cfg.key;
+              const overSection = overKey === cfg.key && dragKey !== cfg.key;
               return (
-                <div key={cfg.key} id={`section-${cfg.key}`} className="scroll-mt-4">
+                <div
+                  key={cfg.key}
+                  id={`section-${cfg.key}`}
+                  className={`relative scroll-mt-4 rounded-xl ${
+                    draggingSection ? "opacity-70" : ""
+                  } ${
+                    overSection
+                      ? dropPos === "after"
+                        ? "outline outline-1 outline-blue-400 border-b-2 border-blue-400"
+                        : "outline outline-1 outline-blue-400 border-t-2 border-blue-400"
+                      : ""
+                  }`}
+                  onDragOver={(e) => {
+                    if (!dragKey || dragKey === cfg.key) return;
+                    e.preventDefault();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const pos: "before" | "after" =
+                      e.clientY < rect.top + rect.height / 2 ? "before" : "after";
+                    setOverKey(cfg.key);
+                    setDropPos(pos);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragKey && dropPos && dragKey !== cfg.key) {
+                      reorderSections(dragKey, cfg.key, dropPos);
+                    }
+                    setDragKey(null);
+                    setOverKey(null);
+                    setDropPos(null);
+                  }}
+                >
+                  <div
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = "move";
+                      setDragKey(cfg.key);
+                      setOverKey(null);
+                      setDropPos(null);
+                    }}
+                    onDragEnd={() => {
+                      setDragKey(null);
+                      setOverKey(null);
+                      setDropPos(null);
+                    }}
+                    className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center w-10 h-4 rounded-full bg-slate-200/80 border border-slate-300 text-slate-500 text-[10px] opacity-60 hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
+                    title="이 섹션을 드래그하여 순서 변경"
+                  >
+                    ⋮⋮
+                  </div>
                   <CrudSection
                     title={cfg.title}
                     endpoint={cfg.endpoint}
@@ -345,6 +395,7 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                     subtitleKeys={cfg.subtitleKeys}
                     fixedPayload={cfg.fixedPayload}
                     inline={cfg.inline}
+                    sectionDragActive={dragKey !== null}
                     onChanged={() => {
                       apiGet<ResumeView>("/view").then(setView).catch(() => undefined);
                     }}
@@ -457,8 +508,10 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                 })}
             </ul>
             <p className="mt-3 text-[11px] text-slate-400 leading-snug">
-              항목을 드래그하거나 ▲▼ 버튼으로 순서를 바꾸고, "보임/숨김"으로 표시 여부를 조절할 수
-              있습니다. 이 이력서의 미리보기·PDF에만 적용되며 항목 데이터는 모든 이력서가 공유합니다.
+              왼쪽 카드 상단의 ⋮⋮ 핸들을 드래그하거나, 이 패널이나 카드 위 아래 절반에 놓으면 해당
+              위치에 섹션이 들어갑니다. 각 항목은 항목 우측 ▲▼/⋮⋮로 순서를 바꾸고, "보임/숨김"으로
+              표시 여부를 조절할 수 있습니다. 이 이력서의 미리보기·PDF에만 적용되며 항목 데이터는 모든
+              이력서가 공유합니다.
             </p>
           </aside>
         </div>
