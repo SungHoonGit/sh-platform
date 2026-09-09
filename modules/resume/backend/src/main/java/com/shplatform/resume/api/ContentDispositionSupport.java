@@ -28,6 +28,18 @@ public final class ContentDispositionSupport {
         return "attachment; filename=\"" + ascii + "\"; filename*=UTF-8''" + encoded;
     }
 
+    /**
+     * 브라우저에 인라인 표시(이미지 미리보기 등)할 때 사용하는 헤더 값을 만든다.
+     *
+     * @param filename 표시용 파일명 (비ASCII 허용)
+     * @return "inline; filename=...; filename*=UTF-8''..." 형식 헤더 값
+     */
+    public static String inline(String filename) {
+        String ascii = toAsciiFallback(filename);
+        String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+        return "inline; filename=\"" + ascii + "\"; filename*=UTF-8''" + encoded;
+    }
+
     private static String toAsciiFallback(String filename) {
         String safe = filename == null ? "" : filename;
         safe = safe.replaceAll("[^\\x20-\\x7E\\x80-\\xFF]", "_");

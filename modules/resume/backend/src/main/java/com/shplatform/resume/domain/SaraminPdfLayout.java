@@ -50,6 +50,8 @@ public class SaraminPdfLayout implements ResumePdfLayout {
 
     private final FileStorageService fileStorageService;
 
+    private Long userId;
+
     public SaraminPdfLayout(FileStorageService fileStorageService) {
         this.fileStorageService = fileStorageService;
     }
@@ -57,6 +59,7 @@ public class SaraminPdfLayout implements ResumePdfLayout {
     @Override
     public void render(Document document, PdfWriter writer, ResumeViewResponse view,
                        List<String> sectionKeys, Long userId) throws DocumentException {
+        this.userId = userId;
         renderProfileBox(document, view.profile(), userId);
 
         for (String key : sectionKeys) {
@@ -412,15 +415,22 @@ box.setSpacingAfter(2f);
             }
             first = false;
 
-            String prefix = "FILE".equalsIgnoreCase(it.itemType()) ? "[파일] "
-                    : "LINK".equalsIgnoreCase(it.itemType()) ? "[링크] " : "";
+            Image thumb = PdfLayoutSupport.loadImage(it.thumbnailPath(), this.userId, fileStorageService, 90f, 65f);
+            if (thumb != null) {
+                thumb.setAlignment(Element.ALIGN_LEFT);
+                thumb.setSpacingAfter(3f);
+                cell.addElement(thumb);
+            }
+
+            String prefix = hasText(it.filePath()) ? "[첨부] " : "";
             Paragraph title = new Paragraph(prefix + (it.title() == null ? "" : it.title()),
                     bold(10.5f, HEAD));
             title.setSpacingAfter(3f);
             cell.addElement(title);
 
-            if ("LINK".equalsIgnoreCase(it.itemType()) && hasText(it.linkUrl())) {
-                cell.addElement(new Paragraph("링크: " + it.linkUrl(), regular(9f, FAINT)));
+            var links = PdfLayoutSupport.portfolioLinks(it);
+            if (!links.isEmpty()) {
+                cell.addElement(new Paragraph("링크: " + String.join("  |  ", links), regular(9f, FAINT)));
             }
             if (hasText(it.description())) {
                 Paragraph desc = new Paragraph(normalizeNewlines(it.description()), regular(9.5f, BODY));

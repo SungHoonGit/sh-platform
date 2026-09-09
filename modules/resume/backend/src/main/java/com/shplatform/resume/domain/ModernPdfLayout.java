@@ -56,6 +56,8 @@ public class ModernPdfLayout implements ResumePdfLayout {
 
     private final FileStorageService fileStorageService;
 
+    private Long userId;
+
     public ModernPdfLayout(FileStorageService fileStorageService) {
         this.fileStorageService = fileStorageService;
     }
@@ -63,6 +65,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
     @Override
     public void render(Document document, PdfWriter writer, ResumeViewResponse view,
                        List<String> sectionKeys, Long userId) throws DocumentException {
+        this.userId = userId;
         PdfPTable page = new PdfPTable(2);
         page.setWidthPercentage(100f);
         page.setWidths(new float[]{30f, 70f});
@@ -361,21 +364,26 @@ public class ModernPdfLayout implements ResumePdfLayout {
     }
 
     private void mainPortfolio(PdfPCell cell, PortfolioItemResponse item) throws DocumentException {
-        String prefix = "FILE".equalsIgnoreCase(item.itemType()) ? "[파일] "
-                : "LINK".equalsIgnoreCase(item.itemType()) ? "[링크] " : "";
+        Image thumb = PdfLayoutSupport.loadImage(item.thumbnailPath(), this.userId, fileStorageService, 110f, 80f);
+        if (thumb != null) {
+            thumb.setAlignment(Element.ALIGN_LEFT);
+            thumb.setSpacingAfter(4f);
+            cell.addElement(thumb);
+        }
+        String prefix = hasText(item.filePath()) ? "[첨부] " : "";
         Paragraph title = new Paragraph(prefix + (item.title() == null ? "" : item.title()),
                 bold(11f, HEAD));
         title.setSpacingAfter(3f);
         cell.addElement(title);
-        if ("LINK".equalsIgnoreCase(item.itemType()) && hasText(item.linkUrl())) {
-            Paragraph link = new Paragraph("링크: " + item.linkUrl(), regular(9f, MUTED));
+        var links = PdfLayoutSupport.portfolioLinks(item);
+        if (!links.isEmpty()) {
+            Paragraph link = new Paragraph("링크: " + String.join("  |  ", links), regular(9f, MUTED));
             link.setSpacingAfter(2f);
             cell.addElement(link);
         }
         if (hasText(item.description())) {
             cell.addElement(paragraphBody(normalizeNewlines(item.description()), 7f));
-        } else if ("FILE".equalsIgnoreCase(item.itemType())
-                || "LINK".equalsIgnoreCase(item.itemType())) {
+        } else {
             Paragraph spacer = new Paragraph(" ", regular(6f, MUTED));
             spacer.setSpacingAfter(7f);
             cell.addElement(spacer);

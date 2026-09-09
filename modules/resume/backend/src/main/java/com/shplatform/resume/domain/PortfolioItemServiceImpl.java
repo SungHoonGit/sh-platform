@@ -92,6 +92,10 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
     private void applyRequest(ResumePortfolioItemEntity entity, PortfolioItemRequest request) {
         entity.setTitle(request.title());
         entity.setItemType(request.itemType());
+        entity.setThumbnailPath(request.thumbnailPath());
+        entity.setGithubUrl(request.githubUrl());
+        entity.setDemoUrl(request.demoUrl());
+        entity.setVideoUrl(request.videoUrl());
         entity.setFilePath(request.filePath());
         entity.setLinkUrl(request.linkUrl());
         entity.setDescription(request.description());
@@ -103,6 +107,10 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
                 entity.getId(),
                 entity.getTitle(),
                 entity.getItemType(),
+                entity.getThumbnailPath(),
+                entity.getGithubUrl(),
+                entity.getDemoUrl(),
+                entity.getVideoUrl(),
                 entity.getFilePath(),
                 entity.getLinkUrl(),
                 entity.getDescription(),

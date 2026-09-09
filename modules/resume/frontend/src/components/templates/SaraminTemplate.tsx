@@ -1,7 +1,6 @@
 import { Fragment } from "react";
 import type { ResumeView } from "../../types/resume";
-import { ProfilePhoto, period } from "./shared";
-import { apiDownload, fileDownloadPath } from "../../api/client";
+import { ProfilePhoto, period, PortfolioCard } from "./shared";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -17,9 +16,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function SaraminTemplate({
   view,
   order,
+  shareToken,
 }: {
   view: ResumeView;
   order: string[];
+  shareToken?: string;
 }) {
   const p = view.profile;
   const contacts: [string, string | null][] = [
@@ -164,39 +165,9 @@ export default function SaraminTemplate({
     portfolioItems:
       view.portfolioItems.length > 0 ? (
         <Section title="포트폴리오">
-          <ul className="space-y-1.5 text-sm">
-            {view.portfolioItems.map((pi) => (
-              <li key={pi.id}>
-                <span className={`inline-block mr-2 px-1.5 py-0.5 text-[10px] rounded ${
-                  pi.itemType === "FILE" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"
-                }`}>
-                  {pi.itemType}
-                </span>
-                {pi.itemType === "FILE" && pi.filePath ? (
-                  <button
-                    onClick={() =>
-                      void apiDownload(fileDownloadPath(pi.filePath!), `${pi.title}`).catch(() =>
-                        alert("다운로드에 실패했습니다."),
-                      )
-                    }
-                    className="font-semibold text-blue-600 underline"
-                  >
-                    {pi.title} (첨부)
-                  </button>
-                ) : (
-                  <>
-                    <span className="font-semibold">{pi.title}</span>
-                    {pi.linkUrl && (
-                      <a href={pi.linkUrl} target="_blank" rel="noreferrer" className="ml-2 text-xs text-blue-600 underline">
-                        바로가기
-                      </a>
-                    )}
-                  </>
-                )}
-                {pi.description && <p className="text-xs text-gray-600 mt-0.5">{pi.description}</p>}
-              </li>
-            ))}
-          </ul>
+          {view.portfolioItems.map((pi) => (
+            <PortfolioCard key={pi.id} item={pi} shareToken={shareToken} />
+          ))}
         </Section>
       ) : null,
   };

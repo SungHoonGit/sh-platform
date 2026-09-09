@@ -1,6 +1,5 @@
 import type { ResumeView } from "../../types/resume";
-import { ProfilePhoto, period } from "./shared";
-import { apiDownload, fileDownloadPath } from "../../api/client";
+import { ProfilePhoto, period, PortfolioCard } from "./shared";
 
 function SideSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -28,9 +27,11 @@ function MainSection({ title, children }: { title: string; children: React.React
 export default function ModernTemplate({
   view,
   order,
+  shareToken,
 }: {
   view: ResumeView;
   order: string[];
+  shareToken?: string;
 }) {
   const p = view.profile;
   const sideKeys = new Set(["educations", "skills", "certificates"]);
@@ -100,34 +101,9 @@ export default function ModernTemplate({
     portfolioItems:
       view.portfolioItems.length > 0 ? (
         <MainSection title="포트폴리오">
-          <ul className="space-y-1.5">
-            {view.portfolioItems.map((pi) => (
-              <li key={pi.id} className="text-sm">
-                {pi.itemType === "FILE" && pi.filePath ? (
-                  <button
-                    onClick={() =>
-                      void apiDownload(fileDownloadPath(pi.filePath!), `${pi.title}`).catch(() =>
-                        alert("다운로드에 실패했습니다."),
-                      )
-                    }
-                    className="font-semibold text-slate-800 underline"
-                  >
-                    {pi.title} <span className="text-xs text-slate-400 not-italic">(첨부 다운로드)</span>
-                  </button>
-                ) : (
-                  <>
-                    <span className="font-semibold text-slate-800">{pi.title}</span>
-                    {pi.linkUrl && (
-                      <a href={pi.linkUrl} target="_blank" rel="noreferrer" className="ml-2 text-xs text-blue-600 underline">
-                        {pi.linkUrl}
-                      </a>
-                    )}
-                  </>
-                )}
-                {pi.description && <p className="text-xs text-gray-500">{pi.description}</p>}
-              </li>
-            ))}
-          </ul>
+          {view.portfolioItems.map((pi) => (
+            <PortfolioCard key={pi.id} item={pi} shareToken={shareToken} />
+          ))}
         </MainSection>
       ) : null,
   };

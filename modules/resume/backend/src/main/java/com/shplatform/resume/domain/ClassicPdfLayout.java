@@ -47,6 +47,8 @@ public class ClassicPdfLayout implements ResumePdfLayout {
 
     private final FileStorageService fileStorageService;
 
+    private Long userId;
+
     public ClassicPdfLayout(FileStorageService fileStorageService) {
         this.fileStorageService = fileStorageService;
     }
@@ -54,6 +56,7 @@ public class ClassicPdfLayout implements ResumePdfLayout {
     @Override
     public void render(Document document, PdfWriter writer, ResumeViewResponse view,
                        List<String> sectionKeys, Long userId) throws DocumentException {
+        this.userId = userId;
         ProfileResponse profile = view.profile();
         if (profile == null) {
             Paragraph spacer = new Paragraph(" ", regular(1f, INK));
@@ -232,25 +235,35 @@ public class ClassicPdfLayout implements ResumePdfLayout {
     }
 
     private void renderPortfolio(Document document, PortfolioItemResponse item) throws DocumentException {
-        String prefix = "FILE".equalsIgnoreCase(item.itemType()) ? "[파일] "
-                : "LINK".equalsIgnoreCase(item.itemType()) ? "[링크] " : "";
-        Paragraph title = new Paragraph(prefix + (item.title() == null ? "" : item.title()),
-                bold(11.5f, HEAD));
-        title.setSpacingAfter(3f);
-        document.add(title);
-        if ("LINK".equalsIgnoreCase(item.itemType()) && hasText(item.linkUrl())) {
-            Paragraph link = new Paragraph("링크: " + item.linkUrl(), regular(9.5f, FAINT));
-            link.setSpacingAfter(2f);
-            document.add(link);
+        renderPortfolioCard(document, item);
+        var links = PdfLayoutSupport.portfolioLinks(item);
+        if (!links.isEmpty()) {
+            Paragraph linkP = new Paragraph("링크: " + String.join("  |  ", links), regular(9.5f, FAINT));
+            linkP.setSpacingAfter(2f);
+            document.add(linkP);
         }
         if (hasText(item.description())) {
             document.add(bodyParagraph(normalizeNewlines(item.description()), 7f));
-        } else if ("FILE".equalsIgnoreCase(item.itemType())
-                || "LINK".equalsIgnoreCase(item.itemType())) {
+        } else {
             Paragraph spacer = new Paragraph(" ", regular(6f, MUTED));
             spacer.setSpacingAfter(7f);
             document.add(spacer);
         }
+    }
+
+    /** 썸네일(있으면) + 제목. 하이퍼링크 없는 PDF에서는 첨부는 안내 텍스트로 함께 표기한다. */
+    private void renderPortfolioCard(Document document, PortfolioItemResponse item) throws DocumentException {
+        Image thumb = PdfLayoutSupport.loadImage(item.thumbnailPath(), this.userId, fileStorageService, 110f, 80f);
+        if (thumb != null) {
+            thumb.setAlignment(Element.ALIGN_LEFT);
+            thumb.setSpacingAfter(4f);
+            document.add(thumb);
+        }
+        String prefix = hasText(item.filePath()) ? "[첨부] " : "";
+        Paragraph title = new Paragraph(prefix + (item.title() == null ? "" : item.title()),
+                bold(11.5f, HEAD));
+        title.setSpacingAfter(3f);
+        document.add(title);
     }
 
     /** 본문 문단. 개행 보존, 문단 간 여백(스페이싱) 적용. */

@@ -79,6 +79,10 @@ export interface PortfolioItem {
   id: number;
   title: string;
   itemType: string;
+  thumbnailPath: string | null;
+  githubUrl: string | null;
+  demoUrl: string | null;
+  videoUrl: string | null;
   filePath: string | null;
   linkUrl: string | null;
   description: string | null;

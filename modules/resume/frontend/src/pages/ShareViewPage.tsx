@@ -78,11 +78,11 @@ export default function ShareViewPage({ token }: { token: string }) {
 
       <div className="max-w-3xl mx-auto bg-white shadow-sm px-10 py-8 print:shadow-none print:px-0 print:max-w-none">
         {templateCode === "MODERN" ? (
-          <ModernTemplate view={view} order={order} />
+          <ModernTemplate view={view} order={order} shareToken={token} />
         ) : templateCode === "SARAMIN" ? (
-          <SaraminTemplate view={view} order={order} />
+          <SaraminTemplate view={view} order={order} shareToken={token} />
         ) : (
-          <ClassicTemplate view={view} order={order} />
+          <ClassicTemplate view={view} order={order} shareToken={token} />
         )}
       </div>
     </div>

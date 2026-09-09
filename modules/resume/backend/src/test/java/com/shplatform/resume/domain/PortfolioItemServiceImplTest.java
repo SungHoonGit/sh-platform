@@ -38,7 +38,13 @@ class PortfolioItemServiceImplTest {
 
     private PortfolioItemRequest linkRequest() {
         return new PortfolioItemRequest("포트폴리오 사이트", "LINK",
-                null, "https://portfolio.example.com", "개인 포트폴리오", 1);
+                null, null, null, null, null, "https://portfolio.example.com", "개인 포트폴리오", 1);
+    }
+
+    private PortfolioItemRequest enhancedRequest() {
+        return new PortfolioItemRequest("sh-platform", "LINK",
+                "6/202608/thumb.png", "https://github.com/owner/repo", "https://demo.example.com",
+                "https://youtube.com/watch?v=abc", null, null, "채용공고 스크래핑 플랫폼", 1);
     }
 
     private ResumePortfolioItemEntity entity(Long userId) {
@@ -83,7 +89,7 @@ class PortfolioItemServiceImplTest {
     @DisplayName("createPortfolioItem: FILE 타입인데 filePath가 없으면 INVALID_INPUT 예외가 발생한다")
     void createPortfolioItem_fileWithoutPathRejected() {
         var fileRequest = new PortfolioItemRequest("첨부파일", "FILE",
-                null, null, null, 1);
+                null, null, null, null, null, null, null, 1);
 
         assertThatThrownBy(() -> portfolioItemService.createPortfolioItem(USER_ID, fileRequest))
                 .isInstanceOf(BusinessException.class)
@@ -100,7 +106,7 @@ class PortfolioItemServiceImplTest {
                     return invocation.getArgument(0);
                 });
         var fileRequest = new PortfolioItemRequest("기획서", "FILE",
-                "6/202608/uuid.pptx", null, "서비스 기획서", 2);
+                null, null, null, null, "6/202608/uuid.pptx", null, "서비스 기획서", 2);
 
         portfolioItemService.createPortfolioItem(USER_ID, fileRequest);
 
@@ -122,6 +128,43 @@ class PortfolioItemServiceImplTest {
 
         then(portfolioItemRepository).should(times(1)).save(existing);
         assertThat(response.title()).isEqualTo("포트폴리오 사이트");
+    }
+
+    @Test
+    @DisplayName("createPortfolioItem: 썸네일·다중링크(깃허브/데모/영상)가 저장된다")
+    void createPortfolioItem_enhancedFields() {
+        given(portfolioItemRepository.save(any(ResumePortfolioItemEntity.class)))
+                .willAnswer(invocation -> {
+                    invocation.getArgument(0, ResumePortfolioItemEntity.class).setId(ITEM_ID);
+                    return invocation.getArgument(0);
+                });
+
+        var response = portfolioItemService.createPortfolioItem(USER_ID, enhancedRequest());
+
+        ArgumentCaptor<ResumePortfolioItemEntity> captor = ArgumentCaptor.forClass(ResumePortfolioItemEntity.class);
+        then(portfolioItemRepository).should(times(1)).save(captor.capture());
+        assertThat(captor.getValue().getThumbnailPath()).isEqualTo("6/202608/thumb.png");
+        assertThat(captor.getValue().getGithubUrl()).isEqualTo("https://github.com/owner/repo");
+        assertThat(captor.getValue().getDemoUrl()).isEqualTo("https://demo.example.com");
+        assertThat(captor.getValue().getVideoUrl()).isEqualTo("https://youtube.com/watch?v=abc");
+        assertThat(response.thumbnailPath()).isEqualTo("6/202608/thumb.png");
+        assertThat(response.linkUrl()).isNull();
+    }
+
+    @Test
+    @DisplayName("updatePortfolioItem: 썸네일·다중링크 필드가 갱신된다")
+    void updatePortfolioItem_enhancedFields() {
+        var existing = entity(USER_ID);
+        given(portfolioItemRepository.findById(ITEM_ID)).willReturn(Optional.of(existing));
+        given(portfolioItemRepository.save(any(ResumePortfolioItemEntity.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        var response = portfolioItemService.updatePortfolioItem(USER_ID, ITEM_ID, enhancedRequest());
+
+        assertThat(existing.getGithubUrl()).isEqualTo("https://github.com/owner/repo");
+        assertThat(existing.getDemoUrl()).isEqualTo("https://demo.example.com");
+        assertThat(existing.getVideoUrl()).isEqualTo("https://youtube.com/watch?v=abc");
+        assertThat(response.videoUrl()).isEqualTo("https://youtube.com/watch?v=abc");
     }
 
     @Test

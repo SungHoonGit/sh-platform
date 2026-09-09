@@ -20,6 +20,8 @@ export interface FieldDef {
   showIf?: { key: string; equals: string };
   /** check 타입: 체크 시 이 key들을 비우고 잠근다 */
   disablesOnCheck?: string[];
+  /** file 타입이 이미지(jpg/png)면 업로드 후 미리보기를 표시 */
+  image?: boolean;
 }
 
 type Item = Record<string, unknown>;
@@ -27,6 +29,38 @@ type FormState = Record<string, string>;
 
 const inputCls =
   "w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gray-500";
+
+function ImageThumb({
+  path,
+  className,
+}: {
+  path: string | undefined;
+  className: string;
+}) {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!path) return;
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+    let url: string | null = null;
+    fetch(`/resume${fileDownloadPath(path)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.blob() : Promise.reject(new Error(String(res.status)))))
+      .then((blob) => {
+        url = URL.createObjectURL(blob);
+        setSrc(url);
+      })
+      .catch(() => setSrc(null));
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [path]);
+
+  if (!src) return null;
+  return <img src={src} alt="미리보기" className={className} />;
+}
 
 interface Sug {
   name: string;
@@ -44,6 +78,7 @@ export default function CrudSection({
   inline = false,
   sectionDragActive = false,
   dragHandle,
+  importOptions = null,
   onChanged,
 }: {
   title: string;
@@ -63,6 +98,12 @@ export default function CrudSection({
     onDragStart: (e: React.DragEvent<HTMLDivElement>) => void;
     onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void;
   };
+  /** 폼 상단에 특정 작업물(포트폴리오)에서 필드를 가져올 수 있는 셀렉트를 표시 */
+  importOptions?: {
+    items: Item[];
+    /** form 필드 key → 작업물 필드 key */
+    fieldMap: Record<string, string>;
+  } | null;
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -79,6 +120,7 @@ export default function CrudSection({
   const [suggestions, setSuggestions] = useState<Sug[]>([]);
   const suggestField = useRef<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [importVal, setImportVal] = useState("");
 
   useEffect(() => {
     return () => {
@@ -129,6 +171,7 @@ export default function CrudSection({
     setForm(Object.fromEntries(fields.map((f) => [f.key, ""])));
     setFileNames({});
     setEditing("new");
+    setImportVal("");
     setError(null);
     scrollToForm();
   };
@@ -157,8 +200,23 @@ export default function CrudSection({
     );
     setForm((prev) => ({ ...prev, ...derived }));
     setEditing(String(it.id));
+    setImportVal("");
     setError(null);
     scrollToForm();
+  };
+
+  const applyImport = () => {
+    if (!importOptions || importVal === "") return;
+    const src = importOptions.items[Number(importVal)];
+    if (!src) return;
+    const next: FormState = { ...form };
+    for (const [formKey, srcKey] of Object.entries(importOptions.fieldMap)) {
+      const v = src[srcKey];
+      next[formKey] = v == null ? "" : String(v);
+    }
+    setForm(next);
+    setImportVal("");
+    setError(null);
   };
 
   const save = async () => {
@@ -278,6 +336,34 @@ export default function CrudSection({
 
   const renderForm = () => (
     <div id={`crud-form-${title}`} className="mt-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
+      {importOptions && importOptions.items.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-[220px]">
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              작업물에서 가져오기
+            </label>
+            <select
+              value={importVal}
+              onChange={(e) => setImportVal(e.target.value)}
+              className={inputCls}
+            >
+              <option value="">-- 작업물 선택 --</option>
+              {importOptions.items.map((it, i) => (
+                <option key={String(it.id ?? i)} value={String(i)}>
+                  {String(it.title ?? "작업물")}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={applyImport}
+            disabled={importVal === ""}
+            className="px-3 py-1.5 text-sm bg-slate-900 text-white rounded hover:bg-slate-700 disabled:opacity-50"
+          >
+            필드 채우기
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {fields.filter(visible).map((f) => (
           <div
@@ -324,22 +410,38 @@ export default function CrudSection({
                 ))}
               </select>
             ) : f.type === "file" ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  accept={f.accept}
-                  disabled={uploading}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) void uploadFile(f.key, file);
-                    e.target.value = "";
-                  }}
-                  className="text-sm text-slate-600 file:mr-2 file:px-2.5 file:py-1.5 file:text-xs file:border-0 file:bg-slate-900 file:text-white file:rounded hover:file:bg-slate-700"
-                />
-                {fileNames[f.key] && (
-                  <span className="text-xs text-green-700 truncate">
-                    {uploading ? "업로드 중..." : `✓ ${fileNames[f.key]}`}
-                  </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept={f.accept}
+                    disabled={uploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (f.image && file.size > 5 * 1024 * 1024) {
+                        setError("썸네일 이미지는 5MB 이하만 가능합니다.");
+                        return;
+                      }
+                      void uploadFile(f.key, file);
+                      e.target.value = "";
+                    }}
+                    className="text-sm text-slate-600 file:mr-2 file:px-2.5 file:py-1.5 file:text-xs file:border-0 file:bg-slate-900 file:text-white file:rounded hover:file:bg-slate-700"
+                  />
+                  {fileNames[f.key] && (
+                    <span className="text-xs text-green-700 truncate">
+                      {uploading ? "업로드 중..." : `✓ ${fileNames[f.key]}`}
+                    </span>
+                  )}
+                </div>
+                {f.image && form[f.key] && (
+                  <div className="mt-2">
+                    <ImageThumb
+                      key={form[f.key]}
+                      path={form[f.key]}
+                      className="max-h-32 rounded border border-gray-200"
+                    />
+                  </div>
                 )}
               </div>
             ) : f.type === "school" || f.type === "major" ? (
@@ -508,8 +610,10 @@ export default function CrudSection({
           </p>
         ) : null,
       )}
-      {fileFields.map((f) => {
-        const v = it[f.key];
+      {fileFields
+        .filter((f) => !f.image)
+        .map((f) => {
+          const v = it[f.key];
         if (v == null || String(v) === "") return null;
         return (
           <button

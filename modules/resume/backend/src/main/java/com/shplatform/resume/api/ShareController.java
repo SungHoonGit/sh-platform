@@ -1,7 +1,10 @@
 package com.shplatform.resume.api;
 
 import com.shplatform.common.dto.ApiResponse;
+import com.shplatform.common.exception.BusinessException;
+import com.shplatform.common.exception.ErrorCode;
 import com.shplatform.resume.api.dto.ShareViewResponse;
+import com.shplatform.resume.domain.FileStorageService;
 import com.shplatform.resume.domain.ResumePdfService;
 import com.shplatform.resume.domain.ResumeShareService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +30,7 @@ public class ShareController {
 
     private final ResumeShareService shareService;
     private final ResumePdfService resumePdfService;
+    private final FileStorageService fileStorageService;
 
     /**
      * (질의형) 공유 토큰으로 이력서 뷰를 반환한다. 검색 엔진 색인을 막는 noindex 헤더를 포함한다.
@@ -47,8 +51,7 @@ public class ShareController {
     @Operation(summary = "공유 이력서 PDF 다운로드")
     public ResponseEntity<byte[]> getSharedPdf(@PathVariable String token) {
         var resolved = shareService.resolve(token)
-                .orElseThrow(() -> new com.shplatform.common.exception.BusinessException(
-                        com.shplatform.common.exception.ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         byte[] pdf = resumePdfService.generatePdf(resolved.userId(), resolved.documentId());
         String filename = resumePdfService.pdfFilename(resolved.userId(), resolved.documentId());
         return ResponseEntity.ok()
@@ -56,5 +59,23 @@ public class ShareController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionSupport.attachment(filename))
                 .header("X-Robots-Tag", "noindex")
                 .body(pdf);
+    }
+
+    /**
+     * (질의형) 공유 토큰으로 확인된 소유자의 파일을 이미지 인라인으로 반환한다.
+     * 공유 이력서 뷰의 포트폴리오 썸네일 등에 사용된다.
+     */
+    @GetMapping("/{token}/files/{fileId}")
+    @Operation(summary = "공유 이력서 소유자 파일 조회 (인라인)")
+    public ResponseEntity<byte[]> getSharedFile(@PathVariable String token, @PathVariable Long fileId) {
+        var resolved = shareService.resolve(token)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        var downloaded = fileStorageService.download(resolved.userId(), fileId);
+        String contentType = downloaded.contentType() != null ? downloaded.contentType() : "application/octet-stream";
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionSupport.inline(downloaded.originalName()))
+                .header("X-Robots-Tag", "noindex")
+                .body(downloaded.data());
     }
 }

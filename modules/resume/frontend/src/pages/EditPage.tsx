@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiGet, apiPut, logout } from "../api/client";
 import type { ResumeView } from "../types/resume";
+import type { PortfolioItem } from "../types/resume";
 import type { ResumeDocument, SectionItem } from "../types/document";
 import CrudSection, { type FieldDef } from "../components/CrudSection";
 import ProfileEditor from "../components/ProfileEditor";
+import { PORTFOLIO_ENDPOINT, PORTFOLIO_FIELDS, PORTFOLIO_LIST_KEY } from "../config/portfolioConfig";
 import {
   DEFAULT_ORDER,
   SECTION_LABELS,
@@ -118,28 +120,11 @@ const SECTIONS: SectionConfig[] = [
   {
     key: "portfolioItems",
     title: "포트폴리오",
-    endpoint: "/portfolio-items",
-    listKey: "portfolioItems",
+    endpoint: PORTFOLIO_ENDPOINT,
+    listKey: PORTFOLIO_LIST_KEY,
     titleKey: "title",
-    subtitleKeys: ["itemType", "linkUrl", "filePath"],
-    fields: [
-      { key: "title", label: "작업물 제목", required: true },
-      { key: "itemType", label: "유형", type: "select", options: ["LINK", "FILE"] },
-      {
-        key: "linkUrl",
-        label: "URL (LINK)",
-        placeholder: "https://github.com/...",
-        showIf: { key: "itemType", equals: "LINK" },
-      },
-      {
-        key: "filePath",
-        label: "첨부파일 (FILE) — pdf/pptx/docx/png/jpg, 10MB 이하",
-        type: "file",
-        accept: ".pdf,.pptx,.ppt,.docx,.png,.jpg,.jpeg",
-        showIf: { key: "itemType", equals: "FILE" },
-      },
-      { key: "description", label: "설명", type: "textarea" },
-    ],
+    subtitleKeys: ["description"],
+    fields: PORTFOLIO_FIELDS,
   },
 ];
 
@@ -154,6 +139,13 @@ export default function EditPage({ documentId }: { documentId?: number }) {
   const [dropPos, setDropPos] = useState<"before" | "after" | null>(null);
   const origSnapshot = useRef<SectionItem[] | null>(null);
   const dropHandled = useRef(false);
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
+
+  useEffect(() => {
+    apiGet<PortfolioItem[]>("/portfolio-items")
+      .then(setPortfolioItems)
+      .catch(() => setPortfolioItems([]));
+  }, []);
 
   useEffect(() => {
     apiGet<ResumeView>("/view")
@@ -425,6 +417,23 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                     fixedPayload={cfg.fixedPayload}
                     inline={cfg.inline}
                     sectionDragActive={dragKey !== null}
+                    importOptions={
+                      cfg.key === "projects"
+                        ? {
+                            items: portfolioItems.map((it) => ({
+                              id: it.id,
+                              title: it.title,
+                              description: it.description,
+                              importLink: it.githubUrl || it.demoUrl || null,
+                            })),
+                            fieldMap: {
+                              name: "title",
+                              description: "description",
+                              linkUrl: "importLink",
+                            },
+                          }
+                        : null
+                    }
                     dragHandle={{
                       active: draggingSection,
                       onDragStart: (e) => {

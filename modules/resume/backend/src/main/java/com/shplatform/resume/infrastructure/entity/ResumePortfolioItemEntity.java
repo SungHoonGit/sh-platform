@@ -40,6 +40,18 @@ public class ResumePortfolioItemEntity {
     @Column(name = "link_url", length = 300)
     private String linkUrl;
 
+    @Column(name = "thumbnail_path", length = 300)
+    private String thumbnailPath;
+
+    @Column(name = "github_url", length = 300)
+    private String githubUrl;
+
+    @Column(name = "demo_url", length = 300)
+    private String demoUrl;
+
+    @Column(name = "video_url", length = 300)
+    private String videoUrl;
+
     @Column(name = "description", length = 500)
     private String description;
 

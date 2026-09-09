@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.shplatform.resume.api.dto.PortfolioItemResponse;
 
 /**
  * PDF 레이아웃 공용 지원 — 폰트(정적 로드), 색, 날짜 포맷, 사진 로드, 페이지 공간, 문자열 유틸.
@@ -90,6 +91,9 @@ final class PdfLayoutSupport {
 
     /** 프로필 사진을 디스크에서 읽어 표준 프레임(24×32mm)에 맞춘다. 없거나 손상됐으면 null (설계: 사진 선택). */
     static Image loadPhoto(ProfileResponse profile, Long userId, FileStorageService fileStorage) {
+        if (profile == null) {
+            return null;
+        }
         return loadPhoto(profile, userId, fileStorage, PHOTO_W, PHOTO_H);
     }
 
@@ -99,8 +103,17 @@ final class PdfLayoutSupport {
         if (profile == null || profile.photoUrl() == null) {
             return null;
         }
+        return loadImage(profile.photoUrl(), userId, fileStorage, maxWidthPt, maxHeightPt);
+    }
+
+    /** 저장 경로(/api/v1/files/{id}/download)의 이미지를 읽어 지정 박스에 맞춘다. 없거나 손상됐으면 null. */
+    static Image loadImage(String path, Long userId, FileStorageService fileStorage,
+                           float maxWidthPt, float maxHeightPt) {
+        if (!hasText(path)) {
+            return null;
+        }
         try {
-            Matcher matcher = PHOTO_URL_PATTERN.matcher(profile.photoUrl());
+            Matcher matcher = PHOTO_URL_PATTERN.matcher(path);
             if (!matcher.find()) {
                 return null;
             }
@@ -176,5 +189,23 @@ final class PdfLayoutSupport {
             }
         }
         return String.join(separator, kept);
+    }
+
+    /** 포트폴리오의 존재하는 링크들을 "라벨: url" 문자열 목록으로 만든다 (GitHub/데모/영상/레거시 링크). */
+    static List<String> portfolioLinks(PortfolioItemResponse item) {
+        List<String> links = new ArrayList<>();
+        if (hasText(item.githubUrl())) {
+            links.add("GitHub: " + item.githubUrl());
+        }
+        if (hasText(item.demoUrl())) {
+            links.add("데모: " + item.demoUrl());
+        }
+        if (hasText(item.videoUrl())) {
+            links.add("영상: " + item.videoUrl());
+        }
+        if (hasText(item.linkUrl())) {
+            links.add("링크: " + item.linkUrl());
+        }
+        return links;
     }
 }

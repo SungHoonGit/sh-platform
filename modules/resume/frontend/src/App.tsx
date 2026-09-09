@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, FileText, Search } from "lucide-react";
+import { CalendarDays, FileText, FolderOpen, Search } from "lucide-react";
 import AppShell from "./shell/AppShell";
 import type { DrawerSection } from "./shell/SideDrawer";
 import ResumesPage from "./pages/ResumesPage";
@@ -7,6 +7,7 @@ import ResumeViewPage from "./pages/ResumeViewPage";
 import EditPage from "./pages/EditPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import PostingsBrowsePage from "./pages/PostingsBrowsePage";
+import PortfolioPage from "./pages/PortfolioPage";
 import ShareViewPage from "./pages/ShareViewPage";
 import { apiGet } from "./api/client";
 import { useAuth } from "./hooks/useAuth";
@@ -17,6 +18,7 @@ type Route =
   | { name: "edit"; documentId: number }
   | { name: "applications" }
   | { name: "postings" }
+  | { name: "portfolio" }
   | { name: "share"; token: string };
 
 function parseHash(): Route {
@@ -29,6 +31,7 @@ function parseHash(): Route {
   if (shareMatch) return { name: "share", token: shareMatch[1] };
   if (h === "/applications") return { name: "applications" };
   if (h === "/postings") return { name: "postings" };
+  if (h === "/portfolio") return { name: "portfolio" };
   return { name: "resumes" };
 }
 
@@ -67,6 +70,7 @@ export default function App() {
       icon: FileText,
       active: route.name === "resumes" || route.name === "view" || route.name === "edit",
     },
+    { label: "포트폴리오", href: "#/portfolio", icon: FolderOpen, active: route.name === "portfolio" },
     { label: "공고 탐색", href: "#/postings", icon: Search, active: tab === "postings" },
     { label: "지원 관리", href: "#/applications", icon: CalendarDays, active: tab === "applications" },
   ];
@@ -82,6 +86,7 @@ export default function App() {
     {
       label: "탐색·지원",
       items: [
+        { label: "포트폴리오 관리", href: "#/portfolio" },
         { label: "공고 탐색", href: "#/postings" },
         { label: "지원 관리", href: "#/applications" },
       ],
@@ -98,6 +103,7 @@ export default function App() {
   else if (route.name === "edit") page = <EditPage documentId={route.documentId} />;
   else if (route.name === "applications") page = <ApplicationsPage />;
   else if (route.name === "postings") page = <PostingsBrowsePage />;
+  else if (route.name === "portfolio") page = <PortfolioPage />;
   else page = <ResumesPage />;
 
   return (

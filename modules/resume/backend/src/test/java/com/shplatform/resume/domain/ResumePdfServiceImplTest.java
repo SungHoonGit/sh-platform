@@ -239,7 +239,8 @@ class ResumePdfServiceImplTest {
         IntroductionResponse intro = new IntroductionResponse(
                 8L, "지원동기", "데이터를 좋아하는 개발자입니다.", 0, null, null);
         PortfolioItemResponse portfolio = new PortfolioItemResponse(
-                9L, "포트폴리오", "LINK", null, "https://example.com/portfolio", "작업물 모음", 0, null);
+                9L, "포트폴리오", "LINK", null, null, null, null, null,
+                "https://example.com/portfolio", "작업물 모음", 0, null);
 
         return new ResumeViewResponse(profile, List.of(career, oldCareer), List.of(education),
                 List.of(skill, skill2), List.of(cert), List.of(project), List.of(intro),
