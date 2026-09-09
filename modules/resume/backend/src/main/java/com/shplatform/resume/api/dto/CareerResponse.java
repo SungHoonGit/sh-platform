@@ -2,6 +2,7 @@ package com.shplatform.resume.api.dto;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 경력 응답.
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
  * @param startDate    입사일
  * @param endDate      퇴사일 (재직중이면 null)
  * @param description  주요 업무 내용
+ * @param items        기간별 상세 항목 (경력기술서 문서화, 표시 순서순)
  * @param displayOrder 표시 순서
  * @param createdAt    등록 시각
  * @param updatedAt    수정 시각
@@ -23,6 +25,7 @@ public record CareerResponse(
         LocalDate startDate,
         LocalDate endDate,
         String description,
+        List<CareerItemResponse> items,
         Integer displayOrder,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

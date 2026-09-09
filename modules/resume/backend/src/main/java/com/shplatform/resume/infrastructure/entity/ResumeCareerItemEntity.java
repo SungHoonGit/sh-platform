@@ -16,25 +16,26 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * 경력(회사) 내 기간별 상세 항목 엔티티.
+ * 경력기술서 양식의 "근무기간 × 업무/프로젝트" 문서화를 지원한다.
+ */
 @Entity
-@Table(name = "resume_projects")
+@Table(name = "resume_career_items")
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ResumeProjectEntity {
+public class ResumeCareerItemEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "career_id", nullable = false)
+    private Long careerId;
 
-    @Column(name = "name", nullable = false, length = 100)
-    private String name;
-
-    @Column(name = "role", length = 100)
-    private String role;
+    @Column(name = "title", length = 100)
+    private String title;
 
     @Column(name = "start_date")
     private LocalDate startDate;
@@ -44,24 +45,6 @@ public class ResumeProjectEntity {
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
-
-    @Column(name = "tech_stack", length = 300)
-    private String techStack;
-
-    @Column(name = "github_url", length = 300)
-    private String githubUrl;
-
-    @Column(name = "demo_url", length = 300)
-    private String demoUrl;
-
-    @Column(name = "video_url", length = 300)
-    private String videoUrl;
-
-    @Column(name = "link_url", length = 300)
-    private String linkUrl;
-
-    @Column(name = "thumbnail_path", length = 300)
-    private String thumbnailPath;
 
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder = 0;
@@ -74,9 +57,9 @@ public class ResumeProjectEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public static ResumeProjectEntity create(Long userId) {
-        var entity = new ResumeProjectEntity();
-        entity.userId = userId;
+    public static ResumeCareerItemEntity create(Long careerId) {
+        var entity = new ResumeCareerItemEntity();
+        entity.careerId = careerId;
         return entity;
     }
 }

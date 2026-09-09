@@ -4,12 +4,18 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import java.time.LocalDate;
+
 /**
  * 포트폴리오 작업물 등록/수정 요청.
  * FILE 타입은 사전에 POST /api/v1/files 로 업로드 후 반환된 storedPath(또는 fileId 참조)를 전달한다.
  *
- * @param title         작업물 제목 (필수)
+ * @param title         프로젝트/작업물 제목 (필수)
  * @param itemType      유형 (비면 자동 결정 — 첨부파일 있으면 FILE, 없으면 LINK)
+ * @param role          담당 역할
+ * @param startDate     시작일
+ * @param endDate       종료일 (진행 중이면 생략)
+ * @param techStack     기술 스택
  * @param thumbnailPath 썸네일 이미지 저장 경로 (선택)
  * @param githubUrl     GitHub 저장소 링크 (선택)
  * @param demoUrl       데모/배포 링크 (선택)
@@ -22,6 +28,10 @@ import jakarta.validation.constraints.Size;
 public record PortfolioItemRequest(
         @NotBlank @Size(max = 100) String title,
         @Pattern(regexp = "FILE|LINK") String itemType,
+        @Size(max = 100) String role,
+        LocalDate startDate,
+        LocalDate endDate,
+        @Size(max = 300) String techStack,
         @Size(max = 300) String thumbnailPath,
         @Size(max = 300) String githubUrl,
         @Size(max = 300) String demoUrl,

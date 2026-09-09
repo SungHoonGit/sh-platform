@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import type { ResumeView } from "../../types/resume";
-import { ProfilePhoto, period, PortfolioCard } from "./shared";
+import { FileThumb, period, PortfolioCard, ProfilePhoto, projectLinks, ymd } from "./shared";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -54,15 +54,26 @@ export default function SaraminTemplate({
               ))}
             </tbody>
           </table>
-          {view.careers.some((c) => c.description) && (
+          {view.careers.some((c) => c.description || c.items.length > 0) && (
             <ul className="mt-1 space-y-1.5">
               {view.careers
-                .filter((c) => c.description)
-                .map((c) => (
-                  <li key={c.id} className="text-xs leading-normal text-gray-700 whitespace-pre-wrap">
-                    ▸ [{c.company}] {c.description}
-                  </li>
-                ))}
+                .filter((c) => c.description || c.items.length > 0)
+                .flatMap((c) => [
+                  c.description ? (
+                    <li key={`d-${c.id}`} className="text-xs leading-normal text-gray-700 whitespace-pre-wrap">
+                      ▸ [{c.company}] {c.description}
+                    </li>
+                  ) : null,
+                  ...c.items.map((it) => (
+                    <li key={`i-${c.id}-${it.id}`} className="text-xs leading-normal text-gray-700 whitespace-pre-wrap">
+                      ▸ [{c.company}]{" "}
+                      {it.startDate ? `${ymd(it.startDate)} ~ ${it.endDate ? ymd(it.endDate) : "현재"} · ` : ""}
+                      <span className="font-medium">{it.title}</span>
+                      {it.description ? ` — ${it.description}` : ""}
+                    </li>
+                  )),
+                ])
+                .filter(Boolean)}
             </ul>
           )}
         </Section>
@@ -72,6 +83,9 @@ export default function SaraminTemplate({
         <Section title="프로젝트">
           {view.projects.map((pr) => (
             <article key={pr.id} className="mb-3 last:mb-0 pb-3 border-b border-dashed border-gray-200 last:border-0">
+              {pr.thumbnailPath && (
+                <FileThumb path={pr.thumbnailPath} className="w-full max-h-44 object-cover mb-2 rounded border border-gray-200" />
+              )}
               <div className="flex justify-between items-baseline">
                 <h3 className="font-semibold text-sm">
                   {pr.name}
@@ -85,10 +99,14 @@ export default function SaraminTemplate({
               {pr.description && (
                 <p className="mt-1 text-xs leading-normal text-gray-700 whitespace-pre-wrap">{pr.description}</p>
               )}
-              {pr.linkUrl && (
-                <a href={pr.linkUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline">
-                  {pr.linkUrl}
-                </a>
+              {projectLinks(pr).length > 0 && (
+                <p className="mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5">
+                  {projectLinks(pr).map((l) => (
+                    <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline">
+                      {l.label}
+                    </a>
+                  ))}
+                </p>
               )}
             </article>
           ))}

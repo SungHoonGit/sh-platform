@@ -87,7 +87,11 @@ public class ProjectServiceImpl implements ProjectService {
         entity.setEndDate(request.endDate());
         entity.setDescription(request.description());
         entity.setTechStack(request.techStack());
+        entity.setGithubUrl(request.githubUrl());
+        entity.setDemoUrl(request.demoUrl());
+        entity.setVideoUrl(request.videoUrl());
         entity.setLinkUrl(request.linkUrl());
+        entity.setThumbnailPath(request.thumbnailPath());
         entity.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 0);
     }
 
@@ -100,7 +104,11 @@ public class ProjectServiceImpl implements ProjectService {
                 entity.getEndDate(),
                 entity.getDescription(),
                 entity.getTechStack(),
+                entity.getGithubUrl(),
+                entity.getDemoUrl(),
+                entity.getVideoUrl(),
                 entity.getLinkUrl(),
+                entity.getThumbnailPath(),
                 entity.getDisplayOrder(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

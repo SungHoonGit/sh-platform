@@ -79,6 +79,7 @@ export default function CrudSection({
   sectionDragActive = false,
   dragHandle,
   importOptions = null,
+  renderRowExtra,
   onChanged,
 }: {
   title: string;
@@ -104,6 +105,8 @@ export default function CrudSection({
     /** form 필드 key → 작업물 필드 key */
     fieldMap: Record<string, string>;
   } | null;
+  /** 각 행 아래 추가 UI를 그린다 (예: 경력의 기간별 상세 항목 편집기) */
+  renderRowExtra?: (it: Item) => React.ReactNode;
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -666,6 +669,7 @@ export default function CrudSection({
               </div>
             )}
           </div>
+          {renderRowExtra?.(it)}
           {inline && editing === String(it.id) && renderForm()}
         </div>
       ))}
@@ -720,29 +724,32 @@ export default function CrudSection({
                 <li
                   key={String(it.id)}
                   {...rowDragProps(it)}
-                  className={`py-2.5 flex justify-between items-start gap-2 ${
+                  className={`py-2.5 flex flex-col gap-2 ${
                     overId === String(it.id) ? isOverRow(it) : ""
                   }`}
                 >
-                  {orderControls(it, i)}
-                  {renderRowInfo(it)}
-                  {editing !== String(it.id) && (
-                    <div className="shrink-0 flex gap-1.5">
-                      <button
-                        onClick={() => openEdit(it)}
-                        className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                      >
-                        수정
-                      </button>
-                      <button
-                        onClick={() => remove(Number(it.id))}
-                        disabled={busy}
-                        className="px-2 py-1 text-xs border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-50"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex justify-between items-start gap-2">
+                    {orderControls(it, i)}
+                    {renderRowInfo(it)}
+                    {editing !== String(it.id) && (
+                      <div className="shrink-0 flex gap-1.5">
+                        <button
+                          onClick={() => openEdit(it)}
+                          className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                        >
+                          수정
+                        </button>
+                        <button
+                          onClick={() => remove(Number(it.id))}
+                          disabled={busy}
+                          className="px-2 py-1 text-xs border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-50"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {renderRowExtra?.(it)}
                 </li>
               ))}
             </ul>

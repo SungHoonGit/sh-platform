@@ -14,7 +14,11 @@ import java.time.LocalDate;
  * @param endDate      종료일
  * @param description  프로젝트 설명
  * @param techStack    기술 스택
- * @param linkUrl      관련 링크
+ * @param githubUrl    GitHub 저장소 링크
+ * @param demoUrl      데모/배포 링크
+ * @param videoUrl     시연 영상 링크
+ * @param linkUrl      관련 링크 (레거시 단일 링크)
+ * @param thumbnailPath 썸네일 이미지 저장 경로
  * @param displayOrder 표시 순서
  */
 public record ProjectRequest(
@@ -24,7 +28,11 @@ public record ProjectRequest(
         LocalDate endDate,
         String description,
         @Size(max = 300) String techStack,
+        @Size(max = 300) String githubUrl,
+        @Size(max = 300) String demoUrl,
+        @Size(max = 300) String videoUrl,
         @Size(max = 300) String linkUrl,
+        @Size(max = 300) String thumbnailPath,
         Integer displayOrder
 ) {
 }

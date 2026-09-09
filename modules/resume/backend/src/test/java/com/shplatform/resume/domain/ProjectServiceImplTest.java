@@ -38,7 +38,7 @@ class ProjectServiceImplTest {
 
     private ProjectRequest request() {
         return new ProjectRequest("sh-platform", "개발자",
-                null, null, "통합 플랫폼", "Java, Spring Boot", "https://github.com", 1);
+                null, null, "통합 플랫폼", "Java, Spring Boot", "https://github.com", null, null, null, null, 1);
     }
 
     private ResumeProjectEntity entity(Long userId) {

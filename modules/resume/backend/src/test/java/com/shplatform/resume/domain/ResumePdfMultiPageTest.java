@@ -61,7 +61,7 @@ class ResumePdfMultiPageTest {
         for (int i = 1; i <= 40; i++) {
             careers.add(new CareerResponse((long) i, "회사" + i, "백엔드 개발자",
                     LocalDate.of(2020, 1, 1), null,
-                    "오래된 경력 설명 문장입니다. ".repeat(30).trim() + " (" + i + ")", i, null, null));
+                    "오래된 경력 설명 문장입니다. ".repeat(30).trim() + " (" + i + ")", List.of(), i, null, null));
         }
         return new ResumeViewResponse(
                 new ProfileResponse(1L, "홍길동", "t@e.com", "010-1234-5678", "대전 서구",

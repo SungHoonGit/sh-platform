@@ -222,10 +222,10 @@ class ResumePdfServiceImplTest {
     private ResumeViewResponse fullView(ProfileResponse profile) {
         CareerResponse career = new CareerResponse(
                 1L, "네이버", "백엔드 개발자", LocalDate.of(2022, 3, 1), null,
-                "검색 서비스 API 개발", 0, null, null);
+                "검색 서비스 API 개발", List.of(), 0, null, null);
         CareerResponse oldCareer = new CareerResponse(
                 2L, "카카오", "주니어 개발자", LocalDate.of(2020, 1, 1), LocalDate.of(2022, 2, 28),
-                "앱 백엔드 유지보수", 1, null, null);
+                "앱 백엔드 유지보수", List.of(), 1, null, null);
         EducationResponse education = new EducationResponse(
                 3L, "한남대학교", "대학교", "컴퓨터공학과", "학사", "3.9 / 4.5",
                 LocalDate.of(2015, 3, 2), LocalDate.of(2020, 2, 20), "졸업", 0, null, null);
@@ -235,12 +235,13 @@ class ResumePdfServiceImplTest {
                 6L, "정보처리기사", "한국산업인력공단", LocalDate.of(2021, 6, 1), 0, null);
         ProjectResponse project = new ProjectResponse(
                 7L, "sh-platform", "백엔드·풀스택", LocalDate.of(2026, 1, 1), null,
-                "채용공고 스크래핑 플랫폼", "Java · Spring Boot · React", "https://github.com/example", 0, null, null);
+                "채용공고 스크래핑 플랫폼", "Java · Spring Boot · React", "https://github.com/example",
+                null, null, null, null, 0, null, null);
         IntroductionResponse intro = new IntroductionResponse(
                 8L, "지원동기", "데이터를 좋아하는 개발자입니다.", 0, null, null);
         PortfolioItemResponse portfolio = new PortfolioItemResponse(
-                9L, "포트폴리오", "LINK", null, null, null, null, null,
-                "https://example.com/portfolio", "작업물 모음", 0, null);
+                9L, "포트폴리오", "LINK", null, null, null, null, null, null,
+                null, null, null, "https://example.com/portfolio", "작업물 모음", 0, null);
 
         return new ResumeViewResponse(profile, List.of(career, oldCareer), List.of(education),
                 List.of(skill, skill2), List.of(cert), List.of(project), List.of(intro),

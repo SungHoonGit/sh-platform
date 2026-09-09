@@ -38,13 +38,13 @@ class PortfolioItemServiceImplTest {
 
     private PortfolioItemRequest linkRequest() {
         return new PortfolioItemRequest("포트폴리오 사이트", "LINK",
-                null, null, null, null, null, "https://portfolio.example.com", "개인 포트폴리오", 1);
+                null, null, null, null, null, null, null, null, null, "https://portfolio.example.com", "개인 포트폴리오", 1);
     }
 
     private PortfolioItemRequest enhancedRequest() {
         return new PortfolioItemRequest("sh-platform", "LINK",
-                "6/202608/thumb.png", "https://github.com/owner/repo", "https://demo.example.com",
-                "https://youtube.com/watch?v=abc", null, null, "채용공고 스크래핑 플랫폼", 1);
+                "개발자", null, null, "Java, Spring", "6/202608/thumb.png", "https://github.com/owner/repo",
+                "https://demo.example.com", "https://youtube.com/watch?v=abc", null, null, "채용공고 스크래핑 플랫폼", 1);
     }
 
     private ResumePortfolioItemEntity entity(Long userId) {
@@ -89,7 +89,7 @@ class PortfolioItemServiceImplTest {
     @DisplayName("createPortfolioItem: FILE 타입인데 filePath가 없으면 INVALID_INPUT 예외가 발생한다")
     void createPortfolioItem_fileWithoutPathRejected() {
         var fileRequest = new PortfolioItemRequest("첨부파일", "FILE",
-                null, null, null, null, null, null, null, 1);
+                null, null, null, null, null, null, null, null, null, null, null, 1);
 
         assertThatThrownBy(() -> portfolioItemService.createPortfolioItem(USER_ID, fileRequest))
                 .isInstanceOf(BusinessException.class)
@@ -106,7 +106,7 @@ class PortfolioItemServiceImplTest {
                     return invocation.getArgument(0);
                 });
         var fileRequest = new PortfolioItemRequest("기획서", "FILE",
-                null, null, null, null, "6/202608/uuid.pptx", null, "서비스 기획서", 2);
+                null, null, null, null, null, null, null, null, "6/202608/uuid.pptx", null, "서비스 기획서", 2);
 
         portfolioItemService.createPortfolioItem(USER_ID, fileRequest);
 
@@ -122,9 +122,9 @@ class PortfolioItemServiceImplTest {
         given(portfolioItemRepository.save(any(ResumePortfolioItemEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         var linkOnly = new PortfolioItemRequest("프로젝트 A", null,
-                null, "https://github.com/owner/repo", null, null, null, null, null, 1);
+                null, null, null, null, null, "https://github.com/owner/repo", null, null, null, null, null, 1);
         var fileAttached = new PortfolioItemRequest("프로젝트 B", null,
-                null, null, null, null, "6/202609/uuid.pdf", null, null, 1);
+                null, null, null, null, null, null, null, null, "6/202609/uuid.pdf", null, null, 1);
 
         portfolioItemService.createPortfolioItem(USER_ID, linkOnly);
         portfolioItemService.createPortfolioItem(USER_ID, fileAttached);

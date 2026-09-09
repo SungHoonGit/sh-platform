@@ -5,6 +5,10 @@ export const PORTFOLIO_LIST_KEY = "portfolioItems";
 
 export const PORTFOLIO_FIELDS: FieldDef[] = [
   { key: "title", label: "작업물 제목", required: true },
+  { key: "role", label: "맡은 역할" },
+  { key: "startDate", label: "시작일", type: "date" },
+  { key: "endDate", label: "종료일", type: "date", placeholder: "진행 중이면 비움" },
+  { key: "techStack", label: "기술 스택", placeholder: "쉼표로 구분: Java, Spring, MySQL" },
   {
     key: "thumbnailPath",
     label: "썸네일 이미지 (jpg/png, 5MB 이하)",

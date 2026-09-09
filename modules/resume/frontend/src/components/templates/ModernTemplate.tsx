@@ -1,5 +1,5 @@
 import type { ResumeView } from "../../types/resume";
-import { ProfilePhoto, period, PortfolioCard } from "./shared";
+import { FileThumb, period, PortfolioCard, ProfilePhoto, projectLinks, ymd } from "./shared";
 
 function SideSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -52,6 +52,21 @@ export default function ModernTemplate({
               {c.description && (
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-normal text-gray-600">{c.description}</p>
               )}
+              {c.items.length > 0 && (
+                <ul className="mt-1.5 space-y-1">
+                  {c.items.map((item) => (
+                    <li key={item.id} className="text-sm leading-normal text-gray-600">
+                      <span className="text-xs text-gray-400">
+                        {item.startDate ? `${ymd(item.startDate)} ~ ${item.endDate ? ymd(item.endDate) : "현재"} · ` : ""}
+                      </span>
+                      <span className="font-medium text-slate-800">{item.title}</span>
+                      {item.description && (
+                        <span className="whitespace-pre-wrap"> — {item.description}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </article>
           ))}
         </MainSection>
@@ -61,6 +76,9 @@ export default function ModernTemplate({
         <MainSection title="프로젝트">
           {view.projects.map((pr) => (
             <article key={pr.id} className="mb-4 last:mb-0 pl-3 border-l-2 border-gray-200">
+              {pr.thumbnailPath && (
+                <FileThumb path={pr.thumbnailPath} className="w-full max-h-44 object-cover mb-2 rounded border border-gray-200" />
+              )}
               <div className="flex justify-between items-baseline gap-2">
                 <h3 className="font-bold text-slate-800">{pr.name}</h3>
                 <span className="text-xs text-gray-500 shrink-0">{period(pr.startDate, pr.endDate)}</span>
@@ -78,10 +96,14 @@ export default function ModernTemplate({
               {pr.description && (
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-normal text-gray-600">{pr.description}</p>
               )}
-              {pr.linkUrl && (
-                <a href={pr.linkUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline">
-                  {pr.linkUrl}
-                </a>
+              {projectLinks(pr).length > 0 && (
+                <p className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5">
+                  {projectLinks(pr).map((l) => (
+                    <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline">
+                      {l.label}
+                    </a>
+                  ))}
+                </p>
               )}
             </article>
           ))}

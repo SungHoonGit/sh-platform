@@ -5,6 +5,8 @@ import com.shplatform.common.exception.ErrorCode;
 import com.shplatform.resume.api.dto.CareerRequest;
 import com.shplatform.resume.api.dto.CareerResponse;
 import com.shplatform.resume.infrastructure.entity.ResumeCareerEntity;
+import com.shplatform.resume.infrastructure.entity.ResumeCareerItemEntity;
+import com.shplatform.resume.infrastructure.repository.ResumeCareerItemRepository;
 import com.shplatform.resume.infrastructure.repository.ResumeCareerRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +36,8 @@ class CareerServiceImplTest {
 
     @Mock
     private ResumeCareerRepository careerRepository;
+    @Mock
+    private ResumeCareerItemRepository careerItemRepository;
 
     @InjectMocks
     private CareerServiceImpl careerService;
@@ -55,11 +59,17 @@ class CareerServiceImplTest {
         return e;
     }
 
+    private List<ResumeCareerItemEntity> emptyItems() {
+        return List.of();
+    }
+
     @Test
     @DisplayName("getCareers: 표시 순서대로 경력 목록을 조회한다")
     void getCareers_success() {
         given(careerRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
                 .willReturn(List.of(entity(USER_ID)));
+        given(careerItemRepository.findByCareerIdInOrderByDisplayOrderAscIdAsc(List.of(CAREER_ID)))
+                .willReturn(emptyItems());
 
         List<CareerResponse> responses = careerService.getCareers(USER_ID);
 
@@ -76,6 +86,8 @@ class CareerServiceImplTest {
                     e.setId(CAREER_ID);
                     return e;
                 });
+        given(careerItemRepository.findByCareerIdOrderByDisplayOrderAscIdAsc(CAREER_ID))
+                .willReturn(emptyItems());
 
         CareerResponse response = careerService.createCareer(USER_ID, request());
 
@@ -91,6 +103,8 @@ class CareerServiceImplTest {
     void updateCareer_success() {
         var existing = entity(USER_ID);
         given(careerRepository.findById(CAREER_ID)).willReturn(Optional.of(existing));
+        given(careerItemRepository.findByCareerIdOrderByDisplayOrderAscIdAsc(CAREER_ID))
+                .willReturn(emptyItems());
         given(careerRepository.save(any(ResumeCareerEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 

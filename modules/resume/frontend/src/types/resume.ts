@@ -11,6 +11,16 @@ export interface Profile {
   updatedAt: string;
 }
 
+export interface CareerItem {
+  id: number;
+  title: string;
+  startDate: string | null;
+  endDate: string | null;
+  description: string | null;
+  displayOrder: number;
+  createdAt: string;
+}
+
 export interface Career {
   id: number;
   company: string;
@@ -18,6 +28,7 @@ export interface Career {
   startDate: string;
   endDate: string | null;
   description: string | null;
+  items: CareerItem[];
   displayOrder: number;
   createdAt: string;
 }
@@ -62,7 +73,11 @@ export interface Project {
   endDate: string | null;
   description: string | null;
   techStack: string | null;
+  githubUrl: string | null;
+  demoUrl: string | null;
+  videoUrl: string | null;
   linkUrl: string | null;
+  thumbnailPath: string | null;
   displayOrder: number;
   createdAt: string;
 }
@@ -79,6 +94,10 @@ export interface PortfolioItem {
   id: number;
   title: string;
   itemType: string;
+  role: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  techStack: string | null;
   thumbnailPath: string | null;
   githubUrl: string | null;
   demoUrl: string | null;

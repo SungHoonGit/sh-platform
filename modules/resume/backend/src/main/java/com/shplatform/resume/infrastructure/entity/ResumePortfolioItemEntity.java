@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -51,6 +52,18 @@ public class ResumePortfolioItemEntity {
 
     @Column(name = "video_url", length = 300)
     private String videoUrl;
+
+    @Column(name = "role", length = 100)
+    private String role;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @Column(name = "tech_stack", length = 300)
+    private String techStack;
 
     @Column(name = "description", length = 500)
     private String description;

@@ -4,6 +4,7 @@ import type { ResumeView } from "../types/resume";
 import type { PortfolioItem } from "../types/resume";
 import type { ResumeDocument, SectionItem } from "../types/document";
 import CrudSection, { type FieldDef } from "../components/CrudSection";
+import CareerItemsEditor from "../components/CareerItemsEditor";
 import ProfileEditor from "../components/ProfileEditor";
 import { PORTFOLIO_ENDPOINT, PORTFOLIO_FIELDS, PORTFOLIO_LIST_KEY } from "../config/portfolioConfig";
 import {
@@ -56,7 +57,17 @@ const SECTIONS: SectionConfig[] = [
       { key: "startDate", label: "시작일", type: "date" },
       { key: "endDate", label: "종료일", type: "date", placeholder: "진행 중이면 비움" },
       { key: "techStack", label: "기술 스택", placeholder: "쉼표로 구분: Java, Spring, MySQL" },
-      { key: "linkUrl", label: "관련 링크 (GitHub 등)" },
+      {
+        key: "thumbnailPath",
+        label: "썸네일 이미지 (jpg/png, 5MB 이하)",
+        type: "file",
+        accept: ".jpg,.jpeg,.png",
+        image: true,
+      },
+      { key: "githubUrl", label: "GitHub 링크", placeholder: "https://github.com/user/repo" },
+      { key: "demoUrl", label: "데모/배포 링크", placeholder: "https://your-demo.example.com" },
+      { key: "videoUrl", label: "시연 영상 링크", placeholder: "https://youtube.com/watch?v=..." },
+      { key: "linkUrl", label: "관련 링크 (기타)" },
       { key: "description", label: "프로젝트 설명", type: "textarea" },
     ],
   },
@@ -423,16 +434,42 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                             items: portfolioItems.map((it) => ({
                               id: it.id,
                               title: it.title,
+                              role: it.role,
+                              startDate: it.startDate,
+                              endDate: it.endDate,
+                              techStack: it.techStack,
+                              githubUrl: it.githubUrl,
+                              demoUrl: it.demoUrl,
+                              videoUrl: it.videoUrl,
+                              thumbnailPath: it.thumbnailPath,
                               description: it.description,
-                              importLink: it.githubUrl || it.demoUrl || null,
                             })),
                             fieldMap: {
                               name: "title",
+                              role: "role",
+                              startDate: "startDate",
+                              endDate: "endDate",
+                              techStack: "techStack",
+                              githubUrl: "githubUrl",
+                              demoUrl: "demoUrl",
+                              videoUrl: "videoUrl",
                               description: "description",
-                              linkUrl: "importLink",
+                              thumbnailPath: "thumbnailPath",
                             },
                           }
                         : null
+                    }
+                    renderRowExtra={
+                      cfg.key === "careers"
+                        ? (career) => (
+                            <CareerItemsEditor
+                              careerId={Number(career.id)}
+                              onChanged={() => {
+                                apiGet<ResumeView>("/view").then(setView).catch(() => undefined);
+                              }}
+                            />
+                          )
+                        : undefined
                     }
                     dragHandle={{
                       active: draggingSection,

@@ -2,9 +2,12 @@ package com.shplatform.resume.domain;
 
 import com.shplatform.common.exception.BusinessException;
 import com.shplatform.common.exception.ErrorCode;
+import com.shplatform.resume.api.dto.CareerItemResponse;
 import com.shplatform.resume.api.dto.CareerRequest;
 import com.shplatform.resume.api.dto.CareerResponse;
 import com.shplatform.resume.infrastructure.entity.ResumeCareerEntity;
+import com.shplatform.resume.infrastructure.entity.ResumeCareerItemEntity;
+import com.shplatform.resume.infrastructure.repository.ResumeCareerItemRepository;
 import com.shplatform.resume.infrastructure.repository.ResumeCareerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,11 +23,15 @@ import java.util.stream.Collectors;
 public class CareerServiceImpl implements CareerService {
 
     private final ResumeCareerRepository careerRepository;
+    private final ResumeCareerItemRepository careerItemRepository;
 
     @Override
     public List<CareerResponse> getCareers(Long userId) {
-        return careerRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId).stream()
-                .map(this::toResponse)
+        var careers = careerRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        Map<Long, List<ResumeCareerItemEntity>> itemsByCareer = groupItems(
+                careers.stream().map(ResumeCareerEntity::getId).toList());
+        return careers.stream()
+                .map(e -> toResponse(e, itemsByCareer.getOrDefault(e.getId(), List.of())))
                 .toList();
     }
 
@@ -34,7 +41,7 @@ public class CareerServiceImpl implements CareerService {
         var entity = ResumeCareerEntity.create(userId);
         entity.setUserId(userId);
         applyRequest(entity, request);
-        return toResponse(careerRepository.save(entity));
+        return toResponse(careerRepository.save(entity), listItems(entity.getId()));
     }
 
     @Override
@@ -42,7 +49,7 @@ public class CareerServiceImpl implements CareerService {
     public CareerResponse updateCareer(Long userId, Long careerId, CareerRequest request) {
         var entity = getOwnedCareer(userId, careerId);
         applyRequest(entity, request);
-        return toResponse(careerRepository.save(entity));
+        return toResponse(careerRepository.save(entity), listItems(entity.getId()));
     }
 
     @Override
@@ -81,6 +88,18 @@ public class CareerServiceImpl implements CareerService {
         return entity;
     }
 
+    private List<ResumeCareerItemEntity> listItems(Long careerId) {
+        return careerItemRepository.findByCareerIdOrderByDisplayOrderAscIdAsc(careerId);
+    }
+
+    private Map<Long, List<ResumeCareerItemEntity>> groupItems(List<Long> careerIds) {
+        if (careerIds.isEmpty()) {
+            return Map.of();
+        }
+        return careerItemRepository.findByCareerIdInOrderByDisplayOrderAscIdAsc(careerIds).stream()
+                .collect(Collectors.groupingBy(ResumeCareerItemEntity::getCareerId));
+    }
+
     private void applyRequest(ResumeCareerEntity entity, CareerRequest request) {
         entity.setCompany(request.company());
         entity.setTitle(request.title());
@@ -90,7 +109,18 @@ public class CareerServiceImpl implements CareerService {
         entity.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 0);
     }
 
-    private CareerResponse toResponse(ResumeCareerEntity entity) {
+    private CareerResponse toResponse(ResumeCareerEntity entity, List<ResumeCareerItemEntity> items) {
+        List<CareerItemResponse> itemResponses = items.stream()
+                .map(it -> new CareerItemResponse(
+                        it.getId(),
+                        it.getTitle(),
+                        it.getStartDate(),
+                        it.getEndDate(),
+                        it.getDescription(),
+                        it.getDisplayOrder(),
+                        it.getCreatedAt()
+                ))
+                .toList();
         return new CareerResponse(
                 entity.getId(),
                 entity.getCompany(),
@@ -98,6 +128,7 @@ public class CareerServiceImpl implements CareerService {
                 entity.getStartDate(),
                 entity.getEndDate(),
                 entity.getDescription(),
+                itemResponses,
                 entity.getDisplayOrder(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

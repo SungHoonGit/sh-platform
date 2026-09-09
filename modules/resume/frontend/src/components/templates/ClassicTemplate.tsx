@@ -1,5 +1,5 @@
 import type { ResumeView } from "../../types/resume";
-import { ProfilePhoto, period, PortfolioCard } from "./shared";
+import { FileThumb, period, PortfolioCard, ProfilePhoto, projectLinks, ymd } from "./shared";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -34,6 +34,21 @@ export default function ClassicTemplate({
               {c.description && (
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-normal">{c.description}</p>
               )}
+              {c.items.length > 0 && (
+                <ul className="mt-1.5 space-y-1">
+                  {c.items.map((item) => (
+                    <li key={item.id} className="text-sm leading-normal">
+                      <span className="text-gray-500 text-xs">
+                        {item.startDate ? `${ymd(item.startDate)} ~ ${item.endDate ? ymd(item.endDate) : "현재"} · ` : ""}
+                      </span>
+                      <span className="font-medium">{item.title}</span>
+                      {item.description && (
+                        <span className="text-gray-700 whitespace-pre-wrap"> — {item.description}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </article>
           ))}
         </Section>
@@ -43,6 +58,9 @@ export default function ClassicTemplate({
         <Section title="프로젝트">
           {view.projects.map((pr) => (
               <article key={pr.id} className="mb-3 last:mb-0">
+              {pr.thumbnailPath && (
+                <FileThumb path={pr.thumbnailPath} className="w-full max-h-44 object-cover mb-2 rounded border border-gray-200" />
+              )}
               <div className="flex justify-between items-baseline">
                 <h3 className="font-bold">{pr.name}</h3>
                 <span className="text-sm text-gray-500">{period(pr.startDate, pr.endDate)}</span>
@@ -60,10 +78,14 @@ export default function ClassicTemplate({
               {pr.description && (
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-normal">{pr.description}</p>
               )}
-              {pr.linkUrl && (
-                <a href={pr.linkUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
-                  {pr.linkUrl}
-                </a>
+              {projectLinks(pr).length > 0 && (
+                <p className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5">
+                  {projectLinks(pr).map((l) => (
+                    <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
+                      {l.label}
+                    </a>
+                  ))}
+                </p>
               )}
             </article>
           ))}
