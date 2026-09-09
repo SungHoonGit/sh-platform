@@ -258,9 +258,25 @@ export default function EditPage({ documentId }: { documentId?: number }) {
     setDropPos(null);
   };
 
-  const restoreOriginalOrder = () => {
-    if (!dropHandled.current && origSnapshot.current) {
-      setSectionItems(origSnapshot.current);
+  const endDrag = () => {
+    if (dropHandled.current) {
+      origSnapshot.current = null;
+      dropHandled.current = false;
+      resetDrag();
+      return;
+    }
+    if (origSnapshot.current && sectionItems) {
+      const changed =
+        origSnapshot.current.map((s) => s.key).join(",") !== sectionItems.map((s) => s.key).join(",");
+      if (changed) {
+        // 드롭이 소스 카드 자신 위에서 끊겨(drop 미발생) 순서만 바뀐 채 끝난 경우 → 현재 순서를 저장.
+        // (브라우저는 드래그 소스 자신 위에서는 drop 이벤트를 발생시키지 않는다)
+        dropHandled.current = true;
+        origSnapshot.current = null;
+        resetDrag();
+        persistSections(sectionItems);
+        return;
+      }
     }
     origSnapshot.current = null;
     dropHandled.current = false;
@@ -381,8 +397,9 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                     draggingSection ? "opacity-40" : overSection ? "outline outline-2 outline-blue-400 outline-offset-2" : ""
                   }`}
                   onDragOver={(e) => {
-                    if (!dragKey || dragKey === cfg.key) return;
+                    if (!dragKey) return;
                     e.preventDefault();
+                    if (dragKey === cfg.key) return;
                     const rect = e.currentTarget.getBoundingClientRect();
                     const pos: "before" | "after" =
                       e.clientY < rect.top + rect.height / 2 ? "before" : "after";
@@ -422,7 +439,7 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                         setOverKey(null);
                         setDropPos(null);
                       },
-                      onDragEnd: restoreOriginalOrder,
+                      onDragEnd: endDrag,
                     }}
                     onChanged={() => {
                       apiGet<ResumeView>("/view").then(setView).catch(() => undefined);
@@ -462,7 +479,7 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                         setOverKey(null);
                         setDropPos(null);
                       }}
-                      onDragEnd={restoreOriginalOrder}
+                      onDragEnd={endDrag}
                       onDragOver={(e) => {
                         e.preventDefault();
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -538,8 +555,8 @@ export default function EditPage({ documentId }: { documentId?: number }) {
             </ul>
             <p className="mt-3 text-[11px] text-slate-400 leading-snug">
               왼쪽 카드 <b className="text-slate-500">상단 헤더를 드래그</b>하거나, 이 패널의 항목을 드래그하면
-              섹션 순서가 실시간으로 바뀝니다. 놓는 위치(위/아래)에 들어가고, 카드 밖에 놓으면 원래 순서로
-              되돌아갑니다. 각 항목은 항목 우측 ▲▼/⋮⋮로 순서를 바꾸고, "보임/숨김"으로 표시 여부를 조절할 수
+              섹션 순서가 실시간으로 바뀝니다. 놓는 위치(위/아래)에 들어가고, 드래그로 정리된 순서 그대로
+              저장됩니다. 각 항목은 항목 우측 ▲▼/⋮⋮로 순서를 바꾸고, "보임/숨김"으로 표시 여부를 조절할 수
               있습니다. 이 이력서의 미리보기·PDF에만 적용되며 항목 데이터는 모든 이력서가 공유합니다.
             </p>
           </aside>

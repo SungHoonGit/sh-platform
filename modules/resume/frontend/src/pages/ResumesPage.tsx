@@ -131,9 +131,25 @@ export default function ResumesPage() {
     });
   };
 
-  const restoreOriginalOrder = () => {
-    if (!dropHandled.current && origSnapshot.current) {
-      setDocuments(origSnapshot.current);
+  const endDrag = () => {
+    if (dropHandled.current) {
+      origSnapshot.current = null;
+      dropHandled.current = false;
+      setDragId(null);
+      setOverId(null);
+      return;
+    }
+    if (origSnapshot.current && documents) {
+      const changed =
+        origSnapshot.current.map((x) => x.id).join(",") !== documents.map((x) => x.id).join(",");
+      if (changed) {
+        // 드롭이 소스 카드 자신 위에서 끊겨(drop 미발생) 순서만 바뀐 채 끝난 경우 → 현재 순서를 저장.
+        // (브라우저는 드래그 소스 자신 위에서는 drop 이벤트를 발생시키지 않는다)
+        dropHandled.current = true;
+        origSnapshot.current = null;
+        void persistOrder(documents);
+        return;
+      }
     }
     origSnapshot.current = null;
     dropHandled.current = false;
@@ -285,8 +301,9 @@ export default function ResumesPage() {
             <div
               key={d.id}
               onDragOver={(e) => {
-                if (dragId == null || dragId === d.id) return;
+                if (dragId == null) return;
                 e.preventDefault();
+                if (dragId === d.id) return;
                 const rect = e.currentTarget.getBoundingClientRect();
                 const pos: "before" | "after" =
                   e.clientY < rect.top + rect.height / 2 ? "before" : "after";
@@ -316,7 +333,7 @@ export default function ResumesPage() {
                   setDragId(d.id);
                   setOverId(null);
                 }}
-                onDragEnd={restoreOriginalOrder}
+                onDragEnd={endDrag}
                 onDragOver={(e) => e.preventDefault()}
                 className={`mb-2 flex items-center justify-between gap-2 rounded ${
                   dragId === d.id ? "" : "cursor-grab active:cursor-grabbing hover:bg-slate-50"
