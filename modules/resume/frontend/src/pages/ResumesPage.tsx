@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiDelete, apiGet, apiPost, apiPut } from "../api/client";
 import type { ResumeDocument, ShareLink } from "../types/document";
 import { TEMPLATE_LABELS, TEMPLATE_OPTIONS } from "../components/templates/shared";
@@ -14,8 +14,9 @@ export default function ResumesPage() {
   const [shareBusy, setShareBusy] = useState<number | null>(null);
   const [dragId, setDragId] = useState<number | null>(null);
   const [overId, setOverId] = useState<number | null>(null);
-  const [dropPos, setDropPos] = useState<"before" | "after" | null>(null);
   const [orderBusy, setOrderBusy] = useState(false);
+  const origSnapshot = useRef<ResumeDocument[] | null>(null);
+  const dropHandled = useRef(false);
 
   const shareUrl = (token: string) =>
     `${window.location.origin}/resume/#/s/${token}`;
@@ -96,7 +97,6 @@ export default function ResumesPage() {
       setOrderBusy(false);
       setDragId(null);
       setOverId(null);
-      setDropPos(null);
     }
   };
 
@@ -113,19 +113,32 @@ export default function ResumesPage() {
     void persistOrder(next);
   };
 
+  /** 드래그 중 실시간으로 목록을 다시 배치한다 (저장은 drop 시점에만). */
   const reorderDocuments = (draggedId: number, targetId: number, pos: "before" | "after") => {
-    if (!documents) return;
-    const from = documents.findIndex((x) => x.id === draggedId);
-    if (from < 0) return;
-    const rest = documents.filter((x) => x.id !== draggedId);
-    const targetIndex = rest.findIndex((x) => x.id === targetId);
-    if (targetIndex < 0) return;
-    const dragged = documents[from];
-    rest.splice(pos === "after" ? targetIndex + 1 : targetIndex, 0, dragged);
+    setDocuments((prev) => {
+      if (!prev || prev.length < 2) return prev;
+      const rest = prev.filter((x) => x.id !== draggedId);
+      if (rest.length === prev.length) return prev;
+      const dragged = prev.find((x) => x.id === draggedId);
+      if (!dragged) return prev;
+      const targetIndex = rest.findIndex((x) => x.id === targetId);
+      if (targetIndex < 0) return prev;
+      const insertAt = pos === "after" ? targetIndex + 1 : targetIndex;
+      const next = [...rest];
+      next.splice(insertAt, 0, dragged);
+      const key = (arr: ResumeDocument[]) => arr.map((x) => x.id).join(",");
+      return key(next) === key(prev) ? prev : next;
+    });
+  };
+
+  const restoreOriginalOrder = () => {
+    if (!dropHandled.current && origSnapshot.current) {
+      setDocuments(origSnapshot.current);
+    }
+    origSnapshot.current = null;
+    dropHandled.current = false;
     setDragId(null);
     setOverId(null);
-    setDropPos(null);
-    void persistOrder(rest);
   };
 
   const changeTemplate = async (id: number, templateCode: string) => {
@@ -267,6 +280,7 @@ export default function ResumesPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {documents.map((d, i) => {
           const isOver = overId === d.id && dragId !== d.id;
+          const dragging = dragId === d.id;
           return (
             <div
               key={d.id}
@@ -277,19 +291,38 @@ export default function ResumesPage() {
                 const pos: "before" | "after" =
                   e.clientY < rect.top + rect.height / 2 ? "before" : "after";
                 setOverId(d.id);
-                setDropPos(pos);
+                reorderDocuments(dragId, d.id, pos);
               }}
               onDrop={(e) => {
                 e.preventDefault();
-                if (dragId != null && dropPos) reorderDocuments(dragId, d.id, dropPos);
+                if (dragId == null || !documents) return;
+                dropHandled.current = true;
+                void persistOrder(documents);
               }}
-              className={`bg-white rounded-xl p-4 flex flex-col hover:shadow-md transition-shadow ${
-                isOver
-                  ? `border border-blue-400 ${dropPos === "after" ? "border-b-4" : "border-t-4"}`
-                  : "border border-slate-200"
+              className={`bg-white rounded-xl p-4 flex flex-col border border-slate-200 hover:shadow-md transition-shadow ${
+                dragging ? "opacity-40" : isOver ? "outline outline-2 outline-blue-400" : ""
               }`}
             >
-              <div className="flex items-center justify-between mb-1">
+              <div
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = "move";
+                  const card = e.currentTarget.parentElement;
+                  if (card) {
+                    e.dataTransfer.setDragImage(card, 8, 8);
+                  }
+                  origSnapshot.current = documents;
+                  dropHandled.current = false;
+                  setDragId(d.id);
+                  setOverId(null);
+                }}
+                onDragEnd={restoreOriginalOrder}
+                onDragOver={(e) => e.preventDefault()}
+                className={`mb-2 flex items-center justify-between gap-2 rounded ${
+                  dragId === d.id ? "" : "cursor-grab active:cursor-grabbing hover:bg-slate-50"
+                } select-none`}
+                title="이 영역을 드래그하여 표시 순서 변경"
+              >
                 <div className="flex items-center gap-1 text-[11px] text-slate-400">
                   <button
                     onClick={() => moveDocument(d, -1)}
@@ -307,23 +340,7 @@ export default function ResumesPage() {
                   >
                     ▼
                   </button>
-                  <span
-                    draggable
-                    onDragStart={() => {
-                      setDragId(d.id);
-                      setOverId(null);
-                      setDropPos(null);
-                    }}
-                    onDragEnd={() => {
-                      setDragId(null);
-                      setOverId(null);
-                      setDropPos(null);
-                    }}
-                    className="px-1 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing select-none"
-                    title="드래그로 표시 순서 변경"
-                  >
-                    ⋮⋮
-                  </span>
+                  <span className="px-1 text-slate-300">⋮⋮</span>
                 </div>
                 <span className="text-[11px] text-slate-300">#{i + 1}</span>
               </div>
