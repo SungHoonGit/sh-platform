@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiPut, apiUpload } from "../api/client";
+import { apiDownload, apiPut, apiUpload, fileDownloadPath } from "../api/client";
 import type { Profile } from "../types/resume";
 import { ProfilePhoto } from "./templates/shared";
 
@@ -174,7 +174,23 @@ export default function ProfileEditor({
             />
             {photoBusy && <span className="text-xs text-slate-500">업로드 중...</span>}
             {form.photoUrl && !photoBusy && (
-              <span className="text-xs text-green-700">✓ 사진 등록됨</span>
+              <>
+                <span className="text-xs text-green-700">✓ 사진 등록됨</span>
+                <button
+                  onClick={() =>
+                    void apiDownload(fileDownloadPath(form.photoUrl), "프로필-사진").catch((e) =>
+                      setError(
+                        e instanceof Error && e.message === "UNAUTHORIZED"
+                          ? "로그인이 필요합니다."
+                          : "사진 다운로드에 실패했습니다.",
+                      ),
+                    )
+                  }
+                  className="shrink-0 px-2.5 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50"
+                >
+                  원본 다운로드
+                </button>
+              </>
             )}
           </div>
         </div>

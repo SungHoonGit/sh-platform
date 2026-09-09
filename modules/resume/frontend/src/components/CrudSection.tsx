@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { apiDelete, apiGet, apiPost, apiPut, apiUpload } from "../api/client";
+import { apiDelete, apiDownload, apiGet, apiPost, apiPut, apiUpload, fileDownloadPath } from "../api/client";
 
 export interface FieldDef {
   key: string;
@@ -208,6 +208,14 @@ export default function CrudSection({
       setUploading(false);
     }
   };
+
+  const downloadFile = (path: string) => {
+    void apiDownload(fileDownloadPath(path), "첨부파일").catch((e) =>
+      setError(e instanceof Error && e.message === "UNAUTHORIZED" ? "로그인이 필요합니다." : "첨부파일 다운로드에 실패했습니다."),
+    );
+  };
+
+  const fileFields = fields.filter((f) => f.type === "file");
 
   const remove = async (id: number) => {
     if (!(await window.confirm("이 항목을 삭제할까요?"))) return;
@@ -486,6 +494,40 @@ export default function CrudSection({
     overId === String(it.id) &&
     (dropPos === "after" ? "border-b-2 border-blue-400" : "border-t-2 border-blue-400");
 
+  const fileKeys = new Set(fileFields.map((f) => f.key));
+
+  const renderRowInfo = (it: Item) => (
+    <div className="min-w-0 flex-1">
+      <p className="font-semibold text-sm text-slate-800 truncate">
+        {String(it[titleKey] ?? "")}
+      </p>
+      {subtitleKeys.map((k) =>
+        it[k] != null && String(it[k]) !== "" && !fileKeys.has(k) ? (
+          <p key={k} className="text-xs text-slate-500 truncate">
+            {String(it[k])}
+          </p>
+        ) : null,
+      )}
+      {fileFields.map((f) => {
+        const v = it[f.key];
+        if (v == null || String(v) === "") return null;
+        return (
+          <button
+            key={f.key}
+            onClick={(e) => {
+              e.stopPropagation();
+              downloadFile(String(v));
+            }}
+            className="mt-1 text-xs text-blue-700 border border-blue-200 bg-blue-50 rounded px-2 py-0.5 hover:bg-blue-100"
+            title={f.label}
+          >
+            {f.label} 다운로드
+          </button>
+        );
+      })}
+    </div>
+  );
+
   const itemList = (
     <div className="space-y-2">
       {inline && editing === "new" && renderForm()}
@@ -501,18 +543,7 @@ export default function CrudSection({
         >
           <div className="py-2.5 px-1 flex justify-between items-start gap-2">
             {orderControls(it, i)}
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-sm text-slate-800 truncate">
-                {String(it[titleKey] ?? "")}
-              </p>
-              {subtitleKeys.map((k) =>
-                it[k] != null && String(it[k]) !== "" ? (
-                  <p key={k} className="text-xs text-slate-500 truncate">
-                    {String(it[k])}
-                  </p>
-                ) : null,
-              )}
-            </div>
+            {renderRowInfo(it)}
             {editing !== String(it.id) && (
               <div className="shrink-0 flex gap-1.5">
                 <button
@@ -590,18 +621,7 @@ export default function CrudSection({
                   }`}
                 >
                   {orderControls(it, i)}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-sm text-slate-800 truncate">
-                      {String(it[titleKey] ?? "")}
-                    </p>
-                    {subtitleKeys.map((k) =>
-                      it[k] != null && String(it[k]) !== "" ? (
-                        <p key={k} className="text-xs text-slate-500 truncate">
-                          {String(it[k])}
-                        </p>
-                      ) : null,
-                    )}
-                  </div>
+                  {renderRowInfo(it)}
                   {editing !== String(it.id) && (
                     <div className="shrink-0 flex gap-1.5">
                       <button
