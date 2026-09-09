@@ -43,6 +43,7 @@ export default function CrudSection({
   fixedPayload = {},
   inline = false,
   sectionDragActive = false,
+  dragHandle,
   onChanged,
 }: {
   title: string;
@@ -56,6 +57,12 @@ export default function CrudSection({
   inline?: boolean;
   /** 상위(EditPage)에서 섹션 카드 드래그가 진행 중일 때, 항목 드래그 표시를 비활성화 */
   sectionDragActive?: boolean;
+  /** 카드 헤더 전체를 드래그 핸들로 만들 때 (섹션 카드 순서 이동) */
+  dragHandle?: {
+    active: boolean;
+    onDragStart: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void;
+  };
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -532,7 +539,19 @@ export default function CrudSection({
 
   return (
     <section className="mb-6 bg-white rounded-xl border border-slate-200 p-5">
-      <div className="flex justify-between items-center mb-3">
+      <div
+        draggable={!!dragHandle}
+        onDragStart={dragHandle?.onDragStart}
+        onDragEnd={dragHandle?.onDragEnd}
+        className={`flex justify-between items-center mb-3 ${
+          dragHandle
+            ? dragHandle.active
+              ? "cursor-grabbing select-none"
+              : "cursor-grab active:cursor-grabbing select-none hover:bg-slate-50 rounded px-1 -mx-1"
+            : ""
+        }`}
+        title={dragHandle ? "이 헤더를 드래그하여 섹션 순서 변경" : undefined}
+      >
         <h2 className="font-bold text-slate-800">
           {title}
           <span className="ml-2 text-xs font-normal text-slate-400">{items.length}개</span>

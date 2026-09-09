@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { apiGet, apiPut, logout } from "../api/client";
 import type { ResumeView } from "../types/resume";
 import type { ResumeDocument, SectionItem } from "../types/document";
@@ -152,6 +152,8 @@ export default function EditPage({ documentId }: { documentId?: number }) {
   const [dragKey, setDragKey] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
   const [dropPos, setDropPos] = useState<"before" | "after" | null>(null);
+  const origSnapshot = useRef<SectionItem[] | null>(null);
+  const dropHandled = useRef(false);
 
   useEffect(() => {
     apiGet<ResumeView>("/view")
@@ -228,6 +230,41 @@ export default function EditPage({ documentId }: { documentId?: number }) {
     rest.splice(insertAt, 0, dragged);
     const next = rest.map((s, i) => ({ ...s, order: i + 1 }));
     persistSections(next);
+  };
+
+  /** 드래그 중 실시간으로 섹션 순서를 재배치한다 (저장은 drop 시점에만). */
+  const reorderSectionsLive = (draggedKey: string, targetKey: string, pos: "before" | "after") => {
+    setSectionItems((prev) => {
+      if (!prev || prev.length < 2) return prev;
+      const sorted = [...prev].sort((a, b) => a.order - b.order);
+      const rest = sorted.filter((s) => s.key !== draggedKey);
+      if (rest.length === sorted.length) return prev;
+      const dragged = sorted.find((s) => s.key === draggedKey);
+      if (!dragged) return prev;
+      const targetIndex = rest.findIndex((s) => s.key === targetKey);
+      if (targetIndex < 0) return prev;
+      const insertAt = pos === "after" ? targetIndex + 1 : targetIndex;
+      const nextArr = [...rest];
+      nextArr.splice(insertAt, 0, dragged);
+      const next = nextArr.map((s, i) => ({ ...s, order: i + 1 }));
+      const key = (arr: SectionItem[]) => arr.map((s) => `${s.key}`).join(",");
+      return key(next) === key(sorted) ? prev : next;
+    });
+  };
+
+  const resetDrag = () => {
+    setDragKey(null);
+    setOverKey(null);
+    setDropPos(null);
+  };
+
+  const restoreOriginalOrder = () => {
+    if (!dropHandled.current && origSnapshot.current) {
+      setSectionItems(origSnapshot.current);
+    }
+    origSnapshot.current = null;
+    dropHandled.current = false;
+    resetDrag();
   };
 
   const orderedSections = useMemo(() => {
@@ -340,14 +377,8 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                 <div
                   key={cfg.key}
                   id={`section-${cfg.key}`}
-                  className={`relative scroll-mt-4 rounded-xl ${
-                    draggingSection ? "opacity-70" : ""
-                  } ${
-                    overSection
-                      ? dropPos === "after"
-                        ? "outline outline-1 outline-blue-400 border-b-2 border-blue-400"
-                        : "outline outline-1 outline-blue-400 border-t-2 border-blue-400"
-                      : ""
+                  className={`scroll-mt-4 rounded-xl ${
+                    draggingSection ? "opacity-40" : overSection ? "outline outline-2 outline-blue-400 outline-offset-2" : ""
                   }`}
                   onDragOver={(e) => {
                     if (!dragKey || dragKey === cfg.key) return;
@@ -357,35 +388,16 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                       e.clientY < rect.top + rect.height / 2 ? "before" : "after";
                     setOverKey(cfg.key);
                     setDropPos(pos);
+                    reorderSectionsLive(dragKey, cfg.key, pos);
                   }}
                   onDrop={(e) => {
                     e.preventDefault();
-                    if (dragKey && dropPos && dragKey !== cfg.key) {
-                      reorderSections(dragKey, cfg.key, dropPos);
-                    }
-                    setDragKey(null);
-                    setOverKey(null);
-                    setDropPos(null);
+                    if (!dragKey) return;
+                    dropHandled.current = true;
+                    if (sectionItems) persistSections(sectionItems);
+                    resetDrag();
                   }}
                 >
-                  <div
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.effectAllowed = "move";
-                      setDragKey(cfg.key);
-                      setOverKey(null);
-                      setDropPos(null);
-                    }}
-                    onDragEnd={() => {
-                      setDragKey(null);
-                      setOverKey(null);
-                      setDropPos(null);
-                    }}
-                    className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center w-10 h-4 rounded-full bg-slate-200/80 border border-slate-300 text-slate-500 text-[10px] opacity-60 hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
-                    title="이 섹션을 드래그하여 순서 변경"
-                  >
-                    ⋮⋮
-                  </div>
                   <CrudSection
                     title={cfg.title}
                     endpoint={cfg.endpoint}
@@ -396,6 +408,22 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                     fixedPayload={cfg.fixedPayload}
                     inline={cfg.inline}
                     sectionDragActive={dragKey !== null}
+                    dragHandle={{
+                      active: draggingSection,
+                      onDragStart: (e) => {
+                        e.dataTransfer.effectAllowed = "move";
+                        const card = e.currentTarget.parentElement;
+                        if (card) {
+                          e.dataTransfer.setDragImage(card, 8, 8);
+                        }
+                        origSnapshot.current = sectionItems;
+                        dropHandled.current = false;
+                        setDragKey(cfg.key);
+                        setOverKey(null);
+                        setDropPos(null);
+                      },
+                      onDragEnd: restoreOriginalOrder,
+                    }}
                     onChanged={() => {
                       apiGet<ResumeView>("/view").then(setView).catch(() => undefined);
                     }}
@@ -425,16 +453,16 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                     <li
                       key={s.key}
                       draggable
-                      onDragStart={() => {
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setDragImage(e.currentTarget, 8, 8);
+                        origSnapshot.current = sectionItems;
+                        dropHandled.current = false;
                         setDragKey(s.key);
                         setOverKey(null);
                         setDropPos(null);
                       }}
-                      onDragEnd={() => {
-                        setDragKey(null);
-                        setOverKey(null);
-                        setDropPos(null);
-                      }}
+                      onDragEnd={restoreOriginalOrder}
                       onDragOver={(e) => {
                         e.preventDefault();
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -445,10 +473,11 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
-                        if (dragKey && dropPos) reorderSections(dragKey, s.key, dropPos);
-                        setDragKey(null);
-                        setOverKey(null);
-                        setDropPos(null);
+                        if (dragKey && dropPos) {
+                          dropHandled.current = true;
+                          reorderSections(dragKey, s.key, dropPos);
+                        }
+                        resetDrag();
                       }}
                       className={`relative flex items-center gap-1 rounded px-1 py-1 ${
                         visible ? "hover:bg-gray-50" : "opacity-50"
@@ -508,10 +537,10 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                 })}
             </ul>
             <p className="mt-3 text-[11px] text-slate-400 leading-snug">
-              왼쪽 카드 상단의 ⋮⋮ 핸들을 드래그하거나, 이 패널이나 카드 위 아래 절반에 놓으면 해당
-              위치에 섹션이 들어갑니다. 각 항목은 항목 우측 ▲▼/⋮⋮로 순서를 바꾸고, "보임/숨김"으로
-              표시 여부를 조절할 수 있습니다. 이 이력서의 미리보기·PDF에만 적용되며 항목 데이터는 모든
-              이력서가 공유합니다.
+              왼쪽 카드 <b className="text-slate-500">상단 헤더를 드래그</b>하거나, 이 패널의 항목을 드래그하면
+              섹션 순서가 실시간으로 바뀝니다. 놓는 위치(위/아래)에 들어가고, 카드 밖에 놓으면 원래 순서로
+              되돌아갑니다. 각 항목은 항목 우측 ▲▼/⋮⋮로 순서를 바꾸고, "보임/숨김"으로 표시 여부를 조절할 수
+              있습니다. 이 이력서의 미리보기·PDF에만 적용되며 항목 데이터는 모든 이력서가 공유합니다.
             </p>
           </aside>
         </div>
