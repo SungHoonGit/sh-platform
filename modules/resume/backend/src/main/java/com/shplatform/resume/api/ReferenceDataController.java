@@ -3,6 +3,7 @@ package com.shplatform.resume.api;
 import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.resume.api.dto.MajorResponse;
 import com.shplatform.resume.api.dto.SchoolResponse;
+import com.shplatform.resume.api.dto.SkillMasterResponse;
 import com.shplatform.resume.domain.ReferenceDataService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -50,6 +51,21 @@ public class ReferenceDataController {
     public ResponseEntity<ApiResponse<List<MajorResponse>>> searchMajors(
             @RequestParam("q") String q) {
         var response = referenceDataService.searchMajors(q);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * (질의형) 기술 스택을 유사검색한다. 기준 데이터는 DB 마스터에서 조회 (프론트 하드코딩 금지).
+     * 정식 이름 부분일치 + 별칭(유사어) 포함을 함께 찾는다.
+     *
+     * @param q 검색어 (기술명 또는 별칭, 예: "React", "스프링")
+     * @return 기술 스택 목록
+     */
+    @GetMapping("/skills/search")
+    @Operation(summary = "기술 스택 유사검색")
+    public ResponseEntity<ApiResponse<List<SkillMasterResponse>>> searchSkills(
+            @RequestParam("q") String q) {
+        var response = referenceDataService.searchSkills(q);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

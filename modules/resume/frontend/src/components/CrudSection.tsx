@@ -12,7 +12,8 @@ export interface FieldDef {
     | "file"
     | "check"
     | "school"
-    | "major";
+    | "major"
+    | "skill";
   options?: string[];
   accept?: string;
   required?: boolean;
@@ -139,9 +140,11 @@ export default function CrudSection({
         return;
       }
       const path =
-        type === undefined
-          ? `/reference/majors/search?q=${encodeURIComponent(query)}`
-          : `/reference/schools/search?q=${encodeURIComponent(query)}&schoolType=${encodeURIComponent(type ?? "")}`;
+        type === "skill"
+          ? `/reference/skills/search?q=${encodeURIComponent(query)}`
+          : type === undefined
+            ? `/reference/majors/search?q=${encodeURIComponent(query)}`
+            : `/reference/schools/search?q=${encodeURIComponent(query)}&schoolType=${encodeURIComponent(type ?? "")}`;
       try {
         const res = await apiGet<Sug[]>(path);
         setSuggestions(Array.isArray(res) ? res : []);
@@ -371,7 +374,7 @@ export default function CrudSection({
         {fields.filter(visible).map((f) => (
           <div
             key={f.key}
-            className={f.type === "textarea" || f.type === "file" || f.type === "school" || f.type === "major" ? "md:col-span-2" : ""}
+            className={f.type === "textarea" || f.type === "file" || f.type === "school" || f.type === "major" || f.type === "skill" ? "md:col-span-2" : ""}
           >
             {f.type !== "check" && (
               <label className="block text-xs font-medium text-slate-600 mb-1">
@@ -447,12 +450,19 @@ export default function CrudSection({
                   </div>
                 )}
               </div>
-            ) : f.type === "school" || f.type === "major" ? (
+            ) : f.type === "school" || f.type === "major" || f.type === "skill" ? (
               <div className="relative">
                 <input
                   type="text"
                   value={form[f.key] ?? ""}
-                  placeholder={f.placeholder ?? (f.type === "school" ? "학교명 입력 후 선택" : "전공명 입력 후 선택")}
+                  placeholder={
+                    f.placeholder ??
+                    (f.type === "school"
+                      ? "학교명 입력 후 선택"
+                      : f.type === "major"
+                        ? "전공명 입력 후 선택"
+                        : "기술명 입력 후 선택 (쉼표로 여러 개)")
+                  }
                   onChange={(e) => {
                     const v = e.target.value;
                     setForm((prev) => ({ ...prev, [f.key]: v }));
@@ -460,7 +470,11 @@ export default function CrudSection({
                     suggestField.current = f.key;
                     fetchSuggestions(
                       v,
-                      f.type === "school" ? (form.schoolType || undefined) : undefined,
+                      f.type === "school"
+                        ? form.schoolType || undefined
+                        : f.type === "skill"
+                          ? "skill"
+                          : undefined,
                     );
                     setSchoolOpen(true);
                   }}
@@ -471,7 +485,42 @@ export default function CrudSection({
                   onBlur={() => setTimeout(() => setSchoolOpen(false), 150)}
                   className={inputCls}
                 />
-                {schoolOpen && suggestField.current === f.key && (
+                {schoolOpen && suggestField.current === f.key && f.type === "skill" && (
+                  <ul className="absolute z-20 mt-1 w-full max-h-48 overflow-auto bg-white border border-gray-200 rounded shadow-lg">
+                    {suggestions.map((s) => (
+                      <li key={s.name}>
+                        <button
+                          type="button"
+                          className="w-full px-2.5 py-1.5 text-sm text-left hover:bg-gray-50 flex justify-between items-center"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            const cur = (form[f.key] ?? "").trim();
+                            const parts = cur
+                              .split(",")
+                              .map((p) => p.trim())
+                              .filter((p) => p !== "");
+                            parts[parts.length - 1] = s.name;
+                            setForm((prev) => ({ ...prev, [f.key]: parts.join(", ") }));
+                            setSchoolQuery("");
+                            setSuggestions([]);
+                            setSchoolOpen(false);
+                          }}
+                        >
+                          <span>{s.name}</span>
+                          {s.type && (
+                            <span className="text-xs text-gray-400 shrink-0">{s.type}</span>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                    {suggestions.length === 0 && (
+                      <li className="px-2.5 py-1.5 text-xs text-gray-400">
+                        "{schoolQuery}" 를 직접 입력해 저장할 수 있습니다
+                      </li>
+                    )}
+                  </ul>
+                )}
+                {schoolOpen && suggestField.current === f.key && f.type !== "skill" && (
                   <ul className="absolute z-20 mt-1 w-full max-h-48 overflow-auto bg-white border border-gray-200 rounded shadow-lg">
                     {suggestions.map((s) => (
                       <li key={s.name}>

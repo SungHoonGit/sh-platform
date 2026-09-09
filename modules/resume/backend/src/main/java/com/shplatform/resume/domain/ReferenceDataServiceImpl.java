@@ -2,8 +2,10 @@ package com.shplatform.resume.domain;
 
 import com.shplatform.resume.api.dto.MajorResponse;
 import com.shplatform.resume.api.dto.SchoolResponse;
+import com.shplatform.resume.api.dto.SkillMasterResponse;
 import com.shplatform.resume.infrastructure.repository.MajorRepository;
 import com.shplatform.resume.infrastructure.repository.SchoolRepository;
+import com.shplatform.resume.infrastructure.repository.SkillMasterRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -11,7 +13,7 @@ import org.springframework.util.StringUtils;
 import java.util.List;
 
 /**
- * 기준/마스터 데이터(학교·전공) 조회 구현.
+ * 기준/마스터 데이터(학교·전공·기술스택) 조회 구현.
  */
 @Service
 @RequiredArgsConstructor
@@ -19,6 +21,7 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
 
     private final SchoolRepository schoolRepository;
     private final MajorRepository majorRepository;
+    private final SkillMasterRepository skillMasterRepository;
 
     @Override
     public List<SchoolResponse> searchSchools(String keyword, String schoolType) {
@@ -42,6 +45,17 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
         }
         return majorRepository.findTop20ByNameContainingOrderByNameAsc(q).stream()
                 .map(e -> new MajorResponse(e.getId(), e.getName()))
+                .toList();
+    }
+
+    @Override
+    public List<SkillMasterResponse> searchSkills(String keyword) {
+        String q = StringUtils.hasText(keyword) ? keyword.trim() : "";
+        if (!StringUtils.hasText(q)) {
+            return List.of();
+        }
+        return skillMasterRepository.search(q, 20).stream()
+                .map(e -> new SkillMasterResponse(e.getId(), e.getName(), e.getCategory()))
                 .toList();
     }
 }

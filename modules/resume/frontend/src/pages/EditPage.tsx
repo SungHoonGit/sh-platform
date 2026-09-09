@@ -56,7 +56,7 @@ const SECTIONS: SectionConfig[] = [
       { key: "role", label: "맡은 역할" },
       { key: "startDate", label: "시작일", type: "date" },
       { key: "endDate", label: "종료일", type: "date", placeholder: "진행 중이면 비움" },
-      { key: "techStack", label: "기술 스택", placeholder: "쉼표로 구분: Java, Spring, MySQL" },
+      { key: "techStack", label: "기술 스택", type: "skill", placeholder: "기술명 입력 후 선택 (쉼표로 여러 개): Java, Spring, MySQL" },
       {
         key: "thumbnailPath",
         label: "썸네일 이미지 (jpg/png, 5MB 이하)",

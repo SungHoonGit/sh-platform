@@ -2,8 +2,10 @@ package com.shplatform.resume.domain;
 
 import com.shplatform.resume.infrastructure.entity.MajorEntity;
 import com.shplatform.resume.infrastructure.entity.SchoolEntity;
+import com.shplatform.resume.infrastructure.entity.SkillMasterEntity;
 import com.shplatform.resume.infrastructure.repository.MajorRepository;
 import com.shplatform.resume.infrastructure.repository.SchoolRepository;
+import com.shplatform.resume.infrastructure.repository.SkillMasterRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +17,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class ReferenceDataServiceImplTest {
@@ -24,6 +27,9 @@ class ReferenceDataServiceImplTest {
 
     @Mock
     private MajorRepository majorRepository;
+
+    @Mock
+    private SkillMasterRepository skillMasterRepository;
 
     @InjectMocks
     private ReferenceDataServiceImpl referenceDataService;
@@ -80,6 +86,25 @@ class ReferenceDataServiceImplTest {
     @DisplayName("전공 검색: 검색어가 없으면 빈 목록을 반환한다")
     void searchMajors_emptyKeyword() {
         var result = referenceDataService.searchMajors("  ");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("기술 스택 검색: 이름/별칭으로 유사검색한다")
+    void searchSkills() {
+        given(skillMasterRepository.search("react", 20))
+                .willReturn(List.of(mock(SkillMasterEntity.class)));
+
+        var result = referenceDataService.searchSkills("react");
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("기술 스택 검색: 빈 검색어는 빈 목록을 반환한다")
+    void searchSkills_emptyKeyword() {
+        var result = referenceDataService.searchSkills("   ");
 
         assertThat(result).isEmpty();
     }
