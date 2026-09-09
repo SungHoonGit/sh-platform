@@ -26,10 +26,10 @@ export default function PortfolioPage() {
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">포트폴리오 관리</h1>
+            <h1 className="text-xl font-bold text-slate-900">프로젝트 관리</h1>
             <p className="mt-1 text-sm text-slate-500">
-              작업물을 이력서와 독립적으로 관리합니다. 모든 이력서의 포트폴리오 섹션과
-              프로젝트의 &quot;작업물에서 가져오기&quot;에서 사용됩니다.
+              작업물을 이력서와 독립적으로 관리합니다. 이력서의 프로젝트 &quot;작업물에서
+              가져오기&quot;와 포트폴리오 섹션에서 사용됩니다.
             </p>
           </div>
         </div>
@@ -38,7 +38,7 @@ export default function PortfolioPage() {
           <div className="p-10 text-center text-gray-500">불러오는 중...</div>
         ) : (
           <CrudSection
-            title="포트폴리오 작업물"
+            title="내 프로젝트"
             endpoint={PORTFOLIO_ENDPOINT}
             items={items as unknown as Record<string, unknown>[]}
             fields={PORTFOLIO_FIELDS}

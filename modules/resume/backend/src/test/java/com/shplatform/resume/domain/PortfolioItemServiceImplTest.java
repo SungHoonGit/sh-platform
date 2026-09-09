@@ -117,6 +117,25 @@ class PortfolioItemServiceImplTest {
     }
 
     @Test
+    @DisplayName("createPortfolioItem: itemType이 비어 있으면 파일 첨부 여부로 유형을 자동 결정한다")
+    void createPortfolioItem_itemTypeAutoResolved() {
+        given(portfolioItemRepository.save(any(ResumePortfolioItemEntity.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+        var linkOnly = new PortfolioItemRequest("프로젝트 A", null,
+                null, "https://github.com/owner/repo", null, null, null, null, null, 1);
+        var fileAttached = new PortfolioItemRequest("프로젝트 B", null,
+                null, null, null, null, "6/202609/uuid.pdf", null, null, 1);
+
+        portfolioItemService.createPortfolioItem(USER_ID, linkOnly);
+        portfolioItemService.createPortfolioItem(USER_ID, fileAttached);
+
+        ArgumentCaptor<ResumePortfolioItemEntity> captor = ArgumentCaptor.forClass(ResumePortfolioItemEntity.class);
+        then(portfolioItemRepository).should(times(2)).save(captor.capture());
+        assertThat(captor.getAllValues().get(0).getItemType()).isEqualTo("LINK");
+        assertThat(captor.getAllValues().get(1).getItemType()).isEqualTo("FILE");
+    }
+
+    @Test
     @DisplayName("updatePortfolioItem: 내 작업물을 수정한다")
     void updatePortfolioItem_success() {
         var existing = entity(USER_ID);

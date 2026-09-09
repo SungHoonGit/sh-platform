@@ -80,6 +80,15 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
         }
     }
 
+    /** itemType이 비어 있으면 첨부 여부로 유형을 결정한다 (프론트가 더 이상 itemType을 보내지 않음). */
+    private String resolveItemType(PortfolioItemRequest request) {
+        String type = request.itemType();
+        if (type != null && !type.isBlank()) {
+            return type;
+        }
+        return request.filePath() != null && !request.filePath().isBlank() ? "FILE" : "LINK";
+    }
+
     private ResumePortfolioItemEntity getOwnedPortfolioItem(Long userId, Long itemId) {
         var entity = portfolioItemRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -91,7 +100,7 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
 
     private void applyRequest(ResumePortfolioItemEntity entity, PortfolioItemRequest request) {
         entity.setTitle(request.title());
-        entity.setItemType(request.itemType());
+        entity.setItemType(resolveItemType(request));
         entity.setThumbnailPath(request.thumbnailPath());
         entity.setGithubUrl(request.githubUrl());
         entity.setDemoUrl(request.demoUrl());

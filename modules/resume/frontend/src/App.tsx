@@ -70,7 +70,7 @@ export default function App() {
       icon: FileText,
       active: route.name === "resumes" || route.name === "view" || route.name === "edit",
     },
-    { label: "포트폴리오", href: "#/portfolio", icon: FolderOpen, active: route.name === "portfolio" },
+    { label: "프로젝트", href: "#/portfolio", icon: FolderOpen, active: route.name === "portfolio" },
     { label: "공고 탐색", href: "#/postings", icon: Search, active: tab === "postings" },
     { label: "지원 관리", href: "#/applications", icon: CalendarDays, active: tab === "applications" },
   ];
@@ -86,7 +86,7 @@ export default function App() {
     {
       label: "탐색·지원",
       items: [
-        { label: "포트폴리오 관리", href: "#/portfolio" },
+        { label: "프로젝트 관리", href: "#/portfolio" },
         { label: "공고 탐색", href: "#/postings" },
         { label: "지원 관리", href: "#/applications" },
       ],
