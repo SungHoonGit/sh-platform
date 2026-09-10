@@ -29,4 +29,9 @@ public interface SkillMasterRepository extends JpaRepository<SkillMasterEntity, 
             LIMIT :limit
             """, nativeQuery = true)
     List<SkillMasterEntity> search(@Param("q") String q, @Param("limit") int limit);
+
+    /**
+     * 활성 기술 스택을 표시 순서로 조회한다. (매칭 정규화용 전체 로드)
+     */
+    List<SkillMasterEntity> findByActiveTrueOrderByDisplayOrderAscNameAsc();
 }

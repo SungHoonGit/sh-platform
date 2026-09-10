@@ -20,6 +20,14 @@ interface ScrapItem {
   position: string;
   url: string | null;
   siteName: string | null;
+  tech?: string | null;
+}
+
+interface SkillMatchResult {
+  matchedSkills: string[];
+  matchCount: number;
+  requestedCount: number;
+  mySkillCount: number;
 }
 
 const STATUS_ORDER = ["PREPARING", "APPLIED", "SCREEN_PASSED", "INTERVIEW", "OFFER", "REJECTED"] as const;
@@ -84,6 +92,8 @@ export default function ApplicationsPage() {
   const [showForm, setShowForm] = useState(false);
   const [scraps, setScraps] = useState<ScrapItem[]>([]);
   const [scrapError, setScrapError] = useState<string | null>(null);
+  const [match, setMatch] = useState<SkillMatchResult | null>(null);
+  const [matchError, setMatchError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     apiGet<Application[]>("/applications")
@@ -135,11 +145,15 @@ export default function ApplicationsPage() {
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setMatch(null);
+    setMatchError(null);
     setShowForm(true);
   };
 
   const openEdit = (a: Application) => {
     setEditingId(a.id);
+    setMatch(null);
+    setMatchError(null);
     setForm({
       companyName: a.companyName,
       postingTitle: a.postingTitle,
@@ -214,6 +228,20 @@ export default function ApplicationsPage() {
       status: "APPLIED",
       postingId: scrap.postingId,
     }));
+    if (scrap.tech && scrap.tech.trim()) {
+      apiPost<SkillMatchResult>("/applications/match-skills", { techStack: scrap.tech })
+        .then((res) => {
+          setMatch(res);
+          setMatchError(null);
+        })
+        .catch(() => {
+          setMatch(null);
+          setMatchError("기술 매칭을 불러올 수 없습니다.");
+        });
+    } else {
+      setMatch(null);
+      setMatchError(null);
+    }
   };
 
   const field = "border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-gray-500 w-full";
@@ -348,6 +376,31 @@ export default function ApplicationsPage() {
                     ))}
                   </select>
                 )}
+
+                {matchError ? (
+                  <p className="text-xs text-red-500 mt-2">{matchError}</p>
+                ) : match ? (
+                  <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold text-emerald-800">
+                        내 이력서와 일치하는 기술 {match.matchCount}개 / 공고 {match.requestedCount}개
+                      </span>
+                      {match.matchedSkills.map((s) => (
+                        <span
+                          key={s}
+                          className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[11px] font-medium"
+                        >
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                    {match.matchCount === 0 && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        일치하는 기술이 없습니다. 이력서 프로젝트/작업물에 기술 스택을 등록해 보세요.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
               </div>
             )}
 

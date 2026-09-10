@@ -4,7 +4,10 @@ import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
 import com.shplatform.resume.api.dto.ApplicationRequest;
 import com.shplatform.resume.api.dto.ApplicationResponse;
+import com.shplatform.resume.api.dto.SkillMatchRequest;
+import com.shplatform.resume.api.dto.SkillMatchResponse;
 import com.shplatform.resume.domain.ApplicationService;
+import com.shplatform.resume.domain.SkillMatchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,6 +26,22 @@ import org.springframework.web.bind.annotation.*;
 public class ApplicationController {
 
     private final ApplicationService applicationService;
+    private final SkillMatchService skillMatchService;
+
+    /**
+     * (질의형) 공고의 기술 스택과 내 이력서의 기술 스택을 비교해 일치 기술을 계산한다.
+     *
+     * @param request 공고의 기술 스택 문자열 (콤마 구분)
+     * @return 일치 기술 목록과 개수
+     */
+    @PostMapping("/match-skills")
+    @Operation(summary = "공고-이력서 기술 매칭", description = "공고 기술 스택과 내 이력서(프로젝트·작업물) 기술 스택을 마스터 기준으로 정규화해 일치 기술을 반환합니다.")
+    public ResponseEntity<ApiResponse<SkillMatchResponse>> matchSkills(
+            @Valid @RequestBody SkillMatchRequest request) {
+        SkillMatchResponse response =
+                skillMatchService.match(SecurityUtils.currentAccountId(), request.techStack());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
     /**
      * 내 지원 목록을 조회한다.
