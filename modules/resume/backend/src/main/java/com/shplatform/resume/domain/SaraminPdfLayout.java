@@ -200,6 +200,8 @@ public class SaraminPdfLayout implements ResumePdfLayout {
 
         PdfPTable bodyWrap = new PdfPTable(1);
         bodyWrap.setWidthPercentage(100f);
+        bodyWrap.setSplitLate(false);
+        bodyWrap.setKeepTogether(false);
         PdfPCell bodyCell = new PdfPCell();
         bodyCell.setBorder(Rectangle.NO_BORDER);
         bodyCell.setPadding(8f);
