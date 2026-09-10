@@ -66,8 +66,8 @@ public class ClassicPdfLayout implements ResumePdfLayout {
             renderHeader(document, profile, userId);
         }
         for (String key : sectionKeys) {
-            ensureRoom(document, writer, PdfLayoutSupport.MIN_SECTION_SPACE);
-            renderSection(document, key, view);
+            ensureRoom(document, writer, PdfLayoutSupport.SECTION_TITLE_SPACE);
+            renderSection(document, key, view, writer);
         }
     }
 
@@ -121,31 +121,35 @@ public class ClassicPdfLayout implements ResumePdfLayout {
         document.add(new Chunk(new LineSeparator(1.1f, 100f, HEAD, Element.ALIGN_LEFT, 4)));
     }
 
-    private void renderSection(Document document, String key, ResumeViewResponse view) throws DocumentException {
+    private void renderSection(Document document, String key, ResumeViewResponse view, PdfWriter writer)
+            throws DocumentException {
         switch (key) {
-            case "careers" -> renderGroup(document, "경력", view.careers(), (d, it) -> renderCareer(d, it));
-            case "projects" -> renderGroup(document, "프로젝트",
+            case "careers" -> renderGroup(document, writer, "경력", view.careers(), (d, it) -> renderCareer(d, it));
+            case "projects" -> renderGroup(document, writer, "프로젝트",
                         view.projects().stream().filter(ClassicPdfLayout::hasProjectContent).toList(),
                         (d, it) -> renderProject(d, it));
-            case "educations" -> renderGroup(document, "학력", view.educations(), (d, it) -> renderEducation(d, it));
-            case "skills" -> renderGroup(document, "스킬", view.skills(), (d, it) -> renderSkill(d, it));
+            case "educations" ->
+                    renderGroup(document, writer, "학력", view.educations(), (d, it) -> renderEducation(d, it));
+            case "skills" ->
+                    renderGroup(document, writer, "스킬", view.skills(), (d, it) -> renderSkill(d, it));
             case "certificates" ->
-                    renderGroup(document, "자격증", view.certificates(), (d, it) -> renderCertificate(d, it));
+                    renderGroup(document, writer, "자격증", view.certificates(), (d, it) -> renderCertificate(d, it));
             case "introductions" ->
-                    renderGroup(document, "자기소개", view.introductions(), (d, it) -> renderIntroduction(d, it));
+                    renderGroup(document, writer, "자기소개", view.introductions(), (d, it) -> renderIntroduction(d, it));
             case "portfolioItems" ->
-                    renderGroup(document, "포트폴리오", view.portfolioItems(), (d, it) -> renderPortfolio(d, it));
+                    renderGroup(document, writer, "포트폴리오", view.portfolioItems(), (d, it) -> renderPortfolio(d, it));
             default -> { }
         }
     }
 
-    private <T> void renderGroup(Document document, String title, List<T> items,
+    private <T> void renderGroup(Document document, PdfWriter writer, String title, List<T> items,
                                  SectionRenderer<T> renderer) throws DocumentException {
         if (items == null || items.isEmpty()) {
             return;
         }
         addSectionTitle(document, title);
         for (T item : items) {
+            ensureRoom(document, writer, PdfLayoutSupport.ITEM_TITLE_SPACE);
             renderer.render(document, item);
         }
     }
@@ -273,12 +277,15 @@ public class ClassicPdfLayout implements ResumePdfLayout {
         document.add(title);
     }
 
-    /** 본문 문단. 개행 보존, 문단 간 여백(스페이싱) 적용. */
+    /**
+     * 본문 문단. 개행 보존, 문단 간 여백(스페이싱) 적용.
+     * keepTogether를 걸지 않아 긴 본문은 페이지 경계에서 자연 분할된다. (keepTogether 시
+     * 남은 공간이 부족하면 본문 전체가 다음 페이지로 밀려 제목·항목명이 페이지 끝에 고아로 남는다)
+     */
     private Paragraph bodyParagraph(String text, float spacingAfter) {
         Paragraph body = new Paragraph(text, regular(10.5f, BODY));
         body.setLeading(12.5f);
         body.setSpacingAfter(spacingAfter);
-        body.setKeepTogether(true);
         return body;
     }
 

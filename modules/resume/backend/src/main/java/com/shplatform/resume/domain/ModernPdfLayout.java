@@ -128,14 +128,14 @@ public class ModernPdfLayout implements ResumePdfLayout {
             }
         }
 
-        Paragraph nameP = new Paragraph(name, bold(16f, WHITE));
+        Paragraph nameP = new Paragraph(name, bold(14.5f, WHITE));
         nameP.setAlignment(Element.ALIGN_CENTER);
         nameP.setSpacingBefore(profile != null ? 4f : 0f);
         nameP.setSpacingAfter(3f);
         sidebar.addElement(nameP);
 
         if (profile != null && hasText(profile.headline())) {
-            Paragraph headline = new Paragraph(profile.headline(), regular(9.5f, TEAL));
+            Paragraph headline = new Paragraph(profile.headline(), regular(9f, TEAL));
             headline.setAlignment(Element.ALIGN_CENTER);
             headline.setSpacingAfter(6f);
             sidebar.addElement(headline);
@@ -153,7 +153,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
     }
 
     private void addSideLabel(PdfPCell cell, String label) throws DocumentException {
-        Paragraph title = new Paragraph(label, bold(9f, PdfLayoutSupport.FAINT));
+        Paragraph title = new Paragraph(label, bold(8.5f, PdfLayoutSupport.FAINT));
         title.setSpacingBefore(6f);
         title.setSpacingAfter(3f);
         cell.addElement(title);
@@ -166,8 +166,8 @@ public class ModernPdfLayout implements ResumePdfLayout {
             return;
         }
         Phrase phrase = new Phrase();
-        phrase.add(new Chunk(label + "  ", bold(8f, PdfLayoutSupport.FAINT)));
-        phrase.add(new Chunk(value, regular(9f, ON_DARK_MUTED)));
+        phrase.add(new Chunk(label + "  ", bold(7.5f, PdfLayoutSupport.FAINT)));
+        phrase.add(new Chunk(value, regular(8.5f, ON_DARK_MUTED)));
         Paragraph line = new Paragraph(phrase);
         line.setSpacingAfter(3f);
         cell.addElement(line);
@@ -204,7 +204,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
     }
 
     private void sideEducation(PdfPCell cell, EducationResponse item) throws DocumentException {
-        Paragraph name = new Paragraph(item.school() == null ? " " : item.school(), bold(10f, WHITE));
+        Paragraph name = new Paragraph(item.school() == null ? " " : item.school(), bold(9.5f, WHITE));
         name.setSpacingAfter(1f);
         name.setSpacingBefore(5f);
         cell.addElement(name);
@@ -241,7 +241,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
     }
 
     private Paragraph paragraphSmall(String text, java.awt.Color color, float spacingAfter) {
-        Paragraph p = new Paragraph(text, regular(9f, color));
+        Paragraph p = new Paragraph(text, regular(8.5f, color));
         p.setSpacingAfter(spacingAfter);
         return p;
     }
@@ -296,14 +296,14 @@ public class ModernPdfLayout implements ResumePdfLayout {
 
         PdfPCell accent = new PdfPCell();
         accent.setBackgroundColor(TEAL);
-        accent.setFixedHeight(13f);
+        accent.setFixedHeight(12f);
         accent.setBorder(Rectangle.NO_BORDER);
 
         PdfPCell titleCell = new PdfPCell();
         titleCell.setBorder(Rectangle.NO_BORDER);
         titleCell.setPaddingLeft(7f);
         titleCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        titleCell.addElement(new Paragraph(title, bold(13f, HEAD)));
+        titleCell.addElement(new Paragraph(title, bold(12f, HEAD)));
 
         bar.addCell(accent);
         bar.addCell(titleCell);
@@ -317,10 +317,10 @@ public class ModernPdfLayout implements ResumePdfLayout {
         row.setKeepTogether(true);
 
         PdfPCell left = emptyCell();
-        left.addElement(new Paragraph(main, bold(11f, HEAD)));
+        left.addElement(new Paragraph(main, bold(10.5f, HEAD)));
         PdfPCell rightCell = emptyCell();
         rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        rightCell.addElement(new Paragraph(right, regular(10f, FAINT)));
+        rightCell.addElement(new Paragraph(right, regular(9.5f, FAINT)));
         row.addCell(left);
         row.addCell(rightCell);
         cell.addElement(row);
@@ -340,7 +340,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
                 joinNonBlank(" · ", nullIfBlank(item.name()), nullIfBlank(item.role())),
                 periodOrEmpty(item.startDate(), item.endDate()));
         if (hasText(item.techStack())) {
-            Paragraph stack = new Paragraph(item.techStack(), regular(9.5f, TEAL_DARK));
+            Paragraph stack = new Paragraph(item.techStack(), regular(9f, TEAL_DARK));
             stack.setSpacingAfter(3f);
             cell.addElement(stack);
         }
@@ -348,19 +348,28 @@ public class ModernPdfLayout implements ResumePdfLayout {
             cell.addElement(paragraphBody(normalizeNewlines(item.description()), 3f));
         }
         if (hasText(item.linkUrl())) {
-            Paragraph link = new Paragraph("링크: " + item.linkUrl(), regular(9f, MUTED));
+            Paragraph link = new Paragraph("링크: " + item.linkUrl(), regular(8.5f, MUTED));
             link.setSpacingAfter(7f);
             cell.addElement(link);
         }
     }
 
     private void mainIntroduction(PdfPCell cell, IntroductionResponse item) throws DocumentException {
-        if (hasText(item.title())) {
-            Paragraph title = new Paragraph(item.title(), bold(11f, TEAL_DARK));
-            title.setSpacingAfter(2f);
-            cell.addElement(title);
+        String content = normalizeNewlines(item.content() == null ? "" : item.content());
+        if (!hasText(item.title()) && !hasText(content)) {
+            return;
         }
-        cell.addElement(paragraphBody(normalizeNewlines(item.content() == null ? "" : item.content()), 7f));
+        Paragraph block = new Paragraph();
+        block.setKeepTogether(true);
+        block.setSpacingAfter(7f);
+        block.setLeading(12f);
+        if (hasText(item.title())) {
+            block.add(new Chunk(item.title() + "\n", bold(10.5f, TEAL_DARK)));
+        }
+        if (hasText(content)) {
+            block.add(new Chunk(content, regular(10f, BODY)));
+        }
+        cell.addElement(block);
     }
 
     private void mainPortfolio(PdfPCell cell, PortfolioItemResponse item) throws DocumentException {
@@ -372,12 +381,12 @@ public class ModernPdfLayout implements ResumePdfLayout {
         }
         String prefix = hasText(item.filePath()) ? "[첨부] " : "";
         Paragraph title = new Paragraph(prefix + (item.title() == null ? "" : item.title()),
-                bold(11f, HEAD));
+                bold(10.5f, HEAD));
         title.setSpacingAfter(3f);
         cell.addElement(title);
         var links = PdfLayoutSupport.portfolioLinks(item);
         if (!links.isEmpty()) {
-            Paragraph link = new Paragraph("링크: " + String.join("  |  ", links), regular(9f, MUTED));
+            Paragraph link = new Paragraph("링크: " + String.join("  |  ", links), regular(8.5f, MUTED));
             link.setSpacingAfter(2f);
             cell.addElement(link);
         }
@@ -391,10 +400,9 @@ public class ModernPdfLayout implements ResumePdfLayout {
     }
 
     private Paragraph paragraphBody(String text, float spacingAfter) {
-        Paragraph body = new Paragraph(text, regular(10.5f, BODY));
-        body.setLeading(12.5f);
+        Paragraph body = new Paragraph(text, regular(10f, BODY));
+        body.setLeading(12f);
         body.setSpacingAfter(spacingAfter);
-        body.setKeepTogether(true);
         return body;
     }
 

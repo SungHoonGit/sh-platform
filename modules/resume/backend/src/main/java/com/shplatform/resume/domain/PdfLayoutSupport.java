@@ -37,6 +37,15 @@ final class PdfLayoutSupport {
     /** 섹션 시작 시 남은 공간이 이 값(포인트)보다 작으면 다음 페이지로 보낸다. */
     static final float MIN_SECTION_SPACE = 70f;
 
+    /**
+     * 섹션 제목을 놓기 전에 보장할 최소 공간. 제목(굵은 글씨+구분선)과 첫 항목 한 줄이
+     * 함께 페이지에 들어갈 수 있도록 충분히 크게 잡아, 페이지 끝에 제목만 고아로 남는 것을 막는다.
+     */
+    static final float SECTION_TITLE_SPACE = 130f;
+
+    /** 항목(예: 경력/프로젝트) 제목 줄과 그 다음 본문 한 줄이 함께 놓일 최소 공간. */
+    static final float ITEM_TITLE_SPACE = 55f;
+
     static final Color INK = new Color(0x0F172A);
     static final Color HEAD = new Color(0x1E293B);
     static final Color BODY = new Color(0x475569);

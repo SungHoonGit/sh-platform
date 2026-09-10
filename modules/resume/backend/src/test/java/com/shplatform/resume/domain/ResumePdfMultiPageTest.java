@@ -56,6 +56,45 @@ class ResumePdfMultiPageTest {
         }
     }
 
+    @Test
+    @DisplayName("클래식: 섹션 제목과 첫 항목 본문이 같은 페이지에 놓인다 (제목 고아 방지)")
+    void classic_sectionTitleStaysWithFirstItem() throws Exception {
+        ResumeViewResponse view = multiPageView();
+        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(view);
+        ResumePdfService service = new ResumePdfServiceImpl(
+                resumeViewService, resumeDocumentService,
+                new ClassicPdfLayout(fileStorageService),
+                new ModernPdfLayout(fileStorageService),
+                new SaraminPdfLayout(fileStorageService));
+        given(resumeDocumentService.getDocuments(USER_ID))
+                .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "제목고아방지", "CLASSIC", true, 1, null, null, null)));
+
+        byte[] pdf = service.generatePdf(USER_ID, DOCUMENT_ID);
+        List<String> pages = extractPages(pdf);
+
+        assertThat(pageWith(pages, "경력")).as("경력 제목 페이지에 첫 항목 본문이 함께 있어야 한다")
+                .contains("경력 설명");
+        assertThat(pageWith(pages, "학력")).as("학력 제목 페이지에 학교명이 함께 있어야 한다")
+                .contains("한남대학교");
+        assertThat(pageWith(pages, "스킬")).as("스킬 제목 페이지에 스킬명이 함께 있어야 한다")
+                .contains("Java");
+    }
+
+    private String pageWith(List<String> pages, String keyword) {
+        return pages.stream().filter(p -> p.contains(keyword)).findFirst().orElse("");
+    }
+
+    private List<String> extractPages(byte[] pdf) throws Exception {
+        List<String> pages = new ArrayList<>();
+        try (PdfReader reader = new PdfReader(pdf)) {
+            PdfTextExtractor extractor = new PdfTextExtractor(reader);
+            for (int page = 1; page <= reader.getNumberOfPages(); page++) {
+                pages.add(extractor.getTextFromPage(page));
+            }
+        }
+        return pages;
+    }
+
     private ResumeViewResponse multiPageView() {
         List<CareerResponse> careers = new ArrayList<>();
         for (int i = 1; i <= 40; i++) {
