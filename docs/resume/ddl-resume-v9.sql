@@ -22,11 +22,18 @@ PREPARE stmt FROM @ddl;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
--- 기존 문서를 생성순(모든 이력서가 공유하는 정렬 기준)으로 순번 부여 (매 실행 동일 결과 = 멱등)
-UPDATE resume_documents d
-JOIN (
-    SELECT id,
-           ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at, id) AS rn
-    FROM resume_documents
-) r ON r.id = d.id
-SET d.display_order = r.rn;
+-- 순번 초기화는 컬럼을 신규 추가한 경우에만 수행해야 한다.
+-- (매 배포마다 실행되므로, 항상 실행하면 사용자가 저장한 display_order 를
+--  생성순으로 덮어써서 문서 목록 순서가 배포 때마다 되돌아간다)
+SET @upd := IF(@col_exists = 0,
+    'UPDATE resume_documents d
+     JOIN (
+         SELECT id,
+                ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at, id) AS rn
+         FROM resume_documents
+     ) r ON r.id = d.id
+     SET d.display_order = r.rn',
+    'SELECT 1');
+PREPARE stmt2 FROM @upd;
+EXECUTE stmt2;
+DEALLOCATE PREPARE stmt2;
