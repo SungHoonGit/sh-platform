@@ -33,6 +33,9 @@ public class SkillMasterEntity {
     @Column(name = "aliases", length = 500)
     private String aliases;
 
+    @Column(name = "display_order")
+    private Integer displayOrder = 0;
+
     @Column(name = "active", nullable = false)
     private Boolean active = true;
 }
