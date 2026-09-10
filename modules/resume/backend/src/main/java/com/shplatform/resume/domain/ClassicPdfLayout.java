@@ -102,13 +102,20 @@ public class ClassicPdfLayout implements ResumePdfLayout {
         header.addCell(left);
 
         Image photo = PdfLayoutSupport.loadPhoto(profile, userId, fileStorageService);
+        PdfPCell photoHolder = emptyCell();
         PdfPCell photoCell = PdfLayoutSupport.photoCell(photo);
         if (photoCell != null) {
-            photoCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            header.addCell(photoCell);
-        } else {
-            header.addCell(emptyCell());
+            PdfPTable photoBox = new PdfPTable(1);
+            photoBox.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            photoBox.setLockedWidth(true);
+            photoBox.setTotalWidth(photo.getScaledWidth() + 4f);
+            photoBox.setWidths(new float[]{photo.getScaledWidth()});
+            photoCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            photoBox.addCell(photoCell);
+            photoHolder.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            photoHolder.addElement(photoBox);
         }
+        header.addCell(photoHolder);
 
         document.add(header);
         document.add(new Chunk(new LineSeparator(1.1f, 100f, HEAD, Element.ALIGN_LEFT, 4)));

@@ -172,9 +172,13 @@ public class SaraminPdfLayout implements ResumePdfLayout {
     private void box(Document document, String title, BoxContent body) throws DocumentException {
         PdfPTable box = new PdfPTable(1);
         box.setWidthPercentage(100f);
-box.setSpacingBefore(6f);
-box.setSpacingAfter(2f);
-        box.setKeepTogether(true);
+        box.setSpacingBefore(6f);
+        box.setSpacingAfter(2f);
+        // 박스 전체를 한 페이지에 강제로 붙이지 않는다(keepTogether 금지).
+        // 자기소개처럼 긴 섹션이 남은 공간보다 크면 통째로 다음 페이지로 밀려
+        // 현재 페이지 끝이 통짜로 비는 문제가 있다. 대신 행(본문)이 페이지에 걸쳐
+        // 자연스럽게 나누어지게 해 '적당히 채우고 나머지는 다음 페이지'로 흐르게 한다.
+        box.setSplitLate(false);
 
         PdfPCell wrap = new PdfPCell();
         wrap.setBorder(Rectangle.BOX);
