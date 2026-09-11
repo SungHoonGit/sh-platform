@@ -135,7 +135,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
         sidebar.addElement(nameP);
 
         if (profile != null && hasText(profile.headline())) {
-            Paragraph headline = new Paragraph(profile.headline(), regular(9f, TEAL));
+            Paragraph headline = new Paragraph(profile.headline(), regular(8.5f, TEAL));
             headline.setAlignment(Element.ALIGN_CENTER);
             headline.setSpacingAfter(6f);
             sidebar.addElement(headline);
@@ -167,7 +167,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
         }
         Phrase phrase = new Phrase();
         phrase.add(new Chunk(label + "  ", bold(7.5f, PdfLayoutSupport.FAINT)));
-        phrase.add(new Chunk(value, regular(8.5f, ON_DARK_MUTED)));
+        phrase.add(new Chunk(value, regular(8f, ON_DARK_MUTED)));
         Paragraph line = new Paragraph(phrase);
         line.setSpacingAfter(3f);
         cell.addElement(line);
@@ -204,7 +204,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
     }
 
     private void sideEducation(PdfPCell cell, EducationResponse item) throws DocumentException {
-        Paragraph name = new Paragraph(item.school() == null ? " " : item.school(), bold(9.5f, WHITE));
+        Paragraph name = new Paragraph(item.school() == null ? " " : item.school(), bold(9f, WHITE));
         name.setSpacingAfter(1f);
         name.setSpacingBefore(5f);
         cell.addElement(name);
@@ -241,7 +241,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
     }
 
     private Paragraph paragraphSmall(String text, java.awt.Color color, float spacingAfter) {
-        Paragraph p = new Paragraph(text, regular(8.5f, color));
+        Paragraph p = new Paragraph(text, regular(8f, color));
         p.setSpacingAfter(spacingAfter);
         return p;
     }
@@ -290,20 +290,20 @@ public class ModernPdfLayout implements ResumePdfLayout {
     private void addMainTitle(PdfPCell cell, String title) throws DocumentException {
         PdfPTable bar = new PdfPTable(2);
         bar.setWidthPercentage(100f);
-        bar.setWidths(new float[]{0.6f, 99.4f});
+        bar.setWidths(new float[]{1.2f, 98.8f});
         bar.setSpacingBefore(6f);
         bar.setSpacingAfter(3f);
 
         PdfPCell accent = new PdfPCell();
-        accent.setBackgroundColor(TEAL);
-        accent.setFixedHeight(12f);
+        accent.setBackgroundColor(TEAL_DARK);
+        accent.setFixedHeight(9f);
         accent.setBorder(Rectangle.NO_BORDER);
 
         PdfPCell titleCell = new PdfPCell();
         titleCell.setBorder(Rectangle.NO_BORDER);
         titleCell.setPaddingLeft(7f);
         titleCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        titleCell.addElement(new Paragraph(title, bold(12f, HEAD)));
+        titleCell.addElement(new Paragraph(title, bold(11.5f, HEAD)));
 
         bar.addCell(accent);
         bar.addCell(titleCell);
@@ -317,10 +317,10 @@ public class ModernPdfLayout implements ResumePdfLayout {
         row.setKeepTogether(true);
 
         PdfPCell left = emptyCell();
-        left.addElement(new Paragraph(main, bold(10.5f, HEAD)));
+        left.addElement(new Paragraph(main, bold(10f, HEAD)));
         PdfPCell rightCell = emptyCell();
         rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        rightCell.addElement(new Paragraph(right, regular(9.5f, FAINT)));
+        rightCell.addElement(new Paragraph(right, regular(9f, FAINT)));
         row.addCell(left);
         row.addCell(rightCell);
         cell.addElement(row);
@@ -340,7 +340,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
                 joinNonBlank(" · ", nullIfBlank(item.name()), nullIfBlank(item.role())),
                 periodOrEmpty(item.startDate(), item.endDate()));
         if (hasText(item.techStack())) {
-            Paragraph stack = new Paragraph(item.techStack(), regular(9f, TEAL_DARK));
+            Paragraph stack = new Paragraph(item.techStack(), regular(8.5f, TEAL_DARK));
             stack.setSpacingAfter(3f);
             cell.addElement(stack);
         }
@@ -348,7 +348,7 @@ public class ModernPdfLayout implements ResumePdfLayout {
             cell.addElement(paragraphBody(normalizeNewlines(item.description()), 3f));
         }
         if (hasText(item.linkUrl())) {
-            Paragraph link = new Paragraph("링크: " + item.linkUrl(), regular(8.5f, MUTED));
+            Paragraph link = new Paragraph("링크: " + item.linkUrl(), regular(8f, MUTED));
             link.setSpacingAfter(7f);
             cell.addElement(link);
         }
@@ -360,14 +360,13 @@ public class ModernPdfLayout implements ResumePdfLayout {
             return;
         }
         Paragraph block = new Paragraph();
-        block.setKeepTogether(true);
         block.setSpacingAfter(7f);
-        block.setLeading(12f);
+        block.setLeading(11f);
         if (hasText(item.title())) {
-            block.add(new Chunk(item.title() + "\n", bold(10.5f, TEAL_DARK)));
+            block.add(new Chunk(item.title() + "\n", bold(10f, HEAD)));
         }
         if (hasText(content)) {
-            block.add(new Chunk(content, regular(10f, BODY)));
+            block.add(new Chunk(content, regular(9.5f, BODY)));
         }
         cell.addElement(block);
     }
@@ -381,12 +380,12 @@ public class ModernPdfLayout implements ResumePdfLayout {
         }
         String prefix = hasText(item.filePath()) ? "[첨부] " : "";
         Paragraph title = new Paragraph(prefix + (item.title() == null ? "" : item.title()),
-                bold(10.5f, HEAD));
+                bold(10f, HEAD));
         title.setSpacingAfter(3f);
         cell.addElement(title);
         var links = PdfLayoutSupport.portfolioLinks(item);
         if (!links.isEmpty()) {
-            Paragraph link = new Paragraph("링크: " + String.join("  |  ", links), regular(8.5f, MUTED));
+            Paragraph link = new Paragraph("링크: " + String.join("  |  ", links), regular(8f, MUTED));
             link.setSpacingAfter(2f);
             cell.addElement(link);
         }
@@ -400,8 +399,8 @@ public class ModernPdfLayout implements ResumePdfLayout {
     }
 
     private Paragraph paragraphBody(String text, float spacingAfter) {
-        Paragraph body = new Paragraph(text, regular(10f, BODY));
-        body.setLeading(12f);
+        Paragraph body = new Paragraph(text, regular(9.5f, BODY));
+        body.setLeading(11f);
         body.setSpacingAfter(spacingAfter);
         return body;
     }

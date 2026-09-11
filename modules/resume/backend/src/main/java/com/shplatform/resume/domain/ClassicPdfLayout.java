@@ -1,6 +1,7 @@
 package com.shplatform.resume.domain;
 
 import static com.shplatform.resume.domain.PdfLayoutSupport.BODY;
+import static com.shplatform.resume.domain.PdfLayoutSupport.BORDER;
 import static com.shplatform.resume.domain.PdfLayoutSupport.FAINT;
 import static com.shplatform.resume.domain.PdfLayoutSupport.HEAD;
 import static com.shplatform.resume.domain.PdfLayoutSupport.INK;
@@ -74,7 +75,7 @@ public class ClassicPdfLayout implements ResumePdfLayout {
     private void renderHeader(Document document, ProfileResponse profile, Long userId) throws DocumentException {
         PdfPTable header = new PdfPTable(2);
         header.setWidthPercentage(100f);
-        header.setWidths(new float[]{7f, 3f});
+        header.setWidths(new float[]{4.5f, 1f});
         header.setKeepTogether(true);
 
         PdfPCell left = emptyCell();
@@ -113,12 +114,13 @@ public class ClassicPdfLayout implements ResumePdfLayout {
             photoCell.setHorizontalAlignment(Element.ALIGN_CENTER);
             photoBox.addCell(photoCell);
             photoHolder.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            photoHolder.setPaddingRight(6f);
             photoHolder.addElement(photoBox);
         }
         header.addCell(photoHolder);
 
         document.add(header);
-        document.add(new Chunk(new LineSeparator(1.1f, 100f, HEAD, Element.ALIGN_LEFT, 4)));
+        document.add(new Chunk(new LineSeparator(0.9f, 100f, BORDER, Element.ALIGN_LEFT, 4)));
     }
 
     private void renderSection(Document document, String key, ResumeViewResponse view, PdfWriter writer)
@@ -160,12 +162,13 @@ public class ClassicPdfLayout implements ResumePdfLayout {
     }
 
     private void addSectionTitle(Document document, String title) throws DocumentException {
-        Paragraph section = new Paragraph(title, bold(13f, HEAD));
+        Chunk heading = new Chunk(title, bold(13f, INK));
+        heading.setUnderline(0.9f, -2f);
+        Paragraph section = new Paragraph(heading);
         section.setSpacingBefore(8f);
-        section.setSpacingAfter(3f);
+        section.setSpacingAfter(6f);
         section.setKeepTogether(true);
         document.add(section);
-        document.add(new Chunk(new LineSeparator(0.9f, 100f, HEAD, Element.ALIGN_LEFT, 0)));
     }
 
     private void renderCareer(Document document, CareerResponse item) throws DocumentException {
