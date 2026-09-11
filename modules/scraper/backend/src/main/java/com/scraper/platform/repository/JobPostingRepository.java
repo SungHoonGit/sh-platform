@@ -35,6 +35,23 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
     @Query("SELECT j.dedupKey FROM JobPosting j WHERE j.crawledAt >= :sinceDate")
     Set<String> findDedupKeysSince(@Param("sinceDate") LocalDate sinceDate);
 
+    /**
+     * 쿼리 조건(예: Java 공고 export)에 맞는 공고를 페이지네이션으로 조회한다.
+     * keyword는 company/position/tech 대상 부분 일치(대소문자 무시)로 매칭한다.
+     *
+     * @param keyword  검색 키워드 (null/blank 시 전체 조회)
+     * @param pageable 페이지네이션
+     * @return 페이지 공고
+     */
+    @Query("""
+            SELECT j FROM JobPosting j
+            WHERE (:keyword IS NULL OR :keyword = '' OR
+                   LOWER(j.company) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(j.position) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(j.tech) LIKE LOWER(CONCAT('%', :keyword, '%')))
+            """)
+    Page<JobPosting> searchExport(@Param("keyword") String keyword, Pageable pageable);
+
     long countByConfigId(Long configId);
 
     Optional<JobPosting> findByDedupKeyAndCrawledAt(String dedupKey, java.time.LocalDate crawledAt);

@@ -18,11 +18,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtTokenValidator jwtTokenValidator) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtTokenValidator jwtTokenValidator,
+                                           ApiKeyFilter apiKeyFilter) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/export/**").permitAll()
                 .requestMatchers(
                     "/", "/index.html", "/favicon.ico",
                     "/assets/**", "/static/**",
@@ -44,6 +46,7 @@ public class SecurityConfig {
                 .authenticationEntryPoint(unauthorizedEntryPoint())
                 .accessDeniedHandler(forbiddenHandler())
             )
+            .addFilterBefore(apiKeyFilter, JwtAuthenticationFilter.class)
             .addFilterBefore(new JwtAuthenticationFilter(jwtTokenValidator),
                     UsernamePasswordAuthenticationFilter.class);
         return http.build();
