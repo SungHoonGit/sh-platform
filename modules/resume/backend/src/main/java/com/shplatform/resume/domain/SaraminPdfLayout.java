@@ -155,17 +155,35 @@ public class SaraminPdfLayout implements ResumePdfLayout {
 
     private void renderSection(Document document, String key, ResumeViewResponse view) throws DocumentException {
         switch (key) {
-            case "careers" -> box(document, "경력", cell -> careerBody(cell, view.careers()));
-            case "projects" -> box(document, "프로젝트", cell -> projectBody(cell, view.projects()));
-            case "educations" -> box(document, "학력", cell -> educationBody(cell, view.educations()));
-            case "skills" -> box(document, "스킬", cell -> skillBody(cell, view.skills()));
-            case "certificates" -> box(document, "자격증", cell -> certificateBody(cell, view.certificates()));
-            case "introductions" -> box(document, "자기소개",
+            case "careers" -> renderBoxIfNotEmpty(document, "경력", isNotEmpty(view.careers()),
+                    cell -> careerBody(cell, view.careers()));
+            case "projects" -> renderBoxIfNotEmpty(document, "프로젝트", isNotEmpty(view.projects()),
+                    cell -> projectBody(cell, view.projects()));
+            case "educations" -> renderBoxIfNotEmpty(document, "학력", isNotEmpty(view.educations()),
+                    cell -> educationBody(cell, view.educations()));
+            case "skills" -> renderBoxIfNotEmpty(document, "스킬", isNotEmpty(view.skills()),
+                    cell -> skillBody(cell, view.skills()));
+            case "certificates" -> renderBoxIfNotEmpty(document, "자격증", isNotEmpty(view.certificates()),
+                    cell -> certificateBody(cell, view.certificates()));
+            case "introductions" -> renderBoxIfNotEmpty(document, "자기소개", isNotEmpty(view.introductions()),
                     cell -> introductionBody(cell, view.introductions()));
-            case "portfolioItems" -> box(document, "포트폴리오",
+            case "portfolioItems" -> renderBoxIfNotEmpty(document, "포트폴리오", isNotEmpty(view.portfolioItems()),
                     cell -> portfolioBody(cell, view.portfolioItems()));
             default -> { }
         }
+    }
+
+    /** 웹 미리보기와 동일하게: 내용이 없으면 섹션 제목 바조차 그리지 않는다. */
+    private void renderBoxIfNotEmpty(Document document, String title, boolean hasContent, BoxContent body)
+            throws DocumentException {
+        if (!hasContent) {
+            return;
+        }
+        box(document, title, body);
+    }
+
+    private static boolean isNotEmpty(List<?> items) {
+        return items != null && !items.isEmpty();
     }
 
     /** 제목 바(bg-slate-100) + 본문을 회색 테두리 박스로 감싸 추가한다. */

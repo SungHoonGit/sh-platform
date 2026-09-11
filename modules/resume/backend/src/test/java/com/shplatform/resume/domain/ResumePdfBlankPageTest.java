@@ -104,6 +104,30 @@ class ResumePdfBlankPageTest {
     }
 
     @Test
+    @DisplayName("SARAMIN: 내용이 없는 섹션은 웹 미리보기와 동일하게 제목 바조차 PDF에 그리지 않는다")
+    void saramin_emptyProjects_sectionTitleNotRendered() throws Exception {
+        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(view("자기소개"));
+        given(resumeDocumentService.getDocuments(USER_ID))
+                .willReturn(List.of(doc("빈프로젝트문서", "SARAMIN", """
+                        [
+                          {"key":"careers","included":true,"order":1},
+                          {"key":"projects","included":true,"order":2},
+                          {"key":"educations","included":false,"order":3},
+                          {"key":"skills","included":false,"order":4},
+                          {"key":"certificates","included":false,"order":5},
+                          {"key":"introductions","included":true,"order":6},
+                          {"key":"portfolioItems","included":false,"order":7}
+                        ]""")));
+
+        byte[] pdf = service.generatePdf(USER_ID, DOCUMENT_ID);
+
+        String text = extract(pdf);
+        assertThat(text).contains("경력");
+        assertThat(text).contains("자기소개");
+        assertThat(text).doesNotContain("프로젝트");
+    }
+
+    @Test
     @DisplayName("자격증 항목별 숨김: 문서 sectionConfig의 hiddenItemIds에 포함된 자격증은 PDF에 렌더링되지 않는다")
     void hiddenCertificates_areNotRendered() throws Exception {
         given(resumeViewService.getMyResumeView(USER_ID)).willReturn(viewWithCertificates());
