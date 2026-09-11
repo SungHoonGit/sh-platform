@@ -190,6 +190,9 @@ export default function EditPage({ documentId }: { documentId?: number }) {
     }
   };
 
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
+  const saveChain = useRef<Promise<unknown>>(Promise.resolve());
+
   const persistSections = (next: SectionItem[]) => {
     setSectionItems(next);
     if (!documentId) return;
@@ -201,9 +204,17 @@ export default function EditPage({ documentId }: { documentId?: number }) {
         order: s.order,
         ...(s.hiddenItemIds && s.hiddenItemIds.length > 0 ? { hiddenItemIds: s.hiddenItemIds } : {}),
       }));
-    apiPut(`/documents/${documentId}`, { sectionConfig: JSON.stringify(body) }).catch(() => {
-      setError("섹션 편성을 저장하지 못했습니다.");
-    });
+    setSaveState("saving");
+    // 저장 요청을 직렬화한다. 병렬 발사 시 이전 PUT가 나중 요청의 최신 상태를
+    // 덮어써서(섹션 보임/숨김 되돌아감) 미리보기와 PDF가 어긋나는 유실을 막는다.
+    saveChain.current = saveChain.current
+      .catch(() => undefined)
+      .then(() => apiPut(`/documents/${documentId}`, { sectionConfig: JSON.stringify(body) }))
+      .then(() => setSaveState((prev) => (prev === "error" ? prev : "idle")))
+      .catch(() => {
+        setSaveState("error");
+        setError("섹션 편성을 저장하지 못했습니다. 새로고침 후 다시 확인해 주세요.");
+      });
   };
 
   const toggleSection = (key: string) => {
@@ -389,6 +400,17 @@ export default function EditPage({ documentId }: { documentId?: number }) {
             )}
           </div>
           <div className="flex gap-2">
+            {saveState !== "idle" && (
+              <span
+                className={`px-2.5 py-1.5 text-xs rounded flex items-center ${
+                  saveState === "error"
+                    ? "bg-red-50 text-red-600"
+                    : "bg-amber-50 text-amber-600"
+                }`}
+              >
+                {saveState === "error" ? "저장 실패 — 새로고침 필요" : "저장 중..."}
+              </span>
+            )}
             <a
               href={documentId ? `#/r/${documentId}` : "#/resumes"}
               className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
