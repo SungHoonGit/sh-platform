@@ -58,6 +58,16 @@ export default function ShareViewPage({ token }: { token: string }) {
           .map((s) => s.key)
       : DEFAULT_ORDER;
 
+  // 이 문서에서 숨김 처리된 자격증(id) 집합 — 문서별 on/off와 정합.
+  const hiddenCertIds: Set<number> = (() => {
+    const cert = config.find((s) => s.key === "certificates");
+    return new Set(cert?.hiddenItemIds ?? []);
+  })();
+  const filteredView: ResumeView =
+    hiddenCertIds.size > 0
+      ? { ...view, certificates: view.certificates.filter((c) => !hiddenCertIds.has(c.id)) }
+      : view;
+
   return (
     <div className="min-h-screen bg-gray-100 py-6 print:bg-white print:py-0">
       <style>{`@media print { @page { margin: 15mm; } }`}</style>
@@ -78,11 +88,11 @@ export default function ShareViewPage({ token }: { token: string }) {
 
       <div className="max-w-3xl mx-auto bg-white shadow-sm px-10 py-8 print:shadow-none print:px-0 print:max-w-none">
         {templateCode === "MODERN" ? (
-          <ModernTemplate view={view} order={order} shareToken={token} />
+          <ModernTemplate view={filteredView} order={order} shareToken={token} />
         ) : templateCode === "SARAMIN" ? (
-          <SaraminTemplate view={view} order={order} shareToken={token} />
+          <SaraminTemplate view={filteredView} order={order} shareToken={token} />
         ) : (
-          <ClassicTemplate view={view} order={order} shareToken={token} />
+          <ClassicTemplate view={filteredView} order={order} shareToken={token} />
         )}
       </div>
     </div>
