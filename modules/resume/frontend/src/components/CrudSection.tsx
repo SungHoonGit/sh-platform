@@ -81,6 +81,7 @@ export default function CrudSection({
   dragHandle,
   importOptions = null,
   renderRowExtra,
+  rowToggle,
   onChanged,
 }: {
   title: string;
@@ -108,6 +109,11 @@ export default function CrudSection({
   } | null;
   /** 각 행 아래 추가 UI를 그린다 (예: 경력의 기간별 상세 항목 편집기) */
   renderRowExtra?: (it: Item) => React.ReactNode;
+  /** 항목별 보임/숨김 토글 (이력서 문서 설정). true면 이 이력서에서 표시됨. */
+  rowToggle?: {
+    visible: (it: Item) => boolean;
+    onToggle: (it: Item) => void;
+  };
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -650,6 +656,21 @@ export default function CrudSection({
 
   const fileKeys = new Set(fileFields.map((f) => f.key));
 
+  const toggleButton = (it: Item) =>
+    rowToggle ? (
+      <button
+        onClick={() => rowToggle.onToggle(it)}
+        title={rowToggle.visible(it) ? "이 이력서에서 숨기기" : "이 이력서에서 표시하기"}
+        className={`px-2 py-1 text-xs rounded whitespace-nowrap ${
+          rowToggle.visible(it)
+            ? "bg-green-50 text-green-600 hover:bg-green-100"
+            : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+        }`}
+      >
+        {rowToggle.visible(it) ? "보임" : "숨김"}
+      </button>
+    ) : null;
+
   const renderRowInfo = (it: Item) => (
     <div className="min-w-0 flex-1">
       <p className="font-semibold text-sm text-slate-800 truncate">
@@ -702,6 +723,7 @@ export default function CrudSection({
             {renderRowInfo(it)}
             {editing !== String(it.id) && (
               <div className="shrink-0 flex gap-1.5">
+                {toggleButton(it)}
                 <button
                   onClick={() => openEdit(it)}
                   className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
@@ -782,6 +804,7 @@ export default function CrudSection({
                     {renderRowInfo(it)}
                     {editing !== String(it.id) && (
                       <div className="shrink-0 flex gap-1.5">
+                        {toggleButton(it)}
                         <button
                           onClick={() => openEdit(it)}
                           className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"

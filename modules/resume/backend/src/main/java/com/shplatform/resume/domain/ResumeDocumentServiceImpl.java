@@ -159,6 +159,10 @@ public class ResumeDocumentServiceImpl implements ResumeDocumentService {
                         || !ALLOWED_SECTION_KEYS.contains(key.asText())) {
                     throw new BusinessException(ErrorCode.INVALID_INPUT);
                 }
+                JsonNode hidden = item.get("hiddenItemIds");
+                if (hidden != null && !hidden.isArray()) {
+                    throw new BusinessException(ErrorCode.INVALID_INPUT);
+                }
             }
         } catch (BusinessException e) {
             throw e;

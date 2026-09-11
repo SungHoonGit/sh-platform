@@ -103,8 +103,43 @@ class ResumePdfBlankPageTest {
         assertThat(text).contains("경력");
     }
 
+    @Test
+    @DisplayName("자격증 항목별 숨김: 문서 sectionConfig의 hiddenItemIds에 포함된 자격증은 PDF에 렌더링되지 않는다")
+    void hiddenCertificates_areNotRendered() throws Exception {
+        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(viewWithCertificates());
+        given(resumeDocumentService.getDocuments(USER_ID))
+                .willReturn(List.of(doc("숨김자격증문서", "CLASSIC", """
+                        [
+                          {"key":"careers","included":true,"order":1},
+                          {"key":"projects","included":false,"order":2},
+                          {"key":"educations","included":false,"order":3},
+                          {"key":"skills","included":false,"order":4},
+                          {"key":"certificates","included":true,"order":5,"hiddenItemIds":[3]},
+                          {"key":"introductions","included":false,"order":6},
+                          {"key":"portfolioItems","included":false,"order":7}
+                        ]""")));
+
+        byte[] pdf = service.generatePdf(USER_ID, DOCUMENT_ID);
+
+        String text = extract(pdf);
+        assertThat(text).contains("정보처리기사");
+        assertThat(text).doesNotContain("SQLD");
+    }
+
     private ResumeViewResponse view(String introContent) {
         return viewWithProjects(introContent, List.of());
+    }
+
+    private ResumeViewResponse viewWithCertificates() {
+        return new ResumeViewResponse(
+                new ProfileResponse(1L, "홍길동", "t@e.com", "010-1", "대전", LocalDate.of(1996, 1, 1), null,
+                        "백엔드", null, null),
+                List.of(), List.of(), List.of(),
+                List.of(new com.shplatform.resume.api.dto.CertificateResponse(
+                                2L, "정보처리기사", "한국산업인력공단", LocalDate.of(2025, 6, 1), 1, null),
+                        new com.shplatform.resume.api.dto.CertificateResponse(
+                                3L, "SQLD", "한국데이터산업진흥원", LocalDate.of(2024, 12, 1), 2, null)),
+                List.of(), List.of(), List.of(), null);
     }
 
     private ResumeViewResponse viewWithProjects(String introContent, List<ProjectResponse> projects) {

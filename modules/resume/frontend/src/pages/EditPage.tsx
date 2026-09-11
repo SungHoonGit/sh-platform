@@ -193,9 +193,14 @@ export default function EditPage({ documentId }: { documentId?: number }) {
   const persistSections = (next: SectionItem[]) => {
     setSectionItems(next);
     if (!documentId) return;
-    const body = next
-      .map((s) => ({ key: s.key, included: s.included, order: s.order }))
-      .sort((a, b) => a.order - b.order);
+    const body = [...next]
+      .sort((a, b) => a.order - b.order)
+      .map((s) => ({
+        key: s.key,
+        included: s.included,
+        order: s.order,
+        ...(s.hiddenItemIds && s.hiddenItemIds.length > 0 ? { hiddenItemIds: s.hiddenItemIds } : {}),
+      }));
     apiPut(`/documents/${documentId}`, { sectionConfig: JSON.stringify(body) }).catch(() => {
       setError("섹션 편성을 저장하지 못했습니다.");
     });
@@ -205,6 +210,20 @@ export default function EditPage({ documentId }: { documentId?: number }) {
     if (!sectionItems) return;
     persistSections(
       sectionItems.map((s) => (s.key === key ? { ...s, included: !s.included } : s)),
+    );
+  };
+
+  /** 자격증 항목별 보임/숨김. 숨김 목록은 이 문서의 sectionConfig에 저장된다. */
+  const toggleCertificateHidden = (certId: number) => {
+    if (!sectionItems) return;
+    persistSections(
+      sectionItems.map((s) => {
+        if (s.key !== "certificates") return s;
+        const hidden = new Set(s.hiddenItemIds ?? []);
+        if (hidden.has(certId)) hidden.delete(certId);
+        else hidden.add(certId);
+        return { ...s, hiddenItemIds: [...hidden].sort((a, b) => a - b) };
+      }),
     );
   };
 
@@ -294,6 +313,12 @@ export default function EditPage({ documentId }: { documentId?: number }) {
         .map((s) => s.key);
     }
     return DEFAULT_ORDER;
+  }, [sectionItems]);
+
+  /** 현재 문서에서 숨겨져 있는 자격증 id 집합 */
+  const hiddenCertificateIds = useMemo(() => {
+    const cert = (sectionItems ?? []).find((s) => s.key === "certificates");
+    return new Set(cert?.hiddenItemIds ?? []);
   }, [sectionItems]);
 
   const scrollTo = (key: string) => {
@@ -469,6 +494,14 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                               }}
                             />
                           )
+                        : undefined
+                    }
+                    rowToggle={
+                      cfg.key === "certificates"
+                        ? {
+                            visible: (it) => !hiddenCertificateIds.has(Number(it.id)),
+                            onToggle: (it) => toggleCertificateHidden(Number(it.id)),
+                          }
                         : undefined
                     }
                     dragHandle={{

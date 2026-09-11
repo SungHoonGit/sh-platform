@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiDownload, apiGet } from "../api/client";
 import type { ResumeView } from "../types/resume";
 import type { SectionItem } from "../types/document";
@@ -11,6 +11,7 @@ export default function ResumeViewPage({ documentId }: { documentId?: number }) 
   const [view, setView] = useState<ResumeView | null>(null);
   const [templateCode, setTemplateCode] = useState("CLASSIC");
   const [sectionOrder, setSectionOrder] = useState<string[] | null>(null);
+  const [hiddenCertIds, setHiddenCertIds] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -32,10 +33,20 @@ export default function ResumeViewPage({ documentId }: { documentId?: number }) 
               .sort((a, b) => a.order - b.order)
               .map((s) => s.key),
           );
+          const cert = config.find((s) => s.key === "certificates");
+          setHiddenCertIds(new Set(cert?.hiddenItemIds ?? []));
         })
         .catch(() => undefined);
     }
   }, [documentId]);
+
+  const filteredView = useMemo(
+    () =>
+      view && hiddenCertIds.size > 0
+        ? { ...view, certificates: view.certificates.filter((c) => !hiddenCertIds.has(c.id)) }
+        : view,
+    [view, hiddenCertIds],
+  );
 
   if (loading) {
     return <div className="p-10 text-center text-gray-500">불러오는 중...</div>;
@@ -98,11 +109,11 @@ export default function ResumeViewPage({ documentId }: { documentId?: number }) 
 
       <div className="max-w-3xl mx-auto bg-white shadow-sm px-10 py-8 print:shadow-none print:px-0 print:max-w-none">
         {templateCode === "MODERN" ? (
-          <ModernTemplate view={view} order={order} />
+          <ModernTemplate view={filteredView!} order={order} />
         ) : templateCode === "SARAMIN" ? (
-          <SaraminTemplate view={view} order={order} />
+          <SaraminTemplate view={filteredView!} order={order} />
         ) : (
-          <ClassicTemplate view={view} order={order} />
+          <ClassicTemplate view={filteredView!} order={order} />
         )}
       </div>
     </div>

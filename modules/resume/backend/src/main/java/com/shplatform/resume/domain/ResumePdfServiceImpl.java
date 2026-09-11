@@ -6,6 +6,7 @@ import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.pdf.PdfWriter;
+import com.shplatform.resume.api.dto.CertificateResponse;
 import com.shplatform.resume.api.dto.DocumentResponse;
 import com.shplatform.resume.api.dto.ResumeViewResponse;
 import java.io.ByteArrayOutputStream;
@@ -13,9 +14,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 /**
@@ -64,12 +67,13 @@ public class ResumePdfServiceImpl implements ResumePdfService {
     public byte[] generatePdf(Long userId, Long documentId) {
         ResumeViewResponse view = resumeViewService.getMyResumeView(userId);
         DocumentOption option = resolveDocumentOption(userId, documentId);
+        ResumeViewResponse effectiveView = applyHiddenCertificates(view, option.hiddenCertificateIds());
         ResumePdfLayout layout = layouts.getOrDefault(option.templateCode(), layouts.get(DEFAULT_TEMPLATE_CODE));
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
              Document document = new Document(PageSize.A4, MARGIN_MM_18, MARGIN_MM_18, MARGIN_MM_16, MARGIN_MM_16)) {
             PdfWriter writer = PdfWriter.getInstance(document, bos);
             document.open();
-            layout.render(document, writer, view, option.sectionKeys(), userId);
+            layout.render(document, writer, effectiveView, option.sectionKeys(), userId);
             document.close();
             return bos.toByteArray();
         } catch (DocumentException | IOException e) {
@@ -85,7 +89,8 @@ public class ResumePdfServiceImpl implements ResumePdfService {
         return "(" + theme + ") " + title + ".pdf";
     }
 
-    private record DocumentOption(List<String> sectionKeys, String templateCode, String title) {
+    private record DocumentOption(List<String> sectionKeys, String templateCode, String title,
+                                  Set<Long> hiddenCertificateIds) {
     }
 
     private static Map<String, String> themeLabels() {
@@ -99,19 +104,58 @@ public class ResumePdfServiceImpl implements ResumePdfService {
     /** 문서 ID가 있으면 해당 문서의 sectionConfig/templateCode/제목을 사용하고, 없으면 기본값을 쓴다. */
     private DocumentOption resolveDocumentOption(Long userId, Long documentId) {
         if (documentId == null) {
-            return new DocumentOption(DEFAULT_SECTION_ORDER, DEFAULT_TEMPLATE_CODE, null);
+            return new DocumentOption(DEFAULT_SECTION_ORDER, DEFAULT_TEMPLATE_CODE, null, Set.of());
         }
         DocumentResponse doc = resumeDocumentService.getDocuments(userId).stream()
                 .filter(d -> d.id().equals(documentId))
                 .findFirst()
                 .orElse(null);
         if (doc == null) {
-            return new DocumentOption(DEFAULT_SECTION_ORDER, DEFAULT_TEMPLATE_CODE, null);
+            return new DocumentOption(DEFAULT_SECTION_ORDER, DEFAULT_TEMPLATE_CODE, null, Set.of());
         }
         List<String> keys = parseSectionKeys(doc.sectionConfig());
         String template = (doc.templateCode() == null || doc.templateCode().isBlank())
                 ? DEFAULT_TEMPLATE_CODE : doc.templateCode().toUpperCase();
-        return new DocumentOption(keys, template, doc.title());
+        return new DocumentOption(keys, template, doc.title(), parseHiddenCertificateIds(doc.sectionConfig()));
+    }
+
+    /** sectionConfig의 certificates 항목에 지정된 숨김 자격증 id 목록을 파싱한다. */
+    private Set<Long> parseHiddenCertificateIds(String sectionConfig) {
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(sectionConfig);
+            if (root == null || !root.isArray()) {
+                return Set.of();
+            }
+            for (JsonNode node : root) {
+                if (!"certificates".equals(node.path("key").asText())) {
+                    continue;
+                }
+                JsonNode hidden = node.get("hiddenItemIds");
+                if (hidden == null || !hidden.isArray()) {
+                    return Set.of();
+                }
+                Set<Long> ids = new HashSet<>();
+                for (JsonNode idNode : hidden) {
+                    ids.add(idNode.asLong());
+                }
+                return ids;
+            }
+            return Set.of();
+        } catch (Exception e) {
+            return Set.of();
+        }
+    }
+
+    /** 문서에서 숨김 처리된 자격증을 제외한 뷰를 만든다. */
+    private ResumeViewResponse applyHiddenCertificates(ResumeViewResponse view, Set<Long> hiddenIds) {
+        if (hiddenIds.isEmpty() || view.certificates() == null || view.certificates().isEmpty()) {
+            return view;
+        }
+        List<CertificateResponse> visible = view.certificates().stream()
+                .filter(c -> !hiddenIds.contains(c.id()))
+                .toList();
+        return new ResumeViewResponse(view.profile(), view.careers(), view.educations(), view.skills(),
+                visible, view.projects(), view.introductions(), view.portfolioItems(), view.generatedAt());
     }
 
     private List<String> parseSectionKeys(String sectionConfig) {
