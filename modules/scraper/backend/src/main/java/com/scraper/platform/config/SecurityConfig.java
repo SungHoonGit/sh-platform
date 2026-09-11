@@ -46,7 +46,7 @@ public class SecurityConfig {
                 .authenticationEntryPoint(unauthorizedEntryPoint())
                 .accessDeniedHandler(forbiddenHandler())
             )
-            .addFilterBefore(apiKeyFilter, JwtAuthenticationFilter.class)
+            .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(new JwtAuthenticationFilter(jwtTokenValidator),
                     UsernamePasswordAuthenticationFilter.class);
         return http.build();
