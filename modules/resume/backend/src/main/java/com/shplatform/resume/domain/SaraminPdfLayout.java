@@ -71,7 +71,7 @@ public class SaraminPdfLayout implements ResumePdfLayout {
     private void renderProfileBox(Document document, ProfileResponse profile, Long userId) throws DocumentException {
         PdfPTable outer = new PdfPTable(2);
         outer.setWidthPercentage(100f);
-        outer.setWidths(new float[]{28f, 72f});
+        outer.setWidths(new float[]{18f, 82f});
         outer.setKeepTogether(true);
 
         Image photo = profile != null
@@ -80,7 +80,7 @@ public class SaraminPdfLayout implements ResumePdfLayout {
         photoSide.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
         photoSide.setBorderColor(HEAD);
         photoSide.setBorderWidth(1.2f);
-        photoSide.setPadding(8f);
+        photoSide.setPadding(5f);
         photoSide.setVerticalAlignment(Element.ALIGN_MIDDLE);
         PdfPCell photoCell = PdfLayoutSupport.photoCell(photo);
         if (photoCell != null) {
@@ -98,17 +98,17 @@ public class SaraminPdfLayout implements ResumePdfLayout {
         contentSide.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.RIGHT);
         contentSide.setBorderColor(HEAD);
         contentSide.setBorderWidth(1.2f);
-        contentSide.setPadding(12f);
+        contentSide.setPadding(10f);
         contentSide.setVerticalAlignment(Element.ALIGN_TOP);
 
         String name = profile != null && hasText(profile.name()) ? profile.name() : "(이름 미등록)";
-        Paragraph nameP = new Paragraph(name, bold(20f, HEAD));
-        nameP.setSpacingAfter(4f);
+        Paragraph nameP = new Paragraph(name, bold(18f, HEAD));
+        nameP.setSpacingAfter(2f);
         contentSide.addElement(nameP);
 
         if (profile != null && hasText(profile.headline())) {
-            Paragraph headline = new Paragraph(profile.headline(), regular(10.5f, MUTED));
-            headline.setSpacingAfter(8f);
+            Paragraph headline = new Paragraph(profile.headline(), regular(10f, MUTED));
+            headline.setSpacingAfter(6f);
             contentSide.addElement(headline);
         }
 
@@ -116,41 +116,56 @@ public class SaraminPdfLayout implements ResumePdfLayout {
         outer.addCell(contentSide);
 
         document.add(outer);
-        document.add(spacer(10f));
+        document.add(spacer(8f));
     }
 
     private void addContactGrid(PdfPCell cell, ProfileResponse profile) throws DocumentException {
-        PdfPTable grid = new PdfPTable(2);
+        PdfPTable grid = new PdfPTable(4);
         grid.setWidthPercentage(100f);
-        grid.setWidths(new float[]{22f, 78f});
+        // 미리보기와 동일하게 라벨-값을 2쌍씩 한 행에 배치해 세로 공간을 줄인다.
+        grid.setWidths(new float[]{16f, 34f, 16f, 34f});
+        grid.setSpacingBefore(2f);
 
-        addLabelValueRow(grid, "이메일", profile != null ? profile.email() : null);
-        addLabelValueRow(grid, "전화번호", profile != null ? profile.phone() : null);
-        addLabelValueRow(grid, "생년월일", profile != null && profile.birthDate() != null
-                ? profile.birthDate().format(PdfLayoutSupport.YMD) : null);
-        addLabelValueRow(grid, "주소", profile != null ? profile.address() : null);
+        String email = profile != null ? profile.email() : null;
+        String phone = profile != null ? profile.phone() : null;
+        String birth = profile != null && profile.birthDate() != null
+                ? profile.birthDate().format(PdfLayoutSupport.YMD) : null;
+        String address = profile != null ? profile.address() : null;
+
+        addLabelValuePair(grid, "이메일", email, "전화번호", phone);
+        addLabelValuePair(grid, "생년월일", birth, "주소", address);
 
         cell.addElement(grid);
     }
 
-    private void addLabelValueRow(PdfPTable grid, String label, String value) throws DocumentException {
-        PdfPCell labelCell = new PdfPCell(new Paragraph(label, bold(8.5f, MUTED)));
+    private void addLabelValuePair(PdfPTable grid, String label1, String value1,
+                                   String label2, String value2) {
+        grid.addCell(labelCell(label1));
+        grid.addCell(valueCell(value1));
+        grid.addCell(labelCell(label2));
+        grid.addCell(valueCell(value2));
+    }
+
+    private PdfPCell labelCell(String label) {
+        PdfPCell labelCell = new PdfPCell(new Paragraph(label, bold(8f, MUTED)));
         labelCell.setBackgroundColor(SLATE_50);
         labelCell.setBorder(Rectangle.BOX);
         labelCell.setBorderColor(RULE_LIGHT);
         labelCell.setBorderWidth(0.4f);
-        labelCell.setPadding(4f);
+        labelCell.setPadding(2.5f);
         labelCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        return labelCell;
+    }
 
+    private PdfPCell valueCell(String value) {
         PdfPCell valueCell = new PdfPCell(
-                new Paragraph(hasText(value) ? value : "-", regular(9f, BODY)));
+                new Paragraph(hasText(value) ? value : "-", regular(8.5f, BODY)));
         valueCell.setBorder(Rectangle.BOX);
         valueCell.setBorderColor(RULE_LIGHT);
         valueCell.setBorderWidth(0.4f);
-        valueCell.setPadding(4f);
-
-        grid.addCell(labelCell);
-        grid.addCell(valueCell);
+        valueCell.setPadding(2.5f);
+        valueCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        return valueCell;
     }
 
     private void renderSection(Document document, String key, ResumeViewResponse view) throws DocumentException {
