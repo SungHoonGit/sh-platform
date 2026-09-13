@@ -10,46 +10,43 @@
 --   mysql -h 10.0.0.39 -u sh_user -p resume_platform < docs/resume/ddl-resume-v13.sql
 -- ============================================================
 
-SET @tables = CONCAT(
-    'resume_careers,resume_educations,resume_skills,resume_certificates,',
-    'resume_projects,resume_introductions,resume_portfolio_items,resume_career_items'
-);
-
--- 멱등: 각 테이블의 document_id 컬럼이 없을 때만 추가
-SET @cnt := (
-    SELECT COUNT(*)
-    FROM information_schema.columns
-    WHERE table_schema = DATABASE()
-      AND table_name IN ('resume_careers','resume_educations','resume_skills',
-                         'resume_certificates','resume_projects','resume_introductions',
-                         'resume_portfolio_items','resume_career_items')
-      AND column_name = 'document_id'
-);
-SET @ddl := IF(@cnt = 8, 'SELECT 1', (
-    SELECT GROUP_CONCAT(
-        CONCAT(
-            'ALTER TABLE `', table_name, '` ADD COLUMN document_id BIGINT NULL AFTER user_id;'
-        )
-        SEPARATOR ' '
-    )
-    FROM (
-        SELECT 'resume_careers' AS table_name UNION ALL
-        SELECT 'resume_educations' UNION ALL
-        SELECT 'resume_skills' UNION ALL
-        SELECT 'resume_certificates' UNION ALL
-        SELECT 'resume_projects' UNION ALL
-        SELECT 'resume_introductions' UNION ALL
-        SELECT 'resume_portfolio_items' UNION ALL
-        SELECT 'resume_career_items'
-    ) t
-    WHERE (SELECT COUNT(*) FROM information_schema.columns c
-           WHERE c.table_schema = DATABASE()
-             AND c.table_name = t.table_name
-             AND c.column_name = 'document_id') = 0
-));
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+-- 멱등: 각 테이블의 document_id 컬럼이 없을 때만 추가.
+-- PREPARE는 한 번에 한 문장만 실행하므로 테이블별로 개별 ALTER를 수행한다.
+DROP PROCEDURE IF EXISTS add_document_id_columns;
+DELIMITER //
+CREATE PROCEDURE add_document_id_columns()
+BEGIN
+    DECLARE done INT DEFAULT 0;
+    DECLARE tbl VARCHAR(64);
+    DECLARE cur CURSOR FOR
+        SELECT t.table_name
+        FROM information_schema.tables t
+        WHERE t.table_schema = DATABASE()
+          AND t.table_name IN ('resume_careers','resume_educations','resume_skills',
+                               'resume_certificates','resume_projects','resume_introductions',
+                               'resume_portfolio_items','resume_career_items')
+          AND NOT EXISTS (
+              SELECT 1 FROM information_schema.columns c
+              WHERE c.table_schema = t.table_schema
+                AND c.table_name = t.table_name
+                AND c.column_name = 'document_id'
+          )
+        ORDER BY t.table_name;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    OPEN cur;
+    read_loop: LOOP
+        FETCH cur INTO tbl;
+        IF done = 1 THEN LEAVE read_loop; END IF;
+        SET @s := CONCAT('ALTER TABLE `', tbl, '` ADD COLUMN document_id BIGINT NULL AFTER user_id');
+        PREPARE stmt FROM @s;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END LOOP;
+    CLOSE cur;
+END //
+DELIMITER ;
+CALL add_document_id_columns();
+DROP PROCEDURE IF EXISTS add_document_id_columns;
 
 -- 인덱스 추가 (멱등)
 SET @idx_cnt := (
