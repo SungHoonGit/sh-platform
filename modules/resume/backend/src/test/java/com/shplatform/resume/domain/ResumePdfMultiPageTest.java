@@ -35,7 +35,7 @@ class ResumePdfMultiPageTest {
     @DisplayName("generatePdf: 모든 테마가 여러 페이지에 걸쳐도 항목을 잃지 않는다")
     void allThemesKeepEveryItemOnMultiPage() throws Exception {
         ResumeViewResponse view = multiPageView();
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(view);
+        given(resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID)).willReturn(view);
 
         for (String theme : List.of("CLASSIC", "MODERN", "SARAMIN")) {
             ResumePdfService service = new ResumePdfServiceImpl(
@@ -60,7 +60,7 @@ class ResumePdfMultiPageTest {
     @DisplayName("클래식: 섹션 제목과 첫 항목 본문이 같은 페이지에 놓인다 (제목 고아 방지)")
     void classic_sectionTitleStaysWithFirstItem() throws Exception {
         ResumeViewResponse view = multiPageView();
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(view);
+        given(resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID)).willReturn(view);
         ResumePdfService service = new ResumePdfServiceImpl(
                 resumeViewService, resumeDocumentService,
                 new ClassicPdfLayout(fileStorageService),

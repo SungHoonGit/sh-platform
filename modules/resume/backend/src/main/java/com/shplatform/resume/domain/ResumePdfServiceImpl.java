@@ -65,7 +65,7 @@ public class ResumePdfServiceImpl implements ResumePdfService {
 
     @Override
     public byte[] generatePdf(Long userId, Long documentId) {
-        ResumeViewResponse view = resumeViewService.getMyResumeView(userId);
+        ResumeViewResponse view = resumeViewService.getMyResumeView(userId, documentId);
         DocumentOption option = resolveDocumentOption(userId, documentId);
         ResumeViewResponse effectiveView = applyHiddenCertificates(view, option.hiddenCertificateIds());
         ResumePdfLayout layout = layouts.getOrDefault(option.templateCode(), layouts.get(DEFAULT_TEMPLATE_CODE));

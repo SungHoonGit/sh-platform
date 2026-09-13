@@ -51,7 +51,7 @@ class ResumePdfBlankPageTest {
     @Test
     @DisplayName("SARAMIN: 자기소개가 길어 페이지를 넘어도 빈 페이지 없이 분할된다")
     void saramin_longIntroduction_hasNoBlankPage() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID))
+        given(resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID))
                 .willReturn(view("자기소개 " + "내용입니다. ".repeat(3_000)));
         given(resumeDocumentService.getDocuments(USER_ID))
                 .willReturn(List.of(doc("긴 문서", "SARAMIN", null)));
@@ -69,7 +69,7 @@ class ResumePdfBlankPageTest {
                         "Java", null, null, null, null, null, 0, null, null),
                 new ProjectResponse(4L, "숨김프로젝트2", "역할", LocalDate.of(2024, 2, 1), null, "설명",
                         "Spring", null, null, null, null, null, 1, null, null));
-        given(resumeViewService.getMyResumeView(USER_ID))
+        given(resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID))
                 .willReturn(viewWithProjects("자기소개", hiddenProjects));
         given(resumeDocumentService.getDocuments(USER_ID))
                 .willReturn(List.of(doc("숨김문서", "SARAMIN", """
@@ -94,7 +94,7 @@ class ResumePdfBlankPageTest {
     @Test
     @DisplayName("documentId 없으면 SARAMIN config를 참조할 수 없어 CLASSIC 기본 편성으로 폴백한다")
     void saramin_withoutDocumentId_fallsBackToClassicDefault() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(view("자기소개"));
+        given(resumeViewService.getMyResumeView(USER_ID, null)).willReturn(view("자기소개"));
 
         byte[] pdf = service.generatePdf(USER_ID, null);
 
@@ -106,7 +106,7 @@ class ResumePdfBlankPageTest {
     @Test
     @DisplayName("SARAMIN: 내용이 없는 섹션은 웹 미리보기와 동일하게 제목 바조차 PDF에 그리지 않는다")
     void saramin_emptyProjects_sectionTitleNotRendered() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(view("자기소개"));
+        given(resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID)).willReturn(view("자기소개"));
         given(resumeDocumentService.getDocuments(USER_ID))
                 .willReturn(List.of(doc("빈프로젝트문서", "SARAMIN", """
                         [
@@ -130,7 +130,7 @@ class ResumePdfBlankPageTest {
     @Test
     @DisplayName("자격증 항목별 숨김: 문서 sectionConfig의 hiddenItemIds에 포함된 자격증은 PDF에 렌더링되지 않는다")
     void hiddenCertificates_areNotRendered() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(viewWithCertificates());
+        given(resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID)).willReturn(viewWithCertificates());
         given(resumeDocumentService.getDocuments(USER_ID))
                 .willReturn(List.of(doc("숨김자격증문서", "CLASSIC", """
                         [

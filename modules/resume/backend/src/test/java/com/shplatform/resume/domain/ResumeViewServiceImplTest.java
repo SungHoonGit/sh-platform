@@ -20,6 +20,7 @@ import static org.mockito.BDDMockito.given;
 class ResumeViewServiceImplTest {
 
     private static final Long USER_ID = 1L;
+    private static final long DOCUMENT_ID = 100L;
 
     @Mock
     private ResumeProfileService resumeProfileService;
@@ -46,15 +47,15 @@ class ResumeViewServiceImplTest {
     void getMyResumeView_assemblesAll() {
         given(resumeProfileService.getMyProfile(USER_ID))
                 .willReturn(new ProfileResponse(10L, "홍길동", null, null, null, null, null, "소개", null, null));
-        given(careerService.getCareers(USER_ID)).willReturn(List.of());
-        given(educationService.getEducations(USER_ID)).willReturn(List.of());
-        given(skillService.getSkills(USER_ID)).willReturn(List.of());
-        given(certificateService.getCertificates(USER_ID)).willReturn(List.of());
-        given(projectService.getProjects(USER_ID)).willReturn(List.of());
-        given(introductionService.getIntroductions(USER_ID)).willReturn(List.of());
-        given(portfolioItemService.getPortfolioItems(USER_ID)).willReturn(List.of());
+        given(careerService.getCareers(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(educationService.getEducations(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(skillService.getSkills(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(certificateService.getCertificates(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(projectService.getProjects(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(introductionService.getIntroductions(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(portfolioItemService.getPortfolioItems(USER_ID, DOCUMENT_ID)).willReturn(List.of());
 
-        ResumeViewResponse response = resumeViewService.getMyResumeView(USER_ID);
+        ResumeViewResponse response = resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID);
 
         assertThat(response.profile().name()).isEqualTo("홍길동");
         assertThat(response.careers()).isEmpty();
@@ -66,15 +67,15 @@ class ResumeViewServiceImplTest {
     void getMyResumeView_profileMissing() {
         given(resumeProfileService.getMyProfile(USER_ID))
                 .willThrow(new BusinessException(ErrorCode.NOT_FOUND));
-        given(careerService.getCareers(USER_ID)).willReturn(List.of());
-        given(educationService.getEducations(USER_ID)).willReturn(List.of());
-        given(skillService.getSkills(USER_ID)).willReturn(List.of());
-        given(certificateService.getCertificates(USER_ID)).willReturn(List.of());
-        given(projectService.getProjects(USER_ID)).willReturn(List.of());
-        given(introductionService.getIntroductions(USER_ID)).willReturn(List.of());
-        given(portfolioItemService.getPortfolioItems(USER_ID)).willReturn(List.of());
+        given(careerService.getCareers(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(educationService.getEducations(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(skillService.getSkills(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(certificateService.getCertificates(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(projectService.getProjects(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(introductionService.getIntroductions(USER_ID, DOCUMENT_ID)).willReturn(List.of());
+        given(portfolioItemService.getPortfolioItems(USER_ID, DOCUMENT_ID)).willReturn(List.of());
 
-        ResumeViewResponse response = resumeViewService.getMyResumeView(USER_ID);
+        ResumeViewResponse response = resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID);
 
         assertThat(response.profile()).isNull();
         assertThat(response.skills()).isEmpty();

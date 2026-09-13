@@ -29,6 +29,7 @@ class SkillServiceImplTest {
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 999L;
     private static final Long SKILL_ID = 300L;
+    private static final Long DOCUMENT_ID = 100L;
 
     @Mock
     private ResumeSkillRepository skillRepository;
@@ -41,7 +42,7 @@ class SkillServiceImplTest {
     }
 
     private ResumeSkillEntity entity(Long userId) {
-        var e = ResumeSkillEntity.create(userId);
+        var e = ResumeSkillEntity.create(userId, DOCUMENT_ID);
         e.setId(SKILL_ID);
         e.setName("Java");
         return e;
@@ -50,10 +51,10 @@ class SkillServiceImplTest {
     @Test
     @DisplayName("getSkills: 스킬 목록을 조회한다")
     void getSkills_success() {
-        given(skillRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(skillRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
 
-        var responses = skillService.getSkills(USER_ID);
+        var responses = skillService.getSkills(USER_ID, DOCUMENT_ID);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).name()).isEqualTo("Java");
@@ -68,7 +69,7 @@ class SkillServiceImplTest {
                     return invocation.getArgument(0);
                 });
 
-        var response = skillService.createSkill(USER_ID, request());
+        var response = skillService.createSkill(USER_ID, DOCUMENT_ID, request());
 
         ArgumentCaptor<ResumeSkillEntity> captor = ArgumentCaptor.forClass(ResumeSkillEntity.class);
         then(skillRepository).should(times(1)).save(captor.capture());
@@ -84,7 +85,7 @@ class SkillServiceImplTest {
         given(skillRepository.save(any(ResumeSkillEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = skillService.updateSkill(USER_ID, SKILL_ID, request());
+        var response = skillService.updateSkill(USER_ID, DOCUMENT_ID, SKILL_ID, request());
 
         then(skillRepository).should(times(1)).save(existing);
         assertThat(response.name()).isEqualTo("Java");
@@ -95,7 +96,7 @@ class SkillServiceImplTest {
     void updateSkill_forbidden() {
         given(skillRepository.findById(SKILL_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> skillService.updateSkill(USER_ID, SKILL_ID, request()))
+        assertThatThrownBy(() -> skillService.updateSkill(USER_ID, DOCUMENT_ID, SKILL_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -107,7 +108,7 @@ class SkillServiceImplTest {
         var existing = entity(USER_ID);
         given(skillRepository.findById(SKILL_ID)).willReturn(Optional.of(existing));
 
-        skillService.deleteSkill(USER_ID, SKILL_ID);
+        skillService.deleteSkill(USER_ID, DOCUMENT_ID, SKILL_ID);
 
         then(skillRepository).should(times(1)).delete(existing);
     }
@@ -121,12 +122,12 @@ class SkillServiceImplTest {
         var second = entity(USER_ID);
         second.setId(302L);
         second.setDisplayOrder(2);
-        given(skillRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(skillRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(first, second));
         given(skillRepository.saveAll(any()))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        skillService.reorderSkills(USER_ID, List.of(302L, 301L));
+        skillService.reorderSkills(USER_ID, DOCUMENT_ID, List.of(302L, 301L));
 
         assertThat(first.getDisplayOrder()).isEqualTo(2);
         assertThat(second.getDisplayOrder()).isEqualTo(1);
@@ -136,10 +137,10 @@ class SkillServiceImplTest {
     @Test
     @DisplayName("reorderSkills: 본인 소유가 아닌 스킬 id가 포함되면 FORBIDDEN 예외가 발생한다")
     void reorderSkills_forbidden() {
-        given(skillRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(skillRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
 
-        assertThatThrownBy(() -> skillService.reorderSkills(USER_ID, List.of(999L)))
+        assertThatThrownBy(() -> skillService.reorderSkills(USER_ID, DOCUMENT_ID, List.of(999L)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);

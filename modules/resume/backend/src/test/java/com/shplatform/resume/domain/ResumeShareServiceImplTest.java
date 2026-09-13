@@ -199,7 +199,7 @@ class ResumeShareServiceImplTest {
         given(shareLinkRepository.findByToken(TOKEN)).willReturn(Optional.of(saved));
         given(documentRepository.findById(DOC_ID)).willReturn(Optional.of(owner));
         given(resumeDocumentService.getDocuments(USER_ID)).willReturn(List.of(docResponse));
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(view);
+        given(resumeViewService.getMyResumeView(USER_ID, DOC_ID)).willReturn(view);
 
         var response = shareService.getPublicView(TOKEN);
 

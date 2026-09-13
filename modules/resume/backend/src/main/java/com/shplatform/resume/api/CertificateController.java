@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -35,8 +36,8 @@ public class CertificateController {
      */
     @GetMapping
     @Operation(summary = "자격증 목록 조회")
-    public ResponseEntity<ApiResponse<List<CertificateResponse>>> getCertificates() {
-        var response = certificateService.getCertificates(SecurityUtils.currentAccountId());
+    public ResponseEntity<ApiResponse<List<CertificateResponse>>> getCertificates(@RequestParam Long documentId) {
+        var response = certificateService.getCertificates(SecurityUtils.currentAccountId(), documentId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -46,8 +47,9 @@ public class CertificateController {
     @PostMapping
     @Operation(summary = "자격증 추가")
     public ResponseEntity<ApiResponse<CertificateResponse>> createCertificate(
-            @Valid @RequestBody CertificateRequest request) {
-        var response = certificateService.createCertificate(SecurityUtils.currentAccountId(), request);
+            @Valid @RequestBody CertificateRequest request,
+            @RequestParam Long documentId) {
+        var response = certificateService.createCertificate(SecurityUtils.currentAccountId(), documentId, request);
         return ResponseEntity.ok(ApiResponse.created(response));
     }
 
@@ -58,8 +60,9 @@ public class CertificateController {
     @Operation(summary = "자격증 수정")
     public ResponseEntity<ApiResponse<CertificateResponse>> updateCertificate(
             @PathVariable Long id,
-            @Valid @RequestBody CertificateRequest request) {
-        var response = certificateService.updateCertificate(SecurityUtils.currentAccountId(), id, request);
+            @Valid @RequestBody CertificateRequest request,
+            @RequestParam Long documentId) {
+        var response = certificateService.updateCertificate(SecurityUtils.currentAccountId(), id, documentId, request);
         return ResponseEntity.ok(ApiResponse.success("수정 완료", response));
     }
 
@@ -68,8 +71,8 @@ public class CertificateController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "자격증 삭제")
-    public ResponseEntity<Void> deleteCertificate(@PathVariable Long id) {
-        certificateService.deleteCertificate(SecurityUtils.currentAccountId(), id);
+    public ResponseEntity<Void> deleteCertificate(@PathVariable Long id, @RequestParam Long documentId) {
+        certificateService.deleteCertificate(SecurityUtils.currentAccountId(), id, documentId);
         return ResponseEntity.noContent().build();
     }
 
@@ -78,8 +81,8 @@ public class CertificateController {
      */
     @PutMapping("/reorder")
     @Operation(summary = "자격증 표시 순서 재정렬")
-    public ResponseEntity<Void> reorderCertificates(@Valid @RequestBody ReorderRequest request) {
-        certificateService.reorderCertificates(SecurityUtils.currentAccountId(), request.ids());
+    public ResponseEntity<Void> reorderCertificates(@Valid @RequestBody ReorderRequest request, @RequestParam Long documentId) {
+        certificateService.reorderCertificates(SecurityUtils.currentAccountId(), documentId, request.ids());
         return ResponseEntity.noContent().build();
     }
 }

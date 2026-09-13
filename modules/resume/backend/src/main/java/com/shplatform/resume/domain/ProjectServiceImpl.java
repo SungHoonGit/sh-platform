@@ -22,42 +22,42 @@ public class ProjectServiceImpl implements ProjectService {
     private final ResumeProjectRepository projectRepository;
 
     @Override
-    public List<ProjectResponse> getProjects(Long userId) {
-        return projectRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId).stream()
+    public List<ProjectResponse> getProjects(Long userId, Long documentId) {
+        return projectRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, documentId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Override
     @Transactional
-    public ProjectResponse createProject(Long userId, ProjectRequest request) {
-        var entity = ResumeProjectEntity.create(userId);
+    public ProjectResponse createProject(Long userId, Long documentId, ProjectRequest request) {
+        var entity = ResumeProjectEntity.create(userId, documentId);
         applyRequest(entity, request);
         return toResponse(projectRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public ProjectResponse updateProject(Long userId, Long projectId, ProjectRequest request) {
-        var entity = getOwnedProject(userId, projectId);
+    public ProjectResponse updateProject(Long userId, Long documentId, Long projectId, ProjectRequest request) {
+        var entity = getOwnedProject(userId, documentId, projectId);
         applyRequest(entity, request);
         return toResponse(projectRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public void deleteProject(Long userId, Long projectId) {
-        var entity = getOwnedProject(userId, projectId);
+    public void deleteProject(Long userId, Long documentId, Long projectId) {
+        var entity = getOwnedProject(userId, documentId, projectId);
         projectRepository.delete(entity);
     }
 
     @Override
     @Transactional
-    public void reorderProjects(Long userId, List<Long> orderedIds) {
+    public void reorderProjects(Long userId, Long documentId, List<Long> orderedIds) {
         if (orderedIds == null || orderedIds.isEmpty()) {
             return;
         }
-        var owned = projectRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        var owned = projectRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, documentId);
         Map<Long, ResumeProjectEntity> byId = owned.stream()
                 .collect(Collectors.toMap(ResumeProjectEntity::getId, e -> e));
         int order = 1;
@@ -71,10 +71,10 @@ public class ProjectServiceImpl implements ProjectService {
         projectRepository.saveAll(owned);
     }
 
-    private ResumeProjectEntity getOwnedProject(Long userId, Long projectId) {
+    private ResumeProjectEntity getOwnedProject(Long userId, Long documentId, Long projectId) {
         var entity = projectRepository.findById(projectId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        if (!entity.getUserId().equals(userId)) {
+        if (!entity.getUserId().equals(userId) || !entity.getDocumentId().equals(documentId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
         return entity;

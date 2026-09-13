@@ -22,42 +22,42 @@ public class SkillServiceImpl implements SkillService {
     private final ResumeSkillRepository skillRepository;
 
     @Override
-    public List<SkillResponse> getSkills(Long userId) {
-        return skillRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId).stream()
+    public List<SkillResponse> getSkills(Long userId, Long documentId) {
+        return skillRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, documentId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Override
     @Transactional
-    public SkillResponse createSkill(Long userId, SkillRequest request) {
-        var entity = ResumeSkillEntity.create(userId);
+    public SkillResponse createSkill(Long userId, Long documentId, SkillRequest request) {
+        var entity = ResumeSkillEntity.create(userId, documentId);
         applyRequest(entity, request);
         return toResponse(skillRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public SkillResponse updateSkill(Long userId, Long skillId, SkillRequest request) {
-        var entity = getOwnedSkill(userId, skillId);
+    public SkillResponse updateSkill(Long userId, Long documentId, Long skillId, SkillRequest request) {
+        var entity = getOwnedSkill(userId, documentId, skillId);
         applyRequest(entity, request);
         return toResponse(skillRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public void deleteSkill(Long userId, Long skillId) {
-        var entity = getOwnedSkill(userId, skillId);
+    public void deleteSkill(Long userId, Long documentId, Long skillId) {
+        var entity = getOwnedSkill(userId, documentId, skillId);
         skillRepository.delete(entity);
     }
 
     @Override
     @Transactional
-    public void reorderSkills(Long userId, List<Long> orderedIds) {
+    public void reorderSkills(Long userId, Long documentId, List<Long> orderedIds) {
         if (orderedIds == null || orderedIds.isEmpty()) {
             return;
         }
-        var owned = skillRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        var owned = skillRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, documentId);
         Map<Long, ResumeSkillEntity> byId = owned.stream()
                 .collect(Collectors.toMap(ResumeSkillEntity::getId, e -> e));
         int order = 1;
@@ -71,10 +71,10 @@ public class SkillServiceImpl implements SkillService {
         skillRepository.saveAll(owned);
     }
 
-    private ResumeSkillEntity getOwnedSkill(Long userId, Long skillId) {
+    private ResumeSkillEntity getOwnedSkill(Long userId, Long documentId, Long skillId) {
         var entity = skillRepository.findById(skillId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        if (!entity.getUserId().equals(userId)) {
+        if (!entity.getUserId().equals(userId) || !entity.getDocumentId().equals(documentId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
         return entity;

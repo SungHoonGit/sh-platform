@@ -22,44 +22,44 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
     private final ResumePortfolioItemRepository portfolioItemRepository;
 
     @Override
-    public List<PortfolioItemResponse> getPortfolioItems(Long userId) {
-        return portfolioItemRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId).stream()
+    public List<PortfolioItemResponse> getPortfolioItems(Long userId, Long documentId) {
+        return portfolioItemRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, documentId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Override
     @Transactional
-    public PortfolioItemResponse createPortfolioItem(Long userId, PortfolioItemRequest request) {
+    public PortfolioItemResponse createPortfolioItem(Long userId, Long documentId, PortfolioItemRequest request) {
         validateTypePayload(request);
-        var entity = ResumePortfolioItemEntity.create(userId);
+        var entity = ResumePortfolioItemEntity.create(userId, documentId);
         applyRequest(entity, request);
         return toResponse(portfolioItemRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public PortfolioItemResponse updatePortfolioItem(Long userId, Long itemId, PortfolioItemRequest request) {
+    public PortfolioItemResponse updatePortfolioItem(Long userId, Long documentId, Long itemId, PortfolioItemRequest request) {
         validateTypePayload(request);
-        var entity = getOwnedPortfolioItem(userId, itemId);
+        var entity = getOwnedPortfolioItem(userId, documentId, itemId);
         applyRequest(entity, request);
         return toResponse(portfolioItemRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public void deletePortfolioItem(Long userId, Long itemId) {
-        var entity = getOwnedPortfolioItem(userId, itemId);
+    public void deletePortfolioItem(Long userId, Long documentId, Long itemId) {
+        var entity = getOwnedPortfolioItem(userId, documentId, itemId);
         portfolioItemRepository.delete(entity);
     }
 
     @Override
     @Transactional
-    public void reorderPortfolioItems(Long userId, List<Long> orderedIds) {
+    public void reorderPortfolioItems(Long userId, Long documentId, List<Long> orderedIds) {
         if (orderedIds == null || orderedIds.isEmpty()) {
             return;
         }
-        var owned = portfolioItemRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        var owned = portfolioItemRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, documentId);
         Map<Long, ResumePortfolioItemEntity> byId = owned.stream()
                 .collect(Collectors.toMap(ResumePortfolioItemEntity::getId, e -> e));
         int order = 1;
@@ -89,10 +89,10 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
         return request.filePath() != null && !request.filePath().isBlank() ? "FILE" : "LINK";
     }
 
-    private ResumePortfolioItemEntity getOwnedPortfolioItem(Long userId, Long itemId) {
+    private ResumePortfolioItemEntity getOwnedPortfolioItem(Long userId, Long documentId, Long itemId) {
         var entity = portfolioItemRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        if (!entity.getUserId().equals(userId)) {
+        if (!entity.getUserId().equals(userId) || !entity.getDocumentId().equals(documentId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
         return entity;

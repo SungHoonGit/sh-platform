@@ -24,16 +24,16 @@ public class ResumeViewServiceImpl implements ResumeViewService {
     private final PortfolioItemService portfolioItemService;
 
     @Override
-    public ResumeViewResponse getMyResumeView(Long userId) {
+    public ResumeViewResponse getMyResumeView(Long userId, Long documentId) {
         return new ResumeViewResponse(
                 findProfileOrNull(userId),
-                careerService.getCareers(userId),
-                educationService.getEducations(userId),
-                skillService.getSkills(userId),
-                certificateService.getCertificates(userId),
-                projectService.getProjects(userId),
-                introductionService.getIntroductions(userId),
-                portfolioItemService.getPortfolioItems(userId),
+                careerService.getCareers(userId, documentId),
+                educationService.getEducations(userId, documentId),
+                skillService.getSkills(userId, documentId),
+                certificateService.getCertificates(userId, documentId),
+                projectService.getProjects(userId, documentId),
+                introductionService.getIntroductions(userId, documentId),
+                portfolioItemService.getPortfolioItems(userId, documentId),
                 java.time.LocalDateTime.now()
         );
     }

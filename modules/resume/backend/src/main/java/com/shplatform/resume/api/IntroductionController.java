@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -35,8 +36,8 @@ public class IntroductionController {
      */
     @GetMapping
     @Operation(summary = "자기소개 항목 목록 조회")
-    public ResponseEntity<ApiResponse<List<IntroductionResponse>>> getIntroductions() {
-        var response = introductionService.getIntroductions(SecurityUtils.currentAccountId());
+    public ResponseEntity<ApiResponse<List<IntroductionResponse>>> getIntroductions(@RequestParam Long documentId) {
+        var response = introductionService.getIntroductions(SecurityUtils.currentAccountId(), documentId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -46,8 +47,9 @@ public class IntroductionController {
     @PostMapping
     @Operation(summary = "자기소개 항목 추가")
     public ResponseEntity<ApiResponse<IntroductionResponse>> createIntroduction(
-            @Valid @RequestBody IntroductionRequest request) {
-        var response = introductionService.createIntroduction(SecurityUtils.currentAccountId(), request);
+            @Valid @RequestBody IntroductionRequest request,
+            @RequestParam Long documentId) {
+        var response = introductionService.createIntroduction(SecurityUtils.currentAccountId(), documentId, request);
         return ResponseEntity.ok(ApiResponse.created(response));
     }
 
@@ -58,8 +60,9 @@ public class IntroductionController {
     @Operation(summary = "자기소개 항목 수정")
     public ResponseEntity<ApiResponse<IntroductionResponse>> updateIntroduction(
             @PathVariable Long id,
-            @Valid @RequestBody IntroductionRequest request) {
-        var response = introductionService.updateIntroduction(SecurityUtils.currentAccountId(), id, request);
+            @Valid @RequestBody IntroductionRequest request,
+            @RequestParam Long documentId) {
+        var response = introductionService.updateIntroduction(SecurityUtils.currentAccountId(), id, documentId, request);
         return ResponseEntity.ok(ApiResponse.success("수정 완료", response));
     }
 
@@ -68,8 +71,8 @@ public class IntroductionController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "자기소개 항목 삭제")
-    public ResponseEntity<Void> deleteIntroduction(@PathVariable Long id) {
-        introductionService.deleteIntroduction(SecurityUtils.currentAccountId(), id);
+    public ResponseEntity<Void> deleteIntroduction(@PathVariable Long id, @RequestParam Long documentId) {
+        introductionService.deleteIntroduction(SecurityUtils.currentAccountId(), id, documentId);
         return ResponseEntity.noContent().build();
     }
 
@@ -78,8 +81,8 @@ public class IntroductionController {
      */
     @PutMapping("/reorder")
     @Operation(summary = "자기소개 표시 순서 재정렬")
-    public ResponseEntity<Void> reorderIntroductions(@Valid @RequestBody ReorderRequest request) {
-        introductionService.reorderIntroductions(SecurityUtils.currentAccountId(), request.ids());
+    public ResponseEntity<Void> reorderIntroductions(@Valid @RequestBody ReorderRequest request, @RequestParam Long documentId) {
+        introductionService.reorderIntroductions(SecurityUtils.currentAccountId(), documentId, request.ids());
         return ResponseEntity.noContent().build();
     }
 }

@@ -16,7 +16,7 @@ public interface SkillService {
      * @param userId 로그인 사용자 ID
      * @return 스킬 목록 (display_order ASC, id ASC)
      */
-    List<SkillResponse> getSkills(Long userId);
+    List<SkillResponse> getSkills(Long userId, Long documentId);
 
     /**
      * (명령형) 스킬을 추가한다.
@@ -25,7 +25,7 @@ public interface SkillService {
      * @param request 스킬 정보
      * @return 생성된 스킬
      */
-    SkillResponse createSkill(Long userId, SkillRequest request);
+    SkillResponse createSkill(Long userId, Long documentId, SkillRequest request);
 
     /**
      * (명령형) 스킬을 수정한다.
@@ -36,7 +36,7 @@ public interface SkillService {
      * @return 수정된 스킬
      * @throws BusinessException NOT_FOUND 스킬이 없을 때, FORBIDDEN 다른 사용자의 스킬일 때
      */
-    SkillResponse updateSkill(Long userId, Long skillId, SkillRequest request);
+    SkillResponse updateSkill(Long userId, Long skillId, Long documentId, SkillRequest request);
 
     /**
      * (명령형) 스킬을 삭제한다.
@@ -45,7 +45,7 @@ public interface SkillService {
      * @param skillId 스킬 ID
      * @throws BusinessException NOT_FOUND 스킬이 없을 때, FORBIDDEN 다른 사용자의 스킬일 때
      */
-    void deleteSkill(Long userId, Long skillId);
+    void deleteSkill(Long userId, Long skillId, Long documentId);
 
     /**
      * (명령형) 스킬의 표시 순서를 재정렬한다.
@@ -54,5 +54,5 @@ public interface SkillService {
      * @param orderedIds 새 표시 순서대로 나열한 스킬 ID 목록
      * @throws BusinessException FORBIDDEN 본인 소유가 아닌 스킬 ID가 포함된 경우
      */
-    void reorderSkills(Long userId, List<Long> orderedIds);
+    void reorderSkills(Long userId, Long documentId, List<Long> orderedIds);
 }

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -35,8 +36,8 @@ public class ProjectController {
      */
     @GetMapping
     @Operation(summary = "프로젝트 목록 조회")
-    public ResponseEntity<ApiResponse<List<ProjectResponse>>> getProjects() {
-        var response = projectService.getProjects(SecurityUtils.currentAccountId());
+    public ResponseEntity<ApiResponse<List<ProjectResponse>>> getProjects(@RequestParam Long documentId) {
+        var response = projectService.getProjects(SecurityUtils.currentAccountId(), documentId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -46,8 +47,9 @@ public class ProjectController {
     @PostMapping
     @Operation(summary = "프로젝트 추가")
     public ResponseEntity<ApiResponse<ProjectResponse>> createProject(
-            @Valid @RequestBody ProjectRequest request) {
-        var response = projectService.createProject(SecurityUtils.currentAccountId(), request);
+            @Valid @RequestBody ProjectRequest request,
+            @RequestParam Long documentId) {
+        var response = projectService.createProject(SecurityUtils.currentAccountId(), documentId, request);
         return ResponseEntity.ok(ApiResponse.created(response));
     }
 
@@ -58,8 +60,9 @@ public class ProjectController {
     @Operation(summary = "프로젝트 수정")
     public ResponseEntity<ApiResponse<ProjectResponse>> updateProject(
             @PathVariable Long id,
-            @Valid @RequestBody ProjectRequest request) {
-        var response = projectService.updateProject(SecurityUtils.currentAccountId(), id, request);
+            @Valid @RequestBody ProjectRequest request,
+            @RequestParam Long documentId) {
+        var response = projectService.updateProject(SecurityUtils.currentAccountId(), id, documentId, request);
         return ResponseEntity.ok(ApiResponse.success("수정 완료", response));
     }
 
@@ -68,8 +71,8 @@ public class ProjectController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "프로젝트 삭제")
-    public ResponseEntity<Void> deleteProject(@PathVariable Long id) {
-        projectService.deleteProject(SecurityUtils.currentAccountId(), id);
+    public ResponseEntity<Void> deleteProject(@PathVariable Long id, @RequestParam Long documentId) {
+        projectService.deleteProject(SecurityUtils.currentAccountId(), id, documentId);
         return ResponseEntity.noContent().build();
     }
 
@@ -78,8 +81,8 @@ public class ProjectController {
      */
     @PutMapping("/reorder")
     @Operation(summary = "프로젝트 표시 순서 재정렬")
-    public ResponseEntity<Void> reorderProjects(@Valid @RequestBody ReorderRequest request) {
-        projectService.reorderProjects(SecurityUtils.currentAccountId(), request.ids());
+    public ResponseEntity<Void> reorderProjects(@Valid @RequestBody ReorderRequest request, @RequestParam Long documentId) {
+        projectService.reorderProjects(SecurityUtils.currentAccountId(), documentId, request.ids());
         return ResponseEntity.noContent().build();
     }
 }

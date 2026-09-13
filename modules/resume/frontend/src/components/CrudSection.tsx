@@ -82,6 +82,7 @@ export default function CrudSection({
   importOptions = null,
   renderRowExtra,
   rowToggle,
+  documentId,
   onChanged,
 }: {
   title: string;
@@ -114,8 +115,11 @@ export default function CrudSection({
     visible: (it: Item) => boolean;
     onToggle: (it: Item) => void;
   };
+  /** 이력서 문서 id. 모든 저장/삭제/순서 변경 API에 쿼리 파라미터로 전달된다 */
+  documentId?: number;
   onChanged: () => void;
 }) {
+  const docParams = documentId ? { documentId: String(documentId) } : undefined;
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>({});
   const [fileNames, setFileNames] = useState<Record<string, string>>({});
@@ -254,8 +258,8 @@ export default function CrudSection({
           payload[f.key] = form[f.key]?.trim() === "" ? null : form[f.key];
         }
       }
-      if (editing === "new") await apiPost(endpoint, payload);
-      else await apiPut(`${endpoint}/${editing}`, payload);
+      if (editing === "new") await apiPost(endpoint, payload, docParams);
+      else await apiPut(`${endpoint}/${editing}`, payload, docParams);
       setEditing(null);
       onChanged();
     } catch (e) {
@@ -292,7 +296,7 @@ export default function CrudSection({
     setBusy(true);
     setError(null);
     try {
-      await apiDelete(`${endpoint}/${id}`);
+      await apiDelete(`${endpoint}/${id}`, docParams);
       onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : "삭제에 실패했습니다.");
@@ -305,7 +309,7 @@ export default function CrudSection({
     setBusy(true);
     setError(null);
     try {
-      await apiPut(`${endpoint}/reorder`, { ids: next.map((it) => Number(it.id)) });
+      await apiPut(`${endpoint}/reorder`, { ids: next.map((it) => Number(it.id)) }, docParams);
       onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : "순서 저장에 실패했습니다.");

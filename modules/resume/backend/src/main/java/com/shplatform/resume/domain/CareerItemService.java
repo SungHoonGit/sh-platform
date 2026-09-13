@@ -15,7 +15,7 @@ public interface CareerItemService {
      * @return 상세 항목 목록 (표시 순서순)
      * @throws com.shplatform.common.exception.BusinessException NOT_FOUND (경력 없음), FORBIDDEN (타인 소유)
      */
-    List<CareerItemResponse> getCareerItems(Long userId, Long careerId);
+    List<CareerItemResponse> getCareerItems(Long userId, Long careerId, Long documentId);
 
     /**
      * (명령형) 경력에 기간별 상세 항목을 추가한다.
@@ -26,7 +26,7 @@ public interface CareerItemService {
      * @return 생성된 상세 항목
      * @throws com.shplatform.common.exception.BusinessException NOT_FOUND, FORBIDDEN
      */
-    CareerItemResponse createCareerItem(Long userId, Long careerId, CareerItemRequest request);
+    CareerItemResponse createCareerItem(Long userId, Long careerId, Long documentId, CareerItemRequest request);
 
     /**
      * (명령형) 경력의 상세 항목을 수정한다.
@@ -38,7 +38,7 @@ public interface CareerItemService {
      * @return 수정된 상세 항목
      * @throws com.shplatform.common.exception.BusinessException NOT_FOUND, FORBIDDEN
      */
-    CareerItemResponse updateCareerItem(Long userId, Long careerId, Long itemId, CareerItemRequest request);
+    CareerItemResponse updateCareerItem(Long userId, Long careerId, Long itemId, Long documentId, CareerItemRequest request);
 
     /**
      * (명령형) 경력의 상세 항목을 삭제한다.
@@ -48,7 +48,7 @@ public interface CareerItemService {
      * @param itemId   상세 항목 ID
      * @throws com.shplatform.common.exception.BusinessException NOT_FOUND, FORBIDDEN
      */
-    void deleteCareerItem(Long userId, Long careerId, Long itemId);
+    void deleteCareerItem(Long userId, Long careerId, Long itemId, Long documentId);
 
     /**
      * (명령형) 상세 항목의 표시 순서를 재정렬한다.
@@ -58,5 +58,5 @@ public interface CareerItemService {
      * @param orderedIds 재배치할 항목 ID 목록 (첫 번째가 위)
      * @throws com.shplatform.common.exception.BusinessException NOT_FOUND, FORBIDDEN
      */
-    void reorderCareerItems(Long userId, Long careerId, List<Long> orderedIds);
+    void reorderCareerItems(Long userId, Long careerId, Long documentId, List<Long> orderedIds);
 }

@@ -16,7 +16,7 @@ export default function ResumeViewPage({ documentId }: { documentId?: number }) 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiGet<ResumeView>("/view")
+    apiGet<ResumeView>("/view", documentId ? { documentId: String(documentId) } : undefined)
       .then(setView)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));

@@ -11,4 +11,6 @@ public interface ResumeCareerItemRepository extends JpaRepository<ResumeCareerIt
     List<ResumeCareerItemEntity> findByCareerIdOrderByDisplayOrderAscIdAsc(Long careerId);
 
     List<ResumeCareerItemEntity> findByCareerIdInOrderByDisplayOrderAscIdAsc(Collection<Long> careerIds);
+
+    List<ResumeCareerItemEntity> findByCareerIdAndDocumentIdOrderByDisplayOrderAscIdAsc(Long careerId, Long documentId);
 }

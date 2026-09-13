@@ -29,6 +29,7 @@ class PortfolioItemServiceImplTest {
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 999L;
     private static final Long ITEM_ID = 700L;
+    private static final Long DOCUMENT_ID = 100L;
 
     @Mock
     private ResumePortfolioItemRepository portfolioItemRepository;
@@ -48,7 +49,7 @@ class PortfolioItemServiceImplTest {
     }
 
     private ResumePortfolioItemEntity entity(Long userId) {
-        var e = ResumePortfolioItemEntity.create(userId);
+        var e = ResumePortfolioItemEntity.create(userId, DOCUMENT_ID);
         e.setId(ITEM_ID);
         e.setTitle("포트폴리오 사이트");
         e.setItemType("LINK");
@@ -58,10 +59,10 @@ class PortfolioItemServiceImplTest {
     @Test
     @DisplayName("getPortfolioItems: 작업물 목록을 조회한다")
     void getPortfolioItems_success() {
-        given(portfolioItemRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(portfolioItemRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
 
-        var responses = portfolioItemService.getPortfolioItems(USER_ID);
+        var responses = portfolioItemService.getPortfolioItems(USER_ID, DOCUMENT_ID);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).title()).isEqualTo("포트폴리오 사이트");
@@ -76,7 +77,7 @@ class PortfolioItemServiceImplTest {
                     return invocation.getArgument(0);
                 });
 
-        var response = portfolioItemService.createPortfolioItem(USER_ID, linkRequest());
+        var response = portfolioItemService.createPortfolioItem(USER_ID, DOCUMENT_ID, linkRequest());
 
         ArgumentCaptor<ResumePortfolioItemEntity> captor = ArgumentCaptor.forClass(ResumePortfolioItemEntity.class);
         then(portfolioItemRepository).should(times(1)).save(captor.capture());
@@ -91,7 +92,7 @@ class PortfolioItemServiceImplTest {
         var fileRequest = new PortfolioItemRequest("첨부파일", "FILE",
                 null, null, null, null, null, null, null, null, null, null, null, 1);
 
-        assertThatThrownBy(() -> portfolioItemService.createPortfolioItem(USER_ID, fileRequest))
+        assertThatThrownBy(() -> portfolioItemService.createPortfolioItem(USER_ID, DOCUMENT_ID, fileRequest))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INVALID_INPUT);
@@ -108,7 +109,7 @@ class PortfolioItemServiceImplTest {
         var fileRequest = new PortfolioItemRequest("기획서", "FILE",
                 null, null, null, null, null, null, null, null, "6/202608/uuid.pptx", null, "서비스 기획서", 2);
 
-        portfolioItemService.createPortfolioItem(USER_ID, fileRequest);
+        portfolioItemService.createPortfolioItem(USER_ID, DOCUMENT_ID, fileRequest);
 
         ArgumentCaptor<ResumePortfolioItemEntity> captor = ArgumentCaptor.forClass(ResumePortfolioItemEntity.class);
         then(portfolioItemRepository).should(times(1)).save(captor.capture());
@@ -126,8 +127,8 @@ class PortfolioItemServiceImplTest {
         var fileAttached = new PortfolioItemRequest("프로젝트 B", null,
                 null, null, null, null, null, null, null, null, "6/202609/uuid.pdf", null, null, 1);
 
-        portfolioItemService.createPortfolioItem(USER_ID, linkOnly);
-        portfolioItemService.createPortfolioItem(USER_ID, fileAttached);
+        portfolioItemService.createPortfolioItem(USER_ID, DOCUMENT_ID, linkOnly);
+        portfolioItemService.createPortfolioItem(USER_ID, DOCUMENT_ID, fileAttached);
 
         ArgumentCaptor<ResumePortfolioItemEntity> captor = ArgumentCaptor.forClass(ResumePortfolioItemEntity.class);
         then(portfolioItemRepository).should(times(2)).save(captor.capture());
@@ -143,7 +144,7 @@ class PortfolioItemServiceImplTest {
         given(portfolioItemRepository.save(any(ResumePortfolioItemEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = portfolioItemService.updatePortfolioItem(USER_ID, ITEM_ID, linkRequest());
+        var response = portfolioItemService.updatePortfolioItem(USER_ID, DOCUMENT_ID, ITEM_ID, linkRequest());
 
         then(portfolioItemRepository).should(times(1)).save(existing);
         assertThat(response.title()).isEqualTo("포트폴리오 사이트");
@@ -158,7 +159,7 @@ class PortfolioItemServiceImplTest {
                     return invocation.getArgument(0);
                 });
 
-        var response = portfolioItemService.createPortfolioItem(USER_ID, enhancedRequest());
+        var response = portfolioItemService.createPortfolioItem(USER_ID, DOCUMENT_ID, enhancedRequest());
 
         ArgumentCaptor<ResumePortfolioItemEntity> captor = ArgumentCaptor.forClass(ResumePortfolioItemEntity.class);
         then(portfolioItemRepository).should(times(1)).save(captor.capture());
@@ -178,7 +179,7 @@ class PortfolioItemServiceImplTest {
         given(portfolioItemRepository.save(any(ResumePortfolioItemEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = portfolioItemService.updatePortfolioItem(USER_ID, ITEM_ID, enhancedRequest());
+        var response = portfolioItemService.updatePortfolioItem(USER_ID, DOCUMENT_ID, ITEM_ID, enhancedRequest());
 
         assertThat(existing.getGithubUrl()).isEqualTo("https://github.com/owner/repo");
         assertThat(existing.getDemoUrl()).isEqualTo("https://demo.example.com");
@@ -191,7 +192,7 @@ class PortfolioItemServiceImplTest {
     void updatePortfolioItem_forbidden() {
         given(portfolioItemRepository.findById(ITEM_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> portfolioItemService.updatePortfolioItem(USER_ID, ITEM_ID, linkRequest()))
+        assertThatThrownBy(() -> portfolioItemService.updatePortfolioItem(USER_ID, DOCUMENT_ID, ITEM_ID, linkRequest()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -203,7 +204,7 @@ class PortfolioItemServiceImplTest {
         var existing = entity(USER_ID);
         given(portfolioItemRepository.findById(ITEM_ID)).willReturn(Optional.of(existing));
 
-        portfolioItemService.deletePortfolioItem(USER_ID, ITEM_ID);
+        portfolioItemService.deletePortfolioItem(USER_ID, DOCUMENT_ID, ITEM_ID);
 
         then(portfolioItemRepository).should(times(1)).delete(existing);
     }
@@ -217,12 +218,12 @@ class PortfolioItemServiceImplTest {
         var second = entity(USER_ID);
         second.setId(702L);
         second.setDisplayOrder(2);
-        given(portfolioItemRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(portfolioItemRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(first, second));
         given(portfolioItemRepository.saveAll(any()))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        portfolioItemService.reorderPortfolioItems(USER_ID, List.of(702L, 701L));
+        portfolioItemService.reorderPortfolioItems(USER_ID, DOCUMENT_ID, List.of(702L, 701L));
 
         assertThat(first.getDisplayOrder()).isEqualTo(2);
         assertThat(second.getDisplayOrder()).isEqualTo(1);
@@ -232,10 +233,10 @@ class PortfolioItemServiceImplTest {
     @Test
     @DisplayName("reorderPortfolioItems: 본인 소유가 아닌 작업물 id가 포함되면 FORBIDDEN 예외가 발생한다")
     void reorderPortfolioItems_forbidden() {
-        given(portfolioItemRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(portfolioItemRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
 
-assertThatThrownBy(() -> portfolioItemService.reorderPortfolioItems(USER_ID, List.of(999L)))
+assertThatThrownBy(() -> portfolioItemService.reorderPortfolioItems(USER_ID, DOCUMENT_ID, List.of(999L)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);

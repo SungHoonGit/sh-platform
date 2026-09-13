@@ -16,7 +16,7 @@ public interface ProjectService {
      * @param userId 로그인 사용자 ID
      * @return 프로젝트 목록 (display_order ASC, id ASC)
      */
-    List<ProjectResponse> getProjects(Long userId);
+    List<ProjectResponse> getProjects(Long userId, Long documentId);
 
     /**
      * (명령형) 프로젝트를 추가한다.
@@ -25,7 +25,7 @@ public interface ProjectService {
      * @param request 프로젝트 정보
      * @return 생성된 프로젝트
      */
-    ProjectResponse createProject(Long userId, ProjectRequest request);
+    ProjectResponse createProject(Long userId, Long documentId, ProjectRequest request);
 
     /**
      * (명령형) 프로젝트를 수정한다.
@@ -36,7 +36,7 @@ public interface ProjectService {
      * @return 수정된 프로젝트
      * @throws BusinessException NOT_FOUND 프로젝트가 없을 때, FORBIDDEN 다른 사용자의 프로젝트일 때
      */
-    ProjectResponse updateProject(Long userId, Long projectId, ProjectRequest request);
+    ProjectResponse updateProject(Long userId, Long projectId, Long documentId, ProjectRequest request);
 
     /**
      * (명령형) 프로젝트를 삭제한다.
@@ -45,7 +45,7 @@ public interface ProjectService {
      * @param projectId 프로젝트 ID
      * @throws BusinessException NOT_FOUND 프로젝트가 없을 때, FORBIDDEN 다른 사용자의 프로젝트일 때
      */
-    void deleteProject(Long userId, Long projectId);
+    void deleteProject(Long userId, Long projectId, Long documentId);
 
     /**
      * (명령형) 프로젝트의 표시 순서를 재정렬한다.
@@ -54,5 +54,5 @@ public interface ProjectService {
      * @param orderedIds 새 표시 순서대로 나열한 프로젝트 ID 목록
      * @throws BusinessException FORBIDDEN 본인 소유가 아닌 프로젝트 ID가 포함된 경우
      */
-    void reorderProjects(Long userId, List<Long> orderedIds);
+    void reorderProjects(Long userId, Long documentId, List<Long> orderedIds);
 }

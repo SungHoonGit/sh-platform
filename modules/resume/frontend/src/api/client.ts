@@ -31,12 +31,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return json.data;
 }
 
-export function apiGet<T>(path: string): Promise<T> {
-  return request<T>("GET", path);
+export function apiGet<T>(path: string, params?: Record<string, string>): Promise<T> {
+  const query = params ? '?' + new URLSearchParams(params).toString() : '';
+  return request<T>("GET", path + query);
 }
 
-export function apiPost<T>(path: string, body: unknown): Promise<T> {
-  return request<T>("POST", path, body);
+export function apiPost<T>(path: string, body: unknown, params?: Record<string, string>): Promise<T> {
+  const query = params ? '?' + new URLSearchParams(params).toString() : '';
+  return request<T>("POST", path + query, body);
 }
 
 export async function apiUpload<T>(path: string, file: File, fieldName = "file"): Promise<T> {
@@ -124,12 +126,14 @@ export function fileDownloadPath(filePath: string): string {
   return filePath.startsWith("/api/v1/") ? filePath.replace(/^\/api\/v1/, "") : filePath;
 }
 
-export function apiPut<T>(path: string, body: unknown): Promise<T> {
-  return request<T>("PUT", path, body);
+export function apiPut<T>(path: string, body: unknown, params?: Record<string, string>): Promise<T> {
+  const query = params ? '?' + new URLSearchParams(params).toString() : '';
+  return request<T>("PUT", path + query, body);
 }
 
-export function apiDelete<T = null>(path: string): Promise<T> {
-  return request<T>("DELETE", path);
+export function apiDelete<T = null>(path: string, params?: Record<string, string>): Promise<T> {
+  const query = params ? '?' + new URLSearchParams(params).toString() : '';
+  return request<T>("DELETE", path + query);
 }
 
 /**

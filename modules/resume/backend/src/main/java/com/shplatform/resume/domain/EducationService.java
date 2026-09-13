@@ -16,7 +16,7 @@ public interface EducationService {
      * @param userId 로그인 사용자 ID
      * @return 학력 목록 (display_order ASC, id ASC)
      */
-    List<EducationResponse> getEducations(Long userId);
+    List<EducationResponse> getEducations(Long userId, Long documentId);
 
     /**
      * (명령형) 학력을 추가한다.
@@ -25,7 +25,7 @@ public interface EducationService {
      * @param request 학력 정보
      * @return 생성된 학력
      */
-    EducationResponse createEducation(Long userId, EducationRequest request);
+    EducationResponse createEducation(Long userId, Long documentId, EducationRequest request);
 
     /**
      * (명령형) 학력을 수정한다.
@@ -36,7 +36,7 @@ public interface EducationService {
      * @return 수정된 학력
      * @throws BusinessException NOT_FOUND 학력이 없을 때, FORBIDDEN 다른 사용자의 학력일 때
      */
-    EducationResponse updateEducation(Long userId, Long educationId, EducationRequest request);
+    EducationResponse updateEducation(Long userId, Long educationId, Long documentId, EducationRequest request);
 
     /**
      * (명령형) 학력을 삭제한다.
@@ -45,7 +45,7 @@ public interface EducationService {
      * @param educationId 학력 ID
      * @throws BusinessException NOT_FOUND 학력이 없을 때, FORBIDDEN 다른 사용자의 학력일 때
      */
-    void deleteEducation(Long userId, Long educationId);
+    void deleteEducation(Long userId, Long educationId, Long documentId);
 
     /**
      * (명령형) 학력의 표시 순서를 재정렬한다.
@@ -54,5 +54,5 @@ public interface EducationService {
      * @param orderedIds 새 표시 순서대로 나열한 학력 ID 목록
      * @throws BusinessException FORBIDDEN 본인 소유가 아닌 학력 ID가 포함된 경우
      */
-    void reorderEducations(Long userId, List<Long> orderedIds);
+    void reorderEducations(Long userId, Long documentId, List<Long> orderedIds);
 }

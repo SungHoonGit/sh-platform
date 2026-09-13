@@ -16,7 +16,7 @@ public interface CertificateService {
      * @param userId 로그인 사용자 ID
      * @return 자격증 목록 (display_order ASC, id ASC)
      */
-    List<CertificateResponse> getCertificates(Long userId);
+    List<CertificateResponse> getCertificates(Long userId, Long documentId);
 
     /**
      * (명령형) 자격증을 추가한다.
@@ -25,7 +25,7 @@ public interface CertificateService {
      * @param request 자격증 정보
      * @return 생성된 자격증
      */
-    CertificateResponse createCertificate(Long userId, CertificateRequest request);
+    CertificateResponse createCertificate(Long userId, Long documentId, CertificateRequest request);
 
     /**
      * (명령형) 자격증을 수정한다.
@@ -36,7 +36,7 @@ public interface CertificateService {
      * @return 수정된 자격증
      * @throws BusinessException NOT_FOUND 자격증이 없을 때, FORBIDDEN 다른 사용자의 자격증일 때
      */
-    CertificateResponse updateCertificate(Long userId, Long certificateId, CertificateRequest request);
+    CertificateResponse updateCertificate(Long userId, Long certificateId, Long documentId, CertificateRequest request);
 
     /**
      * (명령형) 자격증을 삭제한다.
@@ -45,7 +45,7 @@ public interface CertificateService {
      * @param certificateId 자격증 ID
      * @throws BusinessException NOT_FOUND 자격증이 없을 때, FORBIDDEN 다른 사용자의 자격증일 때
      */
-    void deleteCertificate(Long userId, Long certificateId);
+    void deleteCertificate(Long userId, Long certificateId, Long documentId);
 
     /**
      * (명령형) 자격증의 표시 순서를 재정렬한다.
@@ -54,5 +54,5 @@ public interface CertificateService {
      * @param orderedIds    새 표시 순서대로 나열한 자격증 ID 목록
      * @throws BusinessException FORBIDDEN 본인 소유가 아닌 자격증 ID가 포함된 경우
      */
-    void reorderCertificates(Long userId, List<Long> orderedIds);
+    void reorderCertificates(Long userId, Long documentId, List<Long> orderedIds);
 }

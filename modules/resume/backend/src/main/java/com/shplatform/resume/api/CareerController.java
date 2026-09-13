@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -35,8 +36,8 @@ public class CareerController {
      */
     @GetMapping
     @Operation(summary = "경력 목록 조회")
-    public ResponseEntity<ApiResponse<List<CareerResponse>>> getCareers() {
-        var response = careerService.getCareers(SecurityUtils.currentAccountId());
+    public ResponseEntity<ApiResponse<List<CareerResponse>>> getCareers(@RequestParam Long documentId) {
+        var response = careerService.getCareers(SecurityUtils.currentAccountId(), documentId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -46,8 +47,9 @@ public class CareerController {
     @PostMapping
     @Operation(summary = "경력 추가")
     public ResponseEntity<ApiResponse<CareerResponse>> createCareer(
-            @Valid @RequestBody CareerRequest request) {
-        var response = careerService.createCareer(SecurityUtils.currentAccountId(), request);
+            @Valid @RequestBody CareerRequest request,
+            @RequestParam Long documentId) {
+        var response = careerService.createCareer(SecurityUtils.currentAccountId(), documentId, request);
         return ResponseEntity.ok(ApiResponse.created(response));
     }
 
@@ -58,8 +60,9 @@ public class CareerController {
     @Operation(summary = "경력 수정")
     public ResponseEntity<ApiResponse<CareerResponse>> updateCareer(
             @PathVariable Long id,
-            @Valid @RequestBody CareerRequest request) {
-        var response = careerService.updateCareer(SecurityUtils.currentAccountId(), id, request);
+            @Valid @RequestBody CareerRequest request,
+            @RequestParam Long documentId) {
+        var response = careerService.updateCareer(SecurityUtils.currentAccountId(), id, documentId, request);
         return ResponseEntity.ok(ApiResponse.success("수정 완료", response));
     }
 
@@ -68,8 +71,8 @@ public class CareerController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "경력 삭제")
-    public ResponseEntity<Void> deleteCareer(@PathVariable Long id) {
-        careerService.deleteCareer(SecurityUtils.currentAccountId(), id);
+    public ResponseEntity<Void> deleteCareer(@PathVariable Long id, @RequestParam Long documentId) {
+        careerService.deleteCareer(SecurityUtils.currentAccountId(), id, documentId);
         return ResponseEntity.noContent().build();
     }
 
@@ -78,8 +81,8 @@ public class CareerController {
      */
     @PutMapping("/reorder")
     @Operation(summary = "경력 표시 순서 재정렬")
-    public ResponseEntity<Void> reorderCareers(@Valid @RequestBody ReorderRequest request) {
-        careerService.reorderCareers(SecurityUtils.currentAccountId(), request.ids());
+    public ResponseEntity<Void> reorderCareers(@Valid @RequestBody ReorderRequest request, @RequestParam Long documentId) {
+        careerService.reorderCareers(SecurityUtils.currentAccountId(), documentId, request.ids());
         return ResponseEntity.noContent().build();
     }
 }

@@ -25,46 +25,46 @@ public class CareerItemServiceImpl implements CareerItemService {
     private final ResumeCareerRepository careerRepository;
 
     @Override
-    public List<CareerItemResponse> getCareerItems(Long userId, Long careerId) {
-        requireOwnedCareer(userId, careerId);
-        return careerItemRepository.findByCareerIdOrderByDisplayOrderAscIdAsc(careerId).stream()
+    public List<CareerItemResponse> getCareerItems(Long userId, Long careerId, Long documentId) {
+        requireOwnedCareer(userId, careerId, documentId);
+        return careerItemRepository.findByCareerIdAndDocumentIdOrderByDisplayOrderAscIdAsc(careerId, documentId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Override
     @Transactional
-    public CareerItemResponse createCareerItem(Long userId, Long careerId, CareerItemRequest request) {
-        requireOwnedCareer(userId, careerId);
-        var entity = ResumeCareerItemEntity.create(careerId);
+    public CareerItemResponse createCareerItem(Long userId, Long careerId, Long documentId, CareerItemRequest request) {
+        requireOwnedCareer(userId, careerId, documentId);
+        var entity = ResumeCareerItemEntity.create(careerId, documentId);
         applyRequest(entity, request);
         return toResponse(careerItemRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public CareerItemResponse updateCareerItem(Long userId, Long careerId, Long itemId, CareerItemRequest request) {
-        requireOwnedCareer(userId, careerId);
-        var entity = getOwnedItem(careerId, itemId);
+    public CareerItemResponse updateCareerItem(Long userId, Long careerId, Long itemId, Long documentId, CareerItemRequest request) {
+        requireOwnedCareer(userId, careerId, documentId);
+        var entity = getOwnedItem(careerId, itemId, documentId);
         applyRequest(entity, request);
         return toResponse(careerItemRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public void deleteCareerItem(Long userId, Long careerId, Long itemId) {
-        requireOwnedCareer(userId, careerId);
-        careerItemRepository.delete(getOwnedItem(careerId, itemId));
+    public void deleteCareerItem(Long userId, Long careerId, Long itemId, Long documentId) {
+        requireOwnedCareer(userId, careerId, documentId);
+        careerItemRepository.delete(getOwnedItem(careerId, itemId, documentId));
     }
 
     @Override
     @Transactional
-    public void reorderCareerItems(Long userId, Long careerId, List<Long> orderedIds) {
+    public void reorderCareerItems(Long userId, Long careerId, Long documentId, List<Long> orderedIds) {
         if (orderedIds == null || orderedIds.isEmpty()) {
             return;
         }
-        requireOwnedCareer(userId, careerId);
-        var owned = careerItemRepository.findByCareerIdOrderByDisplayOrderAscIdAsc(careerId);
+        requireOwnedCareer(userId, careerId, documentId);
+        var owned = careerItemRepository.findByCareerIdAndDocumentIdOrderByDisplayOrderAscIdAsc(careerId, documentId);
         Map<Long, ResumeCareerItemEntity> byId = owned.stream()
                 .collect(Collectors.toMap(ResumeCareerItemEntity::getId, e -> e));
         int order = 1;
@@ -78,18 +78,18 @@ public class CareerItemServiceImpl implements CareerItemService {
         careerItemRepository.saveAll(owned);
     }
 
-    private void requireOwnedCareer(Long userId, Long careerId) {
+    private void requireOwnedCareer(Long userId, Long careerId, Long documentId) {
         ResumeCareerEntity career = careerRepository.findById(careerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        if (!career.getUserId().equals(userId)) {
+        if (!career.getUserId().equals(userId) || !career.getDocumentId().equals(documentId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
     }
 
-    private ResumeCareerItemEntity getOwnedItem(Long careerId, Long itemId) {
+    private ResumeCareerItemEntity getOwnedItem(Long careerId, Long itemId, Long documentId) {
         var entity = careerItemRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        if (!entity.getCareerId().equals(careerId)) {
+        if (!entity.getCareerId().equals(careerId) || !entity.getDocumentId().equals(documentId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
         return entity;

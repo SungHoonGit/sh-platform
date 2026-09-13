@@ -29,6 +29,7 @@ class ProjectServiceImplTest {
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 999L;
     private static final Long PROJECT_ID = 500L;
+    private static final Long DOCUMENT_ID = 100L;
 
     @Mock
     private ResumeProjectRepository projectRepository;
@@ -42,7 +43,7 @@ class ProjectServiceImplTest {
     }
 
     private ResumeProjectEntity entity(Long userId) {
-        var e = ResumeProjectEntity.create(userId);
+        var e = ResumeProjectEntity.create(userId, DOCUMENT_ID);
         e.setId(PROJECT_ID);
         e.setName("sh-platform");
         return e;
@@ -51,10 +52,10 @@ class ProjectServiceImplTest {
     @Test
     @DisplayName("getProjects: 프로젝트 목록을 조회한다")
     void getProjects_success() {
-        given(projectRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(projectRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
 
-        var responses = projectService.getProjects(USER_ID);
+        var responses = projectService.getProjects(USER_ID, DOCUMENT_ID);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).name()).isEqualTo("sh-platform");
@@ -69,7 +70,7 @@ class ProjectServiceImplTest {
                     return invocation.getArgument(0);
                 });
 
-        var response = projectService.createProject(USER_ID, request());
+        var response = projectService.createProject(USER_ID, DOCUMENT_ID, request());
 
         ArgumentCaptor<ResumeProjectEntity> captor = ArgumentCaptor.forClass(ResumeProjectEntity.class);
         then(projectRepository).should(times(1)).save(captor.capture());
@@ -85,7 +86,7 @@ class ProjectServiceImplTest {
         given(projectRepository.save(any(ResumeProjectEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = projectService.updateProject(USER_ID, PROJECT_ID, request());
+        var response = projectService.updateProject(USER_ID, DOCUMENT_ID, PROJECT_ID, request());
 
         then(projectRepository).should(times(1)).save(existing);
         assertThat(response.name()).isEqualTo("sh-platform");
@@ -96,7 +97,7 @@ class ProjectServiceImplTest {
     void updateProject_forbidden() {
         given(projectRepository.findById(PROJECT_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> projectService.updateProject(USER_ID, PROJECT_ID, request()))
+        assertThatThrownBy(() -> projectService.updateProject(USER_ID, DOCUMENT_ID, PROJECT_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -108,7 +109,7 @@ class ProjectServiceImplTest {
         var existing = entity(USER_ID);
         given(projectRepository.findById(PROJECT_ID)).willReturn(Optional.of(existing));
 
-        projectService.deleteProject(USER_ID, PROJECT_ID);
+        projectService.deleteProject(USER_ID, DOCUMENT_ID, PROJECT_ID);
 
         then(projectRepository).should(times(1)).delete(existing);
     }
@@ -122,12 +123,12 @@ class ProjectServiceImplTest {
         var second = entity(USER_ID);
         second.setId(502L);
         second.setDisplayOrder(2);
-        given(projectRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(projectRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(first, second));
         given(projectRepository.saveAll(any()))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        projectService.reorderProjects(USER_ID, List.of(502L, 501L));
+        projectService.reorderProjects(USER_ID, DOCUMENT_ID, List.of(502L, 501L));
 
         assertThat(first.getDisplayOrder()).isEqualTo(2);
         assertThat(second.getDisplayOrder()).isEqualTo(1);
@@ -137,10 +138,10 @@ class ProjectServiceImplTest {
     @Test
     @DisplayName("reorderProjects: 본인 소유가 아닌 프로젝트 id가 포함되면 FORBIDDEN 예외가 발생한다")
     void reorderProjects_forbidden() {
-        given(projectRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(projectRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
 
-        assertThatThrownBy(() -> projectService.reorderProjects(USER_ID, List.of(999L)))
+        assertThatThrownBy(() -> projectService.reorderProjects(USER_ID, DOCUMENT_ID, List.of(999L)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);

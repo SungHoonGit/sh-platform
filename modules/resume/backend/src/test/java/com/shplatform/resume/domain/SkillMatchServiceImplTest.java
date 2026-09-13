@@ -42,13 +42,13 @@ class SkillMatchServiceImplTest {
     }
 
     private ResumeProjectEntity project(String techStack) {
-        ResumeProjectEntity e = ResumeProjectEntity.create(1L);
+        ResumeProjectEntity e = ResumeProjectEntity.create(1L, 100L);
         e.setTechStack(techStack);
         return e;
     }
 
     private ResumePortfolioItemEntity portfolioItem(String techStack) {
-        ResumePortfolioItemEntity e = ResumePortfolioItemEntity.create(1L);
+        ResumePortfolioItemEntity e = ResumePortfolioItemEntity.create(1L, 100L);
         e.setTechStack(techStack);
         return e;
     }

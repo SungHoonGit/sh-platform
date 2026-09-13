@@ -7,8 +7,24 @@ import com.shplatform.common.exception.ErrorCode;
 import com.shplatform.resume.api.dto.DocumentCreateRequest;
 import com.shplatform.resume.api.dto.DocumentResponse;
 import com.shplatform.resume.api.dto.DocumentUpdateRequest;
+import com.shplatform.resume.infrastructure.entity.ResumeCareerEntity;
+import com.shplatform.resume.infrastructure.entity.ResumeCareerItemEntity;
+import com.shplatform.resume.infrastructure.entity.ResumeCertificateEntity;
 import com.shplatform.resume.infrastructure.entity.ResumeDocumentEntity;
+import com.shplatform.resume.infrastructure.entity.ResumeEducationEntity;
+import com.shplatform.resume.infrastructure.entity.ResumeIntroductionEntity;
+import com.shplatform.resume.infrastructure.entity.ResumePortfolioItemEntity;
+import com.shplatform.resume.infrastructure.entity.ResumeProjectEntity;
+import com.shplatform.resume.infrastructure.entity.ResumeSkillEntity;
+import com.shplatform.resume.infrastructure.repository.ResumeCareerItemRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeCareerRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeCertificateRepository;
 import com.shplatform.resume.infrastructure.repository.ResumeDocumentRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeEducationRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeIntroductionRepository;
+import com.shplatform.resume.infrastructure.repository.ResumePortfolioItemRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeProjectRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeSkillRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,6 +57,14 @@ public class ResumeDocumentServiceImpl implements ResumeDocumentService {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final ResumeDocumentRepository documentRepository;
+    private final ResumeCareerRepository careerRepository;
+    private final ResumeCareerItemRepository careerItemRepository;
+    private final ResumeEducationRepository educationRepository;
+    private final ResumeProjectRepository projectRepository;
+    private final ResumeSkillRepository skillRepository;
+    private final ResumeCertificateRepository certificateRepository;
+    private final ResumeIntroductionRepository introductionRepository;
+    private final ResumePortfolioItemRepository portfolioItemRepository;
 
     @Override
     @Transactional
@@ -59,8 +83,11 @@ public class ResumeDocumentServiceImpl implements ResumeDocumentService {
     @Transactional
     public DocumentResponse createDocument(Long userId, DocumentCreateRequest request) {
         String sectionConfig = DEFAULT_SECTION_CONFIG;
+        Long fromDocumentId = null;
         if (request.fromDocumentId() != null) {
-            sectionConfig = getOwnedDocument(userId, request.fromDocumentId()).getSectionConfig();
+            var sourceDoc = getOwnedDocument(userId, request.fromDocumentId());
+            sectionConfig = sourceDoc.getSectionConfig();
+            fromDocumentId = sourceDoc.getId();
         }
         var entity = ResumeDocumentEntity.create(userId, request.title(), "CLASSIC", false, sectionConfig);
         List<ResumeDocumentEntity> owned =
@@ -70,7 +97,111 @@ public class ResumeDocumentServiceImpl implements ResumeDocumentService {
                 .max()
                 .orElse(0) + 1;
         entity.updateDisplayOrder(nextOrder);
-        return toResponse(documentRepository.save(entity));
+        ResumeDocumentEntity saved = documentRepository.save(entity);
+        if (fromDocumentId != null) {
+            cloneItems(userId, fromDocumentId, saved.getId());
+        }
+        return toResponse(saved);
+    }
+
+    private void cloneItems(Long userId, Long sourceDocumentId, Long targetDocumentId) {
+        var careers = careerRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, sourceDocumentId);
+        for (var career : careers) {
+            var newCareer = ResumeCareerEntity.create(userId, targetDocumentId);
+            newCareer.setCompany(career.getCompany());
+            newCareer.setTitle(career.getTitle());
+            newCareer.setStartDate(career.getStartDate());
+            newCareer.setEndDate(career.getEndDate());
+            newCareer.setDescription(career.getDescription());
+            newCareer.setDisplayOrder(career.getDisplayOrder());
+            var savedCareer = careerRepository.save(newCareer);
+            var items = careerItemRepository.findByCareerIdAndDocumentIdOrderByDisplayOrderAscIdAsc(career.getId(), sourceDocumentId);
+            for (var item : items) {
+                var newItem = ResumeCareerItemEntity.create(savedCareer.getId(), targetDocumentId);
+                newItem.setTitle(item.getTitle());
+                newItem.setStartDate(item.getStartDate());
+                newItem.setEndDate(item.getEndDate());
+                newItem.setDescription(item.getDescription());
+                newItem.setDisplayOrder(item.getDisplayOrder());
+                careerItemRepository.save(newItem);
+            }
+        }
+        var educations = educationRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, sourceDocumentId);
+        for (var edu : educations) {
+            var newEdu = ResumeEducationEntity.create(userId, targetDocumentId);
+            newEdu.setSchool(edu.getSchool());
+            newEdu.setSchoolType(edu.getSchoolType());
+            newEdu.setMajor(edu.getMajor());
+            newEdu.setDegree(edu.getDegree());
+            newEdu.setGpa(edu.getGpa());
+            newEdu.setStartDate(edu.getStartDate());
+            newEdu.setEndDate(edu.getEndDate());
+            newEdu.setStatus(edu.getStatus());
+            newEdu.setDisplayOrder(edu.getDisplayOrder());
+            educationRepository.save(newEdu);
+        }
+        var skills = skillRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, sourceDocumentId);
+        for (var skill : skills) {
+            var newSkill = ResumeSkillEntity.create(userId, targetDocumentId);
+            newSkill.setName(skill.getName());
+            newSkill.setLevel(skill.getLevel());
+            newSkill.setCategory(skill.getCategory());
+            newSkill.setDisplayOrder(skill.getDisplayOrder());
+            skillRepository.save(newSkill);
+        }
+        var certificates = certificateRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, sourceDocumentId);
+        for (var cert : certificates) {
+            var newCert = ResumeCertificateEntity.create(userId, targetDocumentId);
+            newCert.setName(cert.getName());
+            newCert.setIssuer(cert.getIssuer());
+            newCert.setAcquiredAt(cert.getAcquiredAt());
+            newCert.setDisplayOrder(cert.getDisplayOrder());
+            certificateRepository.save(newCert);
+        }
+        var projects = projectRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, sourceDocumentId);
+        for (var proj : projects) {
+            var newProj = ResumeProjectEntity.create(userId, targetDocumentId);
+            newProj.setName(proj.getName());
+            newProj.setRole(proj.getRole());
+            newProj.setStartDate(proj.getStartDate());
+            newProj.setEndDate(proj.getEndDate());
+            newProj.setDescription(proj.getDescription());
+            newProj.setTechStack(proj.getTechStack());
+            newProj.setGithubUrl(proj.getGithubUrl());
+            newProj.setDemoUrl(proj.getDemoUrl());
+            newProj.setVideoUrl(proj.getVideoUrl());
+            newProj.setLinkUrl(proj.getLinkUrl());
+            newProj.setThumbnailPath(proj.getThumbnailPath());
+            newProj.setDisplayOrder(proj.getDisplayOrder());
+            projectRepository.save(newProj);
+        }
+        var introductions = introductionRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, sourceDocumentId);
+        for (var intro : introductions) {
+            var newIntro = ResumeIntroductionEntity.create(userId, targetDocumentId);
+            newIntro.setTitle(intro.getTitle());
+            newIntro.setContent(intro.getContent());
+            newIntro.setDisplayOrder(intro.getDisplayOrder());
+            introductionRepository.save(newIntro);
+        }
+        var portfolioItems = portfolioItemRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, sourceDocumentId);
+        for (var pi : portfolioItems) {
+            var newPi = ResumePortfolioItemEntity.create(userId, targetDocumentId);
+            newPi.setTitle(pi.getTitle());
+            newPi.setItemType(pi.getItemType());
+            newPi.setFilePath(pi.getFilePath());
+            newPi.setLinkUrl(pi.getLinkUrl());
+            newPi.setThumbnailPath(pi.getThumbnailPath());
+            newPi.setGithubUrl(pi.getGithubUrl());
+            newPi.setDemoUrl(pi.getDemoUrl());
+            newPi.setVideoUrl(pi.getVideoUrl());
+            newPi.setRole(pi.getRole());
+            newPi.setStartDate(pi.getStartDate());
+            newPi.setEndDate(pi.getEndDate());
+            newPi.setTechStack(pi.getTechStack());
+            newPi.setDescription(pi.getDescription());
+            newPi.setDisplayOrder(pi.getDisplayOrder());
+            portfolioItemRepository.save(newPi);
+        }
     }
 
     @Override

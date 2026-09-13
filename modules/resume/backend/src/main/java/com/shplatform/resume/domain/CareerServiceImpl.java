@@ -26,8 +26,8 @@ public class CareerServiceImpl implements CareerService {
     private final ResumeCareerItemRepository careerItemRepository;
 
     @Override
-    public List<CareerResponse> getCareers(Long userId) {
-        var careers = careerRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+    public List<CareerResponse> getCareers(Long userId, Long documentId) {
+        var careers = careerRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, documentId);
         Map<Long, List<ResumeCareerItemEntity>> itemsByCareer = groupItems(
                 careers.stream().map(ResumeCareerEntity::getId).toList());
         return careers.stream()
@@ -37,35 +37,34 @@ public class CareerServiceImpl implements CareerService {
 
     @Override
     @Transactional
-    public CareerResponse createCareer(Long userId, CareerRequest request) {
-        var entity = ResumeCareerEntity.create(userId);
-        entity.setUserId(userId);
+    public CareerResponse createCareer(Long userId, Long documentId, CareerRequest request) {
+        var entity = ResumeCareerEntity.create(userId, documentId);
         applyRequest(entity, request);
-        return toResponse(careerRepository.save(entity), listItems(entity.getId()));
+        return toResponse(careerRepository.save(entity), listItems(entity.getId(), documentId));
     }
 
     @Override
     @Transactional
-    public CareerResponse updateCareer(Long userId, Long careerId, CareerRequest request) {
-        var entity = getOwnedCareer(userId, careerId);
+    public CareerResponse updateCareer(Long userId, Long careerId, Long documentId, CareerRequest request) {
+        var entity = getOwnedCareer(userId, careerId, documentId);
         applyRequest(entity, request);
-        return toResponse(careerRepository.save(entity), listItems(entity.getId()));
+        return toResponse(careerRepository.save(entity), listItems(entity.getId(), documentId));
     }
 
     @Override
     @Transactional
-    public void deleteCareer(Long userId, Long careerId) {
-        var entity = getOwnedCareer(userId, careerId);
+    public void deleteCareer(Long userId, Long careerId, Long documentId) {
+        var entity = getOwnedCareer(userId, careerId, documentId);
         careerRepository.delete(entity);
     }
 
     @Override
     @Transactional
-    public void reorderCareers(Long userId, List<Long> orderedIds) {
+    public void reorderCareers(Long userId, Long documentId, List<Long> orderedIds) {
         if (orderedIds == null || orderedIds.isEmpty()) {
             return;
         }
-        var owned = careerRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        var owned = careerRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, documentId);
         Map<Long, ResumeCareerEntity> byId = owned.stream()
                 .collect(Collectors.toMap(ResumeCareerEntity::getId, e -> e));
         int order = 1;
@@ -79,17 +78,17 @@ public class CareerServiceImpl implements CareerService {
         careerRepository.saveAll(owned);
     }
 
-    private ResumeCareerEntity getOwnedCareer(Long userId, Long careerId) {
+    private ResumeCareerEntity getOwnedCareer(Long userId, Long careerId, Long documentId) {
         var entity = careerRepository.findById(careerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        if (!entity.getUserId().equals(userId)) {
+        if (!entity.getUserId().equals(userId) || !entity.getDocumentId().equals(documentId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
         return entity;
     }
 
-    private List<ResumeCareerItemEntity> listItems(Long careerId) {
-        return careerItemRepository.findByCareerIdOrderByDisplayOrderAscIdAsc(careerId);
+    private List<ResumeCareerItemEntity> listItems(Long careerId, Long documentId) {
+        return careerItemRepository.findByCareerIdAndDocumentIdOrderByDisplayOrderAscIdAsc(careerId, documentId);
     }
 
     private Map<Long, List<ResumeCareerItemEntity>> groupItems(List<Long> careerIds) {

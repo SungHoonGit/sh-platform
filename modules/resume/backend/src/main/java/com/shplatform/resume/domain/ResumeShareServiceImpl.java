@@ -71,7 +71,7 @@ public class ResumeShareServiceImpl implements ResumeShareService {
                 doc.title(),
                 doc.templateCode(),
                 doc.sectionConfig(),
-                resumeViewService.getMyResumeView(resolved.userId())
+                resumeViewService.getMyResumeView(resolved.userId(), resolved.documentId())
         );
     }
 

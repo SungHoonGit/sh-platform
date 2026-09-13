@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -35,8 +36,10 @@ public class CareerItemController {
      */
     @GetMapping
     @Operation(summary = "경력 상세 항목 목록 조회")
-    public ResponseEntity<ApiResponse<List<CareerItemResponse>>> getCareerItems(@PathVariable Long careerId) {
-        var response = careerItemService.getCareerItems(SecurityUtils.currentAccountId(), careerId);
+    public ResponseEntity<ApiResponse<List<CareerItemResponse>>> getCareerItems(
+            @PathVariable Long careerId,
+            @RequestParam Long documentId) {
+        var response = careerItemService.getCareerItems(SecurityUtils.currentAccountId(), careerId, documentId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -47,8 +50,9 @@ public class CareerItemController {
     @Operation(summary = "경력 상세 항목 추가")
     public ResponseEntity<ApiResponse<CareerItemResponse>> createCareerItem(
             @PathVariable Long careerId,
-            @Valid @RequestBody CareerItemRequest request) {
-        var response = careerItemService.createCareerItem(SecurityUtils.currentAccountId(), careerId, request);
+            @Valid @RequestBody CareerItemRequest request,
+            @RequestParam Long documentId) {
+        var response = careerItemService.createCareerItem(SecurityUtils.currentAccountId(), careerId, documentId, request);
         return ResponseEntity.ok(ApiResponse.created(response));
     }
 
@@ -60,8 +64,9 @@ public class CareerItemController {
     public ResponseEntity<ApiResponse<CareerItemResponse>> updateCareerItem(
             @PathVariable Long careerId,
             @PathVariable Long id,
-            @Valid @RequestBody CareerItemRequest request) {
-        var response = careerItemService.updateCareerItem(SecurityUtils.currentAccountId(), careerId, id, request);
+            @Valid @RequestBody CareerItemRequest request,
+            @RequestParam Long documentId) {
+        var response = careerItemService.updateCareerItem(SecurityUtils.currentAccountId(), careerId, id, documentId, request);
         return ResponseEntity.ok(ApiResponse.success("수정 완료", response));
     }
 
@@ -70,8 +75,8 @@ public class CareerItemController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "경력 상세 항목 삭제")
-    public ResponseEntity<Void> deleteCareerItem(@PathVariable Long careerId, @PathVariable Long id) {
-        careerItemService.deleteCareerItem(SecurityUtils.currentAccountId(), careerId, id);
+    public ResponseEntity<Void> deleteCareerItem(@PathVariable Long careerId, @PathVariable Long id, @RequestParam Long documentId) {
+        careerItemService.deleteCareerItem(SecurityUtils.currentAccountId(), careerId, id, documentId);
         return ResponseEntity.noContent().build();
     }
 
@@ -82,8 +87,9 @@ public class CareerItemController {
     @Operation(summary = "경력 상세 항목 표시 순서 재정렬")
     public ResponseEntity<Void> reorderCareerItems(
             @PathVariable Long careerId,
-            @Valid @RequestBody ReorderRequest request) {
-        careerItemService.reorderCareerItems(SecurityUtils.currentAccountId(), careerId, request.ids());
+            @Valid @RequestBody ReorderRequest request,
+            @RequestParam Long documentId) {
+        careerItemService.reorderCareerItems(SecurityUtils.currentAccountId(), careerId, documentId, request.ids());
         return ResponseEntity.noContent().build();
     }
 }

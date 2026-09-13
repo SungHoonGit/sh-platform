@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -35,8 +36,8 @@ public class PortfolioItemController {
      */
     @GetMapping
     @Operation(summary = "작업물 목록 조회")
-    public ResponseEntity<ApiResponse<List<PortfolioItemResponse>>> getPortfolioItems() {
-        var response = portfolioItemService.getPortfolioItems(SecurityUtils.currentAccountId());
+    public ResponseEntity<ApiResponse<List<PortfolioItemResponse>>> getPortfolioItems(@RequestParam Long documentId) {
+        var response = portfolioItemService.getPortfolioItems(SecurityUtils.currentAccountId(), documentId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -46,8 +47,9 @@ public class PortfolioItemController {
     @PostMapping
     @Operation(summary = "작업물 추가 (FILE/LINK)")
     public ResponseEntity<ApiResponse<PortfolioItemResponse>> createPortfolioItem(
-            @Valid @RequestBody PortfolioItemRequest request) {
-        var response = portfolioItemService.createPortfolioItem(SecurityUtils.currentAccountId(), request);
+            @Valid @RequestBody PortfolioItemRequest request,
+            @RequestParam Long documentId) {
+        var response = portfolioItemService.createPortfolioItem(SecurityUtils.currentAccountId(), documentId, request);
         return ResponseEntity.ok(ApiResponse.created(response));
     }
 
@@ -58,8 +60,9 @@ public class PortfolioItemController {
     @Operation(summary = "작업물 수정")
     public ResponseEntity<ApiResponse<PortfolioItemResponse>> updatePortfolioItem(
             @PathVariable Long id,
-            @Valid @RequestBody PortfolioItemRequest request) {
-        var response = portfolioItemService.updatePortfolioItem(SecurityUtils.currentAccountId(), id, request);
+            @Valid @RequestBody PortfolioItemRequest request,
+            @RequestParam Long documentId) {
+        var response = portfolioItemService.updatePortfolioItem(SecurityUtils.currentAccountId(), id, documentId, request);
         return ResponseEntity.ok(ApiResponse.success("수정 완료", response));
     }
 
@@ -68,8 +71,8 @@ public class PortfolioItemController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "작업물 삭제")
-    public ResponseEntity<Void> deletePortfolioItem(@PathVariable Long id) {
-        portfolioItemService.deletePortfolioItem(SecurityUtils.currentAccountId(), id);
+    public ResponseEntity<Void> deletePortfolioItem(@PathVariable Long id, @RequestParam Long documentId) {
+        portfolioItemService.deletePortfolioItem(SecurityUtils.currentAccountId(), id, documentId);
         return ResponseEntity.noContent().build();
     }
 
@@ -78,8 +81,8 @@ public class PortfolioItemController {
      */
     @PutMapping("/reorder")
     @Operation(summary = "작업물 표시 순서 재정렬")
-    public ResponseEntity<Void> reorderPortfolioItems(@Valid @RequestBody ReorderRequest request) {
-        portfolioItemService.reorderPortfolioItems(SecurityUtils.currentAccountId(), request.ids());
+    public ResponseEntity<Void> reorderPortfolioItems(@Valid @RequestBody ReorderRequest request, @RequestParam Long documentId) {
+        portfolioItemService.reorderPortfolioItems(SecurityUtils.currentAccountId(), documentId, request.ids());
         return ResponseEntity.noContent().build();
     }
 }

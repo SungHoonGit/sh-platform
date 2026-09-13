@@ -29,6 +29,9 @@ public class ResumeIntroductionEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "document_id")
+    private Long documentId;
+
     @Column(name = "title", nullable = false, length = 100)
     private String title;
 
@@ -46,9 +49,10 @@ public class ResumeIntroductionEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public static ResumeIntroductionEntity create(Long userId) {
+    public static ResumeIntroductionEntity create(Long userId, Long documentId) {
         var entity = new ResumeIntroductionEntity();
         entity.userId = userId;
+        entity.documentId = documentId;
         return entity;
     }
 }

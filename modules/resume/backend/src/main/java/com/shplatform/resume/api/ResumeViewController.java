@@ -30,8 +30,8 @@ public class ResumeViewController {
      */
     @GetMapping
     @Operation(summary = "전체 이력 조립 조회")
-    public ResponseEntity<ApiResponse<ResumeViewResponse>> getMyResumeView() {
-        var response = resumeViewService.getMyResumeView(SecurityUtils.currentAccountId());
+    public ResponseEntity<ApiResponse<ResumeViewResponse>> getMyResumeView(@RequestParam Long documentId) {
+        var response = resumeViewService.getMyResumeView(SecurityUtils.currentAccountId(), documentId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

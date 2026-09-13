@@ -76,7 +76,7 @@ class ResumePdfServiceImplTest {
     @Test
     @DisplayName("generatePdf: 전체 항목이 있으면 유효한 PDF를 생성하고 내용이 포함된다")
     void generatePdf_buildsValidPdfWithContent() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
+        given(resumeViewService.getMyResumeView(USER_ID, null)).willReturn(fullView(profile(null)));
 
         byte[] pdf = resumePdfService.generatePdf(USER_ID, null);
 
@@ -92,7 +92,7 @@ class ResumePdfServiceImplTest {
     @Test
     @DisplayName("generatePdf: 프로필 미등록·항목 전무여도 유효한 PDF를 생성한다")
     void generatePdf_emptyResumeStillGenerates() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID))
+        given(resumeViewService.getMyResumeView(USER_ID, null))
                 .willReturn(new ResumeViewResponse(null, List.of(), List.of(), List.of(),
                         List.of(), List.of(), List.of(), List.of(), null));
 
@@ -106,7 +106,7 @@ class ResumePdfServiceImplTest {
     @Test
     @DisplayName("generatePdf: 날짜가 null인 재직중 경력도 오류 없이 렌더링된다")
     void generatePdf_nullDatesRenderedSafely() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
+        given(resumeViewService.getMyResumeView(USER_ID, null)).willReturn(fullView(profile(null)));
 
         byte[] pdf = resumePdfService.generatePdf(USER_ID, null);
 
@@ -116,7 +116,7 @@ class ResumePdfServiceImplTest {
     @Test
     @DisplayName("generatePdf: 문서 sectionConfig가 지정되면 포함 섹션만 그 순서대로 렌더링한다")
     void generatePdf_respectsDocumentSectionConfig() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
+        given(resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID)).willReturn(fullView(profile(null)));
         String config = """
                 [
                   {"key":"careers","included":true,"order":1},
@@ -143,7 +143,7 @@ class ResumePdfServiceImplTest {
     @Test
     @DisplayName("generatePdf: MODERN 문서는 사이드바(연락처·스킬)와 메인(경력)을 함께 렌더링한다")
     void generatePdf_modernTemplateRendersSidebarAndMain() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
+        given(resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID)).willReturn(fullView(profile(null)));
         given(resumeDocumentService.getDocuments(USER_ID))
                 .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "모던", "MODERN", true, 1, null, null, null)));
 
@@ -162,7 +162,7 @@ class ResumePdfServiceImplTest {
     @Test
     @DisplayName("generatePdf: SARAMIN 문서는 연락처 라벨 표와 회사명/직무/기간 경력 표를 렌더링한다")
     void generatePdf_saraminTemplateRendersProfileTableAndCareerTable() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
+        given(resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID)).willReturn(fullView(profile(null)));
         given(resumeDocumentService.getDocuments(USER_ID))
                 .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "사람인형", "SARAMIN", true, 1, null, null, null)));
 
@@ -181,7 +181,7 @@ class ResumePdfServiceImplTest {
     @Test
     @DisplayName("generatePdf: 알 수 없는 템플릿 코드는 클래식 레이아웃으로 폴백한다")
     void generatePdf_unknownTemplateFallsBackToClassic() throws Exception {
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(profile(null)));
+        given(resumeViewService.getMyResumeView(USER_ID, DOCUMENT_ID)).willReturn(fullView(profile(null)));
         given(resumeDocumentService.getDocuments(USER_ID))
                 .willReturn(List.of(new DocumentResponse(DOCUMENT_ID, "기타", "CUSTOM", true, 1, null, null, null)));
 
@@ -195,7 +195,7 @@ class ResumePdfServiceImplTest {
     @DisplayName("generatePdf: 프로필 사진 파일을 읽어 임베드하고 유효한 PDF를 생성한다")
     void generatePdf_includesProfilePhoto() throws Exception {
         ProfileResponse withPhoto = profile("/api/v1/files/42/download");
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(withPhoto));
+        given(resumeViewService.getMyResumeView(USER_ID, null)).willReturn(fullView(withPhoto));
         given(fileStorageService.download(USER_ID, 42L))
                 .willReturn(new FileStorageService.DownloadedFile("photo.png", "image/png", ONE_PX_PNG));
 
@@ -209,7 +209,7 @@ class ResumePdfServiceImplTest {
     @DisplayName("generatePdf: 사진 파일이 없어도(NOT_FOUND) PDF 생성이 실패하지 않는다")
     void generatePdf_photoMissingStillGenerates() throws Exception {
         ProfileResponse withPhoto = profile("/api/v1/files/999/download");
-        given(resumeViewService.getMyResumeView(USER_ID)).willReturn(fullView(withPhoto));
+        given(resumeViewService.getMyResumeView(USER_ID, null)).willReturn(fullView(withPhoto));
         given(fileStorageService.download(USER_ID, 999L))
                 .willThrow(new com.shplatform.common.exception.BusinessException(
                         com.shplatform.common.exception.ErrorCode.NOT_FOUND));

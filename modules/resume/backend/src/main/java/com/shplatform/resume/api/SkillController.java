@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -35,8 +36,8 @@ public class SkillController {
      */
     @GetMapping
     @Operation(summary = "스킬 목록 조회")
-    public ResponseEntity<ApiResponse<List<SkillResponse>>> getSkills() {
-        var response = skillService.getSkills(SecurityUtils.currentAccountId());
+    public ResponseEntity<ApiResponse<List<SkillResponse>>> getSkills(@RequestParam Long documentId) {
+        var response = skillService.getSkills(SecurityUtils.currentAccountId(), documentId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -46,8 +47,9 @@ public class SkillController {
     @PostMapping
     @Operation(summary = "스킬 추가")
     public ResponseEntity<ApiResponse<SkillResponse>> createSkill(
-            @Valid @RequestBody SkillRequest request) {
-        var response = skillService.createSkill(SecurityUtils.currentAccountId(), request);
+            @Valid @RequestBody SkillRequest request,
+            @RequestParam Long documentId) {
+        var response = skillService.createSkill(SecurityUtils.currentAccountId(), documentId, request);
         return ResponseEntity.ok(ApiResponse.created(response));
     }
 
@@ -58,8 +60,9 @@ public class SkillController {
     @Operation(summary = "스킬 수정")
     public ResponseEntity<ApiResponse<SkillResponse>> updateSkill(
             @PathVariable Long id,
-            @Valid @RequestBody SkillRequest request) {
-        var response = skillService.updateSkill(SecurityUtils.currentAccountId(), id, request);
+            @Valid @RequestBody SkillRequest request,
+            @RequestParam Long documentId) {
+        var response = skillService.updateSkill(SecurityUtils.currentAccountId(), id, documentId, request);
         return ResponseEntity.ok(ApiResponse.success("수정 완료", response));
     }
 
@@ -68,8 +71,8 @@ public class SkillController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "스킬 삭제")
-    public ResponseEntity<Void> deleteSkill(@PathVariable Long id) {
-        skillService.deleteSkill(SecurityUtils.currentAccountId(), id);
+    public ResponseEntity<Void> deleteSkill(@PathVariable Long id, @RequestParam Long documentId) {
+        skillService.deleteSkill(SecurityUtils.currentAccountId(), id, documentId);
         return ResponseEntity.noContent().build();
     }
 
@@ -78,8 +81,8 @@ public class SkillController {
      */
     @PutMapping("/reorder")
     @Operation(summary = "스킬 표시 순서 재정렬")
-    public ResponseEntity<Void> reorderSkills(@Valid @RequestBody ReorderRequest request) {
-        skillService.reorderSkills(SecurityUtils.currentAccountId(), request.ids());
+    public ResponseEntity<Void> reorderSkills(@Valid @RequestBody ReorderRequest request, @RequestParam Long documentId) {
+        skillService.reorderSkills(SecurityUtils.currentAccountId(), documentId, request.ids());
         return ResponseEntity.noContent().build();
     }
 }

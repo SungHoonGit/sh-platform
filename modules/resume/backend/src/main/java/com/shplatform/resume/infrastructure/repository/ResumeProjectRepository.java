@@ -8,4 +8,6 @@ import java.util.List;
 public interface ResumeProjectRepository extends JpaRepository<ResumeProjectEntity, Long> {
 
     List<ResumeProjectEntity> findByUserIdOrderByDisplayOrderAscIdAsc(Long userId);
+
+    List<ResumeProjectEntity> findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(Long userId, Long documentId);
 }

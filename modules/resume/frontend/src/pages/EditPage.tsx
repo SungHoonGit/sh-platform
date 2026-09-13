@@ -153,13 +153,17 @@ export default function EditPage({ documentId }: { documentId?: number }) {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
 
   useEffect(() => {
-    apiGet<PortfolioItem[]>("/portfolio-items")
+    if (!documentId) {
+      setPortfolioItems([]);
+      return;
+    }
+    apiGet<PortfolioItem[]>("/portfolio-items", { documentId: String(documentId) })
       .then(setPortfolioItems)
       .catch(() => setPortfolioItems([]));
-  }, []);
+  }, [documentId]);
 
   useEffect(() => {
-    apiGet<ResumeView>("/view")
+    apiGet<ResumeView>("/view", documentId ? { documentId: String(documentId) } : undefined)
       .then(setView)
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
     apiGet<ResumeDocument[]>("/documents")
@@ -431,7 +435,9 @@ export default function EditPage({ documentId }: { documentId?: number }) {
             <ProfileEditor
               profile={view.profile}
               onChanged={() =>
-                apiGet<ResumeView>("/view").then(setView).catch(() => undefined)
+                apiGet<ResumeView>("/view", documentId ? { documentId: String(documentId) } : undefined)
+                  .then(setView)
+                  .catch(() => undefined)
               }
             />
 
@@ -475,6 +481,7 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                     fixedPayload={cfg.fixedPayload}
                     inline={cfg.inline}
                     sectionDragActive={dragKey !== null}
+                    documentId={documentId}
                     importOptions={
                       cfg.key === "projects"
                         ? {
@@ -511,8 +518,11 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                         ? (career) => (
                             <CareerItemsEditor
                               careerId={Number(career.id)}
+                              documentId={documentId}
                               onChanged={() => {
-                                apiGet<ResumeView>("/view").then(setView).catch(() => undefined);
+                                apiGet<ResumeView>("/view", documentId ? { documentId: String(documentId) } : undefined)
+                                  .then(setView)
+                                  .catch(() => undefined);
                               }}
                             />
                           )
@@ -543,7 +553,9 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                       onDragEnd: endDrag,
                     }}
                     onChanged={() => {
-                      apiGet<ResumeView>("/view").then(setView).catch(() => undefined);
+                      apiGet<ResumeView>("/view", documentId ? { documentId: String(documentId) } : undefined)
+                        .then(setView)
+                        .catch(() => undefined);
                     }}
                   />
                 </div>

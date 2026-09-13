@@ -20,9 +20,11 @@ const EMPTY: FormState = { title: "", startDate: "", endDate: "", description: "
  */
 export default function CareerItemsEditor({
   careerId,
+  documentId,
   onChanged,
 }: {
   careerId: number;
+  documentId?: number;
   onChanged: () => void;
 }) {
   const [items, setItems] = useState<CareerItem[]>([]);
@@ -33,10 +35,11 @@ export default function CareerItemsEditor({
   const [error, setError] = useState<string | null>(null);
 
   const endpoint = `/careers/${careerId}/items`;
+  const docParams = documentId ? { documentId: String(documentId) } : undefined;
 
   const load = async () => {
     try {
-      const res = await apiGet<CareerItem[]>(endpoint);
+      const res = await apiGet<CareerItem[]>(endpoint, docParams);
       setItems(Array.isArray(res) ? res : []);
     } catch {
       setItems([]);
@@ -78,8 +81,8 @@ export default function CareerItemsEditor({
         description: form.description.trim() === "" ? null : form.description,
         displayOrder: 0,
       };
-      if (editing === "new") await apiPost(endpoint, payload);
-      else await apiPut(`${endpoint}/${editing}`, payload);
+      if (editing === "new") await apiPost(endpoint, payload, docParams);
+      else await apiPut(`${endpoint}/${editing}`, payload, docParams);
       setEditing(null);
       onChanged();
       await load();
@@ -95,7 +98,7 @@ export default function CareerItemsEditor({
     setBusy(true);
     setError(null);
     try {
-      await apiDelete(`${endpoint}/${id}`);
+      await apiDelete(`${endpoint}/${id}`, docParams);
       onChanged();
       await load();
     } catch (e) {
@@ -117,7 +120,7 @@ export default function CareerItemsEditor({
     setBusy(true);
     setError(null);
     try {
-      await apiPut(`${endpoint}/reorder`, { ids: next.map((x) => x.id) });
+      await apiPut(`${endpoint}/reorder`, { ids: next.map((x) => x.id) }, docParams);
       onChanged();
       await load();
     } catch (e) {

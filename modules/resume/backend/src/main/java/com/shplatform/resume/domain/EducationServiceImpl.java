@@ -22,42 +22,42 @@ public class EducationServiceImpl implements EducationService {
     private final ResumeEducationRepository educationRepository;
 
     @Override
-    public List<EducationResponse> getEducations(Long userId) {
-        return educationRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId).stream()
+    public List<EducationResponse> getEducations(Long userId, Long documentId) {
+        return educationRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, documentId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Override
     @Transactional
-    public EducationResponse createEducation(Long userId, EducationRequest request) {
-        var entity = ResumeEducationEntity.create(userId);
+    public EducationResponse createEducation(Long userId, Long documentId, EducationRequest request) {
+        var entity = ResumeEducationEntity.create(userId, documentId);
         applyRequest(entity, request);
         return toResponse(educationRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public EducationResponse updateEducation(Long userId, Long educationId, EducationRequest request) {
-        var entity = getOwnedEducation(userId, educationId);
+    public EducationResponse updateEducation(Long userId, Long documentId, Long educationId, EducationRequest request) {
+        var entity = getOwnedEducation(userId, documentId, educationId);
         applyRequest(entity, request);
         return toResponse(educationRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public void deleteEducation(Long userId, Long educationId) {
-        var entity = getOwnedEducation(userId, educationId);
+    public void deleteEducation(Long userId, Long documentId, Long educationId) {
+        var entity = getOwnedEducation(userId, documentId, educationId);
         educationRepository.delete(entity);
     }
 
     @Override
     @Transactional
-    public void reorderEducations(Long userId, List<Long> orderedIds) {
+    public void reorderEducations(Long userId, Long documentId, List<Long> orderedIds) {
         if (orderedIds == null || orderedIds.isEmpty()) {
             return;
         }
-        var owned = educationRepository.findByUserIdOrderByDisplayOrderAscIdAsc(userId);
+        var owned = educationRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(userId, documentId);
         Map<Long, ResumeEducationEntity> byId = owned.stream()
                 .collect(Collectors.toMap(ResumeEducationEntity::getId, e -> e));
         int order = 1;
@@ -71,10 +71,10 @@ public class EducationServiceImpl implements EducationService {
         educationRepository.saveAll(owned);
     }
 
-    private ResumeEducationEntity getOwnedEducation(Long userId, Long educationId) {
+    private ResumeEducationEntity getOwnedEducation(Long userId, Long documentId, Long educationId) {
         var entity = educationRepository.findById(educationId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        if (!entity.getUserId().equals(userId)) {
+        if (!entity.getUserId().equals(userId) || !entity.getDocumentId().equals(documentId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
         return entity;

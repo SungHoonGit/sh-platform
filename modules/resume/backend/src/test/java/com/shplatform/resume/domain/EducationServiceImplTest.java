@@ -29,6 +29,7 @@ class EducationServiceImplTest {
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 999L;
     private static final Long EDUCATION_ID = 200L;
+    private static final Long DOCUMENT_ID = 100L;
 
     @Mock
     private ResumeEducationRepository educationRepository;
@@ -42,7 +43,7 @@ class EducationServiceImplTest {
     }
 
     private ResumeEducationEntity entity(Long userId) {
-        var e = ResumeEducationEntity.create(userId);
+        var e = ResumeEducationEntity.create(userId, DOCUMENT_ID);
         e.setId(EDUCATION_ID);
         e.setSchool("한국대학교");
         return e;
@@ -51,10 +52,10 @@ class EducationServiceImplTest {
     @Test
     @DisplayName("getEducations: 학력 목록을 조회한다")
     void getEducations_success() {
-        given(educationRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(educationRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
 
-        var responses = educationService.getEducations(USER_ID);
+        var responses = educationService.getEducations(USER_ID, DOCUMENT_ID);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).school()).isEqualTo("한국대학교");
@@ -69,7 +70,7 @@ class EducationServiceImplTest {
                     return invocation.getArgument(0);
                 });
 
-        var response = educationService.createEducation(USER_ID, request());
+        var response = educationService.createEducation(USER_ID, DOCUMENT_ID, request());
 
         ArgumentCaptor<ResumeEducationEntity> captor = ArgumentCaptor.forClass(ResumeEducationEntity.class);
         then(educationRepository).should(times(1)).save(captor.capture());
@@ -85,7 +86,7 @@ class EducationServiceImplTest {
         given(educationRepository.save(any(ResumeEducationEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = educationService.updateEducation(USER_ID, EDUCATION_ID, request());
+        var response = educationService.updateEducation(USER_ID, DOCUMENT_ID, EDUCATION_ID, request());
 
         then(educationRepository).should(times(1)).save(existing);
         assertThat(response.school()).isEqualTo("한국대학교");
@@ -96,7 +97,7 @@ class EducationServiceImplTest {
     void updateEducation_notFound() {
         given(educationRepository.findById(EDUCATION_ID)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> educationService.updateEducation(USER_ID, EDUCATION_ID, request()))
+        assertThatThrownBy(() -> educationService.updateEducation(USER_ID, DOCUMENT_ID, EDUCATION_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_FOUND);
@@ -107,7 +108,7 @@ class EducationServiceImplTest {
     void updateEducation_forbidden() {
         given(educationRepository.findById(EDUCATION_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> educationService.updateEducation(USER_ID, EDUCATION_ID, request()))
+        assertThatThrownBy(() -> educationService.updateEducation(USER_ID, DOCUMENT_ID, EDUCATION_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -119,7 +120,7 @@ class EducationServiceImplTest {
         var existing = entity(USER_ID);
         given(educationRepository.findById(EDUCATION_ID)).willReturn(Optional.of(existing));
 
-        educationService.deleteEducation(USER_ID, EDUCATION_ID);
+        educationService.deleteEducation(USER_ID, DOCUMENT_ID, EDUCATION_ID);
 
         then(educationRepository).should(times(1)).delete(existing);
     }
@@ -133,12 +134,12 @@ class EducationServiceImplTest {
         var second = entity(USER_ID);
         second.setId(202L);
         second.setDisplayOrder(2);
-        given(educationRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(educationRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(first, second));
         given(educationRepository.saveAll(any()))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        educationService.reorderEducations(USER_ID, List.of(202L, 201L));
+        educationService.reorderEducations(USER_ID, DOCUMENT_ID, List.of(202L, 201L));
 
         assertThat(first.getDisplayOrder()).isEqualTo(2);
         assertThat(second.getDisplayOrder()).isEqualTo(1);
@@ -148,10 +149,10 @@ class EducationServiceImplTest {
     @Test
     @DisplayName("reorderEducations: 본인 소유가 아닌 학력 id가 포함되면 FORBIDDEN 예외가 발생한다")
     void reorderEducations_forbidden() {
-        given(educationRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(educationRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
 
-        assertThatThrownBy(() -> educationService.reorderEducations(USER_ID, List.of(999L)))
+        assertThatThrownBy(() -> educationService.reorderEducations(USER_ID, DOCUMENT_ID, List.of(999L)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);

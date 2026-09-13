@@ -29,6 +29,9 @@ public class ResumeCertificateEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "document_id")
+    private Long documentId;
+
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
@@ -45,9 +48,10 @@ public class ResumeCertificateEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public static ResumeCertificateEntity create(Long userId) {
+    public static ResumeCertificateEntity create(Long userId, Long documentId) {
         var entity = new ResumeCertificateEntity();
         entity.userId = userId;
+        entity.documentId = documentId;
         return entity;
     }
 }

@@ -11,8 +11,17 @@ import com.shplatform.common.exception.BusinessException;
 import com.shplatform.common.exception.ErrorCode;
 import com.shplatform.resume.api.dto.DocumentCreateRequest;
 import com.shplatform.resume.api.dto.DocumentUpdateRequest;
+import com.shplatform.resume.infrastructure.entity.ResumeCareerEntity;
 import com.shplatform.resume.infrastructure.entity.ResumeDocumentEntity;
+import com.shplatform.resume.infrastructure.repository.ResumeCareerItemRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeCareerRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeCertificateRepository;
 import com.shplatform.resume.infrastructure.repository.ResumeDocumentRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeEducationRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeIntroductionRepository;
+import com.shplatform.resume.infrastructure.repository.ResumePortfolioItemRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeProjectRepository;
+import com.shplatform.resume.infrastructure.repository.ResumeSkillRepository;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +41,22 @@ class ResumeDocumentServiceImplTest {
 
     @Mock
     private ResumeDocumentRepository documentRepository;
+    @Mock
+    private ResumeCareerRepository careerRepository;
+    @Mock
+    private ResumeCareerItemRepository careerItemRepository;
+    @Mock
+    private ResumeEducationRepository educationRepository;
+    @Mock
+    private ResumeProjectRepository projectRepository;
+    @Mock
+    private ResumeSkillRepository skillRepository;
+    @Mock
+    private ResumeCertificateRepository certificateRepository;
+    @Mock
+    private ResumeIntroductionRepository introductionRepository;
+    @Mock
+    private ResumePortfolioItemRepository portfolioItemRepository;
 
     @InjectMocks
     private ResumeDocumentServiceImpl documentService;
@@ -77,12 +102,23 @@ class ResumeDocumentServiceImplTest {
     }
 
     @Test
-    @DisplayName("createDocument: fromDocumentId로 기존 문서의 섹션편성을 복사한다")
+    @DisplayName("createDocument: fromDocumentId로 기존 문서의 섹션편성과 항목을 복사한다")
     void createDocument_fromExisting() {
         var source = entity(99L, "원본", true);
+        ReflectionTestUtils.setField(source, "id", 99L);
         given(documentRepository.findByIdAndUserId(99L, USER_ID))
                 .willReturn(Optional.of(source));
+        var sourceCareer = ResumeCareerEntity.create(USER_ID, 99L);
+        sourceCareer.setCompany("네이버");
+        given(careerRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, 99L))
+                .willReturn(List.of(sourceCareer));
         given(documentRepository.save(any(ResumeDocumentEntity.class)))
+                .willAnswer(invocation -> {
+                    var e = invocation.getArgument(0, ResumeDocumentEntity.class);
+                    ReflectionTestUtils.setField(e, "id", 10L);
+                    return e;
+                });
+        given(careerRepository.save(any(ResumeCareerEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
         var response = documentService.createDocument(USER_ID,
@@ -94,6 +130,12 @@ class ResumeDocumentServiceImplTest {
         assertThat(captor.getValue().getTitle()).isEqualTo("사람인용");
         assertThat(captor.getValue().isPrimary()).isFalse();
         assertThat(response.sectionConfig()).isEqualTo(ResumeDocumentServiceImpl.DEFAULT_SECTION_CONFIG);
+
+        ArgumentCaptor<ResumeCareerEntity> careerCaptor =
+                ArgumentCaptor.forClass(ResumeCareerEntity.class);
+        then(careerRepository).should(times(1)).save(careerCaptor.capture());
+        assertThat(careerCaptor.getValue().getCompany()).isEqualTo("네이버");
+        assertThat(careerCaptor.getValue().getDocumentId()).isEqualTo(10L);
     }
 
     @Test

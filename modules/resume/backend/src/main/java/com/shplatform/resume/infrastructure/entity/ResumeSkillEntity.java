@@ -28,6 +28,9 @@ public class ResumeSkillEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "document_id")
+    private Long documentId;
+
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
@@ -44,9 +47,10 @@ public class ResumeSkillEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public static ResumeSkillEntity create(Long userId) {
+    public static ResumeSkillEntity create(Long userId, Long documentId) {
         var entity = new ResumeSkillEntity();
         entity.userId = userId;
+        entity.documentId = documentId;
         return entity;
     }
 }

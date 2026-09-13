@@ -29,6 +29,7 @@ class CertificateServiceImplTest {
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 999L;
     private static final Long CERTIFICATE_ID = 400L;
+    private static final Long DOCUMENT_ID = 100L;
 
     @Mock
     private ResumeCertificateRepository certificateRepository;
@@ -41,7 +42,7 @@ class CertificateServiceImplTest {
     }
 
     private ResumeCertificateEntity entity(Long userId) {
-        var e = ResumeCertificateEntity.create(userId);
+        var e = ResumeCertificateEntity.create(userId, DOCUMENT_ID);
         e.setId(CERTIFICATE_ID);
         e.setName("정보처리기사");
         return e;
@@ -50,10 +51,10 @@ class CertificateServiceImplTest {
     @Test
     @DisplayName("getCertificates: 자격증 목록을 조회한다")
     void getCertificates_success() {
-        given(certificateRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(certificateRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
 
-        var responses = certificateService.getCertificates(USER_ID);
+        var responses = certificateService.getCertificates(USER_ID, DOCUMENT_ID);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).name()).isEqualTo("정보처리기사");
@@ -68,7 +69,7 @@ class CertificateServiceImplTest {
                     return invocation.getArgument(0);
                 });
 
-        var response = certificateService.createCertificate(USER_ID, request());
+        var response = certificateService.createCertificate(USER_ID, DOCUMENT_ID, request());
 
         ArgumentCaptor<ResumeCertificateEntity> captor = ArgumentCaptor.forClass(ResumeCertificateEntity.class);
         then(certificateRepository).should(times(1)).save(captor.capture());
@@ -84,7 +85,7 @@ class CertificateServiceImplTest {
         given(certificateRepository.save(any(ResumeCertificateEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = certificateService.updateCertificate(USER_ID, CERTIFICATE_ID, request());
+        var response = certificateService.updateCertificate(USER_ID, DOCUMENT_ID, CERTIFICATE_ID, request());
 
         then(certificateRepository).should(times(1)).save(existing);
         assertThat(response.name()).isEqualTo("정보처리기사");
@@ -95,7 +96,7 @@ class CertificateServiceImplTest {
     void updateCertificate_forbidden() {
         given(certificateRepository.findById(CERTIFICATE_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> certificateService.updateCertificate(USER_ID, CERTIFICATE_ID, request()))
+        assertThatThrownBy(() -> certificateService.updateCertificate(USER_ID, DOCUMENT_ID, CERTIFICATE_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -107,7 +108,7 @@ class CertificateServiceImplTest {
         var existing = entity(USER_ID);
         given(certificateRepository.findById(CERTIFICATE_ID)).willReturn(Optional.of(existing));
 
-        certificateService.deleteCertificate(USER_ID, CERTIFICATE_ID);
+        certificateService.deleteCertificate(USER_ID, DOCUMENT_ID, CERTIFICATE_ID);
 
         then(certificateRepository).should(times(1)).delete(existing);
     }
@@ -121,12 +122,12 @@ class CertificateServiceImplTest {
         var second = entity(USER_ID);
         second.setId(402L);
         second.setDisplayOrder(2);
-        given(certificateRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(certificateRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(first, second));
         given(certificateRepository.saveAll(any()))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        certificateService.reorderCertificates(USER_ID, List.of(402L, 401L));
+        certificateService.reorderCertificates(USER_ID, DOCUMENT_ID, List.of(402L, 401L));
 
         assertThat(first.getDisplayOrder()).isEqualTo(2);
         assertThat(second.getDisplayOrder()).isEqualTo(1);
@@ -136,10 +137,10 @@ class CertificateServiceImplTest {
     @Test
     @DisplayName("reorderCertificates: 본인 소유가 아닌 자격증 id가 포함되면 FORBIDDEN 예외가 발생한다")
     void reorderCertificates_forbidden() {
-        given(certificateRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(certificateRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
 
-        assertThatThrownBy(() -> certificateService.reorderCertificates(USER_ID, List.of(999L)))
+        assertThatThrownBy(() -> certificateService.reorderCertificates(USER_ID, DOCUMENT_ID, List.of(999L)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);

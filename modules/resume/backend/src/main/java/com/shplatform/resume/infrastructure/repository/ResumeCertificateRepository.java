@@ -8,4 +8,6 @@ import java.util.List;
 public interface ResumeCertificateRepository extends JpaRepository<ResumeCertificateEntity, Long> {
 
     List<ResumeCertificateEntity> findByUserIdOrderByDisplayOrderAscIdAsc(Long userId);
+
+    List<ResumeCertificateEntity> findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(Long userId, Long documentId);
 }

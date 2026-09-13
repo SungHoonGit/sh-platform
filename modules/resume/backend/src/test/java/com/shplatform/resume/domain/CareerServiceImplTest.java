@@ -33,6 +33,7 @@ class CareerServiceImplTest {
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 999L;
     private static final Long CAREER_ID = 100L;
+    private static final Long DOCUMENT_ID = 100L;
 
     @Mock
     private ResumeCareerRepository careerRepository;
@@ -51,7 +52,7 @@ class CareerServiceImplTest {
     }
 
     private ResumeCareerEntity entity(Long userId) {
-        var e = ResumeCareerEntity.create(userId);
+        var e = ResumeCareerEntity.create(userId, DOCUMENT_ID);
         e.setId(CAREER_ID);
         e.setCompany("테크컴퍼니");
         e.setTitle("백엔드 개발자");
@@ -66,12 +67,12 @@ class CareerServiceImplTest {
     @Test
     @DisplayName("getCareers: 표시 순서대로 경력 목록을 조회한다")
     void getCareers_success() {
-        given(careerRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(careerRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
         given(careerItemRepository.findByCareerIdInOrderByDisplayOrderAscIdAsc(List.of(CAREER_ID)))
                 .willReturn(emptyItems());
 
-        List<CareerResponse> responses = careerService.getCareers(USER_ID);
+        List<CareerResponse> responses = careerService.getCareers(USER_ID, DOCUMENT_ID);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).company()).isEqualTo("테크컴퍼니");
@@ -86,10 +87,10 @@ class CareerServiceImplTest {
                     e.setId(CAREER_ID);
                     return e;
                 });
-        given(careerItemRepository.findByCareerIdOrderByDisplayOrderAscIdAsc(CAREER_ID))
+        given(careerItemRepository.findByCareerIdAndDocumentIdOrderByDisplayOrderAscIdAsc(CAREER_ID, DOCUMENT_ID))
                 .willReturn(emptyItems());
 
-        CareerResponse response = careerService.createCareer(USER_ID, request());
+        CareerResponse response = careerService.createCareer(USER_ID, DOCUMENT_ID, request());
 
         ArgumentCaptor<ResumeCareerEntity> captor = ArgumentCaptor.forClass(ResumeCareerEntity.class);
         then(careerRepository).should(times(1)).save(captor.capture());
@@ -103,7 +104,7 @@ class CareerServiceImplTest {
     void updateCareer_success() {
         var existing = entity(USER_ID);
         given(careerRepository.findById(CAREER_ID)).willReturn(Optional.of(existing));
-        given(careerItemRepository.findByCareerIdOrderByDisplayOrderAscIdAsc(CAREER_ID))
+        given(careerItemRepository.findByCareerIdAndDocumentIdOrderByDisplayOrderAscIdAsc(CAREER_ID, DOCUMENT_ID))
                 .willReturn(emptyItems());
         given(careerRepository.save(any(ResumeCareerEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
@@ -113,7 +114,7 @@ class CareerServiceImplTest {
                 LocalDate.of(2024, 5, 1), LocalDate.of(2026, 1, 31),
                 "팀 리딩", 2
         );
-        CareerResponse response = careerService.updateCareer(USER_ID, CAREER_ID, newRequest);
+        CareerResponse response = careerService.updateCareer(USER_ID, CAREER_ID, DOCUMENT_ID, newRequest);
 
         then(careerRepository).should(times(1)).save(existing);
         assertThat(response.company()).isEqualTo("뉴컴퍼니");
@@ -125,7 +126,7 @@ class CareerServiceImplTest {
     void updateCareer_notFound() {
         given(careerRepository.findById(CAREER_ID)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> careerService.updateCareer(USER_ID, CAREER_ID, request()))
+        assertThatThrownBy(() -> careerService.updateCareer(USER_ID, CAREER_ID, DOCUMENT_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_FOUND);
@@ -136,7 +137,7 @@ class CareerServiceImplTest {
     void updateCareer_forbidden() {
         given(careerRepository.findById(CAREER_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> careerService.updateCareer(USER_ID, CAREER_ID, request()))
+        assertThatThrownBy(() -> careerService.updateCareer(USER_ID, CAREER_ID, DOCUMENT_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -148,7 +149,7 @@ class CareerServiceImplTest {
         var existing = entity(USER_ID);
         given(careerRepository.findById(CAREER_ID)).willReturn(Optional.of(existing));
 
-        careerService.deleteCareer(USER_ID, CAREER_ID);
+        careerService.deleteCareer(USER_ID, CAREER_ID, DOCUMENT_ID);
 
         then(careerRepository).should(times(1)).delete(existing);
     }
@@ -158,7 +159,7 @@ class CareerServiceImplTest {
     void deleteCareer_forbidden() {
         given(careerRepository.findById(CAREER_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> careerService.deleteCareer(USER_ID, CAREER_ID))
+        assertThatThrownBy(() -> careerService.deleteCareer(USER_ID, CAREER_ID, DOCUMENT_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -173,12 +174,12 @@ class CareerServiceImplTest {
         var second = entity(USER_ID);
         second.setId(102L);
         second.setDisplayOrder(2);
-        given(careerRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(careerRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(first, second));
         given(careerRepository.saveAll(any()))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        careerService.reorderCareers(USER_ID, List.of(102L, 101L));
+        careerService.reorderCareers(USER_ID, DOCUMENT_ID, List.of(102L, 101L));
 
         assertThat(first.getDisplayOrder()).isEqualTo(2);
         assertThat(second.getDisplayOrder()).isEqualTo(1);
@@ -188,10 +189,10 @@ class CareerServiceImplTest {
     @Test
     @DisplayName("reorderCareers: 본인 소유가 아닌 경력 id가 포함되면 FORBIDDEN 예외가 발생한다")
     void reorderCareers_forbidden() {
-        given(careerRepository.findByUserIdOrderByDisplayOrderAscIdAsc(USER_ID))
+        given(careerRepository.findByUserIdAndDocumentIdOrderByDisplayOrderAscIdAsc(USER_ID, DOCUMENT_ID))
                 .willReturn(List.of(entity(USER_ID)));
 
-        assertThatThrownBy(() -> careerService.reorderCareers(USER_ID, List.of(999L)))
+        assertThatThrownBy(() -> careerService.reorderCareers(USER_ID, DOCUMENT_ID, List.of(999L)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -200,7 +201,7 @@ class CareerServiceImplTest {
     @Test
     @DisplayName("reorderCareers: 빈 목록이면 아무것도 하지 않는다")
     void reorderCareers_empty() {
-        careerService.reorderCareers(USER_ID, List.of());
+        careerService.reorderCareers(USER_ID, DOCUMENT_ID, List.of());
 
         then(careerRepository).should(times(0)).saveAll(any());
     }

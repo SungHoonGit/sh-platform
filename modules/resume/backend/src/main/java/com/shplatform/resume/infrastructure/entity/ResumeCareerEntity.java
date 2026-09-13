@@ -30,6 +30,9 @@ public class ResumeCareerEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "document_id")
+    private Long documentId;
+
     @Column(name = "company", nullable = false, length = 100)
     private String company;
 
@@ -56,9 +59,10 @@ public class ResumeCareerEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public static ResumeCareerEntity create(Long userId) {
+    public static ResumeCareerEntity create(Long userId, Long documentId) {
         var entity = new ResumeCareerEntity();
         entity.userId = userId;
+        entity.documentId = documentId;
         return entity;
     }
 }

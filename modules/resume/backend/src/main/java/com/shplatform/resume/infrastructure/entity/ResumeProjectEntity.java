@@ -30,6 +30,9 @@ public class ResumeProjectEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "document_id")
+    private Long documentId;
+
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
@@ -74,9 +77,10 @@ public class ResumeProjectEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public static ResumeProjectEntity create(Long userId) {
+    public static ResumeProjectEntity create(Long userId, Long documentId) {
         var entity = new ResumeProjectEntity();
         entity.userId = userId;
+        entity.documentId = documentId;
         return entity;
     }
 }

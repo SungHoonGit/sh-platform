@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -35,8 +36,8 @@ public class EducationController {
      */
     @GetMapping
     @Operation(summary = "학력 목록 조회")
-    public ResponseEntity<ApiResponse<List<EducationResponse>>> getEducations() {
-        var response = educationService.getEducations(SecurityUtils.currentAccountId());
+    public ResponseEntity<ApiResponse<List<EducationResponse>>> getEducations(@RequestParam Long documentId) {
+        var response = educationService.getEducations(SecurityUtils.currentAccountId(), documentId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -46,8 +47,9 @@ public class EducationController {
     @PostMapping
     @Operation(summary = "학력 추가")
     public ResponseEntity<ApiResponse<EducationResponse>> createEducation(
-            @Valid @RequestBody EducationRequest request) {
-        var response = educationService.createEducation(SecurityUtils.currentAccountId(), request);
+            @Valid @RequestBody EducationRequest request,
+            @RequestParam Long documentId) {
+        var response = educationService.createEducation(SecurityUtils.currentAccountId(), documentId, request);
         return ResponseEntity.ok(ApiResponse.created(response));
     }
 
@@ -58,8 +60,9 @@ public class EducationController {
     @Operation(summary = "학력 수정")
     public ResponseEntity<ApiResponse<EducationResponse>> updateEducation(
             @PathVariable Long id,
-            @Valid @RequestBody EducationRequest request) {
-        var response = educationService.updateEducation(SecurityUtils.currentAccountId(), id, request);
+            @Valid @RequestBody EducationRequest request,
+            @RequestParam Long documentId) {
+        var response = educationService.updateEducation(SecurityUtils.currentAccountId(), id, documentId, request);
         return ResponseEntity.ok(ApiResponse.success("수정 완료", response));
     }
 
@@ -68,8 +71,8 @@ public class EducationController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "학력 삭제")
-    public ResponseEntity<Void> deleteEducation(@PathVariable Long id) {
-        educationService.deleteEducation(SecurityUtils.currentAccountId(), id);
+    public ResponseEntity<Void> deleteEducation(@PathVariable Long id, @RequestParam Long documentId) {
+        educationService.deleteEducation(SecurityUtils.currentAccountId(), id, documentId);
         return ResponseEntity.noContent().build();
     }
 
@@ -78,8 +81,8 @@ public class EducationController {
      */
     @PutMapping("/reorder")
     @Operation(summary = "학력 표시 순서 재정렬")
-    public ResponseEntity<Void> reorderEducations(@Valid @RequestBody ReorderRequest request) {
-        educationService.reorderEducations(SecurityUtils.currentAccountId(), request.ids());
+    public ResponseEntity<Void> reorderEducations(@Valid @RequestBody ReorderRequest request, @RequestParam Long documentId) {
+        educationService.reorderEducations(SecurityUtils.currentAccountId(), documentId, request.ids());
         return ResponseEntity.noContent().build();
     }
 }
