@@ -15,6 +15,8 @@ export default function ResumesPage() {
   const [dragId, setDragId] = useState<number | null>(null);
   const [overId, setOverId] = useState<number | null>(null);
   const [orderBusy, setOrderBusy] = useState(false);
+  const [editTitleId, setEditTitleId] = useState<number | null>(null);
+  const [editTitleValue, setEditTitleValue] = useState("");
   const origSnapshot = useRef<ResumeDocument[] | null>(null);
   const dropHandled = useRef(false);
 
@@ -163,6 +165,21 @@ export default function ResumesPage() {
       load();
     } catch {
       setError("테마 변경에 실패했습니다.");
+    }
+  };
+
+  const saveTitle = async (id: number) => {
+    const value = editTitleValue.trim();
+    if (!value) {
+      setEditTitleId(null);
+      return;
+    }
+    try {
+      await apiPut(`/documents/${id}`, { title: value });
+      setEditTitleId(null);
+      load();
+    } catch {
+      setError("제목 변경에 실패했습니다.");
     }
   };
 
@@ -362,12 +379,38 @@ export default function ResumesPage() {
                 <span className="text-[11px] text-slate-300">#{i + 1}</span>
               </div>
               <div className="flex items-start justify-between gap-2 mb-2">
-              <h2 className="font-semibold text-slate-800 truncate">{d.title}</h2>
-              {d.primary && (
-                <span className="shrink-0 px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-medium rounded">
-                  대표
-                </span>
+              {editTitleId === d.id ? (
+                <input
+                  autoFocus
+                  value={editTitleValue}
+                  onChange={(e) => setEditTitleValue(e.target.value)}
+                  onBlur={() => saveTitle(d.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveTitle(d.id);
+                    if (e.key === "Escape") setEditTitleId(null);
+                  }}
+                  className="flex-1 min-w-0 font-semibold text-slate-800 border border-gray-300 rounded px-1 py-0.5 text-sm focus:outline-none"
+                />
+              ) : (
+                <h2 className="font-semibold text-slate-800 truncate">{d.title}</h2>
               )}
+              <div className="flex items-center gap-1 shrink-0">
+                {d.primary && (
+                  <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-medium rounded">
+                    대표
+                  </span>
+                )}
+                <button
+                  onClick={() => {
+                    setEditTitleId(d.id);
+                    setEditTitleValue(d.title);
+                  }}
+                  title="이름 변경"
+                  className="text-slate-400 hover:text-slate-700 text-xs leading-none"
+                >
+                  ✎
+                </button>
+              </div>
             </div>
             <select
               value={TEMPLATE_LABELS[d.templateCode] ? d.templateCode : "CLASSIC"}

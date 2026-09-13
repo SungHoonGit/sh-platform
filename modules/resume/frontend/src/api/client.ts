@@ -13,16 +13,61 @@ function authHeaders(): HeadersInit {
   return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 }
 
+let refreshingPromise: Promise<boolean> | null = null;
+
+async function refreshAccessToken(): Promise<boolean> {
+  if (refreshingPromise) return refreshingPromise;
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (!refreshToken) return false;
+  refreshingPromise = (async () => {
+    try {
+      const res = await fetch("/api/v1/auth/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!res.ok) return false;
+      const json: ApiResponse<{ accessToken: string; refreshToken: string }> = await res.json();
+      const tokens = json.data;
+      if (!tokens?.accessToken) return false;
+      localStorage.setItem("accessToken", tokens.accessToken);
+      if (tokens.refreshToken) localStorage.setItem("refreshToken", tokens.refreshToken);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshingPromise = null;
+    }
+  })();
+  return refreshingPromise;
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}${path}`, {
+  const doFetch = (): Promise<Response> =>
+    fetch(`${API_BASE}${path}`, {
       method,
       headers: authHeaders(),
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
+  let res: Response;
+  try {
+    res = await doFetch();
   } catch {
     throw new Error("NETWORK_ERROR");
+  }
+  if (res.status === 401 || res.status === 403) {
+    if (localStorage.getItem("refreshToken")) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        try {
+          res = await doFetch();
+        } catch {
+          throw new Error("NETWORK_ERROR");
+        }
+      } else {
+        throw new Error("UNAUTHORIZED");
+      }
+    }
   }
   if (res.status === 401) throw new Error("UNAUTHORIZED");
   if (!res.ok) throw new Error(`API_ERROR_${res.status}`);
