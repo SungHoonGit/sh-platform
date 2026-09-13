@@ -6,12 +6,15 @@
 --   resume_careers, resume_educations, resume_skills,
 --   resume_certificates, resume_projects, resume_introductions,
 --   resume_portfolio_items, resume_career_items
+-- 주의: resume_career_items는 user_id 컬럼이 없고 career_id로 경력에 귀속되므로
+--   document_id를 career_id 다음에 추가하고 인덱스도 (career_id, document_id)로 건다.
 -- 실행:
 --   mysql -h 10.0.0.39 -u sh_user -p resume_platform < docs/resume/ddl-resume-v13.sql
 -- ============================================================
 
 -- 멱등: 각 테이블의 document_id 컬럼이 없을 때만 추가.
 -- PREPARE는 한 번에 한 문장만 실행하므로 테이블별로 개별 ALTER를 수행한다.
+-- 주의: resume_career_items는 user_id 컬럼이 없고 career_id로 경력에 속하므로 별도 처리한다.
 DROP PROCEDURE IF EXISTS add_document_id_columns;
 DELIMITER //
 CREATE PROCEDURE add_document_id_columns()
@@ -24,7 +27,7 @@ BEGIN
         WHERE t.table_schema = DATABASE()
           AND t.table_name IN ('resume_careers','resume_educations','resume_skills',
                                'resume_certificates','resume_projects','resume_introductions',
-                               'resume_portfolio_items','resume_career_items')
+                               'resume_portfolio_items')
           AND NOT EXISTS (
               SELECT 1 FROM information_schema.columns c
               WHERE c.table_schema = t.table_schema
@@ -47,6 +50,21 @@ END //
 DELIMITER ;
 CALL add_document_id_columns();
 DROP PROCEDURE IF EXISTS add_document_id_columns;
+
+-- resume_career_items: career_id 다음에 document_id 추가 (user_id 없음)
+SET @cnt_ci := (
+    SELECT COUNT(*)
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = 'resume_career_items'
+      AND column_name = 'document_id'
+);
+SET @ddl_ci := IF(@cnt_ci = 0,
+    'ALTER TABLE resume_career_items ADD COLUMN document_id BIGINT NULL AFTER career_id',
+    'SELECT 1');
+PREPARE stmt_ci FROM @ddl_ci;
+EXECUTE stmt_ci;
+DEALLOCATE PREPARE stmt_ci;
 
 -- 인덱스 추가 (멱등)
 SET @idx_cnt := (
@@ -152,10 +170,10 @@ SET @idx_cnt8 := (
     FROM information_schema.statistics
     WHERE table_schema = DATABASE()
       AND table_name = 'resume_career_items'
-      AND index_name = 'idx_resume_career_items_user_doc'
+      AND index_name = 'idx_resume_career_items_career_doc'
 );
 SET @idx_ddl8 := IF(@idx_cnt8 = 0,
-    'ALTER TABLE resume_career_items ADD INDEX idx_resume_career_items_user_doc (user_id, document_id)',
+    'ALTER TABLE resume_career_items ADD INDEX idx_resume_career_items_career_doc (career_id, document_id)',
     'SELECT 1');
 PREPARE stmt9 FROM @idx_ddl8;
 EXECUTE stmt9;
