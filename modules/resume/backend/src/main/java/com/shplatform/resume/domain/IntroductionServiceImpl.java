@@ -83,7 +83,7 @@ public class IntroductionServiceImpl implements IntroductionService {
     private void applyRequest(ResumeIntroductionEntity entity, IntroductionRequest request) {
         entity.setTitle(request.title());
         entity.setContent(request.content());
-        entity.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 0);
+        if (request.displayOrder() != null) entity.setDisplayOrder(request.displayOrder());
     }
 
     private IntroductionResponse toResponse(ResumeIntroductionEntity entity) {

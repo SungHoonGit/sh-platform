@@ -84,7 +84,7 @@ public class SkillServiceImpl implements SkillService {
         entity.setName(request.name());
         entity.setLevel(request.level());
         entity.setCategory(request.category());
-        entity.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 0);
+        if (request.displayOrder() != null) entity.setDisplayOrder(request.displayOrder());
     }
 
     private SkillResponse toResponse(ResumeSkillEntity entity) {

@@ -89,7 +89,7 @@ public class EducationServiceImpl implements EducationService {
         entity.setStartDate(request.startDate());
         entity.setEndDate(request.endDate());
         entity.setStatus(request.status());
-        entity.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 0);
+        if (request.displayOrder() != null) entity.setDisplayOrder(request.displayOrder());
     }
 
     private EducationResponse toResponse(ResumeEducationEntity entity) {

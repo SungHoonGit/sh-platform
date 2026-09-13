@@ -84,7 +84,7 @@ public class CertificateServiceImpl implements CertificateService {
         entity.setName(request.name());
         entity.setIssuer(request.issuer());
         entity.setAcquiredAt(request.acquiredAt());
-        entity.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 0);
+        if (request.displayOrder() != null) entity.setDisplayOrder(request.displayOrder());
     }
 
     private CertificateResponse toResponse(ResumeCertificateEntity entity) {

@@ -112,7 +112,7 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
         entity.setFilePath(request.filePath());
         entity.setLinkUrl(request.linkUrl());
         entity.setDescription(request.description());
-        entity.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 0);
+        if (request.displayOrder() != null) entity.setDisplayOrder(request.displayOrder());
     }
 
     private PortfolioItemResponse toResponse(ResumePortfolioItemEntity entity) {

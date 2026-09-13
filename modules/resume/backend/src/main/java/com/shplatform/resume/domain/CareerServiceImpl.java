@@ -105,7 +105,7 @@ public class CareerServiceImpl implements CareerService {
         entity.setStartDate(request.startDate());
         entity.setEndDate(request.endDate());
         entity.setDescription(request.description());
-        entity.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 0);
+        if (request.displayOrder() != null) entity.setDisplayOrder(request.displayOrder());
     }
 
     private CareerResponse toResponse(ResumeCareerEntity entity, List<ResumeCareerItemEntity> items) {

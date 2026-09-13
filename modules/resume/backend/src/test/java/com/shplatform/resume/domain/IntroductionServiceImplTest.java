@@ -93,6 +93,23 @@ class IntroductionServiceImplTest {
     }
 
     @Test
+    @DisplayName("updateIntroduction: displayOrder가 null이면 기존 순서를 유지한다")
+    void updateIntroduction_preservesDisplayOrder() {
+        var existing = entity(USER_ID);
+        existing.setDisplayOrder(3);
+        given(introductionRepository.findById(INTRODUCTION_ID)).willReturn(Optional.of(existing));
+        given(introductionRepository.save(any(ResumeIntroductionEntity.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        var response = introductionService.updateIntroduction(USER_ID, DOCUMENT_ID, INTRODUCTION_ID,
+                new IntroductionRequest("지원동기", "백엔드 개발자로 성장하고 싶습니다.", null));
+
+        then(introductionRepository).should(times(1)).save(existing);
+        assertThat(existing.getDisplayOrder()).isEqualTo(3);
+        assertThat(response.displayOrder()).isEqualTo(3);
+    }
+
+    @Test
     @DisplayName("updateIntroduction: 다른 사용자의 항목이면 FORBIDDEN 예외가 발생한다")
     void updateIntroduction_forbidden() {
         given(introductionRepository.findById(INTRODUCTION_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));

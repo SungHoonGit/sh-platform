@@ -92,7 +92,7 @@ public class ProjectServiceImpl implements ProjectService {
         entity.setVideoUrl(request.videoUrl());
         entity.setLinkUrl(request.linkUrl());
         entity.setThumbnailPath(request.thumbnailPath());
-        entity.setDisplayOrder(request.displayOrder() != null ? request.displayOrder() : 0);
+        if (request.displayOrder() != null) entity.setDisplayOrder(request.displayOrder());
     }
 
     private ProjectResponse toResponse(ResumeProjectEntity entity) {
