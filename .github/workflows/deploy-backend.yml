@@ -150,6 +150,13 @@ jobs:
             sudo nginx -t
             sudo systemctl reload nginx
 
+            # MySQL 주기 백업 스케줄 (cron.d 설치, 멱등) — scripts/backup-mysql.sh
+            sudo chmod 700 scripts/backup-mysql.sh
+            sudo cp infra/cron.d/sh-platform-mysql-backup /etc/cron.d/sh-platform-mysql-backup
+            sudo chmod 644 /etc/cron.d/sh-platform-mysql-backup
+            sudo mkdir -p /home/ubuntu/backups/mysql
+            touch /home/ubuntu/backups/mysql/backup.log && sudo chown -R root:root /home/ubuntu/backups/mysql
+
             # Log dump (diagnostics): 스크래퍼 최근 오류 로그
             echo "===== SCRAPER LOGS (last 6h) ====="
             sudo journalctl -u sh-platform-scraper --no-pager --since "6 hours ago" | grep -B2 -A40 "Unhandled exception\|ERROR" | tail -n 200 || true
