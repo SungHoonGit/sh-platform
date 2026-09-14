@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # MySQL 주기 전체 백업 (mysqldump)
-# - DB 3종 전체 덤프: sh_pass / scraper_platform / resume_platform
+# - DB 4종 전체 덤프: sh_pass / scraper_platform / resume_platform / portfolio_platform
 # - 매일 cron.d 로 실행 (infra/cron.d/sh-platform-mysql-backup, Asia/Seoul 03:30)
 # - 보존: KEEP_DAYS(기본 7)일 이전 디렉터리 자동 삭제
 # - 설치/복구 절차: docs/guides/009-260914-mysql-backup-guide.md
@@ -20,7 +20,7 @@ DB_PASS="${DB_PASS:-${DB_USER_PASSWORD:-${MYSQL_PASSWORD:-$(
 )}}}"
 DB_PASS="${DB_PASS:-SHpass1234!}"
 
-DATABASES=(sh_pass scraper_platform resume_platform)
+DATABASES=(sh_pass scraper_platform resume_platform portfolio_platform)
 STAMP="$(date +%Y%m%d_%H%M%S)"
 OUT_DIR="$BACKUP_ROOT/$(date +%Y%m%d)"
 mkdir -p "$OUT_DIR"

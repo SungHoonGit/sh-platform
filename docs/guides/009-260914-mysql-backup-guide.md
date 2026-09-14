@@ -1,9 +1,9 @@
 # 009-260914-MySQL 백업 가이드
 
 ## 개요
-- **목적**: MariaDB 전체 DB(3종)를 매일 덤프하여 장애·실수 삭제 시 시점 복구(PITR) 기반을 마련한다.
+- **목적**: MariaDB 전체 DB(4종)를 매일 덤프하여 장애·실수 삭제 시 시점 복구(PITR) 기반을 마련한다.
 - **배경**: binlog는 2026-09-13 19:28부터만 기록되어 그 이전 시점은 복구 원천이 없다. mysqldump 주기 백업으로 "스냅샷 + binlog 로그" 복구 체계를 구성.
-- **대상 DB**: `sh_pass`(auth), `scraper_platform`, `resume_platform`
+- **대상 DB**: `sh_pass`(auth), `scraper_platform`, `resume_platform`, `portfolio_platform`
 - **작성일**: 2026-09-14
 
 ## 1. 구성 요소

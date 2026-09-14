@@ -6,7 +6,7 @@
 > **⚠️ 진행 중인 작업**: 실사용 검증(문서별 독립성·불러오기 복제) — 문서 단위 분리는 구현·배포·복구 완료.
 > **세션 시작 시 반드시 `docs/daily/2026-09-14-work-log.md`를 먼저 읽고 이어서 작업할 것.**
 > **세션 시작 시 반드시 `git pull origin master`로 원격과 동기화 + 오늘 날짜의 작업 일지(`docs/daily/YYYY-MM-DD-work-log.md`)를 먼저 읽고 이어서 작업할 것.**
-> 최근 완료: 이력서 아이템 문서 단위 분리(documentId, DDL v13) + 403 자동 토큰 갱신 + 제목 인라인 수정 + displayOrder 보존 + **/resume 404 복구(배포 jar에 프론트 dist 누락 → 재배포)** + **MySQL 주기 전체 백업 실동작 검증(매일 03:30 KST mysqldump, 7일 보존, cron.d — 3개 DB 덤프 정상)**.
+> 최근 완료: 이력서 아이템 문서 단위 분리(documentId, DDL v13) + 403 자동 토큰 갱신 + 제목 인라인 수정 + displayOrder 보존 + **/resume 404 복구(배포 jar에 프론트 dist 누락 → 재배포)** + **MySQL 주기 전체 백업 실동작 검증(매일 03:30 KST mysqldump, 7일 보존, cron.d — 4개 DB 덤프 정상)**.
 > 다음: 실사용 검증(문서별 독립성, 불러오기 복제) + **BINLOG MONITOR 부여(`scripts/db-admin-setup.sql` 또는 GitHub secret `MYSQL_ADMIN_PASS`) 후 binlog 좌표 기록 활성화** + 백업 2회차(내일 03:30) 산출물 확인.
 >
 > **⚠️ 배포 시 주의**: resume/scraper jar는 `frontend/dist`를 포함해야 정상 서빙됨(`copyFrontendDist`). 프론트 빌드 없이 백엔드만 빌드해 배포하면 `/resume` 404. 반드시 CI 워크플로우(프론트 빌드→백엔드 빌드 순서)로 배포할 것.
