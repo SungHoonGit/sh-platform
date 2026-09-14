@@ -167,8 +167,12 @@ jobs:
             echo "===== MYSQL DIAGNOSTICS ====="
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' -e "SHOW VARIABLES LIKE 'log_bin'; SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';" 2>&1 || true
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' -e "SHOW MASTER STATUS;" 2>&1 && echo "[coordinate OK]" || echo "(SHOW MASTER STATUS 접근권한 없음 — BINLOG MONITOR 필요)"
-            # DB admin(root·기초 비밀번호 미설정 추정)로 BINLOG MONITOR 부여 시도 — 멱등
-            mysql -h 10.0.0.39 -u root -e "GRANT BINLOG MONITOR ON *.* TO 'sh_user'@'%'; FLUSH PRIVILEGES;" 2>&1 && echo "[GRANT OK] root TCP 접근 성공 — sh_user에 BINLOG MONITOR 부여됨" || echo "[GRANT FAIL] root(무비밀번호) TCP 접근 불가 — 수동 부여 필요"
+            # DB admin 접속 정보가 GitHub secret(MYSQL_ADMIN_PASS)으로 주어지면 1회 자동 적용 (멱등)
+            # 수동 적용 시: scripts/db-admin-setup.sql 참고
+            if [ -n "${{ secrets.MYSQL_ADMIN_PASS }}" ] && [ ! -f /home/ubuntu/backups/mysql/.grant-tried ]; then
+              mysql -h 10.0.0.39 -u root -p"${{ secrets.MYSQL_ADMIN_PASS }}" -e "GRANT BINLOG MONITOR ON *.* TO 'sh_user'@'%'; SET GLOBAL binlog_expire_logs_seconds=1209600; FLUSH PRIVILEGES;" 2>&1 && echo "[ADMIN OK] BINLOG MONITOR 부여 + binlog 보존 14일 적용됨" || echo "[ADMIN FAIL] 접속 실패(비밀번호 불일치?)"
+              sudo touch /home/ubuntu/backups/mysql/.grant-tried
+            fi
             # 첫 배포에 한해 백업 즉시 1회 실행 → binlog 좌표 기록 검증 (.first-run-done 마커로 중복 방지)
             if [ ! -f /home/ubuntu/backups/mysql/.first-run-done ]; then
               sudo /home/ubuntu/sh-platform/scripts/backup-mysql.sh || true

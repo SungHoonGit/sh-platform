@@ -71,7 +71,8 @@ SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';
 SET GLOBAL binlog_expire_logs_seconds = 1209600;  -- 14일
 ```
 영속화: `mysqld.cnf`에 `[mysqld] binlog_expire_logs_seconds=1209600` 추가 후 재시작.
-(이 작업은 SSH로 서버에 적용 필요 — 현재 환경에서 직접 적용 불가, 다음 접속 때 할 것)
+> **일괄 적용 스크립트**: `scripts/db-admin-setup.sql`(BINLOG MONITOR + 보존 14일 + 확인 쿼리) — 관리자로 1회 실행.
+> CI 자동 적용: GitHub secret `MYSQL_ADMIN_PASS` 설정 시 다음 배포에서 자동 적용됨(멱등).
 
 ## 6. 문제 해결
 | 문제 | 원인 | 해결책 |
