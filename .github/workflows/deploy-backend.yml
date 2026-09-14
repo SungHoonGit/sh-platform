@@ -163,4 +163,14 @@ jobs:
             sudo journalctl -u sh-platform-scraper --no-pager --since "6 hours ago" | grep -B2 -A40 "Unhandled exception\|ERROR" | tail -n 200 || true
             echo "===== END SCRAPER LOGS ====="
 
+            # MySQL/백업 진단 (맨 아래 cat 은 mysqlbinlog 예제와 무관한 실제 파일 확인)
+            echo "===== MYSQL DIAGNOSTICS ====="
+            mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' -e "SHOW VARIABLES LIKE 'log_bin'; SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';" 2>&1 || true
+            mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' -e "SHOW MASTER STATUS;" 2>&1 || echo "(SHOW MASTER STATUS 접근권한 없음 — BINLOG MONITOR 필요)"
+            echo "===== BACKUP DIR ====="
+            ls -laR /home/ubuntu/backups/mysql 2>/dev/null | head -80 || echo "(백업 디렉터리 없음)"
+            echo "===== CRON INSTALLED ====="
+            cat /etc/cron.d/sh-platform-mysql-backup 2>/dev/null || echo "(cron.d 미설치)"
+            echo "===== END MYSQL DIAGNOSTICS ====="
+
             echo "Deploy complete!"
