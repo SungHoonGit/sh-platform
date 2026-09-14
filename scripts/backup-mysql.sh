@@ -31,6 +31,20 @@ if [ -z "$DB_PASS" ]; then
 fi
 export MYSQL_PWD="$DB_PASS"
 
+# binlog 좌표 기록 — PITR: 스냅샷 이후 binlog 재생 시작점
+MASTER_STATUS="$(mysql --host="$DB_HOST" --user="$DB_USER" --batch --skip-column-names -e "SHOW MASTER STATUS" 2>/dev/null || true)"
+{
+  echo "# binlog snapshot 좌표 ($(date -Iseconds))"
+  if [ -n "$MASTER_STATUS" ]; then
+    echo "binlog_file: $(printf '%s\n' "$MASTER_STATUS" | awk '{print $1}')"
+    echo "binlog_pos: $(printf '%s\n' "$MASTER_STATUS" | awk '{print $2}')"
+  else
+    echo "binlog_file: (disabled — binlog 미활성)"
+    echo "binlog_pos: -"
+  fi
+} > "$OUT_DIR/binlog-status.txt"
+echo "[OK] binlog 좌표 -> ${OUT_DIR}/binlog-status.txt"
+
 for db in "${DATABASES[@]}"; do
   warn="$OUT_DIR/${db}_${STAMP}.warn"
   sql="$OUT_DIR/${db}_${STAMP}.sql"

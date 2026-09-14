@@ -34,27 +34,44 @@ sudo /home/ubuntu/sh-platform/scripts/backup-mysql.sh
 ```
 
 ## 4. 복구 절차
+스냅샷 복원 = "백업 시점으로 되돌리기", PITR = "백업 시점 + binlog 재생으로 원하는 시각까지 복구"
+
 ```bash
-# DB 전체 복원 (예: resume_platform)
-gzip -dc backup/resume_platform_20260914_030012.sql.gz | \
+# 1) 덤프 복원 (백업 시점의 스냅샷)
+gzip -dc backup/20260914/resume_platform_20260914_030012.sql.gz | \
   mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' resume_platform
-# 특정 테이블만 복원
-gzip -dc backup/resume_platform_*.sql.gz | \
-  mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' --database resume_platform \
-  --execute="SOURCE /dev/stdin" 2>/dev/null || true
-# (권장) 복원 전 현재 DB도 백업해 두고, 앱 재시작 순서 확인
-sudo systemctl restart sh-platform-auth sh-platform-scraper sh-platform-resume
+
+# 2) 시작 좌표 확인 (백업 시점의 binlog 좌표)
+cat backup/20260914/binlog-status.txt
+#   binlog_file: mysql-bin.000123
+#   binlog_pos: 456789
+
+# 3) binlog 재생 — (백업 시점 + 임의 시각)까지 변경분 적용 (PITR)
+#    mysqlbinlog 파일 순서대로, 좌표 ~ 그 뒤 파일을 모두 로그하게 함
+mysqlbinlog \
+  --start-position=456789 \
+  --stop-datetime="2026-09-14 12:00:00" \
+  /var/lib/mysql/mysql-bin.000123 \
+  /var/lib/mysql/mysql-bin.000124 \
+  | mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' resume_platform
 ```
 
-> 복원 시 주의: 백업 후 발생한 변경분은 binlog로 복구해야 함(스냅샷 시점 이후 손실).
-> "스냅샷 + binlog" 복구 구성(마스터 binlog 좌표 기록)은 미구현 — 필요 시 추가.
+> **PITR 성공 조건**: binlog 파일이 스냅샷 좌표부터 **아직 서버에 남아 있어야** 함(아래 6 참고).
+> binlog 좌표 기준 파일이 이미 지워졌으면 그 이전 스냅샷으로 재시도해야 함.
+> 2026-09-14 현재 binlog는 9/13 19:28부터 기록 → **그 이전 시점 복구는 불가** (주기 덤프가 최소 수단).
 
-## 5. binlog 모니터링 권한 (선택)
-운영 계정으로 `SHOW BINARY LOGS` 확인이 필요한 경우:
+## 5. binlog 보존 설정 (PITR 기간 확보 — 서버 적용 필요)
+스냅샷+binlog PITR이 성립하려면 **binlog 보존 기간 ≥ 스냅샷 보존 기간(7일)** 여야 한다.
+덤프 보존(7일) + 이후 변경분을 재생할 여유(7일)를 고려해 **14일 이상** 권장.
+
 ```sql
-GRANT BINLOG MONITOR ON *.* TO 'sh_user'@'%';
-FLUSH PRIVILEGES;
+-- 현재 값 확인 (MariaDB 10.6+)
+SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';
+-- 즉시 적용 (서버에서 실행)
+SET GLOBAL binlog_expire_logs_seconds = 1209600;  -- 14일
 ```
+영속화: `mysqld.cnf`에 `[mysqld] binlog_expire_logs_seconds=1209600` 추가 후 재시작.
+(이 작업은 SSH로 서버에 적용 필요 — 현재 환경에서 직접 적용 불가, 다음 접속 때 할 것)
 
 ## 6. 문제 해결
 | 문제 | 원인 | 해결책 |
@@ -62,6 +79,14 @@ FLUSH PRIVILEGES;
 | 덤프 실패("Access denied") | DB_PASS 미설정/오변경 | `scripts/backup-mysql.sh`의 DB_PASS 설정 확인(.env 우선) |
 | "column statistics" 경고 | MariaDB mysqldump 10.5+ 알려진 무해 경고 | 무시 (스크립트가 실제 오류와 구분) |
 | 백업이 안 보임 | 보존기간 초과 삭제 또는 cron 미기동 | `/home/ubuntu/backups/mysql/backup.log` 확인, `systemctl status cron` |
+| PITR 불가(지정 시각 이전 binlog 없음) | binlog 보존기간 < 복구 대상 시점 | 최근 덤프 중 스냅샷이 좌표 이전인 것 사용, binlog 보존 확대(§5) |
+
+## 7. binlog 모니터링 권한 (선택)
+운영 계정으로 `SHOW BINARY LOGS` 확인이 필요한 경우:
+```sql
+GRANT BINLOG MONITOR ON *.* TO 'sh_user'@'%';
+FLUSH PRIVILEGES;
+```
 
 ---
 *작성일: 2026-09-14*
