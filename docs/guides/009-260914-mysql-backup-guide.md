@@ -18,8 +18,9 @@
 
 ## 2. 실행 주기·보존
 - 매일 **03:30 Asia/Seoul**
-- 파일: `YYYYMMDD/{db}_YYYYmmdd_HHMMSS.sql.gz`
-- 보존: **7일**(`KEEP_DAYS` 환경변수로 변경 가능) — 이전 일자 디렉터리 자동 삭제
+- 덤프 파일: `YYYYMMDD/{db}_YYYYmmdd_HHMMSS.sql.gz`
+- 실행 로그: `backup-YYYYMMDD.log` (일자별 로그)
+- 보존: **7일**(`KEEP_DAYS` 환경변수로 변경 가능) — 덤프·로그 모두 만료 시 자동 삭제
 
 ## 3. 동작 확인
 ```bash
@@ -27,8 +28,8 @@
 cat /etc/cron.d/sh-platform-mysql-backup
 # 누적 백업 목록
 ls -lR /home/ubuntu/backups/mysql
-# 실행 로그
-tail -f /home/ubuntu/backups/mysql/backup.log
+# 오늘 실행 로그
+tail -f /home/ubuntu/backups/mysql/backup-$(date +%Y%m%d).log
 # 즉시 수동 실행 (동일 권한/환경으로 테스트)
 sudo /home/ubuntu/sh-platform/scripts/backup-mysql.sh
 ```
@@ -79,7 +80,7 @@ SET GLOBAL binlog_expire_logs_seconds = 1209600;  -- 14일
 |------|------|--------|
 | 덤프 실패("Access denied") | DB_PASS 미설정/오변경 | `scripts/backup-mysql.sh`의 DB_PASS 설정 확인(.env 우선) |
 | "column statistics" 경고 | MariaDB mysqldump 10.5+ 알려진 무해 경고 | 무시 (스크립트가 실제 오류와 구분) |
-| 백업이 안 보임 | 보존기간 초과 삭제 또는 cron 미기동 | `/home/ubuntu/backups/mysql/backup.log` 확인, `systemctl status cron` |
+| 백업이 안 보임 | 보존기간 초과 삭제 또는 cron 미기동 | `/home/ubuntu/backups/mysql/backup-$(date +%Y%m%d).log` 확인, `systemctl status cron` |
 | PITR 불가(지정 시각 이전 binlog 없음) | binlog 보존기간 < 복구 대상 시점 | 최근 덤프 중 스냅샷이 좌표 이전인 것 사용, binlog 보존 확대(§5) |
 
 ## 7. binlog 모니터링 권한 (선택)

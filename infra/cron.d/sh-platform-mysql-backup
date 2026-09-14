@@ -1,7 +1,7 @@
 # sh-platform MySQL 주기 전체 백업
 # - 설치: CI 배포 시 이 파일을 /etc/cron.d/sh-platform-mysql-backup 로 복사(멱등)
 # - 스크립트: /home/ubuntu/sh-platform/scripts/backup-mysql.sh
-# - 로그: /home/ubuntu/backups/mysql/backup.log
+# - 로그: /home/ubuntu/backups/mysql/backup-YYYYMMDD.log (일자별, 7일 보존)
 # - 상세: docs/guides/009-260914-mysql-backup-guide.md
 CRON_TZ=Asia/Seoul
-30 3 * * * root /home/ubuntu/sh-platform/scripts/backup-mysql.sh >> /home/ubuntu/backups/mysql/backup.log 2>&1
+30 3 * * * root /home/ubuntu/sh-platform/scripts/backup-mysql.sh >> /home/ubuntu/backups/mysql/backup-$(date +\%Y\%m\%d).log 2>&1

@@ -70,4 +70,6 @@ unset MYSQL_PWD
 
 # 보존 기간 초과 백업 삭제 (일자 디렉터리 단위)
 find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_DAYS" -exec rm -rf {} +
+# 보존 기간 초과 실행 로그 삭제 (일별 로그 파일: backup-YYYYMMDD.log)
+find "$BACKUP_ROOT" -maxdepth 1 -type f -name 'backup-*.log' -mtime +"$KEEP_DAYS" -delete
 echo "[DONE] 백업 완료. 누적 크기: $(du -sh "$BACKUP_ROOT" | cut -f1)"
