@@ -156,7 +156,7 @@ jobs:
             sudo cp infra/cron.d/sh-platform-mysql-backup /etc/cron.d/sh-platform-mysql-backup
             sudo chmod 644 /etc/cron.d/sh-platform-mysql-backup
             sudo mkdir -p /home/ubuntu/backups/mysql
-            touch /home/ubuntu/backups/mysql/backup.log && sudo chown -R root:root /home/ubuntu/backups/mysql
+            sudo touch /home/ubuntu/backups/mysql/backup.log || true
 
             # Log dump (diagnostics): 스크래퍼 최근 오류 로그
             echo "===== SCRAPER LOGS (last 6h) ====="
@@ -166,7 +166,14 @@ jobs:
             # MySQL/백업 진단 (맨 아래 cat 은 mysqlbinlog 예제와 무관한 실제 파일 확인)
             echo "===== MYSQL DIAGNOSTICS ====="
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' -e "SHOW VARIABLES LIKE 'log_bin'; SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';" 2>&1 || true
-            mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' -e "SHOW MASTER STATUS;" 2>&1 || echo "(SHOW MASTER STATUS 접근권한 없음 — BINLOG MONITOR 필요)"
+            mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' -e "SHOW MASTER STATUS;" 2>&1 && echo "[coordinate OK]" || echo "(SHOW MASTER STATUS 접근권한 없음 — BINLOG MONITOR 필요)"
+            # DB admin(root·기초 비밀번호 미설정 추정)로 BINLOG MONITOR 부여 시도 — 멱등
+            mysql -h 10.0.0.39 -u root -e "GRANT BINLOG MONITOR ON *.* TO 'sh_user'@'%'; FLUSH PRIVILEGES;" 2>&1 && echo "[GRANT OK] root TCP 접근 성공 — sh_user에 BINLOG MONITOR 부여됨" || echo "[GRANT FAIL] root(무비밀번호) TCP 접근 불가 — 수동 부여 필요"
+            # 첫 배포에 한해 백업 즉시 1회 실행 → binlog 좌표 기록 검증 (.first-run-done 마커로 중복 방지)
+            if [ ! -f /home/ubuntu/backups/mysql/.first-run-done ]; then
+              sudo /home/ubuntu/sh-platform/scripts/backup-mysql.sh || true
+              sudo touch /home/ubuntu/backups/mysql/.first-run-done
+            fi
             echo "===== BACKUP DIR ====="
             ls -laR /home/ubuntu/backups/mysql 2>/dev/null | head -80 || echo "(백업 디렉터리 없음)"
             echo "===== CRON INSTALLED ====="
