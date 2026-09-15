@@ -155,8 +155,11 @@ jobs:
             sudo chmod 700 scripts/backup-mysql.sh
             sudo cp infra/cron.d/sh-platform-mysql-backup /etc/cron.d/sh-platform-mysql-backup
             sudo chmod 644 /etc/cron.d/sh-platform-mysql-backup
-            sudo mkdir -p /home/ubuntu/backups/mysql
+            sudo mkdir -p /home/ubuntu/backups/mysql /home/ubuntu/backups/files
             sudo touch /home/ubuntu/backups/mysql/backup.log || true
+
+            # 웹/WAS 파일 데이터 백업 스크립트 설치 (scripts/backup-files.sh)
+            sudo chmod 700 scripts/backup-files.sh
 
             # Log dump (diagnostics): 스크래퍼 최근 오류 로그
             echo "===== SCRAPER LOGS (last 6h) ====="

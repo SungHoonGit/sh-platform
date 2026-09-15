@@ -83,7 +83,20 @@ SET GLOBAL binlog_expire_logs_seconds = 1209600;  -- 14일
 | 백업이 안 보임 | 보존기간 초과 삭제 또는 cron 미기동 | `/home/ubuntu/backups/mysql/backup-$(date +%Y%m%d).log` 확인, `systemctl status cron` |
 | PITR 불가(지정 시각 이전 binlog 없음) | binlog 보존기간 < 복구 대상 시점 | 최근 덤프 중 스냅샷이 좌표 이전인 것 사용, binlog 보존 확대(§5) |
 
-## 7. binlog 모니터링 권한 (선택)
+## 7. 웹/WAS 파일 데이터 백업
+DB 외 웹 서버에만 존재하는 런타임 파일(코드/설정은 git이 원본이라 제외):
+| 경로 | 내용 | 상태 |
+|------|------|------|
+| `/home/ubuntu/data/` | 스크래퍼 크롤링 MD 등 (`docs/scraper/data-paths.md`가 "전체 백업 권장" 명시) | 백업 대상 |
+| `/home/ubuntu/sh-platform/uploads/` | 이력서/포트폴리오 첨부 파일 | 백업 대상 |
+
+- 스크립트: `scripts/backup-files.sh` — 대상 2개 경로를 tar.gz 일자별로 압축, 7일 보존
+- 스케줄: cron.d 두 번째 라인 `35 3 * * *` (DB 백업 03:30과 5분 간격)
+- 산출물: `/home/ubuntu/backups/files/YYYYMMDD/{data,uploads}_YYYYmmdd_HHMMSS.tar.gz`
+- 로그: `/home/ubuntu/backups/files/backup-YYYYMMDD.log`
+- 복원: `tar xzf data_*.tar.gz -C /home/ubuntu/data/` 형태로 원위치 해제
+
+## 8. binlog 모니터링 권한 (선택)
 운영 계정으로 `SHOW BINARY LOGS` 확인이 필요한 경우:
 ```sql
 GRANT BINLOG MONITOR ON *.* TO 'sh_user'@'%';
