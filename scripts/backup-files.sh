@@ -8,6 +8,9 @@
 #
 set -euo pipefail
 
+# 파일명/디렉터리 날짜를 KST 기준으로
+export TZ=Asia/Seoul
+
 BACKUP_ROOT="${BACKUP_ROOT:-/home/ubuntu/backups/files}"
 KEEP_DAYS="${KEEP_DAYS:-7}"
 STAMP="$(date +%Y%m%d_%H%M%S)"
