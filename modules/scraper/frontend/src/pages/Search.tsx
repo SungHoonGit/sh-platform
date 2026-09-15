@@ -5,19 +5,13 @@ import ExcelJS from "exceljs";
 import { realTimeSearch, fetchCompanyRatings, addBlacklist, updateBlacklist, fetchBlacklist, removeBlacklist, type BlacklistItem, type SearchRequest, type SearchResponse, type CompanyRating } from "../api/scraper";
 import { jobPlanetQuery, deadlineBadge, normCompany } from "../common/jobPlanet";
 import {
-  REGIONS,
-  DEFAULT_LOCATIONS,
   CAREER_TOTAL,
   isCareerActive,
   CareerRangeSlider,
   LocationMultiSelect,
 } from "../components/SearchFilters";
+import { useSites, useRegions, siteDisplayName, siteBadgeColor, DEFAULT_LOCATIONS_FALLBACK } from "../hooks/useMasterData";
 import { BlockConfirmDialog, BlacklistManagerModal } from "@sh-platform/ui";
-
-const SITES = [
-  { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  { id: "jobkorea", name: "잡코리아", color: "bg-green-100 text-green-700 border-green-200" },
-];
 
 const PAGE_SIZE = 20;
 
@@ -74,8 +68,18 @@ export default function Search() {
   const [keyword, setKeyword] = useState("");
   const [careerMin, setCareerMin] = useState(0);
   const [careerMax, setCareerMax] = useState(CAREER_TOTAL);
-  const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
-  const [selectedSites, setSelectedSites] = useState<string[]>(["saramin", "jobkorea"]);
+  const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS_FALLBACK);
+  const { data: regions = [] } = useRegions();
+  const { data: sitesData = [] } = useSites();
+  const sites = useMemo(() => sitesData.filter((s) => s.isEnabled), [sitesData]);
+  const [selectedSites, setSelectedSites] = useState<string[]>([]);
+  const sitesInitialized = useRef(false);
+  useEffect(() => {
+    if (sites.length > 0 && !sitesInitialized.current && selectedSites.length === 0) {
+      sitesInitialized.current = true;
+      setSelectedSites(sites.map((s) => s.siteName));
+    }
+  }, [sites, selectedSites]);
   const [data, setData] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -183,10 +187,10 @@ export default function Search() {
   const siteEntries = useMemo(() => {
     if (!data?.siteCounts) return [];
     return Object.entries(data.siteCounts).map(([siteId, count]) => {
-      const siteDef = SITES.find((s) => s.id === siteId);
-      return { siteId, name: siteDef?.name || siteId, count, color: siteDef?.color || "bg-slate-100 text-slate-600" };
+      const siteDef = sites.find((s) => s.siteName === siteId);
+      return { siteId, name: siteDef?.displayName || siteId, count, color: siteBadgeColor(siteDef?.color) };
     });
-  }, [data]);
+  }, [data, sites]);
 
   const loadRatings = useCallback(async (companyNames: string[]) => {
     const newCompanies = companyNames.filter(name => !ratingsLoadedRef.current.has(name));
@@ -222,7 +226,7 @@ export default function Search() {
       if (careerMin > 0) payload.careerMin = careerMin;
       if (careerMax < CAREER_TOTAL) payload.careerMax = careerMax;
     }
-    if (locations.length > 0 && locations.length < REGIONS.length) {
+    if (locations.length > 0 && locations.length < regions.length) {
       payload.locations = locations;
     }
 
@@ -297,7 +301,7 @@ export default function Search() {
           <LocationMultiSelect
             selected={locations}
             onToggle={toggleLocation}
-            onSelectAll={() => setLocations([...REGIONS])}
+            onSelectAll={() => setLocations(regions.map((r) => r.name))}
             onClear={() => setLocations([])}
           />
           {locations.length === 0 && (
@@ -309,22 +313,24 @@ export default function Search() {
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-[11px] font-medium text-slate-600">사이트</label>
             <button
-              onClick={() => setSelectedSites((prev) => prev.length === SITES.length ? [] : SITES.map((s) => s.id))}
+              onClick={() => setSelectedSites((prev) => prev.length === sites.length ? [] : sites.map((s) => s.siteName))}
               className="text-[10px] text-blue-600 hover:text-blue-800"
             >
-              {selectedSites.length === SITES.length ? "전체해제" : "전체선택"}
+              {selectedSites.length === sites.length ? "전체해제" : "전체선택"}
             </button>
           </div>
           <div className="space-y-1.5">
-            {SITES.map((site) => (
-              <label key={site.id}
+            {sites.map((site) => (
+              <label key={site.siteName}
                 className={`flex items-center gap-2 p-2 rounded cursor-pointer border transition-colors ${
-                  selectedSites.includes(site.id) ? "border-blue-300 bg-blue-50" : "border-slate-200 hover:border-slate-300"
+                  selectedSites.includes(site.siteName) ? "border-blue-300 bg-blue-50" : "border-slate-200 hover:border-slate-300"
                 }`}>
-                <input type="checkbox" checked={selectedSites.includes(site.id)}
-                  onChange={() => toggleSite(site.id)}
+                <input type="checkbox" checked={selectedSites.includes(site.siteName)}
+                  onChange={() => toggleSite(site.siteName)}
                   className="w-3.5 h-3.5 rounded text-blue-600" />
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${site.color}`}>{site.name}</span>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${siteBadgeColor(site.color)}`}>
+                  {site.icon ? `${site.icon} ` : ""}{site.displayName}
+                </span>
               </label>
             ))}
           </div>
@@ -404,16 +410,9 @@ export default function Search() {
                   onClick={async () => {
                     if (filteredJobs.length === 0) return;
 
-                    const SITE_NAME_MAP: Record<string, string> = {
-                      saramin: "사람인",
-                      jobkorea: "잡코리아",
-                      wanted: "원티드",
-                      remember: "리멤버",
-                    };
-
                     const today = new Date().toISOString().slice(0, 10);
                     const toRow = (j: Record<string, string>) => [
-                      SITE_NAME_MAP[j.site] || j.site || "",
+                      siteDisplayName(sites, j.site) || j.site || "",
                       j.company || "",
                       j.position || j.title || "",
                       j.career || "",
@@ -472,7 +471,7 @@ export default function Search() {
 
                     // 사이트별 시트
                     for (const [site, jobs] of bySite) {
-                      const sheetName = SITE_NAME_MAP[site] || site;
+                      const sheetName = siteDisplayName(sites, site) || site;
                       const siteSheet = wb.addWorksheet(sheetName);
                       siteSheet.columns = colWidths;
                       jobs.forEach((j) => siteSheet.addRow(toRow(j)));
@@ -550,7 +549,7 @@ export default function Search() {
                     {pagedJobs.map((job, i) => {
                       const no = (page - 1) * PAGE_SIZE + i + 1;
                       const siteId = job.site || "";
-                      const siteDef = SITES.find((s) => s.id === siteId || s.name === siteId);
+                      const siteDef = sites.find((s) => s.siteName === siteId);
                       return (
                         <tr key={i}
                           onClick={() => job.url && window.open(job.url, "_blank")}
@@ -579,8 +578,8 @@ export default function Search() {
                           </td>
                           <td className="px-2 py-1.5 text-slate-400">{no}</td>
                           <td className="px-2 py-1.5">
-                            <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${siteDef?.color || "bg-slate-100 text-slate-600"}`}>
-                              {siteDef?.name || siteId}
+                            <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${siteBadgeColor(siteDef?.color)}`}>
+                              {siteDef?.displayName || siteId}
                             </span>
                           </td>
                           <td className="px-2 py-1.5 font-medium text-slate-800 truncate">

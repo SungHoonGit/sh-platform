@@ -23,12 +23,7 @@ public record SearchRequest(
     @Schema(description = "지역 (레거시 단일 값)")
     String location,
 
-    @Schema(description = "검색할 사이트 목록", example = "[\"saramin\",\"jobkorea\",\"wanted\",\"remember\"]")
+    @Schema(description = "검색할 사이트 목록 (null/빈 목록이면 활성 사이트 전체)", example = "[\"saramin\",\"jobkorea\"]")
     List<String> sites
 ) {
-    public SearchRequest {
-        if (sites == null || sites.isEmpty()) {
-            sites = List.of("saramin", "jobkorea", "wanted", "remember");
-        }
-    }
 }

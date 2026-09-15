@@ -11,5 +11,7 @@ import java.util.Optional;
 public interface SiteDefinitionRepository extends JpaRepository<SiteDefinition, Long> {
     Optional<SiteDefinition> findBySiteName(String siteName);
     List<SiteDefinition> findByIsEnabledTrue();
+    List<SiteDefinition> findAllByOrderByDisplayOrderAsc();
+    List<SiteDefinition> findByIsEnabledTrueOrderByDisplayOrderAsc();
     boolean existsBySiteName(String siteName);
 }

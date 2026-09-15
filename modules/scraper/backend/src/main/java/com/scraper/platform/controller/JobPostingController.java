@@ -43,6 +43,7 @@ public class JobPostingController {
 
     private final JobPostingRepository jobPostingRepository;
     private final com.scraper.platform.service.CompanyBlacklistService companyBlacklistService;
+    private final com.scraper.platform.service.SiteDefinitionService siteDefinitionService;
 
     /**
      * 최근 수집 공고를 조회한다 (본인 크롤러 설정으로 수집된 공고만).
@@ -297,13 +298,6 @@ public class JobPostingController {
             bySite.computeIfAbsent(site, k -> new java.util.ArrayList<>()).add(p);
         }
 
-        Map<String, String> siteNameMap = Map.of(
-            "saramin", "사람인",
-            "jobkorea", "잡코리아",
-            "wanted", "원티드",
-            "remember", "리멤버"
-        );
-
         String fileName = URLEncoder.encode("채용공고_" + LocalDate.now(), StandardCharsets.UTF_8)
                 .replaceAll("\\+", "%20");
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -332,9 +326,8 @@ public class JobPostingController {
 
             // 사이트별 시트
             for (Map.Entry<String, List<JobPosting>> entry : bySite.entrySet()) {
-                String siteKey = entry.getKey();
+                String sheetName = siteDefinitionService.getDisplayName(entry.getKey());
                 List<JobPosting> sitePostings = entry.getValue();
-                String sheetName = siteNameMap.getOrDefault(siteKey, siteKey);
 
                 List<JobPostingVO> voList = sitePostings.stream()
                         .map(p -> JobPostingVO.builder()

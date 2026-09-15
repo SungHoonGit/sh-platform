@@ -32,6 +32,16 @@ public class SiteDefinition {
     @Builder.Default
     private Boolean isEnabled = true;
 
+    @Column(name = "display_order")
+    @Builder.Default
+    private Integer displayOrder = 0;
+
+    @Column(name = "icon", length = 20)
+    private String icon;
+
+    @Column(name = "color", length = 50)
+    private String color;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

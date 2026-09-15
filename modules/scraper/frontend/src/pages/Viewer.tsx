@@ -6,19 +6,8 @@ import { fetchCrawlers, executeCrawler, fetchJobPostings, downloadJobPostingsExc
 import { deadlineBadge, jobPlanetQuery, normCompany } from "../common/jobPlanet";
 
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
+import { useSites, siteBadgeColor, siteTabColor } from "../hooks/useMasterData";
 import { BlockConfirmDialog, BlacklistManagerModal } from "@sh-platform/ui";
-
-const SITES = [
-  { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  { id: "jobkorea", name: "잡코리아", color: "bg-green-100 text-green-700 border-green-200" },
-];
-
-const SITE_TAB_COLORS: Record<string, string> = {
-  "사람인": "bg-blue-600 text-white",
-  "잡코리아": "bg-green-600 text-white",
-  "원티드": "bg-red-600 text-white",
-  "리멤버": "bg-purple-600 text-white",
-};
 
 const COLUMNS: { key: string; label: string; w: string }[] = [
   { key: "scrap", label: "", w: "w-[32px]" },
@@ -49,6 +38,8 @@ export default function Viewer() {
   const [currentSearchCriteria, setCurrentSearchCriteria] = useState<string>("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [scrappedIds, setScrappedIds] = useState<Set<number>>(new Set());
+  const { data: sitesData = [] } = useSites();
+  const sites = useMemo(() => sitesData.filter((s) => s.isEnabled), [sitesData]);
   const SIZE = 20;
 
   useEffect(() => {
@@ -149,14 +140,14 @@ export default function Viewer() {
 
   // 스케줄에 설정된 활성 사이트만 표시
   const availableSites = useMemo(() => {
-    if (!selectedCrawler?.siteConfigs) return SITES;
+    if (!selectedCrawler?.siteConfigs) return sites;
     const enabledSites = new Set(
       selectedCrawler.siteConfigs
         .filter((sc) => sc.isEnabled)
         .map((sc) => sc.siteName)
     );
-    return SITES.filter((s) => enabledSites.has(s.id));
-  }, [selectedCrawler]);
+    return sites.filter((s) => enabledSites.has(s.siteName));
+  }, [selectedCrawler, sites]);
 
   const filteredJobs = useMemo(() => {
     const kw = searchKeyword.trim().toLowerCase();
@@ -433,15 +424,15 @@ export default function Viewer() {
           </button>
           {availableSites.map((site) => (
             <button
-              key={site.id}
-              onClick={() => { setSelectedSite(site.id); setPage(0); }}
+              key={site.siteName}
+              onClick={() => { setSelectedSite(site.siteName); setPage(0); }}
               className={`px-2.5 py-1 rounded text-[12px] font-medium transition-colors ${
-                selectedSite === site.id
-                  ? SITE_TAB_COLORS[site.name] || "bg-blue-600 text-white"
+                selectedSite === site.siteName
+                  ? siteTabColor(site.color)
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              {site.name}
+              {site.icon ? `${site.icon} ` : ""}{site.displayName}
             </button>
           ))}
 
@@ -530,7 +521,7 @@ export default function Viewer() {
                 <tbody className="divide-y divide-slate-100">
                   {displayJobs.map((job: JobPostingItem, i: number) => {
                     const no = page * SIZE + i + 1;
-                    const siteDef = SITES.find((s) => s.id === job.site || s.name === job.site);
+                    const siteDef = sites.find((s) => s.siteName === job.site);
                     return (
                       <tr
                         key={job.id}
@@ -560,8 +551,8 @@ export default function Viewer() {
                         </td>
                         <td className="px-2 py-1 text-slate-400">{no}</td>
                         <td className="px-2 py-1">
-                          <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${siteDef?.color || "bg-slate-100 text-slate-600"}`}>
-                            {siteDef?.name || job.site}
+                          <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${siteBadgeColor(siteDef?.color)}`}>
+                            {siteDef?.displayName || job.site}
                           </span>
                         </td>
                         <td className="px-2 py-1 font-medium text-slate-800 truncate">

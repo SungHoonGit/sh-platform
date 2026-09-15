@@ -1,9 +1,4 @@
-export const REGIONS = [
-  "서울", "경기", "인천", "부산", "대구", "대전", "광주", "울산", "세종",
-  "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주",
-];
-
-export const DEFAULT_LOCATIONS = ["서울", "경기", "인천", "부산", "대구", "대전", "광주", "울산", "세종"];
+import { useRegions } from "../hooks/useMasterData";
 
 export const CAREER_TOTAL = 15;
 
@@ -67,6 +62,7 @@ export function LocationMultiSelect({
   onSelectAll: () => void;
   onClear: () => void;
 }) {
+  const { data: regions = [] } = useRegions();
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
@@ -87,22 +83,22 @@ export function LocationMultiSelect({
         </div>
       </div>
       <div className="grid grid-cols-3 gap-1.5">
-        {REGIONS.map((loc) => (
+        {regions.map((r) => (
           <label
-            key={loc}
+            key={r.name}
             className={`flex items-center gap-1 px-2 py-1.5 rounded border cursor-pointer text-xs transition-colors ${
-              selected.includes(loc)
+              selected.includes(r.name)
                 ? "border-blue-300 bg-blue-50 text-blue-700"
                 : "border-slate-200 text-slate-600 hover:border-slate-300"
             }`}
           >
             <input
               type="checkbox"
-              checked={selected.includes(loc)}
-              onChange={() => onToggle(loc)}
+              checked={selected.includes(r.name)}
+              onChange={() => onToggle(r.name)}
               className="w-3 h-3 text-blue-600"
             />
-            <span className="truncate">{loc}</span>
+            <span className="truncate">{r.name}</span>
           </label>
         ))}
       </div>

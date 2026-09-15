@@ -194,6 +194,16 @@ export interface SiteDefinitionInfo {
   displayName: string;
   baseUrl: string;
   isEnabled: boolean;
+  displayOrder?: number;
+  icon?: string;
+  color?: string;
+}
+
+export interface RegionInfo {
+  id: number;
+  name: string;
+  displayOrder?: number;
+  isActive?: boolean;
 }
 
 async function errorMessage(res: Response): Promise<string> {
@@ -223,6 +233,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export async function fetchSites(): Promise<SiteDefinitionInfo[]> {
   return request<SiteDefinitionInfo[]>("/sites");
+}
+
+export async function fetchRegions(): Promise<RegionInfo[]> {
+  return request<RegionInfo[]>("/regions");
 }
 
 export interface CrawlerSaveBody {

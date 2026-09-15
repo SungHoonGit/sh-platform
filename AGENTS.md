@@ -106,7 +106,7 @@ Gradle 빌드 출력 → systemd 실행 경로가 다름:
 **인프라 설정 단일 소스 (SSOT)**: 서비스명/포트는 `infra/services.yml`이 원본. 수정 후 반드시
 `python scripts/render_config.py` 실행 (prometheus/promtail/systemd/nginx 생성물 갱신, 가이드: docs/guides/008-260821-infra-ssot-guide.md).
 
-**`ddl-site-search-mapping.sql`** 실행 필요: `mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' scraper_platform < docs/scraper/ddl-site-search-mapping.sql`
+**DDL 적용**: 신규 DDL은 `docs/scraper/ddl-v{번호}.sql`로 추가하고 deploy-backend 워크플로우에 라인을 붙인다(멱등, 어플리케이션 기동 전 실행). 버전 파일: scraper `ddl-v{2..9}`, resume `ddl-resume-v{1..13}`, auth `ddl-login-audit-v1`.
 
 DB명은 `scraper_platform` (sh_platform 아님).
 

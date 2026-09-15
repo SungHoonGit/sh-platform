@@ -19,16 +19,28 @@ public class SiteDefinitionService {
     private final SiteParameterDefinitionRepository siteParameterDefinitionRepository;
 
     public List<SiteDefinition> getAllSites() {
-        return siteDefinitionRepository.findAll();
+        return siteDefinitionRepository.findAllByOrderByDisplayOrderAsc();
     }
 
     public List<SiteDefinition> getEnabledSites() {
-        return siteDefinitionRepository.findByIsEnabledTrue();
+        return siteDefinitionRepository.findByIsEnabledTrueOrderByDisplayOrderAsc();
     }
 
     public SiteDefinition getSiteBySiteName(String siteName) {
         return siteDefinitionRepository.findBySiteName(siteName)
                 .orElseThrow(() -> new RuntimeException("Site not found: " + siteName));
+    }
+
+    /**
+     * 사이트 코드로 표시명(displayName)을 조회한다. 없으면 코드를 그대로 반환한다.
+     *
+     * @param siteName 사이트 코드
+     * @return 표시명
+     */
+    public String getDisplayName(String siteName) {
+        return siteDefinitionRepository.findBySiteName(siteName)
+                .map(SiteDefinition::getDisplayName)
+                .orElse(siteName);
     }
 
     public SiteDefinition getSiteById(Long id) {
@@ -60,6 +72,9 @@ public class SiteDefinitionService {
         existing.setDisplayName(updatedSite.getDisplayName());
         existing.setBaseUrl(updatedSite.getBaseUrl());
         existing.setIsEnabled(updatedSite.getIsEnabled());
+        existing.setDisplayOrder(updatedSite.getDisplayOrder());
+        existing.setIcon(updatedSite.getIcon());
+        existing.setColor(updatedSite.getColor());
         
         return siteDefinitionRepository.save(existing);
     }

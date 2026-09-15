@@ -34,6 +34,11 @@ public class SearchService {
     public SearchResponse search(SearchRequest request) {
         long startTime = System.currentTimeMillis();
         List<String> sites = request.sites();
+        if (sites == null || sites.isEmpty()) {
+            sites = siteDefinitionRepository.findByIsEnabledTrueOrderByDisplayOrderAsc().stream()
+                    .map(SiteDefinition::getSiteName)
+                    .toList();
+        }
         Map<String, String> standardParams = buildStandardParams(request);
 
         log.info("Real-time search started: keyword={}, careerMin={}, careerMax={}, locations={}, sites={}",

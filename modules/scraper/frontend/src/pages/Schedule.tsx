@@ -13,21 +13,13 @@ import {
   saveSiteConfig,
 } from "../api/scraper";
 import {
-  REGIONS,
-  DEFAULT_LOCATIONS,
   CAREER_TOTAL,
   isCareerActive,
   CareerRangeSlider,
   LocationMultiSelect,
 } from "../components/SearchFilters";
+import { useRegions, siteBadgeColor, DEFAULT_LOCATIONS_FALLBACK } from "../hooks/useMasterData";
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
-
-const DEFAULT_SITES = ["saramin", "jobkorea"];
-
-const SITES = [
-  { id: "saramin", name: "사람인", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  { id: "jobkorea", name: "잡코리아", color: "bg-green-100 text-green-700 border-green-200" },
-];
 
 const DAYS = [
   { id: 1, name: "월" }, { id: 2, name: "화" }, { id: 3, name: "수" },
@@ -133,8 +125,8 @@ export default function Schedule() {
   const [keyword, setKeyword] = useState("");
   const [careerMin, setCareerMin] = useState(0);
   const [careerMax, setCareerMax] = useState(CAREER_TOTAL);
-  const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
-  const [selectedSites, setSelectedSites] = useState<string[]>(DEFAULT_SITES);
+  const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS_FALLBACK);
+  const [selectedSites, setSelectedSites] = useState<string[]>([]);
   const [timePairs, setTimePairs] = useState<TimePair[]>([{ hour: 9, minute: 0 }]);
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -157,11 +149,11 @@ export default function Schedule() {
         setCareerMax(state.careerMax ?? CAREER_TOTAL);
       }
       if (typeof state.location === "string") {
-        setLocations(state.location === "전체" ? DEFAULT_LOCATIONS : [state.location]);
+        setLocations(state.location === "전체" ? DEFAULT_LOCATIONS_FALLBACK : [state.location]);
       } else {
-        setLocations(state.locations?.length ? state.locations : DEFAULT_LOCATIONS);
+        setLocations(state.locations?.length ? state.locations : DEFAULT_LOCATIONS_FALLBACK);
       }
-      setSelectedSites(state.sites || DEFAULT_SITES);
+      setSelectedSites(state.sites || []);
       setEditingId(null);
       setShowForm(true);
     }
@@ -176,6 +168,16 @@ export default function Schedule() {
     queryKey: ["sites"],
     queryFn: fetchSites,
   });
+
+  const { data: regionData = [] } = useRegions();
+  const enabledSites = useMemo(() => (sites ?? []).filter((s) => s.isEnabled), [sites]);
+  const sitesInitialized = useRef(false);
+  useEffect(() => {
+    if (enabledSites.length > 0 && !sitesInitialized.current && selectedSites.length === 0) {
+      sitesInitialized.current = true;
+      setSelectedSites(enabledSites.map((s) => s.siteName));
+    }
+  }, [enabledSites, selectedSites]);
 
   const siteMap = useMemo(() => {
     const m = new Map<string, number>();
@@ -228,7 +230,7 @@ export default function Schedule() {
               ...(careerMax < CAREER_TOTAL ? { careerMax: String(careerMax) } : {}),
             }
           : {}),
-        ...(locations.length > 0 && locations.length < REGIONS.length
+        ...(locations.length > 0 && locations.length < regionData.length
           ? { location: locations.join(",") }
           : {}),
       });
@@ -283,8 +285,8 @@ export default function Schedule() {
     setKeyword("");
     setCareerMin(0);
     setCareerMax(CAREER_TOTAL);
-    setLocations(DEFAULT_LOCATIONS);
-    setSelectedSites(DEFAULT_SITES);
+    setLocations(DEFAULT_LOCATIONS_FALLBACK);
+    setSelectedSites(enabledSites.map((s) => s.siteName));
     setTimePairs([{ hour: 9, minute: 0 }]);
     setSelectedDays([1, 2, 3, 4, 5]);
     setScheduleIcon("🤖");
@@ -365,8 +367,8 @@ export default function Schedule() {
     const locs = params.location
       ? params.location.split(",").map((s: string) => s.trim()).filter(Boolean)
       : [];
-    setLocations(locs.length ? locs : DEFAULT_LOCATIONS);
-    setSelectedSites(enabled.length ? enabled.map((sc: any) => sc.siteName) : DEFAULT_SITES);
+    setLocations(locs.length ? locs : DEFAULT_LOCATIONS_FALLBACK);
+    setSelectedSites(enabled.length ? enabled.map((sc: any) => sc.siteName) : []);
     const parsed = parseCronToSchedule(c.schedule);
     setTimePairs(parsed.timePairs);
     setSelectedDays(parsed.days);
@@ -520,7 +522,7 @@ export default function Schedule() {
                         prev.includes(loc) ? prev.filter((l) => l !== loc) : [...prev, loc]
                       )
                     }
-                    onSelectAll={() => setLocations([...REGIONS])}
+                    onSelectAll={() => setLocations(regionData.map((r) => r.name))}
                     onClear={() => setLocations([])}
                   />
                 </div>
@@ -529,22 +531,22 @@ export default function Schedule() {
               <div>
                 <label className="block text-xs text-slate-500 mb-2">사이트</label>
                 <div className="flex gap-2">
-                  {SITES.map((site) => (
+                  {enabledSites.map((site) => (
                     <label
-                      key={site.id}
+                      key={site.siteName}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer text-xs ${
-                        selectedSites.includes(site.id)
+                        selectedSites.includes(site.siteName)
                           ? "border-blue-300 bg-blue-50"
                           : "border-slate-200"
                       }`}
                     >
                       <input
                         type="checkbox"
-                        checked={selectedSites.includes(site.id)}
-                        onChange={() => toggleSite(site.id)}
+                        checked={selectedSites.includes(site.siteName)}
+                        onChange={() => toggleSite(site.siteName)}
                         className="w-3.5 h-3.5"
                       />
-                      {site.name}
+                      {site.icon ? `${site.icon} ` : ""}{site.displayName}
                     </label>
                   ))}
                 </div>
@@ -707,10 +709,10 @@ export default function Schedule() {
                 {/* 사이트 정보 - 구분자 제거 */}
                 <div className="mt-4 flex flex-wrap gap-2">
                   {c.siteConfigs?.map((sc: any) => {
-                    const siteInfo = SITES.find((s) => s.id === sc.siteName);
+                    const siteInfo = enabledSites.find((s) => s.siteName === sc.siteName);
                     return (
                       <div key={sc.siteName} className="bg-slate-50 rounded-lg px-3 py-2 text-sm">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${siteInfo?.color || "bg-slate-100"}`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${siteBadgeColor(siteInfo?.color)}`}>
                           {sc.displayName}
                         </span>
                         {sc.paramValues?.keyword && (
