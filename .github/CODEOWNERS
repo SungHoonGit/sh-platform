@@ -5,11 +5,11 @@
 * @SungHoonGit
 
 # 백엔드 코드 - 백엔드 개발자가 리뷰
-/sh-platform-auth/ @SungHoonGit
-/sh-platform-common/ @SungHoonGit
+/modules/ @SungHoonGit
+/common/ @SungHoonGit
 
 # 프론트엔드 코드 - 프론트엔드 개발자가 리뷰
-/frontend/ @noeyoeslee
+/modules/*/frontend/ @noeyoeslee
 
 # 문서 - 모든 사람이 리뷰 가능
 /docs/ @SungHoonGit @noeyoeslee
