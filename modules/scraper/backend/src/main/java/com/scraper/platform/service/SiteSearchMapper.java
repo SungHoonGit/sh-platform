@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 표준 검색 파라미터를 사이트별 URL 파라미터로 변환하는 서비스.
@@ -88,6 +89,30 @@ public class SiteSearchMapper {
 
         log.debug("SiteSearchMapper: {} params converted: {} -> {}", siteName, standardParams, siteParams);
         return siteParams;
+    }
+
+    /**
+     * 사이트별 지역코드를 value_mapping DB 기준으로 변환한다.
+     * <p>
+     * 사이트의 {@code standard_key=location} 매핑에 값이 있으면 그 코드를 반환하고,
+     * 매핑 행이나 지역 값이 없으면 빈 문자열을 반환한다. 크롤러 호출부에서
+     * 반환값이 빈 문자열일 경우 기존 fallback(하드코딩 switch)을 사용한다.
+     *
+     * @param siteName 사이트 영문명 (saramin, jobkorea, wanted, remember)
+     * @param location 표준 지역명 (예: "서울")
+     * @return 사이트별 지역코드 (예: saramin "101000"), 없으면 빈 문자열
+     */
+    public String mapLocationCode(String siteName, String location) {
+        if (location == null || location.isEmpty()) {
+            return "";
+        }
+        Optional<SiteSearchMapping> mapping = mappingRepository
+                .findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue(siteName, "location");
+        if (mapping.isEmpty()) {
+            return "";
+        }
+        String converted = mapValue(location, mapping.get().getValueMapping());
+        return converted == null ? "" : converted;
     }
 
     /**

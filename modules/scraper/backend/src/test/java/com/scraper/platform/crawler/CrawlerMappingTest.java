@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @DisplayName("크롤러 매핑 함수 테스트")
 class CrawlerMappingTest {
@@ -133,6 +134,37 @@ class CrawlerMappingTest {
             @DisplayName("복수 지역은 빈 문자열을 반환한다 (단일 loc_mcd만 지원)")
             void 복수지역_빈문자열() {
                 assertEquals("", crawler.mapLocationCode("서울,경기"));
+            }
+        }
+
+        @Nested
+        @DisplayName("resolveLocationCode 메서드")
+        class ResolveLocationCode {
+
+            @Test
+            @DisplayName("DB 매핑 값이 있으면 DB 코드를 우선 사용한다")
+            void DB_우선() {
+                when(mockMapper.mapLocationCode("saramin", "서울")).thenReturn("101000");
+                assertEquals("101000", crawler.resolveLocationCode("서울"));
+            }
+
+            @Test
+            @DisplayName("DB 매핑이 없으면 하드코딩 switch를 fallback으로 사용한다")
+            void DB_없음_fallback() {
+                when(mockMapper.mapLocationCode("saramin", "서울")).thenReturn("");
+                assertEquals("101000", crawler.resolveLocationCode("서울"));
+            }
+
+            @Test
+            @DisplayName("복수 지역은 빈 문자열을 반환한다 (단일 loc_mcd만 지원)")
+            void 복수지역_빈문자열() {
+                assertEquals("", crawler.resolveLocationCode("서울,경기"));
+            }
+
+            @Test
+            @DisplayName("빈 지역은 mappers를 건드리지 않고 빈 문자열을 반환한다")
+            void 빈지역_빈문자열() {
+                assertEquals("", crawler.resolveLocationCode(""));
             }
         }
     }

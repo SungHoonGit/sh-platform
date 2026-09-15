@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface SiteSearchMappingRepository extends JpaRepository<SiteSearchMapping, Long> {
@@ -18,4 +19,9 @@ public interface SiteSearchMappingRepository extends JpaRepository<SiteSearchMap
      * 사이트 ID로 활성화된 매핑 목록을 표시 순서대로 조회한다.
      */
     List<SiteSearchMapping> findBySiteDefinitionIdAndIsEnabledTrueOrderByDisplayOrder(Long siteDefinitionId);
+
+    /**
+     * 사이트명과 표준 키(standard_key)로 활성화된 매핑 하나를 조회한다.
+     */
+    Optional<SiteSearchMapping> findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue(String siteName, String standardKey);
 }

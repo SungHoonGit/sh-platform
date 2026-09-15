@@ -77,7 +77,7 @@ public class SaraminCrawler implements SiteCrawler {
                 break;
             }
             boolean careerFiltered = isCareerFilterActive(params);
-            boolean locationFiltered = !mapLocationCode(location).isEmpty();
+            boolean locationFiltered = !resolveLocationCode(location).isEmpty();
             for (Map<String, String> job : pageJobs) {
                 if (careerFiltered) {
                     job.put("careerFiltered", "true");
@@ -154,7 +154,7 @@ public class SaraminCrawler implements SiteCrawler {
      * 이후 서버사이드 필터로 다중 지역을 걸러낸다.
      */
     private void appendLocationParams(StringBuilder sb, String location) {
-        String locCode = mapLocationCode(location);
+        String locCode = resolveLocationCode(location);
         if (!locCode.isEmpty()) {
             sb.append("&loc_mcd=").append(locCode);
         }
@@ -290,6 +290,18 @@ public class SaraminCrawler implements SiteCrawler {
             case "10년이상" -> "12";
             default -> "";
         };
+    }
+
+    /**
+     * 지역코드를 site_search_mapping DB 값 우선으로 해석하고, DB에 없으면
+     * 하드코딩 switch를 fallback으로 사용한다. 복수 지역은 사람인 단일 loc_mcd 제약상 빈 값을 반환한다.
+     */
+    String resolveLocationCode(String location) {
+        if (location == null || location.isEmpty() || location.contains(",")) {
+            return "";
+        }
+        String code = siteSearchMapper.mapLocationCode(getSiteName(), location);
+        return code.isEmpty() ? mapLocationCode(location) : code;
     }
 
     String mapLocationCode(String location) {

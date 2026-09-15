@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
@@ -290,6 +291,61 @@ class SiteSearchMapperTest {
             // then
             assertEquals("Java", result.get("stext"));
             assertEquals("5", result.get("career_level"));
+        }
+    }
+
+    @Nested
+    @DisplayName("mapLocationCode (DB 우선 지역코드 조회)")
+    class MapLocationCode {
+
+        @Test
+        @DisplayName("DB value_mapping에서 지역코드를 조회한다")
+        void DB_매핑_조회() {
+            // given
+            given(mappingRepository.findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue("saramin", "location"))
+                    .willReturn(Optional.of(mapping("location", "loc_cd", SiteSearchMapping.ValueType.mapped,
+                            "{\"서울\":\"101000\",\"경기\":\"102000\"}")));
+
+            // when
+            String result = siteSearchMapper.mapLocationCode("saramin", "서울");
+
+            // then
+            assertEquals("101000", result);
+        }
+
+        @Test
+        @DisplayName("value_mapping에 없는 지역이면 빈 문자열을 반환한다")
+        void 미매핑_빈문자열() {
+            // given
+            given(mappingRepository.findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue("saramin", "location"))
+                    .willReturn(Optional.of(mapping("location", "loc_cd", SiteSearchMapping.ValueType.mapped,
+                            "{\"서울\":\"101000\"}")));
+
+            // when
+            String result = siteSearchMapper.mapLocationCode("saramin", "제주");
+
+            // then
+            assertEquals("", result);
+        }
+
+        @Test
+        @DisplayName("location 매핑 행이 없으면 빈 문자열을 반환한다")
+        void 매핑행_없음_빈문자열() {
+            // given
+            given(mappingRepository.findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue("saramin", "location"))
+                    .willReturn(Optional.empty());
+
+            // when
+            String result = siteSearchMapper.mapLocationCode("saramin", "서울");
+
+            // then
+            assertEquals("", result);
+        }
+
+        @Test
+        @DisplayName("빈 지역은 저장소를 조회하지 않고 빈 문자열을 반환한다")
+        void 빈지역_빈문자열() {
+            assertEquals("", siteSearchMapper.mapLocationCode("saramin", ""));
         }
     }
 
