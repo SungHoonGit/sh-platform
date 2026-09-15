@@ -21,53 +21,6 @@ class CrawlerMappingTest {
         private final SaraminCrawler crawler = new SaraminCrawler(mockMapper);
 
         @Nested
-        @DisplayName("mapCareerCode 메서드")
-        class MapCareerCode {
-
-            @Test
-            @DisplayName("신입을 코드 1로 매핑한다")
-            void 신입_매핑() {
-                assertEquals("1", crawler.mapCareerCode("신입"));
-            }
-
-            @Test
-            @DisplayName("경력을 코드 2로 매핑한다")
-            void 경력_매핑() {
-                assertEquals("2", crawler.mapCareerCode("경력"));
-            }
-
-            @Test
-            @DisplayName("1~3년을 코드 3으로 매핑한다")
-            void 경력_1_3년_매핑() {
-                assertEquals("3", crawler.mapCareerCode("1~3년"));
-            }
-
-            @Test
-            @DisplayName("3~5년을 코드 5로 매핑한다")
-            void 경력_3_5년_매핑() {
-                assertEquals("5", crawler.mapCareerCode("3~5년"));
-            }
-
-            @Test
-            @DisplayName("5~10년을 코드 8로 매핑한다")
-            void 경력_5_10년_매핑() {
-                assertEquals("8", crawler.mapCareerCode("5~10년"));
-            }
-
-            @Test
-            @DisplayName("10년이상을 코드 12로 매핑한다")
-            void 경력_10년이상_매핑() {
-                assertEquals("12", crawler.mapCareerCode("10년이상"));
-            }
-
-            @Test
-            @DisplayName("알 수 없는 값은 빈 문자열을 반환한다")
-            void 알수없는값_빈문자열() {
-                assertEquals("", crawler.mapCareerCode("알수없음"));
-            }
-        }
-
-        @Nested
         @DisplayName("mapLocationCode 메서드")
         class MapLocationCode {
 

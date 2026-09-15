@@ -278,19 +278,7 @@ public class SaraminCrawler implements SiteCrawler {
         }
     }
 
-    // -- 아래 메서드들은 CrawlerMappingTest에서 참조 (기존 매핑 로직, 현재는 SiteSearchMapper가 대체) --
-
-    String mapCareerCode(String career) {
-        return switch (career) {
-            case "신입" -> "1";
-            case "경력" -> "2";
-            case "1~3년" -> "3";
-            case "3~5년" -> "5";
-            case "5~10년" -> "8";
-            case "10년이상" -> "12";
-            default -> "";
-        };
-    }
+    // -- 아래 메서드들은 CrawlerMappingTest에서 참조 --
 
     /**
      * 지역코드를 site_search_mapping DB 값 우선으로 해석하고, DB에 없으면
