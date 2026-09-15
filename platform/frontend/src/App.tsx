@@ -10,6 +10,7 @@ import AdminTenants from "./pages/admin/AdminTenants";
 import AdminAudit from "./pages/admin/AdminAudit";
 import AdminSessions from "./pages/admin/AdminSessions";
 import AdminRoles from "./pages/admin/AdminRoles";
+import AdminMaster from "./pages/admin/AdminMaster";
 import AccountSettings from "./pages/AccountSettings";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ function App() {
               <Route path="/platform/admin/tenants" element={<AdminTenants />} />
               <Route path="/platform/admin/audit" element={<AdminAudit />} />
               <Route path="/platform/admin/sessions" element={<AdminSessions />} />
+              <Route path="/platform/admin/master" element={<AdminMaster />} />
               <Route path="/platform/account" element={<AccountSettings />} />
             </Route>
             <Route path="*" element={<NotFound />} />

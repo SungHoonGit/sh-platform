@@ -35,6 +35,7 @@ export default function PlatformLayout() {
                 { label: "테넌트 관리", href: "/platform/admin/tenants" },
                 { label: "감사 로그", href: "/platform/admin/audit" },
                 { label: "세션 관리", href: "/platform/admin/sessions" },
+                { label: "마스터 관리", href: "/platform/admin/master" },
               ],
             },
         ]
