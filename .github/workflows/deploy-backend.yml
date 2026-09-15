@@ -160,6 +160,11 @@ jobs:
 
             # 웹/WAS 파일 데이터 백업 스크립트 설치 (scripts/backup-files.sh)
             sudo chmod 700 scripts/backup-files.sh
+            # 첫 배포에 한해 파일 백업 즉시 1회 실행 → 실동작 검증 (.first-run-done 마커로 중복 방지)
+            if [ ! -f /home/ubuntu/backups/files/.first-run-done ]; then
+              sudo /home/ubuntu/sh-platform/scripts/backup-files.sh || true
+              sudo touch /home/ubuntu/backups/files/.first-run-done
+            fi
 
             # Log dump (diagnostics): 스크래퍼 최근 오류 로그
             echo "===== SCRAPER LOGS (last 6h) ====="
