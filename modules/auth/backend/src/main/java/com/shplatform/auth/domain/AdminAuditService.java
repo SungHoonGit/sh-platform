@@ -1,9 +1,14 @@
 package com.shplatform.auth.domain;
 
+import com.shplatform.auth.api.dto.AdminAuditLogResponse;
 import com.shplatform.auth.infrastructure.AdminAuditLogEntity;
 import com.shplatform.auth.infrastructure.AdminAuditLogRepository;
+import java.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 /**
@@ -45,5 +50,27 @@ public class AdminAuditService {
         } catch (Exception e) {
             log.warn("[AUDIT] failed to record: action={}, {}", action, e.getMessage());
         }
+    }
+
+    /**
+     * 감사 로그를 최신순으로 조회한다. action/actor/target 필터를 지원한다.
+     *
+     * @param action       행위 코드 필터 (nullable)
+     * @param actorUserId  수행자 ID 필터 (nullable)
+     * @param targetUserId 대상 ID 필터 (nullable)
+     * @param pageable     페이징 정보
+     * @return 감사 로그 페이징 결과
+     */
+    public Page<AdminAuditLogResponse> search(String action, Long actorUserId,
+                                              Long targetUserId, Pageable pageable) {
+        var result = repository.search(action, actorUserId, targetUserId, pageable);
+        var dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        var items = result.getContent().stream()
+                .map(a -> new AdminAuditLogResponse(
+                        a.getId(), a.getActorUserId(), a.getAction(), a.getTargetUserId(),
+                        a.getBeforeValue(), a.getAfterValue(), a.getIp(),
+                        a.getCreatedAt() != null ? a.getCreatedAt().format(dtf) : null))
+                .toList();
+        return new PageImpl<>(items, result.getPageable(), result.getTotalElements());
     }
 }

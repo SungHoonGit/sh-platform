@@ -1,12 +1,10 @@
-package com.shplatform.auth.api.admin;
+package com.shplatform.auth.domain;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.shplatform.auth.api.admin.dto.UserListResponse;
-import com.shplatform.auth.domain.AdminAuditService;
-import com.shplatform.auth.domain.UserRole;
 import com.shplatform.auth.infrastructure.UserEntity;
 import com.shplatform.auth.infrastructure.UserRepository;
 import com.shplatform.shared.exception.BusinessException;

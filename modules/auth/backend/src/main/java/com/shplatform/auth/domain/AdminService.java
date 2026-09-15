@@ -1,8 +1,6 @@
-package com.shplatform.auth.api.admin;
+package com.shplatform.auth.domain;
 
 import com.shplatform.auth.api.admin.dto.*;
-import com.shplatform.auth.domain.AdminAuditService;
-import com.shplatform.auth.domain.UserRole;
 import com.shplatform.auth.domain.tenant.*;
 import com.shplatform.auth.infrastructure.UserEntity;
 import com.shplatform.auth.infrastructure.UserRepository;

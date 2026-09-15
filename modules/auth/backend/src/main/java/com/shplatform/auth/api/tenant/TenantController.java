@@ -1,10 +1,9 @@
 package com.shplatform.auth.api.tenant;
 
 import com.shplatform.auth.api.tenant.dto.*;
+import com.shplatform.auth.domain.CurrentUserResolver;
 import com.shplatform.auth.domain.tenant.TenantMemberRole;
 import com.shplatform.auth.domain.tenant.TenantService;
-import com.shplatform.auth.infrastructure.TokenProvider;
-import com.shplatform.auth.infrastructure.oauth2.CustomOAuth2User;
 import com.shplatform.shared.dto.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -18,9 +17,11 @@ import org.springframework.web.bind.annotation.*;
 public class TenantController {
 
     private final TenantService tenantService;
+    private final CurrentUserResolver currentUserResolver;
 
-    public TenantController(TenantService tenantService) {
+    public TenantController(TenantService tenantService, CurrentUserResolver currentUserResolver) {
         this.tenantService = tenantService;
+        this.currentUserResolver = currentUserResolver;
     }
 
     @PostMapping
@@ -28,7 +29,7 @@ public class TenantController {
             @Valid @RequestBody CreateTenantRequest request,
             @AuthenticationPrincipal Object principal
     ) {
-        Long userId = getCurrentUserId(principal);
+        Long userId = currentUserResolver.resolveUserId(principal);
         var tenant = tenantService.createTenant(userId, request.name(), request.slug());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(TenantResponse.from(tenant)));
@@ -38,7 +39,7 @@ public class TenantController {
     public ResponseEntity<ApiResponse<List<TenantResponse>>> getMyTenants(
             @AuthenticationPrincipal Object principal
     ) {
-        Long userId = getCurrentUserId(principal);
+        Long userId = currentUserResolver.resolveUserId(principal);
         var tenants = tenantService.getTenantsByUserId(userId);
         var responses = tenants.stream()
                 .map(TenantResponse::from)
@@ -90,7 +91,7 @@ public class TenantController {
             @Valid @RequestBody InviteMemberRequest request,
             @AuthenticationPrincipal Object principal
     ) {
-        Long userId = getCurrentUserId(principal);
+        Long userId = currentUserResolver.resolveUserId(principal);
         TenantMemberRole role = request.role() != null
                 ? TenantMemberRole.valueOf(request.role())
                 : TenantMemberRole.MEMBER;
@@ -124,18 +125,10 @@ public class TenantController {
             @PathVariable String token,
             @AuthenticationPrincipal Object principal
     ) {
-        Long userId = getCurrentUserId(principal);
+        Long userId = currentUserResolver.resolveUserId(principal);
         tenantService.acceptInvitation(token, userId);
         return ResponseEntity.ok(ApiResponse.success("초대가 수락되었습니다.", null));
     }
 
-    private Long getCurrentUserId(Object principal) {
-        if (principal instanceof TokenProvider.Claims claims) {
-            return claims.userId();
-        }
-        if (principal instanceof CustomOAuth2User oauth2User) {
-            return oauth2User.getUserId();
-        }
-        throw new RuntimeException("인증된 사용자를 찾을 수 없습니다.");
-    }
+
 }

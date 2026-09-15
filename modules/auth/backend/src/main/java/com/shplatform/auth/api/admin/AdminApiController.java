@@ -1,6 +1,7 @@
 package com.shplatform.auth.api.admin;
 
 import com.shplatform.auth.api.admin.dto.*;
+import com.shplatform.auth.domain.AdminService;
 import com.shplatform.auth.domain.UserRole;
 import com.shplatform.auth.domain.tenant.TenantMemberRole;
 import com.shplatform.shared.dto.ApiResponse;
