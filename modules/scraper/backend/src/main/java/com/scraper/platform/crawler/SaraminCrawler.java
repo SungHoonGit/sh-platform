@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -116,18 +115,15 @@ public class SaraminCrawler implements SiteCrawler {
             .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
             .header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
             .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
-            .header("Accept-Encoding", "gzip, deflate, br")
+            .header("Accept-Encoding", "gzip, deflate")
             .timeout(Duration.ofSeconds(30))
             .GET()
             .build();
-        HttpResponse<String> resp = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .build()
-            .send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<byte[]> resp = HttpFetcher.send(request);
         if (resp.statusCode() >= 400) {
             throw new IOException("HTTP " + resp.statusCode() + " for URL: " + url);
         }
-        return resp.body();
+        return HttpFetcher.decodeBody(resp);
     }
 
     private String buildUrl(Map<String, String> params, int page) {

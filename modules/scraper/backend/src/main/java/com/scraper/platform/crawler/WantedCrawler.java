@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
@@ -130,22 +129,20 @@ public class WantedCrawler implements SiteCrawler {
             .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
             .header("Accept", "application/json, text/plain, */*")
             .header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
-            .header("Accept-Encoding", "gzip, deflate, br")
+            .header("Accept-Encoding", "gzip, deflate")
             .header("Referer", "https://www.wanted.co.kr/")
             .header("Origin", "https://www.wanted.co.kr")
             .timeout(Duration.ofSeconds(30))
             .GET()
             .build();
-        HttpResponse<String> resp = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .build()
-            .send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<byte[]> resp = HttpFetcher.send(request);
+        String body = HttpFetcher.decodeBody(resp);
         log.info("Wanted HTTP status: {}", resp.statusCode());
         if (resp.statusCode() != 200) {
-            log.warn("Wanted returned HTTP {}: {}", resp.statusCode(), resp.body().substring(0, Math.min(200, resp.body().length())));
+            log.warn("Wanted returned HTTP {}: {}", resp.statusCode(), body.substring(0, Math.min(200, body.length())));
             return null;
         }
-        return resp.body();
+        return body;
     }
 
     private String buildUrl(Map<String, String> siteParams, int page, int perPage) {
