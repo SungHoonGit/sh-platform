@@ -30,4 +30,25 @@ public class RegionController {
             @RequestParam("q") String query) {
         return ResponseEntity.ok(regionService.search(query));
     }
+
+    @PostMapping
+    @Operation(summary = "지역 생성", description = "지역 마스터를 등록합니다 (관리용)")
+    public ResponseEntity<Region> createRegion(@RequestBody Region region) {
+        return ResponseEntity.ok(regionService.create(region));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "지역 수정", description = "지역 마스터 정보를 수정합니다 (관리용)")
+    public ResponseEntity<Region> updateRegion(
+            @PathVariable Long id,
+            @RequestBody Region region) {
+        return ResponseEntity.ok(regionService.update(id, region));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "지역 삭제", description = "지역 마스터를 삭제합니다 (관리용)")
+    public ResponseEntity<Void> deleteRegion(@PathVariable Long id) {
+        regionService.delete(id);
+        return ResponseEntity.ok().build();
+    }
 }

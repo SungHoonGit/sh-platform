@@ -9,7 +9,7 @@
 ## 1. 구성 요소
 | 파일 | 위치 | 역할 |
 |------|------|------|
-| `scripts/backup-mysql.sh` | 리포지토리 | 3개 DB 덤프 + gzip + 보존기간 정리 |
+| `scripts/backup-mysql.sh` | 리포지토리 | 4개 DB 덤프 + gzip + 보존기간 정리 |
 | `infra/cron.d/sh-platform-mysql-backup` | 리포지토리 | 매일 03:30(KST) 실행 정의 |
 | `/home/ubuntu/backups/mysql/` | 서버 | 백업 산출물(일자 디렉터리 + backup.log) |
 
@@ -71,7 +71,19 @@ SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';
 -- 즉시 적용 (서버에서 실행)
 SET GLOBAL binlog_expire_logs_seconds = 1209600;  -- 14일
 ```
-영속화: `mysqld.cnf`에 `[mysqld] binlog_expire_logs_seconds=1209600` 추가 후 재시작.
+영속화: binlog 설정 파일 `99-binlog.cnf`의 `[mysqld]` 섹션에 값을 추가 후 재시작하면 재시작해도 유지된다.
+```bash
+# DB 서버(oci-db)에서 실행
+sudo nano /etc/mysql/mariadb.conf.d/99-binlog.cnf
+#   [mysqld]
+#   log_bin
+#   binlog_format=ROW
+#   binlog_expire_logs_seconds=1209600     ← 10일(864000)이면 14일로 교체
+sudo systemctl restart mariadb
+SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';   -- 재시작 후에도 1209600 유지 확인
+```
+> **⚠️ 2026-09-15 현재 상태**: 99-binlog.cnf는 10일(864000) 고정, 런타임 값은 14일(SET GLOBAL).
+> → **DB 서버 재시작 시 10일로 되돌아감.** 재시작 전 반드시 위 파일을 14일로 교체할 것.
 > **일괄 적용 스크립트**: `scripts/db-admin-setup.sql`(BINLOG MONITOR + 보존 14일 + 확인 쿼리) — 관리자로 1회 실행.
 > CI 자동 적용: GitHub secret `MYSQL_ADMIN_PASS` 설정 시 다음 배포에서 자동 적용됨(멱등).
 
@@ -103,5 +115,29 @@ GRANT BINLOG MONITOR ON *.* TO 'sh_user'@'%';
 FLUSH PRIVILEGES;
 ```
 
+## 9. 정기 실행 확인 체크리스트 (백업 다음 날 1회)
+매일 03:30(DB)·03:35(파일) KST 크론 실행 후 확인할 항목:
+
+```bash
+# 1) DB 덤프 4종 + binlog 좌표 + 로그 — 오늘 일자 디렉터리
+ls -l /home/ubuntu/backups/mysql/$(date +%Y%m%d)/
+cat /home/ubuntu/backups/mysql/$(date +%Y%m%d)/binlog-status.txt   # [coordinate OK] 실좌표
+tail -n 20 /home/ubuntu/backups/mysql/backup-$(date +%Y%m%d).log
+
+# 2) 파일 백업 2종 (data, uploads tar.gz)
+ls -l /home/ubuntu/backups/files/$(date +%Y%m%d)/
+tail -n 20 /home/ubuntu/backups/files/backup-$(date +%Y%m%d).log
+
+# 3) cron 스케줄 설치 상태
+cat /etc/cron.d/sh-platform-mysql-backup   # 03:30 DB / 03:35 files 2라인
+```
+
+| 항목 | 기대값 | 이상 시 |
+|------|--------|---------|
+| DB 덤프 4종 `.sql.gz` | `sh_pass`·`scraper_platform`·`resume_platform`·`portfolio_platform` 존재 | 로그 확인 → 수동 실행 `sudo .../scripts/backup-mysql.sh` |
+| `binlog-status.txt` | `binlog_file`/`binlog_pos` 실값 | 백업 로그에서 coordinate 경고 확인 |
+| 파일 백업 2종 `.tar.gz` | `data_*`·`uploads_*` 존재 | 로그 확인 → 수동 실행 `sudo .../scripts/backup-files.sh` |
+| 보존 정리 | 7일 초과 산출물 자동 삭제 | `KEEP_DAYS` 확인 |
+
 ---
-*작성일: 2026-09-14*
+*작성일: 2026-09-14, 갱신: 2026-09-15*
