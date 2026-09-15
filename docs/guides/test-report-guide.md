@@ -16,7 +16,7 @@ build/test-results/test/*.xml          ← CI가 읽는 기계용 데이터
 ### 1.2 HTML 리포트 보는 법
 
 ```
-로컬: sh-platform-auth/build/reports/tests/test/index.html
+로컬: modules/auth/backend/build/reports/tests/test/index.html
          ↓ 브라우저에 더블클릭
   "Test Summary" 대시보드 (tests, failures 수)
          ↓ 패키지 클릭

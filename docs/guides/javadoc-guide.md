@@ -67,7 +67,7 @@ User signup(SignupRequest request);
 
 ```nginx
 location /javadoc/ {
-    alias /home/ubuntu/sh-platform/sh-platform-auth/build/docs/javadoc/;
+    alias /home/ubuntu/sh-platform/modules/auth/backend/build/docs/javadoc/;
     autoindex on;
 }
 ```

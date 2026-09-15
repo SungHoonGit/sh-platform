@@ -24,7 +24,7 @@ Javadoc과의 차이:
 
 ### 2.1 의존성
 
-`sh-platform-auth/build.gradle.kts`:
+`modules/auth/backend/build.gradle.kts`:
 
 ```kotlin
 implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
