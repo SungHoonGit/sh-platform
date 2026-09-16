@@ -108,4 +108,21 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
     @org.springframework.transaction.annotation.Transactional
     @Query("UPDATE JobPosting j SET j.crawlLogId = NULL WHERE j.crawlLogId = :crawlLogId")
     void nullifyCrawlLogId(@Param("crawlLogId") Long crawlLogId);
+
+    /**
+     * 정규화 회사명별 저장 공고 수. CompanyBlacklistService.normalize 와 동일한 규칙을
+     * SQL 로 근사한다 (소문자+공백 제거+법인 표기 제거). 차단 키워드별 숨김 공고 수 표시에 사용.
+     * 탭 공백 등 희귀 케이스는 근사 오차 가능.
+     *
+     * @param keywords 정규화 회사명 목록 (빈 목록이면 호출 금지 — IN () 무효)
+     * @return [정규화명, 개수] 행 목록
+     */
+    @Query(value = """
+            SELECT LOWER(REPLACE(REPLACE(REPLACE(REPLACE(company, ' ', ''), '(주)', ''), '㈜', ''), '주식회사', '')) AS norm,
+                   COUNT(*) AS cnt
+            FROM job_postings
+            WHERE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(company, ' ', ''), '(주)', ''), '㈜', ''), '주식회사', '')) IN :keywords
+            GROUP BY norm
+            """, nativeQuery = true)
+    List<Object[]> countByNormalizedCompanyIn(@Param("keywords") List<String> keywords);
 }

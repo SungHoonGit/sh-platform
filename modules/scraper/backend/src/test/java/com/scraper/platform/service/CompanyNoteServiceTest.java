@@ -9,6 +9,7 @@ import com.scraper.platform.model.CompanyRating;
 import com.scraper.platform.repository.CompanyBlacklistRepository;
 import com.scraper.platform.repository.CompanyNoteRepository;
 import com.scraper.platform.repository.CompanyRatingRepository;
+import com.scraper.platform.repository.JobPostingRepository;
 import com.shplatform.common.exception.BusinessException;
 import com.shplatform.common.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -43,6 +44,9 @@ class CompanyNoteServiceTest {
 
     @Mock
     private CompanyRatingRepository ratingRepository;
+
+    @Mock
+    private JobPostingRepository jobPostingRepository;
 
     @InjectMocks
     private CompanyNoteService noteService;
@@ -136,6 +140,22 @@ class CompanyNoteServiceTest {
             assertEquals(ErrorCode.INVALID_INPUT, assertThrows(BusinessException.class, () ->
                     noteService.upsert(ACCOUNT, new CompanyNoteRequest("네이버", 6, null, null))).getErrorCode());
         }
+
+        @Test
+        @DisplayName("차단된 회사는 북마크가 강제 해제된다")
+        void 차단회사_북마크해제() {
+            given(noteRepository.findByAccountIdAndCompanyNameNormalized(ACCOUNT, "악덕기업"))
+                    .willReturn(Optional.empty());
+            given(noteRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+            given(blacklistRepository.existsByAccountIdAndCompanyNameNormalized(ACCOUNT, "악덕기업"))
+                    .willReturn(true);
+            stubEmptyJoins();
+
+            CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
+                    new CompanyNoteRequest("악덕기업", 1, true, null));
+
+            assertFalse(result.bookmarked());
+        }
     }
 
     @Nested
@@ -189,6 +209,22 @@ class CompanyNoteServiceTest {
 
             verify(noteRepository).delete(existing);
         }
+
+        @Test
+        @DisplayName("차단된 회사 수정 시 북마크가 강제 해제된다")
+        void 차단회사_수정_북마크해제() {
+            CompanyNote existing = note(5L, "악덕기업", "악덕기업", 2, true, null);
+            given(noteRepository.findById(5L)).willReturn(Optional.of(existing));
+            given(noteRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+            given(blacklistRepository.existsByAccountIdAndCompanyNameNormalized(ACCOUNT, "악덕기업"))
+                    .willReturn(true);
+            stubEmptyJoins();
+
+            CompanyNoteDetailResponse result = noteService.update(ACCOUNT, 5L,
+                    new CompanyNoteRequest(null, null, true, null));
+
+            assertFalse(result.bookmarked());
+        }
     }
 
     @Nested
@@ -211,7 +247,7 @@ class CompanyNoteServiceTest {
         }
 
         @Test
-        @DisplayName("blocked 탭은 블랙리스트 기준으로 메모·평점을 조인한다")
+        @DisplayName("blocked 탭은 블랙리스트 기준으로 메모·평점·숨김수를 조인한다")
         void 차단탭() {
             CompanyBlacklist blocked = CompanyBlacklist.builder()
                     .id(11L).accountId(ACCOUNT).companyNameNormalized("악덕기업").reason("야근").build();
@@ -220,12 +256,40 @@ class CompanyNoteServiceTest {
             given(noteRepository.findByAccountIdAndCompanyNameNormalizedIn(ACCOUNT, List.of("악덕기업")))
                     .willReturn(List.of());
             given(ratingRepository.findByCompanyNameIn(any())).willReturn(List.of());
+            given(jobPostingRepository.countByNormalizedCompanyIn(List.of("악덕기업")))
+                    .willReturn(java.util.Collections.singletonList(new Object[]{"악덕기업", 3L}));
 
             Page<CompanyNoteResponse> page = noteService.list(ACCOUNT, "blocked", null, 0, 50);
 
             assertEquals(1, page.getTotalElements());
             assertTrue(page.getContent().get(0).blocked());
             assertNull(page.getContent().get(0).id());
+            assertEquals("악덕기업", page.getContent().get(0).companyNameNormalized());
+            assertEquals(3L, page.getContent().get(0).hiddenCount());
+        }
+
+        @Test
+        @DisplayName("전체 탭은 메모 없는 차단 회사도 함께 표시한다")
+        void 전체탭_차단포함() {
+            CompanyNote n = note(1L, "카카오", "카카오", 5, true, "메모");
+            given(noteRepository.findByAccountId(eq(ACCOUNT), any(Pageable.class)))
+                    .willReturn(new PageImpl<>(List.of(n)));
+            CompanyBlacklist blocked = CompanyBlacklist.builder()
+                    .id(11L).accountId(ACCOUNT).companyNameNormalized("악덕기업").build();
+            given(blacklistRepository.findByAccountIdOrderByCreatedAtDesc(ACCOUNT))
+                    .willReturn(List.of(blocked));
+            given(noteRepository.findByAccountIdAndCompanyNameNormalizedIn(ACCOUNT, List.of("악덕기업")))
+                    .willReturn(List.of());
+            given(ratingRepository.findByCompanyNameIn(any())).willReturn(List.of());
+            given(jobPostingRepository.countByNormalizedCompanyIn(List.of("악덕기업")))
+                    .willReturn(java.util.Collections.singletonList(new Object[]{"악덕기업", 7L}));
+
+            Page<CompanyNoteResponse> page = noteService.list(ACCOUNT, "all", null, 0, 50);
+
+            assertEquals(2, page.getTotalElements());
+            assertEquals("카카오", page.getContent().get(0).companyNameDisplay());
+            assertTrue(page.getContent().get(1).blocked());
+            assertEquals(7L, page.getContent().get(1).hiddenCount());
         }
 
         @Test

@@ -25,6 +25,7 @@ async function companyNoteReq<T>(path: string, options?: RequestInit): Promise<T
 export interface CompanyNoteItem {
   id: number | null;
   companyNameDisplay: string;
+  companyNameNormalized: string;
   myStars: number | null;
   bookmarked: boolean;
   blocked: boolean;
@@ -34,6 +35,7 @@ export interface CompanyNoteItem {
   jobkoreaScore: number | null;
   saraminScore: number | null;
   updatedAt: string | null;
+  hiddenCount: number | null;
 }
 
 export interface CompanyNoteDetail extends Omit<CompanyNoteItem, "id" | "hasNote"> {

@@ -92,7 +92,7 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
   });
 
   const blockMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<boolean> => {
       const list = blacklistQuery.data ?? (await fetchBlacklist());
       const normalized = detail?.companyNameNormalized;
       const existing = normalized ? list.find((b) => b.companyNameNormalized === normalized) : undefined;
@@ -103,11 +103,24 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
       await addBlacklist(detail?.companyNameDisplay ?? companyName ?? "");
       return true;
     },
-    onSuccess: () => {
+    onSuccess: async (nowBlocked) => {
+      // 차단+북마크 상호배타: 차단 시 북마크 자동 해제
+      if (nowBlocked && id != null && detail?.bookmarked) {
+        await companyNoteApi.update(id, { isBookmarked: false }).catch(() => undefined);
+      }
       invalidate();
       detailQuery.refetch();
     },
     onError: () => alert("차단 변경 실패."),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: () => companyNoteApi.remove(id as number),
+    onSuccess: () => {
+      invalidate();
+      onClose();
+    },
+    onError: () => alert("삭제 실패."),
   });
 
   const exportMd = async () => {
@@ -138,13 +151,19 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
       <aside className="absolute right-0 top-0 flex h-full w-full max-w-[560px] flex-col bg-white shadow-xl">
         <header className="flex items-center gap-2 border-b px-4 py-3">
           <h2 className="min-w-0 flex-1 truncate text-base font-semibold">{title}</h2>
-          <button
-            className="rounded p-1.5 hover:bg-gray-100"
-            title={bookmarked ? "북마크 해제" : "북마크"}
-            onClick={() => bookmarkMutation.mutate(!bookmarked)}
-          >
-            {bookmarked ? <BookmarkCheck size={18} className="text-amber-500" /> : <Bookmark size={18} className="text-gray-400" />}
-          </button>
+          {blocked ? (
+            <span className="rounded p-1.5 text-slate-300" title="차단된 회사는 북마크 불가">
+              <Bookmark size={18} />
+            </span>
+          ) : (
+            <button
+              className="rounded p-1.5 hover:bg-gray-100"
+              title={bookmarked ? "북마크 해제" : "북마크"}
+              onClick={() => bookmarkMutation.mutate(!bookmarked)}
+            >
+              {bookmarked ? <BookmarkCheck size={18} className="text-amber-500" /> : <Bookmark size={18} className="text-gray-400" />}
+            </button>
+          )}
           {!isCreate && (
             <>
               <button
@@ -243,6 +262,16 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
               >
                 <Save size={15} /> 저장
               </button>
+              {!isCreate && (
+                <button
+                  className="ml-2 text-xs text-red-500 underline"
+                  onClick={() => {
+                    if (confirm("이 회사 메모를 삭제할까요? (차단·평점은 유지됩니다)")) removeMutation.mutate();
+                  }}
+                >
+                  메모 삭제
+                </button>
+              )}
             </>
           )}
         </div>

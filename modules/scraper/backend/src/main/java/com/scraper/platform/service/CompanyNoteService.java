@@ -9,6 +9,7 @@ import com.scraper.platform.model.CompanyRating;
 import com.scraper.platform.repository.CompanyBlacklistRepository;
 import com.scraper.platform.repository.CompanyNoteRepository;
 import com.scraper.platform.repository.CompanyRatingRepository;
+import com.scraper.platform.repository.JobPostingRepository;
 import com.shplatform.common.exception.BusinessException;
 import com.shplatform.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -41,10 +42,12 @@ public class CompanyNoteService {
     private final CompanyNoteRepository noteRepository;
     private final CompanyBlacklistRepository blacklistRepository;
     private final CompanyRatingRepository ratingRepository;
+    private final JobPostingRepository jobPostingRepository;
 
     /**
      * (질의형) 내 회사 목록을 탭별로 조회한다.
-     * all=내 메모 전체, bookmarked=북마크만, blocked=차단 목록(메모 없어도 표시, 메모·평점 조인).
+     * all=내 메모 전체 + 메모 없는 차단 회사(차단 뱃지 표시),
+     * bookmarked=북마크만, blocked=차단 목록(메모 없어도 표시, 메모·평점·숨김수 조인).
      *
      * @param accountId 소유 계정
      * @param tab all|bookmarked|blocked (기본 all)
@@ -61,6 +64,7 @@ public class CompanyNoteService {
             return listBlocked(accountId, keyword, pageable);
         }
         Page<CompanyNote> notes;
+        boolean includeBlockedOnly = !"bookmarked".equalsIgnoreCase(tab);
         if ("bookmarked".equalsIgnoreCase(tab)) {
             notes = (keyword == null)
                     ? noteRepository.findByAccountIdAndIsBookmarkedTrue(accountId, pageable)
@@ -72,7 +76,7 @@ public class CompanyNoteService {
                     : noteRepository.findByAccountIdAndCompanyNameDisplayContainingIgnoreCase(
                             accountId, keyword, pageable);
         }
-        return enrich(notes, accountId);
+        return enrich(notes, accountId, keyword, includeBlockedOnly);
     }
 
     /**
@@ -90,6 +94,7 @@ public class CompanyNoteService {
 
     /**
      * (명령형) 회사 메모를 생성한다. 같은 정규화 회사명이 있으면 갱신한다(멱등).
+     * 차단된 회사는 북마크가 강제 해제된다 (차단+북마크 상호배타).
      *
      * @param accountId 소유 계정
      * @param request 회사명(필수), 내 별점 1~5, 북마크, MD
@@ -109,12 +114,14 @@ public class CompanyNoteService {
                         .build());
         note.setCompanyNameDisplay(display);
         applyFields(note, request);
+        dropBookmarkIfBlocked(accountId, note);
         CompanyNote saved = noteRepository.save(note);
         return toDetail(saved, blockedNames(accountId), ratingsByNormalized(displayNames(List.of(saved))));
     }
 
     /**
      * (명령형) 메모를 수정한다. 회사명 변경은 무시된다(정규화 키 유지).
+     * 차단된 회사는 북마크가 강제 해제된다 (차단+북마크 상호배타).
      *
      * @param accountId 소유 계정
      * @param id 메모 ID
@@ -127,6 +134,7 @@ public class CompanyNoteService {
         validate(request, false);
         CompanyNote note = ownedNote(accountId, id);
         applyFields(note, request);
+        dropBookmarkIfBlocked(accountId, note);
         CompanyNote saved = noteRepository.save(note);
         return toDetail(saved, blockedNames(accountId), ratingsByNormalized(displayNames(List.of(saved))));
     }
@@ -203,23 +211,74 @@ public class CompanyNoteService {
         }
     }
 
+    /**
+     * 차단된 회사의 북마크를 강제 해제한다. 차단+북마크는 상호배타 (차단된 회사 공고는
+     * 숨겨지므로 북마크 의미가 없음).
+     */
+    private void dropBookmarkIfBlocked(Long accountId, CompanyNote note) {
+        if (Boolean.TRUE.equals(note.getIsBookmarked())
+                && blacklistRepository.existsByAccountIdAndCompanyNameNormalized(
+                        accountId, note.getCompanyNameNormalized())) {
+            note.setIsBookmarked(false);
+        }
+    }
+
     private CompanyNote ownedNote(Long accountId, Long id) {
         return noteRepository.findById(id)
                 .filter(n -> n.getAccountId().equals(accountId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
 
-    private Page<CompanyNoteResponse> enrich(Page<CompanyNote> notes, Long accountId) {
+    private Page<CompanyNoteResponse> enrich(Page<CompanyNote> notes, Long accountId, String keyword,
+                                              boolean includeBlockedOnly) {
         Map<String, CompanyRating> ratings = ratingsByNormalized(displayNames(notes.getContent()));
         Map<String, Boolean> blocked = blockedNames(accountId);
         List<CompanyNoteResponse> items = notes.getContent().stream()
                 .map(n -> toResponse(n, blocked.getOrDefault(n.getCompanyNameNormalized(), false),
-                        ratings.get(n.getCompanyNameNormalized())))
-                .toList();
-        return new PageImpl<>(items, notes.getPageable(), notes.getTotalElements());
+                        ratings.get(n.getCompanyNameNormalized()), null))
+                .collect(java.util.ArrayList::new, java.util.ArrayList::add, java.util.ArrayList::addAll);
+        long total = notes.getTotalElements();
+        // 전체 탭: 메모가 없는 차단 회사도 차단 뱃지와 함께 추가한다 (차단이 바로 보이도록).
+        // 차단은 메모 목록과 다른 테이블이므로 현재 페이지 꼬리에 추가한다 (사용자 규모에서 허용).
+        if (includeBlockedOnly) {
+            BlockedData join = blockedData(accountId, keyword);
+            for (CompanyBlacklist b : join.entries()) {
+                if (join.notes().containsKey(b.getCompanyNameNormalized())) {
+                    continue;
+                }
+                items.add(toResponse(null, b.getCompanyNameNormalized(), b.getCompanyNameNormalized(), true,
+                        join.ratings().get(b.getCompanyNameNormalized()),
+                        join.hiddenCounts().get(b.getCompanyNameNormalized())));
+                total++;
+            }
+        }
+        return new PageImpl<>(items, notes.getPageable(), total);
     }
 
     private Page<CompanyNoteResponse> listBlocked(Long accountId, String keyword, Pageable pageable) {
+        BlockedData join = blockedData(accountId, keyword);
+        List<CompanyNoteResponse> items = join.entries().stream()
+                .map(b -> {
+                    CompanyNote n = join.notes().get(b.getCompanyNameNormalized());
+                    String display = (n != null) ? n.getCompanyNameDisplay() : b.getCompanyNameNormalized();
+                    String normalized = (n != null) ? n.getCompanyNameNormalized() : b.getCompanyNameNormalized();
+                    return toResponse(n, display, normalized, true,
+                            join.ratings().get(b.getCompanyNameNormalized()),
+                            join.hiddenCounts().get(b.getCompanyNameNormalized()));
+                })
+                .toList();
+        int total = items.size();
+        int from = Math.min((int) pageable.getOffset(), total);
+        int to = Math.min(from + pageable.getPageSize(), total);
+        return new PageImpl<>(items.subList(from, to), pageable, total);
+    }
+
+    /** 차단 목록 + 메모·평점·숨김수 조인에 필요한 데이터를 한 번에 모은다. */
+    private record BlockedData(List<CompanyBlacklist> entries, Map<String, CompanyNote> notes,
+                               Map<String, CompanyRating> ratings, Map<String, Long> hiddenCounts) {
+    }
+
+    private BlockedData blockedData(Long accountId, String keyword) {
         List<CompanyBlacklist> entries = blacklistRepository.findByAccountIdOrderByCreatedAtDesc(accountId);
         if (keyword != null) {
             String lower = keyword.toLowerCase();
@@ -228,23 +287,25 @@ public class CompanyNoteService {
                     .toList();
         }
         List<String> normalized = entries.stream().map(CompanyBlacklist::getCompanyNameNormalized).toList();
-        Map<String, CompanyNote> notes = new HashMap<>();
-        for (CompanyNote n : noteRepository.findByAccountIdAndCompanyNameNormalizedIn(accountId, normalized)) {
-            notes.put(n.getCompanyNameNormalized(), n);
+        Map<String, CompanyNote> noteMap = new HashMap<>();
+        if (!normalized.isEmpty()) {
+            for (CompanyNote n : noteRepository.findByAccountIdAndCompanyNameNormalizedIn(accountId, normalized)) {
+                noteMap.put(n.getCompanyNameNormalized(), n);
+            }
         }
-        Map<String, CompanyRating> ratings = ratingsByNormalized(normalized);
-        List<CompanyNoteResponse> items = entries.stream()
-                .map(b -> {
-                    CompanyNote n = notes.get(b.getCompanyNameNormalized());
-                    String display = (n != null) ? n.getCompanyNameDisplay() : b.getCompanyNameNormalized();
-                    return toResponse(n, display, b.getCompanyNameNormalized(), true,
-                            ratings.get(b.getCompanyNameNormalized()));
-                })
-                .toList();
-        int total = items.size();
-        int from = Math.min((int) pageable.getOffset(), total);
-        int to = Math.min(from + pageable.getPageSize(), total);
-        return new PageImpl<>(items.subList(from, to), pageable, total);
+        return new BlockedData(entries, noteMap, ratingsByNormalized(normalized), hiddenCounts(normalized));
+    }
+
+    /** 정규화 회사명별 저장 공고 수 (차단 키워드로 숨겨지는 공고 수). */
+    private Map<String, Long> hiddenCounts(List<String> normalized) {
+        Map<String, Long> counts = new HashMap<>();
+        if (normalized.isEmpty()) {
+            return counts;
+        }
+        for (Object[] row : jobPostingRepository.countByNormalizedCompanyIn(normalized)) {
+            counts.put((String) row[0], ((Number) row[1]).longValue());
+        }
+        return counts;
     }
 
     private List<String> displayNames(List<CompanyNote> notes) {
@@ -276,15 +337,18 @@ public class CompanyNoteService {
         return matched;
     }
 
-    private CompanyNoteResponse toResponse(CompanyNote note, boolean blocked, CompanyRating rating) {
-        return toResponse(note, note.getCompanyNameDisplay(), note.getCompanyNameNormalized(), blocked, rating);
+    private CompanyNoteResponse toResponse(CompanyNote note, boolean blocked, CompanyRating rating,
+                                           Long hiddenCount) {
+        return toResponse(note, note.getCompanyNameDisplay(), note.getCompanyNameNormalized(), blocked, rating,
+                hiddenCount);
     }
 
     private CompanyNoteResponse toResponse(CompanyNote note, String display, String normalized,
-                                           boolean blocked, CompanyRating rating) {
+                                           boolean blocked, CompanyRating rating, Long hiddenCount) {
         return new CompanyNoteResponse(
                 note != null ? note.getId() : null,
                 display,
+                normalized,
                 note != null ? note.getMyStars() : null,
                 note != null && Boolean.TRUE.equals(note.getIsBookmarked()),
                 blocked,
@@ -293,7 +357,8 @@ public class CompanyNoteService {
                 rating != null ? rating.getJobplanetScore() : null,
                 rating != null ? rating.getJobkoreaScore() : null,
                 rating != null ? rating.getSaraminScore() : null,
-                note != null ? note.getUpdatedAt() : null);
+                note != null ? note.getUpdatedAt() : null,
+                hiddenCount);
     }
 
     private CompanyNoteDetailResponse toDetail(CompanyNote note, Map<String, Boolean> blocked,

@@ -12,6 +12,9 @@ public record CompanyNoteResponse(
         @Schema(description = "화면 표시용 회사명")
         String companyNameDisplay,
 
+        @Schema(description = "정규화 회사명 (차단 키워드)")
+        String companyNameNormalized,
+
         @Schema(description = "내 별점 1~5 (null이면 미지정)")
         Integer myStars,
 
@@ -35,6 +38,9 @@ public record CompanyNoteResponse(
         Double saraminScore,
 
         @Schema(description = "메모 수정 일시 (메모 없으면 null)")
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+
+        @Schema(description = "이 차단 키워드로 숨겨지는 저장 공고 수 (차단 행만, 그 외 null)")
+        Long hiddenCount
 ) {
 }
