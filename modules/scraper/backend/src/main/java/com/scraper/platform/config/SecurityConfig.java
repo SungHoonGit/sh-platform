@@ -29,7 +29,7 @@ public class SecurityConfig {
                     "/", "/index.html", "/favicon.ico",
                     "/assets/**", "/static/**",
                     "/sw.js",
-                    "/search", "/schedule", "/viewer",
+                    "/search", "/schedule", "/viewer", "/companies",
                     "/crawl-config/*/progress",
                     "/api/v1/push/vapid-public-key",
                     "/api/health",
