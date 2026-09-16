@@ -44,14 +44,14 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
       setStars(detail.myStars);
       setMd(detail.noteMd ?? "");
       setBookmarked(detail.bookmarked);
-      if (!detail.noteMd?.trim()) setTab("edit");
+      setTab(detail.noteMd?.trim() ? "view" : "edit");
     } else if (isCreate) {
       setStars(null);
       setMd("");
       setBookmarked(false);
       setTab("edit");
     }
-  }, [detail?.id, isCreate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [detail?.id, isCreate, companyName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();

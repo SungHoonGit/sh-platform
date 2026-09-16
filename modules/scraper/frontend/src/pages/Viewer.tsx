@@ -8,6 +8,8 @@ import { deadlineBadge, jobPlanetQuery, normCompany } from "../common/jobPlanet"
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 import { useSites, siteBadgeColor, siteTabColor } from "../hooks/useMasterData";
 import { BlockConfirmDialog, BlacklistManagerModal } from "@sh-platform/ui";
+import CompanySlideOver from "../components/CompanySlideOver";
+import { companyNoteApi } from "../api/companies";
 
 const COLUMNS: { key: string; label: string; w: string }[] = [
   { key: "scrap", label: "", w: "w-[32px]" },
@@ -190,6 +192,18 @@ export default function Viewer() {
   const blockCompany = (company: string) => {
     if (!company) return;
     setBlockDialog(company);
+  };
+  const [companySlide, setCompanySlide] = useState<{ id: number | null; name: string } | null>(null);
+  /** 회사명 클릭 → 기존 메모가 있으면 상세, 없으면 신규 작성 모드로 슬라이드 오픈. */
+  const openCompanySlide = async (company: string) => {
+    if (!company) return;
+    try {
+      const page = await companyNoteApi.list("all", company, 0, 10);
+      const hit = page.content.find((c) => normCompany(c.companyNameDisplay) === normCompany(company));
+      setCompanySlide(hit?.id != null ? { id: hit.id, name: company } : { id: null, name: company });
+    } catch {
+      setCompanySlide({ id: null, name: company });
+    }
   };
   const confirmBlock = async (company: string, reason: string, reasonIds: number[], categoryNames: string[]) => {
     try {
@@ -560,7 +574,13 @@ export default function Viewer() {
                         </td>
                         <td className="px-2 py-1 text-slate-600 truncate">
                           <span className="flex items-center gap-1 group/comp">
-                            <span className="truncate">{job.company || "-"}</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); void openCompanySlide(job.company); }}
+                              className="truncate hover:text-blue-600 hover:underline"
+                              title="회사 메모 열기"
+                            >
+                              {job.company || "-"}
+                            </button>
                             {job.company && (
                               <a
                                 href={`https://www.jobplanet.co.kr/search?query=${encodeURIComponent(jobPlanetQuery(job.company))}`}
@@ -660,6 +680,14 @@ export default function Viewer() {
         onCancel={() => setEditTarget(null)}
         onConfirm={(_reason, reasonIds, categoryNames) => { const t = editTarget; setEditTarget(null); if (t) void confirmEdit(t, reasonIds, categoryNames); }}
       />
+      {companySlide && (
+        <CompanySlideOver
+          id={companySlide.id}
+          companyName={companySlide.name}
+          onClose={() => setCompanySlide(null)}
+          onSaved={(newId) => setCompanySlide({ id: newId, name: companySlide.name })}
+        />
+      )}
     </div>
   );
 }
