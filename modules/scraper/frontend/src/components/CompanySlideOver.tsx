@@ -36,6 +36,13 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
 
   const blacklistQuery = useQuery({ queryKey: ["blacklist"], queryFn: fetchBlacklist });
 
+  const postingsQuery = useQuery({
+    queryKey: ["company-postings", id],
+    queryFn: () => companyNoteApi.postings(id as number, 10),
+    enabled: id != null && tab === "view" && detail != null,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const [stars, setStars] = useState<number | null>(null);
   const [md, setMd] = useState("");
   const [bookmarked, setBookmarked] = useState(false);
@@ -283,6 +290,33 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
               <article className="md-view">
                 {detail.noteMd?.trim() ? <ReactMarkdown>{detail.noteMd}</ReactMarkdown> : <p className="text-sm text-gray-400">작성된 분석 메모가 없습니다. 편집 탭에서 작성하세요.</p>}
               </article>
+              <section className="mt-3">
+                <p className="mb-1 text-xs font-semibold text-gray-500">관련 공고 (최근 저장분)</p>
+                {postingsQuery.isLoading && <p className="text-sm text-gray-400">불러오는 중…</p>}
+                {!postingsQuery.isLoading && (postingsQuery.data?.length ?? 0) === 0 && (
+                  <p className="text-sm text-gray-400">저장된 관련 공고가 없습니다.</p>
+                )}
+                {(postingsQuery.data?.length ?? 0) > 0 && (
+                  <ul className="divide-y divide-slate-100 rounded border border-slate-200">
+                    {postingsQuery.data!.map((p, i) => (
+                      <li key={`${p.url}-${i}`} className="px-2.5 py-1.5 text-sm">
+                        <a
+                          href={p.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block truncate font-medium text-slate-800 hover:text-blue-600 hover:underline"
+                          title={p.position}
+                        >
+                          {p.position}
+                        </a>
+                        <span className="text-xs text-slate-500">
+                          {p.siteName} · {p.crawledAt}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
             </>
           )}
 

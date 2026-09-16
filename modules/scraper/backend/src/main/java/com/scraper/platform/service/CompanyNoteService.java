@@ -3,6 +3,7 @@ package com.scraper.platform.service;
 import com.scraper.platform.api.dto.CompanyNoteDetailResponse;
 import com.scraper.platform.api.dto.CompanyNoteRequest;
 import com.scraper.platform.api.dto.CompanyNoteResponse;
+import com.scraper.platform.api.dto.CompanyPostingItem;
 import com.scraper.platform.model.CompanyBlacklist;
 import com.scraper.platform.model.CompanyNote;
 import com.scraper.platform.model.CompanyRating;
@@ -199,6 +200,28 @@ public class CompanyNoteService {
         md.append((note.getNoteMd() == null || note.getNoteMd().isBlank()) ? "_메모 없음_" : note.getNoteMd().trim())
                 .append("\n");
         return md.toString();
+    }
+
+    /**
+     * (질의형) 회사의 최근 저장 공고를 조회한다 (슬라이드 보기 탭용).
+     * 정규화 키워드 정확 일치 + 수집일 내림차순, 최대 size건 (1~50, 기본 10).
+     * 슬라이드 열 때 1회만 실행되므로 수천 건 규모에서 부담 없다.
+     *
+     * @param accountId 소유 계정 (메모 소유 확인용, 공고 자체는 전역 조회)
+     * @param id 메모 ID
+     * @param size 최대 건수
+     * @return 최근 공고 목록
+     * @throws BusinessException NOT_FOUND
+     */
+    public List<CompanyPostingItem> recentPostings(Long accountId, Long id, int size) {
+        CompanyNote note = ownedNote(accountId, id);
+        int safeSize = Math.min(Math.max(size, 1), 50);
+        Pageable pageable = PageRequest.of(0, safeSize);
+        return jobPostingRepository.findRecentByNormalizedCompany(note.getCompanyNameNormalized(), pageable)
+                .stream()
+                .map(j -> new CompanyPostingItem(
+                        j.getPosition(), j.getSiteName(), j.getCompany(), j.getCrawledAt(), j.getUrl()))
+                .toList();
     }
 
     private void validate(CompanyNoteRequest request, boolean requireName) {

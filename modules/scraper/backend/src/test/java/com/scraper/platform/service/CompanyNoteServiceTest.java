@@ -382,4 +382,39 @@ class CompanyNoteServiceTest {
             assertTrue(md.contains("- 복지 좋음"));
         }
     }
+
+    @Nested
+    @DisplayName("recentPostings 메서드")
+    class RecentPostings {
+
+        @Test
+        @DisplayName("정규화 회사명의 최근 공고를 size上限으로 반환한다")
+        void 최근공고() {
+            CompanyNote n = note(1L, "삼성전자", "삼성전자(주)", 4, true, null);
+            given(noteRepository.findById(1L)).willReturn(Optional.of(n));
+            var posting = com.scraper.platform.model.JobPosting.builder()
+                    .id(100L).siteName("saramin").company("삼성전자(주)").position("백엔드")
+                    .url("https://example.com/1")
+                    .crawledAt(java.time.LocalDate.of(2026, 9, 16))
+                    .build();
+            given(jobPostingRepository.findRecentByNormalizedCompany(eq("삼성전자"), any(Pageable.class)))
+                    .willReturn(List.of(posting));
+
+            var result = noteService.recentPostings(ACCOUNT, 1L, 10);
+
+            assertEquals(1, result.size());
+            assertEquals("백엔드", result.get(0).position());
+            assertEquals("saramin", result.get(0).siteName());
+            verify(jobPostingRepository).findRecentByNormalizedCompany(eq("삼성전자"), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("타인 메모 조회는 NOT_FOUND 예외를 던진다")
+        void 타인조회_예외() {
+            given(noteRepository.findById(1L)).willReturn(Optional.empty());
+
+            assertEquals(ErrorCode.NOT_FOUND, assertThrows(BusinessException.class, () ->
+                    noteService.recentPostings(ACCOUNT, 1L, 10)).getErrorCode());
+        }
+    }
 }

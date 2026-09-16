@@ -125,4 +125,19 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
             GROUP BY norm
             """, nativeQuery = true)
     List<Object[]> countByNormalizedCompanyIn(@Param("keywords") List<String> keywords);
+
+    /**
+     * 정규화 회사명의 최근 저장 공고. 슬라이드 보기 탭의 관련 공고 섹션용 (LIMIT 필수).
+     * 수천 건 규모에서 수십ms — 슬라이드 열 때 1회만 실행된다.
+     *
+     * @param normalized 정규화 회사명
+     * @param pageable 0페이지 + size上限 (crawled_at 내림차순 권장)
+     * @return 최근 공고 (최대 size건)
+     */
+    @Query(value = """
+            SELECT * FROM job_postings
+            WHERE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(company, ' ', ''), '(주)', ''), '㈜', ''), '주식회사', '')) = :normalized
+            ORDER BY crawled_at DESC
+            """, nativeQuery = true)
+    List<JobPosting> findRecentByNormalizedCompany(@Param("normalized") String normalized, Pageable pageable);
 }

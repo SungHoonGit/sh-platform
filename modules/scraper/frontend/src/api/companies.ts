@@ -64,6 +64,14 @@ export interface CompanyNoteInput {
 export type CompanySort = "updated" | "display" | "stars";
 export type SortDir = "asc" | "desc";
 
+export interface CompanyPosting {
+  position: string;
+  siteName: string;
+  company: string;
+  crawledAt: string;
+  url: string;
+}
+
 export const companyNoteApi = {
   list: (tab: CompanyTab, q?: string, page = 0, size = 50, sort: CompanySort = "updated", dir: SortDir = "desc") => {
     const params = new URLSearchParams({ tab, page: String(page), size: String(size), sort, dir });
@@ -77,5 +85,7 @@ export const companyNoteApi = {
     companyNoteReq<CompanyNoteDetail>(`/${id}`, { method: "PUT", body: JSON.stringify(input) }),
   remove: (id: number) =>
     companyNoteReq<void>(`/${id}`, { method: "DELETE" }),
+  postings: (id: number, size = 10) =>
+    companyNoteReq<CompanyPosting[]>(`/${id}/postings?size=${size}`),
   exportUrl: (id: number) => `${BASE}/${id}/export`,
 };

@@ -3,6 +3,7 @@ package com.scraper.platform.controller;
 import com.scraper.platform.api.dto.CompanyNoteDetailResponse;
 import com.scraper.platform.api.dto.CompanyNoteRequest;
 import com.scraper.platform.api.dto.CompanyNoteResponse;
+import com.scraper.platform.api.dto.CompanyPostingItem;
 import com.scraper.platform.service.CompanyNoteService;
 import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * 계정별 회사 메모 API (내 별점·북마크·MD 분석). 크롤링 평점과 차단 여부를 조인해 반환한다.
@@ -86,5 +88,14 @@ public class CompanyNoteController {
                         .build().toString())
                 .contentType(new MediaType("text", "markdown", StandardCharsets.UTF_8))
                 .body(noteService.exportMarkdown(accountId, id));
+    }
+
+    @GetMapping("/{id}/postings")
+    @Operation(summary = "관련 공고 조회", description = "이 회사의 최근 저장 공고를 수집일 내림차순으로 반환한다 (슬라이드 보기 탭용)")
+    public ResponseEntity<ApiResponse<List<CompanyPostingItem>>> postings(
+            @PathVariable Long id,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(
+                noteService.recentPostings(SecurityUtils.currentAccountId(), id, size)));
     }
 }

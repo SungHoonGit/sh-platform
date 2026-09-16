@@ -24,6 +24,19 @@ export default function Companies() {
   const [createName, setCreateName] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addName, setAddName] = useState("");
+  const [debouncedAdd, setDebouncedAdd] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedAdd(addName.trim()), 300);
+    return () => clearTimeout(t);
+  }, [addName]);
+
+  const suggestQuery = useQuery({
+    queryKey: ["company-notes", "all", debouncedAdd, "suggest"],
+    queryFn: () => companyNoteApi.list("all", debouncedAdd, 0, 5),
+    enabled: addOpen && debouncedAdd.length > 0,
+  });
+  const suggestions = suggestQuery.data?.content ?? [];
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -228,13 +241,35 @@ export default function Companies() {
               뷰어·스케줄 공고의 회사명과 같은 이름으로 입력하면 기존 메모·차단과 연결됩니다.
             </p>
             <input
-              className="mb-3 w-full rounded border border-slate-200 px-2.5 py-1.5 text-sm"
+              className="mb-2 w-full rounded border border-slate-200 px-2.5 py-1.5 text-sm"
               placeholder="예: 삼성전자(주)"
               value={addName}
               autoFocus
               onChange={(e) => setAddName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && confirmAdd()}
             />
+            {debouncedAdd.length > 0 && suggestions.length > 0 && (
+              <ul className="mb-2 max-h-44 overflow-auto rounded border border-slate-200">
+                {suggestions.map((s) => (
+                  <li key={`${s.id ?? "b"}-${s.companyNameDisplay}`}>
+                    <button
+                      className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-sm hover:bg-blue-50"
+                      onClick={() => {
+                        setAddOpen(false);
+                        setAddName("");
+                        openRow(s.id, s.companyNameDisplay);
+                      }}
+                    >
+                      <span className="flex-1 truncate font-medium text-slate-800">{s.companyNameDisplay}</span>
+                      {s.myStars != null && <span className="text-xs text-amber-500">★{s.myStars}</span>}
+                      {s.bookmarked && <Bookmark size={13} className="fill-amber-400 text-amber-400" />}
+                      {s.blocked && <Ban size={13} className="text-red-500" />}
+                      {s.hasNote && <FileText size={13} className="text-blue-500" />}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="flex justify-end gap-1.5">
               <button
                 className="rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-600"
