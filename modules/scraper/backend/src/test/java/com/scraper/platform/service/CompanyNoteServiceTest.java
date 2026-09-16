@@ -1,0 +1,274 @@
+package com.scraper.platform.service;
+
+import com.scraper.platform.api.dto.CompanyNoteDetailResponse;
+import com.scraper.platform.api.dto.CompanyNoteRequest;
+import com.scraper.platform.api.dto.CompanyNoteResponse;
+import com.scraper.platform.model.CompanyBlacklist;
+import com.scraper.platform.model.CompanyNote;
+import com.scraper.platform.model.CompanyRating;
+import com.scraper.platform.repository.CompanyBlacklistRepository;
+import com.scraper.platform.repository.CompanyNoteRepository;
+import com.scraper.platform.repository.CompanyRatingRepository;
+import com.shplatform.common.exception.BusinessException;
+import com.shplatform.common.exception.ErrorCode;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("CompanyNoteService 테스트")
+class CompanyNoteServiceTest {
+
+    @Mock
+    private CompanyNoteRepository noteRepository;
+
+    @Mock
+    private CompanyBlacklistRepository blacklistRepository;
+
+    @Mock
+    private CompanyRatingRepository ratingRepository;
+
+    @InjectMocks
+    private CompanyNoteService noteService;
+
+    private static final Long ACCOUNT = 7L;
+
+    private CompanyNote note(Long id, String normalized, String display,
+                             Integer stars, Boolean bookmarked, String md) {
+        return CompanyNote.builder()
+                .id(id)
+                .accountId(ACCOUNT)
+                .companyNameNormalized(normalized)
+                .companyNameDisplay(display)
+                .myStars(stars)
+                .isBookmarked(bookmarked)
+                .noteMd(md)
+                .build();
+    }
+
+    private CompanyRating rating(String name, Double avg, Double planet, Double korea, Double saramin) {
+        return CompanyRating.builder()
+                .companyName(name)
+                .averageScore(avg)
+                .jobplanetScore(planet)
+                .jobkoreaScore(korea)
+                .saraminScore(saramin)
+                .build();
+    }
+
+    private void stubEmptyJoins() {
+        given(blacklistRepository.findByAccountIdOrderByCreatedAtDesc(ACCOUNT)).willReturn(List.of());
+        given(ratingRepository.findByCompanyNameIn(any())).willReturn(List.of());
+    }
+
+    @Nested
+    @DisplayName("upsert 메서드")
+    class Upsert {
+
+        @Test
+        @DisplayName("신규 회사는 정규화해 생성한다")
+        void 신규_생성() {
+            given(noteRepository.findByAccountIdAndCompanyNameNormalized(ACCOUNT, "삼성전자"))
+                    .willReturn(Optional.empty());
+            given(noteRepository.save(any())).willAnswer(inv -> {
+                CompanyNote n = inv.getArgument(0);
+                n.setId(99L);
+                return n;
+            });
+            stubEmptyJoins();
+
+            CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
+                    new CompanyNoteRequest("(주)삼성전자 ", 4, true, "## 총평"));
+
+            assertEquals(99L, result.id());
+            assertEquals("(주)삼성전자", result.companyNameDisplay());
+            assertEquals(4, result.myStars());
+            assertTrue(result.bookmarked());
+        }
+
+        @Test
+        @DisplayName("같은 회사는 갱신한다(멱등)")
+        void 멱등_갱신() {
+            CompanyNote existing = note(null, "카카오", "카카오", 3, false, null);
+            existing.setId(5L);
+            given(noteRepository.findByAccountIdAndCompanyNameNormalized(ACCOUNT, "카카오"))
+                    .willReturn(Optional.of(existing));
+            given(noteRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+            stubEmptyJoins();
+
+            CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
+                    new CompanyNoteRequest("카카오", 5, true, null));
+
+            assertEquals(5L, result.id());
+            assertEquals(5, result.myStars());
+            assertTrue(result.bookmarked());
+        }
+
+        @Test
+        @DisplayName("회사명 누락이면 INVALID_INPUT 예외를 던진다")
+        void 회사명누락_예외() {
+            BusinessException ex = assertThrows(BusinessException.class, () ->
+                    noteService.upsert(ACCOUNT, new CompanyNoteRequest("  ", 3, null, null)));
+            assertEquals(ErrorCode.INVALID_INPUT, ex.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("별점 범위(1~5) 밖이면 INVALID_INPUT 예외를 던진다")
+        void 별점범위_예외() {
+            assertEquals(ErrorCode.INVALID_INPUT, assertThrows(BusinessException.class, () ->
+                    noteService.upsert(ACCOUNT, new CompanyNoteRequest("네이버", 0, null, null))).getErrorCode());
+            assertEquals(ErrorCode.INVALID_INPUT, assertThrows(BusinessException.class, () ->
+                    noteService.upsert(ACCOUNT, new CompanyNoteRequest("네이버", 6, null, null))).getErrorCode());
+        }
+    }
+
+    @Nested
+    @DisplayName("update/delete 메서드")
+    class UpdateDelete {
+
+        @Test
+        @DisplayName("별점·북마크·MD를 수정한다 (회사명 변경 무시)")
+        void 수정() {
+            CompanyNote existing = note(5L, "카카오", "카카오", 3, false, "구메모");
+            given(noteRepository.findById(5L)).willReturn(Optional.of(existing));
+            given(noteRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+            stubEmptyJoins();
+
+            CompanyNoteDetailResponse result = noteService.update(ACCOUNT, 5L,
+                    new CompanyNoteRequest("다른이름", 5, true, "새메모"));
+
+            assertEquals("카카오", result.companyNameDisplay());
+            assertEquals(5, result.myStars());
+            assertTrue(result.bookmarked());
+        }
+
+        @Test
+        @DisplayName("타인 소유 수정은 NOT_FOUND 예외를 던진다")
+        void 타인수정_예외() {
+            CompanyNote others = note(5L, "카카오", "카카오", 3, false, null);
+            others.setAccountId(999L);
+            given(noteRepository.findById(5L)).willReturn(Optional.of(others));
+
+            assertEquals(ErrorCode.NOT_FOUND, assertThrows(BusinessException.class, () ->
+                    noteService.update(ACCOUNT, 5L,
+                            new CompanyNoteRequest(null, 5, null, null))).getErrorCode());
+        }
+
+        @Test
+        @DisplayName("타인 소유 삭제는 NOT_FOUND 예외를 던진다")
+        void 타인삭제_예외() {
+            given(noteRepository.findById(5L)).willReturn(Optional.empty());
+
+            assertEquals(ErrorCode.NOT_FOUND, assertThrows(BusinessException.class, () ->
+                    noteService.delete(ACCOUNT, 5L)).getErrorCode());
+        }
+
+        @Test
+        @DisplayName("본인 메모 삭제 시 repository.delete를 호출한다")
+        void 삭제_호출() {
+            CompanyNote existing = note(5L, "카카오", "카카오", 3, false, null);
+            given(noteRepository.findById(5L)).willReturn(Optional.of(existing));
+
+            noteService.delete(ACCOUNT, 5L);
+
+            verify(noteRepository).delete(existing);
+        }
+    }
+
+    @Nested
+    @DisplayName("list/get 조회")
+    class ListGet {
+
+        @Test
+        @DisplayName("bookmarked 탭은 북마크 쿼리를 사용한다")
+        void 북마크탭() {
+            CompanyNote n = note(1L, "카카오", "카카오", 5, true, "메모");
+            given(noteRepository.findByAccountIdAndIsBookmarkedTrue(eq(ACCOUNT), any(Pageable.class)))
+                    .willReturn(new PageImpl<>(List.of(n)));
+            stubEmptyJoins();
+
+            Page<CompanyNoteResponse> page = noteService.list(ACCOUNT, "bookmarked", null, 0, 50);
+
+            assertEquals(1, page.getTotalElements());
+            assertTrue(page.getContent().get(0).bookmarked());
+            assertTrue(page.getContent().get(0).hasNote());
+        }
+
+        @Test
+        @DisplayName("blocked 탭은 블랙리스트 기준으로 메모·평점을 조인한다")
+        void 차단탭() {
+            CompanyBlacklist blocked = CompanyBlacklist.builder()
+                    .id(11L).accountId(ACCOUNT).companyNameNormalized("악덕기업").reason("야근").build();
+            given(blacklistRepository.findByAccountIdOrderByCreatedAtDesc(ACCOUNT))
+                    .willReturn(List.of(blocked));
+            given(noteRepository.findByAccountIdAndCompanyNameNormalizedIn(ACCOUNT, List.of("악덕기업")))
+                    .willReturn(List.of());
+            given(ratingRepository.findByCompanyNameIn(any())).willReturn(List.of());
+
+            Page<CompanyNoteResponse> page = noteService.list(ACCOUNT, "blocked", null, 0, 50);
+
+            assertEquals(1, page.getTotalElements());
+            assertTrue(page.getContent().get(0).blocked());
+            assertNull(page.getContent().get(0).id());
+        }
+
+        @Test
+        @DisplayName("상세 조회는 평점·차단여부를 포함한다")
+        void 상세조회() {
+            CompanyNote n = note(1L, "삼성전자", "삼성전자(주)", 4, true, "## 총평");
+            given(noteRepository.findById(1L)).willReturn(Optional.of(n));
+            given(blacklistRepository.findByAccountIdOrderByCreatedAtDesc(ACCOUNT)).willReturn(List.of());
+            given(ratingRepository.findByCompanyNameIn(List.of("삼성전자(주)")))
+                    .willReturn(List.of(rating("삼성전자(주)", 4.2, 4.1, 4.3, 4.2)));
+
+            CompanyNoteDetailResponse detail = noteService.get(ACCOUNT, 1L);
+
+            assertEquals(4.2, detail.averageScore());
+            assertEquals(4.1, detail.jobplanetScore());
+            assertFalse(detail.blocked());
+            assertEquals("## 총평", detail.noteMd());
+        }
+    }
+
+    @Nested
+    @DisplayName("exportMarkdown 메서드")
+    class Export {
+
+        @Test
+        @DisplayName("별점·북마크·평점·메모 섹션을 포함한 마크다운을 생성한다")
+        void 내보내기() {
+            CompanyNote n = note(1L, "삼성전자", "삼성전자(주)", 4, true, "## 총평\n- 복지 좋음");
+            given(noteRepository.findById(1L)).willReturn(Optional.of(n));
+            given(ratingRepository.findByCompanyNameIn(List.of("삼성전자(주)")))
+                    .willReturn(List.of(rating("삼성전자(주)", 4.2, 4.1, 4.3, 4.2)));
+            given(blacklistRepository.findByAccountIdAndCompanyNameNormalized(ACCOUNT, "삼성전자"))
+                    .willReturn(Optional.empty());
+
+            String md = noteService.exportMarkdown(ACCOUNT, 1L);
+
+            assertTrue(md.startsWith("# 삼성전자(주)\n"));
+            assertTrue(md.contains("★★★★☆ (4/5)"));
+            assertTrue(md.contains("북마크: 예"));
+            assertTrue(md.contains("차단: 아니오"));
+            assertTrue(md.contains("4.2 (잡플래닛 4.1 · 잡코리아 4.3 · 사람인 4.2)"));
+            assertTrue(md.contains("## 분석 메모"));
+            assertTrue(md.contains("- 복지 좋음"));
+        }
+    }
+}
