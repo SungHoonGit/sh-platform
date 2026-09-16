@@ -6,6 +6,7 @@ import Layout from "./components/Layout";
 import Search from "./pages/Search";
 import Schedule from "./pages/Schedule";
 import Viewer from "./pages/Viewer";
+import Companies from "./pages/Companies";
 import NotFound from "./pages/NotFound";
 import { CrawlProgressProvider } from "./contexts/CrawlProgressContext";
 
@@ -40,6 +41,7 @@ export default function App() {
                 <Route path="/search" element={<Search />} />
                 <Route path="/schedule" element={<Schedule />} />
                 <Route path="/viewer" element={<Viewer />} />
+                <Route path="/companies" element={<Companies />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>

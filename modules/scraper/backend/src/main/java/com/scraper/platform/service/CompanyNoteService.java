@@ -302,6 +302,7 @@ public class CompanyNoteService {
         return new CompanyNoteDetailResponse(
                 note.getId(),
                 note.getCompanyNameDisplay(),
+                note.getCompanyNameNormalized(),
                 note.getMyStars(),
                 Boolean.TRUE.equals(note.getIsBookmarked()),
                 blocked.getOrDefault(note.getCompanyNameNormalized(), false),

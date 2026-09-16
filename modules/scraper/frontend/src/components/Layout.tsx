@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
-import { Search, CalendarPlus, FileText } from "lucide-react";
+import { Search, CalendarPlus, FileText, Building2 } from "lucide-react";
 import AppShell from "../shell/AppShell";
 import type { DrawerSection } from "../shell/SideDrawer";
 import { useAuth } from "../hooks/useAuth";
@@ -15,6 +15,7 @@ const drawerSections: DrawerSection[] = [
     items: [
       { label: "스케줄 등록", href: "/schedule" },
       { label: "공고 뷰어", href: "/viewer" },
+      { label: "회사 관리", href: "/companies" },
     ],
   },
 ];
@@ -31,6 +32,7 @@ export default function Layout() {
     { label: "통합검색", href: "/", icon: Search, active: isActive("/") },
     { label: "스케줄 등록", href: "/schedule", icon: CalendarPlus, active: isActive("/schedule") },
     { label: "뷰어", href: "/viewer", icon: FileText, active: isActive("/viewer") },
+    { label: "회사 관리", href: "/companies", icon: Building2, active: isActive("/companies") },
   ];
 
   return (

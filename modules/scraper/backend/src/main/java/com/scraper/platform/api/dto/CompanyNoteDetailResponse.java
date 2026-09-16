@@ -12,6 +12,9 @@ public record CompanyNoteDetailResponse(
         @Schema(description = "화면 표시용 회사명")
         String companyNameDisplay,
 
+        @Schema(description = "정규화 회사명 (블랙리스트 매칭용)")
+        String companyNameNormalized,
+
         @Schema(description = "내 별점 1~5 (null이면 미지정)")
         Integer myStars,
 
