@@ -9,7 +9,8 @@
 > 최근 완료: 이력서 아이템 문서 단위 분리(documentId, DDL v13) + 403 자동 토큰 갱신 + 제목 인라인 수정 + displayOrder 보존 + **/resume 404 복구(배포 jar에 프론트 dist 누락 → 재배포)** + **MySQL 주기 전체 백업 실동작 검증(매일 03:30 KST mysqldump, 7일 보존, cron.d — 4개 DB 덤프 정상, binlog 좌표 기록 활성) + 웹/WAS 파일 백업(03:35 KST data·uploads tar.gz, 7일 보존)**.
 > 다음: 실사용 검증(문서별 독립성, 불러오기 복제) + 백업 2회차(내일 03:30/03:35) 산출물 확인.
 >
-> **2026-09-15: 프로젝트 정리(구조·코드·문서) 착수.** 감사 완료 → `docs/plans/027-260915-project-cleanup-design.md`. 실행 순서: A(고아 제거) → B1(api→infra 레이어 위반 4건) → C(문서 보관) → B2(사이트·지역 마스터 DB화, 설계 028) → **029(크롤러 매핑시드 init 제거 + 사람인 지역코드 DB 우선)** → **Region 관리 CRUD API** → **030(site_search_mapping 관리 API)** → **관리자 마스터 관리 UI(/platform/admin/master: 사이트·지역·검색 매핑 탭)** → **잔존 switch 재진단(사람인 mapCareerCode는 죽은 코드 → 삭제, 사람인 exp_cd/잡코리아 careerList는 복합 구간 인코딩이라 유지·기록)** → **통합검색/사람인 수집 중단 수정(오류 014: 커밋 1b18ce9 HttpClient 전환 시 gzip 해제 누락 → HttpFetcher 신설)** 완료. 잔여: 실사용 검증, 백업 2회차(내일 03:30/03:35) 확인, (사용자 수동) DB 서버 `99-binlog.cnf` binlog 14일 영속화.
+> **2026-09-16: 설계 031 회사 관리 페이지 완료.** `docs/plans/031-260916-company-manage-design.md` → Phase 1(company_notes CRUD + DDL v10/v11, 테스트 20건) → Phase 2(`/companies` + 슬라이드오버) → Phase 3(viewer 연동) → 피드백 2회(차단 키워드+숨김수·별/북마크 불변식·키워드 편집·애니메이션·정렬·관련공고·자동완성). 교훈: DDL↔엔티티 타입 대조 필수(Integer→INT), SPA 폴백 라우트 추가 시 SecurityConfig permitAll 함께. 잔여: (사용자) 실사용 검증, (SSH) cron 미동작+portfolio 덤프 누락 확인, (수동) `99-binlog.cnf` 14일 영속화.
+> **세션 시작 시 반드시 `docs/daily/2026-09-16-work-log.md`를 먼저 읽고 이어서 작업할 것.**
 >
 > **⚠️ 배포 시 주의**: resume/scraper jar는 `frontend/dist`를 포함해야 정상 서빙됨(`copyFrontendDist`). 프론트 빌드 없이 백엔드만 빌드해 배포하면 `/resume` 404. 반드시 CI 워크플로우(프론트 빌드→백엔드 빌드 순서)로 배포할 것.
 
