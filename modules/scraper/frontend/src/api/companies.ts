@@ -61,9 +61,12 @@ export interface CompanyNoteInput {
   noteMd?: string | null;
 }
 
+export type CompanySort = "updated" | "display" | "stars";
+export type SortDir = "asc" | "desc";
+
 export const companyNoteApi = {
-  list: (tab: CompanyTab, q?: string, page = 0, size = 50) => {
-    const params = new URLSearchParams({ tab, page: String(page), size: String(size) });
+  list: (tab: CompanyTab, q?: string, page = 0, size = 50, sort: CompanySort = "updated", dir: SortDir = "desc") => {
+    const params = new URLSearchParams({ tab, page: String(page), size: String(size), sort, dir });
     if (q?.trim()) params.set("q", q.trim());
     return companyNoteReq<CompanyNotePage>(`?${params}`);
   },

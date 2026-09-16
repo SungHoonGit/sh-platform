@@ -156,6 +156,38 @@ class CompanyNoteServiceTest {
 
             assertFalse(result.bookmarked());
         }
+
+        @Test
+        @DisplayName("별점 설정 시 북마크가 자동 ON된다")
+        void 별점_북마크자동() {
+            given(noteRepository.findByAccountIdAndCompanyNameNormalized(ACCOUNT, "카카오"))
+                    .willReturn(Optional.empty());
+            given(noteRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+            stubEmptyJoins();
+
+            CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
+                    new CompanyNoteRequest("카카오", 4, null, null));
+
+            assertEquals(4, result.myStars());
+            assertTrue(result.bookmarked());
+        }
+
+        @Test
+        @DisplayName("차단된 회사에 별점을 달면 별점·북마크가 모두 해제된다")
+        void 차단회사_별점해제() {
+            given(noteRepository.findByAccountIdAndCompanyNameNormalized(ACCOUNT, "악덕기업"))
+                    .willReturn(Optional.empty());
+            given(noteRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+            given(blacklistRepository.existsByAccountIdAndCompanyNameNormalized(ACCOUNT, "악덕기업"))
+                    .willReturn(true);
+            stubEmptyJoins();
+
+            CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
+                    new CompanyNoteRequest("악덕기업", 5, null, null));
+
+            assertNull(result.myStars());
+            assertFalse(result.bookmarked());
+        }
     }
 
     @Nested
@@ -225,6 +257,21 @@ class CompanyNoteServiceTest {
 
             assertFalse(result.bookmarked());
         }
+
+        @Test
+        @DisplayName("북마크 해제 시 별도 함께 삭제된다")
+        void 북마크해제_별삭제() {
+            CompanyNote existing = note(5L, "카카오", "카카오", 4, true, null);
+            given(noteRepository.findById(5L)).willReturn(Optional.of(existing));
+            given(noteRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+            stubEmptyJoins();
+
+            CompanyNoteDetailResponse result = noteService.update(ACCOUNT, 5L,
+                    new CompanyNoteRequest(null, null, false, null));
+
+            assertFalse(result.bookmarked());
+            assertNull(result.myStars());
+        }
     }
 
     @Nested
@@ -239,7 +286,7 @@ class CompanyNoteServiceTest {
                     .willReturn(new PageImpl<>(List.of(n)));
             stubEmptyJoins();
 
-            Page<CompanyNoteResponse> page = noteService.list(ACCOUNT, "bookmarked", null, 0, 50);
+            Page<CompanyNoteResponse> page = noteService.list(ACCOUNT, "bookmarked", null, 0, 50, "updated", "desc");
 
             assertEquals(1, page.getTotalElements());
             assertTrue(page.getContent().get(0).bookmarked());
@@ -259,7 +306,7 @@ class CompanyNoteServiceTest {
             given(jobPostingRepository.countByNormalizedCompanyIn(List.of("악덕기업")))
                     .willReturn(java.util.Collections.singletonList(new Object[]{"악덕기업", 3L}));
 
-            Page<CompanyNoteResponse> page = noteService.list(ACCOUNT, "blocked", null, 0, 50);
+            Page<CompanyNoteResponse> page = noteService.list(ACCOUNT, "blocked", null, 0, 50, "updated", "desc");
 
             assertEquals(1, page.getTotalElements());
             assertTrue(page.getContent().get(0).blocked());
@@ -284,7 +331,7 @@ class CompanyNoteServiceTest {
             given(jobPostingRepository.countByNormalizedCompanyIn(List.of("악덕기업")))
                     .willReturn(java.util.Collections.singletonList(new Object[]{"악덕기업", 7L}));
 
-            Page<CompanyNoteResponse> page = noteService.list(ACCOUNT, "all", null, 0, 50);
+            Page<CompanyNoteResponse> page = noteService.list(ACCOUNT, "all", null, 0, 50, "updated", "desc");
 
             assertEquals(2, page.getTotalElements());
             assertEquals("카카오", page.getContent().get(0).companyNameDisplay());

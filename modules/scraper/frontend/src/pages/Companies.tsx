@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Bookmark, Ban, FileText, Plus, X } from "lucide-react";
-import { companyNoteApi, type CompanyTab } from "../api/companies";
+import { companyNoteApi, type CompanyTab, type CompanySort, type SortDir } from "../api/companies";
 import CompanySlideOver from "../components/CompanySlideOver";
 import Stars from "../components/Stars";
 
@@ -18,6 +18,8 @@ export default function Companies() {
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [page, setPage] = useState(0);
+  const [sortKey, setSortKey] = useState<CompanySort>("updated");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [createName, setCreateName] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -32,9 +34,21 @@ export default function Companies() {
   }, [q]);
 
   const listQuery = useQuery({
-    queryKey: ["company-notes", tab, debouncedQ, page],
-    queryFn: () => companyNoteApi.list(tab, debouncedQ || undefined, page, PAGE_SIZE),
+    queryKey: ["company-notes", tab, debouncedQ, page, sortKey, sortDir],
+    queryFn: () => companyNoteApi.list(tab, debouncedQ || undefined, page, PAGE_SIZE, sortKey, sortDir),
   });
+
+  const toggleSort = (key: CompanySort) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "display" ? "asc" : "desc");
+    }
+    setPage(0);
+  };
+
+  const sortMark = (key: CompanySort) => (sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : "");
 
   const items = listQuery.data?.content ?? [];
   const total = listQuery.data?.totalElements ?? 0;
@@ -108,13 +122,25 @@ export default function Companies() {
           <table className="w-full min-w-[820px] text-sm">
             <thead className="sticky top-0 bg-slate-50">
               <tr className="text-left text-xs text-slate-500">
-                <th className="px-2 py-1">회사명</th>
+                <th className="px-2 py-1">
+                  <button className="hover:text-slate-800" onClick={() => toggleSort("display")}>
+                    회사명{sortMark("display")}
+                  </button>
+                </th>
                 <th className="px-2 py-1">크롤링 평균</th>
-                <th className="px-2 py-1">내 별점</th>
+                <th className="px-2 py-1">
+                  <button className="hover:text-slate-800" onClick={() => toggleSort("stars")}>
+                    내 별점{sortMark("stars")}
+                  </button>
+                </th>
                 <th className="px-2 py-1">북마크</th>
                 <th className="px-2 py-1">차단</th>
                 <th className="px-2 py-1">메모</th>
-                <th className="px-2 py-1">업데이트</th>
+                <th className="px-2 py-1">
+                  <button className="hover:text-slate-800" onClick={() => toggleSort("updated")}>
+                    업데이트{sortMark("updated")}
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

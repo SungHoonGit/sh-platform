@@ -2,8 +2,12 @@ package com.scraper.platform.service;
 
 import com.scraper.platform.model.BlockReason;
 import com.scraper.platform.model.CompanyBlacklist;
+import com.scraper.platform.model.CompanyNote;
 import com.scraper.platform.repository.BlockReasonRepository;
 import com.scraper.platform.repository.CompanyBlacklistRepository;
+import com.scraper.platform.repository.CompanyNoteRepository;
+import com.shplatform.common.exception.BusinessException;
+import com.shplatform.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +26,7 @@ public class CompanyBlacklistService {
     private final CompanyBlacklistRepository repository;
     private final BlockReasonRepository blockReasonRepository;
     private final BlockReasonService blockReasonService;
+    private final CompanyNoteRepository noteRepository;
 
     public List<CompanyBlacklist> list(Long accountId) {
         return repository.findByAccountIdOrderByCreatedAtDesc(accountId);
@@ -72,14 +77,65 @@ public class CompanyBlacklistService {
     /** 기존 차단 항목의 카테고리를 교체한다(자유 메모는 보존). 본인 항목이 아니면 무시한다. */
     @Transactional
     public CompanyBlacklist update(Long accountId, Long id, List<Long> reasonIds, List<String> categoryNames) {
+        return update(accountId, id, null, null, reasonIds, categoryNames);
+    }
+
+    /**
+     * (명령형) 차단 항목을 수정한다. 회사명(차단 키워드) 변경 시 연결된 회사 메모의
+     * 정규화 키도 함께 이관한다. 본인 항목이 아니면 null을 반환한다.
+     *
+     * @param accountId 소유 계정
+     * @param id 차단 항목 ID
+     * @param companyName 새 회사명 (null/blank이면 키워드 유지)
+     * @param reason 새 자유 메모 (null이면 유지, blank이면 삭제)
+     * @param reasonIds 기존 카테고리 id 목록
+     * @param categoryNames 신규 입력 카테고리명 목록
+     * @return 수정된 항목, 본인 항목이 아니면 null
+     * @throws BusinessException DUPLICATE_NAME 변경 후 키워드가 다른 내 차단/메모와 충돌
+     */
+    @Transactional
+    public CompanyBlacklist update(Long accountId, Long id, String companyName, String reason,
+                                   List<Long> reasonIds, List<String> categoryNames) {
         var categories = resolveCategories(reasonIds, categoryNames);
         return repository.findById(id)
                 .filter(b -> b.getAccountId().equals(accountId))
                 .map(b -> {
+                    if (companyName != null && !companyName.isBlank()) {
+                        rename(accountId, b, companyName.trim());
+                    }
+                    if (reason != null) {
+                        b.setReason(reason.isBlank() ? null : reason);
+                    }
                     b.setBlockReasons(new java.util.ArrayList<>(categories));
                     return repository.save(b);
                 })
                 .orElse(null);
+    }
+
+    /**
+     * 차단 키워드를 변경하고 연결된 회사 메모를 함께 이관한다.
+     * 변경 후 키워드가 다른 내 차단 항목이나 회사 메모와 충돌하면 병합 손실 방지를 위해 거부한다.
+     */
+    private void rename(Long accountId, CompanyBlacklist entry, String companyName) {
+        String normalized = normalize(companyName);
+        if (normalized.isEmpty() || normalized.equals(entry.getCompanyNameNormalized())) {
+            return;
+        }
+        boolean clash = repository.findByAccountIdOrderByCreatedAtDesc(accountId).stream()
+                .anyMatch(b -> !b.getId().equals(entry.getId())
+                        && b.getCompanyNameNormalized().equals(normalized))
+                || noteRepository.findByAccountIdAndCompanyNameNormalized(accountId, normalized).isPresent();
+        if (clash) {
+            throw new BusinessException(ErrorCode.DUPLICATE_NAME);
+        }
+        String oldNormalized = entry.getCompanyNameNormalized();
+        entry.setCompanyNameNormalized(normalized);
+        noteRepository.findByAccountIdAndCompanyNameNormalized(accountId, oldNormalized)
+                .ifPresent(note -> {
+                    note.setCompanyNameNormalized(normalized);
+                    note.setCompanyNameDisplay(companyName);
+                    noteRepository.save(note);
+                });
     }
 
     @Transactional

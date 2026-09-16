@@ -30,14 +30,16 @@ public class CompanyNoteController {
     private final CompanyNoteService noteService;
 
     @GetMapping
-    @Operation(summary = "내 회사 목록", description = "tab=all|bookmarked|blocked, q=회사명 부분 검색, 평점·차단여부 조인")
+    @Operation(summary = "내 회사 목록", description = "tab=all|bookmarked|blocked, q=회사명 부분 검색, sort=display|stars|updated, 평점·차단여부 조인")
     public ResponseEntity<ApiResponse<Page<CompanyNoteResponse>>> list(
             @RequestParam(value = "tab", defaultValue = "all") String tab,
             @RequestParam(value = "q", required = false) String q,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "50") int size) {
+            @RequestParam(value = "size", defaultValue = "50") int size,
+            @RequestParam(value = "sort", defaultValue = "updated") String sort,
+            @RequestParam(value = "dir", defaultValue = "desc") String dir) {
         return ResponseEntity.ok(ApiResponse.success(
-                noteService.list(SecurityUtils.currentAccountId(), tab, q, page, size)));
+                noteService.list(SecurityUtils.currentAccountId(), tab, q, page, size, sort, dir)));
     }
 
     @GetMapping("/{id}")

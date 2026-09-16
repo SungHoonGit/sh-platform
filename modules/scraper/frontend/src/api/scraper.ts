@@ -448,8 +448,13 @@ export const addBlacklist = (companyName: string, reasonIds?: number[], reason?:
   }) as Promise<BlacklistItem>;
 export const removeBlacklist = (id: number) =>
   blacklistReq(`/${id}`, { method: "DELETE" }) as Promise<void>;
-export const updateBlacklist = (id: number, reasonIds?: number[], categoryNames?: string[]) =>
+export const updateBlacklist = (id: number, reasonIds?: number[], categoryNames?: string[], companyName?: string, reason?: string) =>
   blacklistReq(`/${id}`, {
     method: "PUT",
-    body: JSON.stringify({ reasonIds: reasonIds ?? [], categoryNames: categoryNames ?? [] }),
+    body: JSON.stringify({
+      reasonIds: reasonIds ?? [],
+      categoryNames: categoryNames ?? [],
+      ...(companyName !== undefined ? { companyName } : {}),
+      ...(reason !== undefined ? { reason } : {}),
+    }),
   }) as Promise<BlacklistItem>;

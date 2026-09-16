@@ -57,11 +57,28 @@ public class CompanyNoteService {
      * @return 평점·차단여부 조인 목록 페이지
      */
     public Page<CompanyNoteResponse> list(Long accountId, String tab, String q, int page, int size) {
+        return list(accountId, tab, q, page, size, "updated", "desc");
+    }
+
+    /**
+     * (질의형) 내 회사 목록을 탭별로 조회한다. 정렬 키를 지정할 수 있다.
+     *
+     * @param accountId 소유 계정
+     * @param tab all|bookmarked|blocked (기본 all)
+     * @param q 회사명 부분 검색 (null/blank이면 전체)
+     * @param page 0-base 페이지
+     * @param size 페이지 크기 (1~200, 기본 50)
+     * @param sort display|stars|updated (기본 updated)
+     * @param dir asc|desc (기본 desc, display는 asc 권장)
+     * @return 평점·차단여부 조인 목록 페이지
+     */
+    public Page<CompanyNoteResponse> list(Long accountId, String tab, String q, int page, int size,
+                                          String sort, String dir) {
         int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        Pageable pageable = PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "updatedAt"));
+        Pageable pageable = PageRequest.of(Math.max(page, 0), safeSize, resolveSort(sort, dir));
         String keyword = (q == null || q.isBlank()) ? null : q.trim();
         if ("blocked".equalsIgnoreCase(tab)) {
-            return listBlocked(accountId, keyword, pageable);
+            return listBlocked(accountId, keyword, pageable, sort, dir);
         }
         Page<CompanyNote> notes;
         boolean includeBlockedOnly = !"bookmarked".equalsIgnoreCase(tab);
@@ -113,7 +130,7 @@ public class CompanyNoteService {
                         .companyNameDisplay(display)
                         .build());
         note.setCompanyNameDisplay(display);
-        applyFields(note, request);
+        applyFields(accountId, note, request);
         dropBookmarkIfBlocked(accountId, note);
         CompanyNote saved = noteRepository.save(note);
         return toDetail(saved, blockedNames(accountId), ratingsByNormalized(displayNames(List.of(saved))));
@@ -133,7 +150,7 @@ public class CompanyNoteService {
     public CompanyNoteDetailResponse update(Long accountId, Long id, CompanyNoteRequest request) {
         validate(request, false);
         CompanyNote note = ownedNote(accountId, id);
-        applyFields(note, request);
+        applyFields(accountId, note, request);
         dropBookmarkIfBlocked(accountId, note);
         CompanyNote saved = noteRepository.save(note);
         return toDetail(saved, blockedNames(accountId), ratingsByNormalized(displayNames(List.of(saved))));
@@ -199,12 +216,18 @@ public class CompanyNoteService {
         }
     }
 
-    private void applyFields(CompanyNote note, CompanyNoteRequest request) {
+    private void applyFields(Long accountId, CompanyNote note, CompanyNoteRequest request) {
         if (request.myStars() != null) {
             note.setMyStars(request.myStars());
+            // 별점은 북마크 필수: 별 설정 시 북마크 자동 ON
+            note.setIsBookmarked(true);
         }
         if (request.isBookmarked() != null) {
             note.setIsBookmarked(request.isBookmarked());
+            // 북마크 해제 시 별도 함께 삭제 (별 단독 불가)
+            if (Boolean.FALSE.equals(request.isBookmarked())) {
+                note.setMyStars(null);
+            }
         }
         if (request.noteMd() != null) {
             note.setNoteMd(request.noteMd().isBlank() ? null : request.noteMd());
@@ -212,14 +235,15 @@ public class CompanyNoteService {
     }
 
     /**
-     * 차단된 회사의 북마크를 강제 해제한다. 차단+북마크는 상호배타 (차단된 회사 공고는
-     * 숨겨지므로 북마크 의미가 없음).
+     * 차단된 회사의 북마크·별점을 강제 해제한다. 차단+북마크/별점은 상호배타
+     * (차단된 회사 공고는 숨겨지므로 북마크 의미가 없고, 별은 북마크 필수이므로 함께 삭제).
      */
     private void dropBookmarkIfBlocked(Long accountId, CompanyNote note) {
-        if (Boolean.TRUE.equals(note.getIsBookmarked())
+        if ((Boolean.TRUE.equals(note.getIsBookmarked()) || note.getMyStars() != null)
                 && blacklistRepository.existsByAccountIdAndCompanyNameNormalized(
                         accountId, note.getCompanyNameNormalized())) {
             note.setIsBookmarked(false);
+            note.setMyStars(null);
         }
     }
 
@@ -255,7 +279,8 @@ public class CompanyNoteService {
         return new PageImpl<>(items, notes.getPageable(), total);
     }
 
-    private Page<CompanyNoteResponse> listBlocked(Long accountId, String keyword, Pageable pageable) {
+    private Page<CompanyNoteResponse> listBlocked(Long accountId, String keyword, Pageable pageable,
+                                              String sort, String dir) {
         BlockedData join = blockedData(accountId, keyword);
         List<CompanyNoteResponse> items = join.entries().stream()
                 .map(b -> {
@@ -266,11 +291,40 @@ public class CompanyNoteService {
                             join.ratings().get(b.getCompanyNameNormalized()),
                             join.hiddenCounts().get(b.getCompanyNameNormalized()));
                 })
-                .toList();
+                .collect(java.util.ArrayList::new, java.util.ArrayList::add, java.util.ArrayList::addAll);
+        sortBlocked(items, sort, dir);
         int total = items.size();
         int from = Math.min((int) pageable.getOffset(), total);
         int to = Math.min(from + pageable.getPageSize(), total);
         return new PageImpl<>(items.subList(from, to), pageable, total);
+    }
+
+    /** DB 정렬 키(display|stars|updated)를 Spring Sort 로 변환한다. */
+    private Sort resolveSort(String sort, String dir) {
+        Sort.Direction direction = "asc".equalsIgnoreCase(dir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        return switch (sort == null ? "" : sort.toLowerCase()) {
+            case "display" -> Sort.by(direction, "companyNameDisplay");
+            case "stars" -> Sort.by(direction, "myStars");
+            default -> Sort.by(Sort.Direction.DESC, "updatedAt");
+        };
+    }
+
+    /** 차단 탭(메모리 페이징) 정렬. stars 는 null 을 항상 뒤로 보낸다. */
+    private void sortBlocked(List<CompanyNoteResponse> items, String sort, String dir) {
+        boolean asc = "asc".equalsIgnoreCase(dir);
+        switch (sort == null ? "" : sort.toLowerCase()) {
+            case "display" -> items.sort((a, b) -> asc
+                    ? String.CASE_INSENSITIVE_ORDER.compare(a.companyNameDisplay(), b.companyNameDisplay())
+                    : String.CASE_INSENSITIVE_ORDER.compare(b.companyNameDisplay(), a.companyNameDisplay()));
+            case "stars" -> items.sort((a, b) -> {
+                int av = a.myStars() == null ? -1 : a.myStars();
+                int bv = b.myStars() == null ? -1 : b.myStars();
+                return asc ? Integer.compare(av, bv) : Integer.compare(bv, av);
+            });
+            default -> {
+                // 기본 차단 등록 역순 유지
+            }
+        }
     }
 
     /** 차단 목록 + 메모·평점·숨김수 조인에 필요한 데이터를 한 번에 모은다. */

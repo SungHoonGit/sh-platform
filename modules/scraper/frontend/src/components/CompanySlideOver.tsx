@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
-import { X, Star, Bookmark, BookmarkCheck, Ban, Download, Save } from "lucide-react";
+import { X, Star, Bookmark, BookmarkCheck, Ban, Download, Save, Trash2, Pencil } from "lucide-react";
+import { BlockConfirmDialog } from "@sh-platform/ui";
 import { companyNoteApi, type CompanyNoteDetail } from "../api/companies";
-import { fetchBlacklist, addBlacklist, removeBlacklist } from "../api/scraper";
+import { fetchBlacklist, addBlacklist, removeBlacklist, updateBlacklist } from "../api/scraper";
 
 interface Props {
   /** 메모 ID (있으면 상세 조회, 없으면 companyName으로 신규 작성) */
@@ -38,6 +39,17 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
   const [stars, setStars] = useState<number | null>(null);
   const [md, setMd] = useState("");
   const [bookmarked, setBookmarked] = useState(false);
+  const [blockEditOpen, setBlockEditOpen] = useState(false);
+  // 노션식 등장 애니메이션: 마운트 직후 visible ON, 닫을 때 OFF 후 onClose 지연 호출
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const close = useCallback(() => {
+    setVisible(false);
+    window.setTimeout(onClose, 260);
+  }, [onClose]);
 
   useEffect(() => {
     if (detail) {
@@ -54,10 +66,10 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
   }, [detail?.id, isCreate, companyName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [close]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["company-notes"] });
@@ -71,6 +83,9 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
         ? companyNoteApi.upsert({ companyName, myStars: stars, isBookmarked: bookmarked, noteMd: md })
         : companyNoteApi.update(id as number, { myStars: stars, isBookmarked: bookmarked, noteMd: md }),
     onSuccess: (saved) => {
+      // 별 설정 시 북마크 자동 ON 등 서버 불변식을 화면에 반영
+      setBookmarked(saved.bookmarked);
+      setStars(saved.myStars ?? null);
       invalidate();
       setTab("view");
       onSaved?.(saved.id);
@@ -81,10 +96,12 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
   const bookmarkMutation = useMutation({
     mutationFn: (next: boolean) => {
       if (isCreate) return companyNoteApi.upsert({ companyName, isBookmarked: next });
+      // 해제 시 별도 함께 삭제됨 (서버 불변식: 별은 북마크 필수)
       return companyNoteApi.update(id as number, { isBookmarked: next });
     },
     onSuccess: (saved) => {
       setBookmarked(saved.bookmarked);
+      setStars(saved.myStars ?? null);
       invalidate();
       if (isCreate) onSaved?.(saved.id);
     },
@@ -118,10 +135,33 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
     mutationFn: () => companyNoteApi.remove(id as number),
     onSuccess: () => {
       invalidate();
-      onClose();
+      close();
     },
     onError: () => alert("삭제 실패."),
   });
+
+  const blockedEntry = blacklistQuery.data?.find(
+    (b) => b.companyNameNormalized === detail?.companyNameNormalized
+  );
+
+  const confirmBlockEdit = async (reason: string, reasonIds: number[], categoryNames: string[], keyword: string) => {
+    if (blockedEntry == null) return;
+    try {
+      await updateBlacklist(blockedEntry.id, reasonIds, categoryNames, keyword, reason || undefined);
+      setBlockEditOpen(false);
+      invalidate();
+      detailQuery.refetch();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "차단 수정 실패.");
+    }
+  };
+
+  const onBlockToggle = () => {
+    if (!blocked && (detail?.bookmarked || detail?.myStars != null)) {
+      if (!confirm("차단하면 북마크·별점이 해제됩니다. 차단할까요?")) return;
+    }
+    blockMutation.mutate();
+  };
 
   const exportMd = async () => {
     if (id == null) return;
@@ -147,8 +187,13 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
 
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <aside className="absolute right-0 top-0 flex h-full w-full max-w-[560px] flex-col bg-white shadow-xl">
+      <div
+        className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}
+        onClick={close}
+      />
+      <aside
+        className={`absolute right-0 top-0 flex h-full w-full max-w-[560px] flex-col bg-white shadow-xl transition-transform duration-300 ease-out ${visible ? "translate-x-0" : "translate-x-full"}`}
+      >
         <header className="flex items-center gap-2 border-b px-4 py-3">
           <h2 className="min-w-0 flex-1 truncate text-base font-semibold">{title}</h2>
           {blocked ? (
@@ -169,7 +214,7 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
               <button
                 className={`rounded p-1.5 hover:bg-gray-100 ${blocked ? "text-red-600" : "text-gray-400"}`}
                 title={blocked ? "차단 해제" : "차단하기"}
-                onClick={() => blockMutation.mutate()}
+                onClick={onBlockToggle}
               >
                 <Ban size={18} />
               </button>
@@ -178,7 +223,7 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
               </button>
             </>
           )}
-          <button className="rounded p-1.5 text-gray-500 hover:bg-gray-100" onClick={onClose} title="닫기(Esc)">
+          <button className="rounded p-1.5 text-gray-500 hover:bg-gray-100" onClick={close} title="닫기(Esc)">
             <X size={18} />
           </button>
         </header>
@@ -222,7 +267,18 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
                   {scoreText("잡코리아", detail.jobkoreaScore)}
                   {scoreText("사람인", detail.saraminScore)}
                 </div>
-                {blocked && <p className="mt-1 text-xs font-semibold text-red-600">⛔ 차단된 회사</p>}
+                {blocked && (
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="text-xs font-semibold text-red-600">⛔ 차단된 회사</p>
+                    <button
+                      className="inline-flex items-center gap-0.5 text-xs text-slate-500 underline hover:text-slate-700"
+                      onClick={() => setBlockEditOpen(true)}
+                      title="차단 키워드·카테고리 수정"
+                    >
+                      <Pencil size={11} /> 차단 편집
+                    </button>
+                  </div>
+                )}
               </section>
               <article className="md-view">
                 {detail.noteMd?.trim() ? <ReactMarkdown>{detail.noteMd}</ReactMarkdown> : <p className="text-sm text-gray-400">작성된 분석 메모가 없습니다. 편집 탭에서 작성하세요.</p>}
@@ -264,18 +320,30 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
               </button>
               {!isCreate && (
                 <button
-                  className="ml-2 text-xs text-red-500 underline"
+                  className="ml-2 inline-flex items-center gap-1 rounded border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                   onClick={() => {
                     if (confirm("이 회사 메모를 삭제할까요? (차단·평점은 유지됩니다)")) removeMutation.mutate();
                   }}
                 >
-                  메모 삭제
+                  <Trash2 size={15} /> 삭제
                 </button>
               )}
             </>
           )}
         </div>
       </aside>
+      <BlockConfirmDialog
+        open={blockEditOpen}
+        company={detail?.companyNameDisplay ?? ""}
+        title="차단 편집"
+        confirmLabel="저장"
+        editableCompany
+        initialTags={(blockedEntry?.blockReasons ?? []).map((r) => ({ id: r.id, name: r.name }))}
+        onCancel={() => setBlockEditOpen(false)}
+        onConfirm={(reason, reasonIds, categoryNames, keyword) => {
+          void confirmBlockEdit(reason, reasonIds, categoryNames, keyword);
+        }}
+      />
     </div>
   );
 }

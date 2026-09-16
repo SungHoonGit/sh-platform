@@ -31,7 +31,8 @@ public class CompanyBlacklistController {
                              List<String> categoryNames) {}
 
     /** 기존 차단 항목 카테고리 수정 요청 (자유 메모는 보존) */
-    public record UpdateRequest(List<Long> reasonIds, List<String> categoryNames) {}
+    public record UpdateRequest(String companyName, String reason,
+                                List<Long> reasonIds, List<String> categoryNames) {}
 
     /** 차단 사유 마스터 응답 */
     public record BlockReasonResponse(Long id, String name, String category) {}
@@ -77,11 +78,11 @@ public class CompanyBlacklistController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "차단 항목 수정", description = "기존 차단 항목의 카테고리를 교체한다(reasonIds=기존, categoryNames=신규 입력). 자유 메모는 보존한다.")
+    @Operation(summary = "차단 항목 수정", description = "차단 키워드(companyName)·자유 메모(reason)·카테고리를 수정한다. 키워드 변경 시 연결된 회사 메모도 함께 이관된다. 생략된 필드는 유지된다.")
     public ResponseEntity<ApiResponse<CompanyBlacklist>> update(@PathVariable Long id,
                                                                 @RequestBody UpdateRequest request) {
         var saved = blacklistService.update(SecurityUtils.currentAccountId(), id,
-                request.reasonIds(), request.categoryNames());
+                request.companyName(), request.reason(), request.reasonIds(), request.categoryNames());
         if (saved == null) {
             return ResponseEntity.notFound().build();
         }

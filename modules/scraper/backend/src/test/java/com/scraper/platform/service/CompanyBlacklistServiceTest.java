@@ -2,8 +2,12 @@ package com.scraper.platform.service;
 
 import com.scraper.platform.model.BlockReason;
 import com.scraper.platform.model.CompanyBlacklist;
+import com.scraper.platform.model.CompanyNote;
 import com.scraper.platform.repository.BlockReasonRepository;
 import com.scraper.platform.repository.CompanyBlacklistRepository;
+import com.scraper.platform.repository.CompanyNoteRepository;
+import com.shplatform.common.exception.BusinessException;
+import com.shplatform.common.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -31,6 +35,9 @@ class CompanyBlacklistServiceTest {
 
     @Mock
     private BlockReasonService blockReasonService;
+
+    @Mock
+    private CompanyNoteRepository noteRepository;
 
     @InjectMocks
     private CompanyBlacklistService service;
@@ -163,6 +170,59 @@ class CompanyBlacklistServiceTest {
 
             // then
             assertNull(result);
+        }
+
+        @Test
+        @DisplayName("키워드 변경 시 연결된 회사 메모도 함께 이관된다")
+        void update_shouldRenameKeywordAndMigrateNote() {
+            // given
+            var existing = CompanyBlacklist.builder()
+                    .id(9L).accountId(1L)
+                    .companyNameNormalized("구회사")
+                    .build();
+            var note = CompanyNote.builder()
+                    .id(3L).accountId(1L)
+                    .companyNameNormalized("구회사").companyNameDisplay("구회사")
+                    .build();
+            given(repository.findById(9L)).willReturn(java.util.Optional.of(existing));
+            given(repository.findByAccountIdOrderByCreatedAtDesc(1L)).willReturn(List.of(existing));
+            given(noteRepository.findByAccountIdAndCompanyNameNormalized(1L, "신회사"))
+                    .willReturn(java.util.Optional.empty());
+            given(noteRepository.findByAccountIdAndCompanyNameNormalized(1L, "구회사"))
+                    .willReturn(java.util.Optional.of(note));
+            given(blockReasonRepository.findAllById(List.of())).willReturn(List.of());
+            given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
+            given(noteRepository.save(any(CompanyNote.class))).willAnswer(inv -> inv.getArgument(0));
+
+            // when
+            var result = service.update(1L, 9L, "신회사", null, List.of(), null);
+
+            // then
+            assertEquals("신회사", result.getCompanyNameNormalized());
+            assertEquals("신회사", note.getCompanyNameNormalized());
+            assertEquals("신회사", note.getCompanyNameDisplay());
+            verify(noteRepository).save(note);
+        }
+
+        @Test
+        @DisplayName("변경 후 키워드가 다른 내 차단과 충돌하면 DUPLICATE_NAME 예외를 던진다")
+        void update_shouldRejectDuplicateKeyword() {
+            // given
+            var existing = CompanyBlacklist.builder()
+                    .id(9L).accountId(1L)
+                    .companyNameNormalized("구회사")
+                    .build();
+            var other = CompanyBlacklist.builder()
+                    .id(10L).accountId(1L)
+                    .companyNameNormalized("신회사")
+                    .build();
+            given(repository.findById(9L)).willReturn(java.util.Optional.of(existing));
+            given(repository.findByAccountIdOrderByCreatedAtDesc(1L)).willReturn(List.of(existing, other));
+
+            // when / then
+            var ex = assertThrows(BusinessException.class, () ->
+                    service.update(1L, 9L, "신회사", null, null, null));
+            assertEquals(ErrorCode.DUPLICATE_NAME, ex.getErrorCode());
         }
     }
 

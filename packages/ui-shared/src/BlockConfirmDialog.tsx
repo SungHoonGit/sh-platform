@@ -4,9 +4,13 @@ export interface BlockConfirmDialogProps {
   open: boolean;
   company: string;
   onCancel: () => void;
-  onConfirm: (reason: string, reasonIds: number[], categoryNames: string[]) => void;
+  onConfirm: (reason: string, reasonIds: number[], categoryNames: string[], companyName: string) => void;
   initialTags?: { id: number; name: string }[];
   confirmLabel?: string;
+  /** 차단 키워드(회사명) 직접 편집 허용 (차단 편집 모드) */
+  editableCompany?: boolean;
+  /** 다이얼로그 제목 (기본: 회사 차단) */
+  title?: string;
 }
 
 interface Suggestion {
@@ -32,9 +36,10 @@ interface Tag {
  * @param onCancel 취소 콜백
  * @param onConfirm 차단/수정 확정 콜백 (자유메모, 선택한 기존 카테고리 id 목록, 신규 입력 카테고리명 목록)
  */
-export default function BlockConfirmDialog({ open, company, onCancel, onConfirm, initialTags, confirmLabel = "차단" }: BlockConfirmDialogProps) {
+export default function BlockConfirmDialog({ open, company, onCancel, onConfirm, initialTags, confirmLabel = "차단", editableCompany = false, title }: BlockConfirmDialogProps) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [input, setInput] = useState("");
+  const [companyInput, setCompanyInput] = useState(company);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggest, setShowSuggest] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,11 +61,12 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm,
     if (open && !prevOpenRef.current) {
       setTags((initialTags ?? []).map((t) => ({ id: t.id, name: t.name })));
       setInput("");
+      setCompanyInput(company);
       setSuggestions([]);
       setShowSuggest(false);
     }
     prevOpenRef.current = open;
-  }, [open, initialTags]);
+  }, [open, initialTags, company]);
 
   useEffect(() => {
     const q = input.trim();
@@ -115,9 +121,11 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm,
   };
 
   const handleConfirm = () => {
+    const keyword = editableCompany ? companyInput.trim() : company;
+    if (!keyword) return;
     const existingIds = tags.filter((t) => t.id != null).map((t) => t.id as number);
     const newNames = tags.filter((t) => t.id == null).map((t) => t.name);
-    onConfirm("", existingIds, newNames);
+    onConfirm("", existingIds, newNames, keyword);
     setTags([]);
     setInput("");
   };
@@ -125,6 +133,7 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm,
   const handleCancel = () => {
     setTags([]);
     setInput("");
+    setCompanyInput(company);
     setShowSuggest(false);
     onCancel();
   };
@@ -134,13 +143,25 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm,
       <div className="absolute inset-0 bg-black/40" onClick={handleCancel} />
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <p className="text-sm font-semibold text-slate-700">회사 차단</p>
+          <p className="text-sm font-semibold text-slate-700">{title ?? "회사 차단"}</p>
           <button onClick={handleCancel} className="text-slate-400 hover:text-slate-600 text-sm">✕</button>
         </div>
         <div className="px-4 py-4">
-          <p className="text-sm text-slate-700">
-            <span className="font-medium">{company}</span> 회사의 공고를 숨길까요?
-          </p>
+          {editableCompany ? (
+            <>
+              <label className="mb-1 block text-xs font-semibold text-slate-500">차단 키워드</label>
+              <input
+                value={companyInput}
+                onChange={(e) => setCompanyInput(e.target.value)}
+                placeholder="차단할 회사명"
+                className="mb-3 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </>
+          ) : (
+            <p className="text-sm text-slate-700">
+              <span className="font-medium">{company}</span> 회사의 공고를 숨길까요?
+            </p>
+          )}
           <p className="text-xs text-slate-400 mt-1 mb-3">카테고리를 입력하고 Enter. 이전에 쓴 항목이 추천으로 나옵니다.</p>
 
           <div className="relative">
