@@ -22,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
@@ -295,7 +296,8 @@ public class CompanyNoteService {
                 }
                 items.add(toResponse(null, b.getCompanyNameNormalized(), b.getCompanyNameNormalized(), true,
                         join.ratings().get(b.getCompanyNameNormalized()),
-                        join.hiddenCounts().get(b.getCompanyNameNormalized())));
+                        join.hiddenCounts().get(b.getCompanyNameNormalized()),
+                        b.getCreatedAt()));
                 total++;
             }
         }
@@ -310,9 +312,12 @@ public class CompanyNoteService {
                     CompanyNote n = join.notes().get(b.getCompanyNameNormalized());
                     String display = (n != null) ? n.getCompanyNameDisplay() : b.getCompanyNameNormalized();
                     String normalized = (n != null) ? n.getCompanyNameNormalized() : b.getCompanyNameNormalized();
+                    // 메모가 없으면 업데이트 일시 대신 차단 일시 표시 (같은 테이블처럼 보이도록)
+                    LocalDateTime updatedAt = (n != null) ? n.getUpdatedAt() : b.getCreatedAt();
                     return toResponse(n, display, normalized, true,
                             join.ratings().get(b.getCompanyNameNormalized()),
-                            join.hiddenCounts().get(b.getCompanyNameNormalized()));
+                            join.hiddenCounts().get(b.getCompanyNameNormalized()),
+                            updatedAt);
                 })
                 .collect(java.util.ArrayList::new, java.util.ArrayList::add, java.util.ArrayList::addAll);
         sortBlocked(items, sort, dir);
@@ -417,11 +422,12 @@ public class CompanyNoteService {
     private CompanyNoteResponse toResponse(CompanyNote note, boolean blocked, CompanyRating rating,
                                            Long hiddenCount) {
         return toResponse(note, note.getCompanyNameDisplay(), note.getCompanyNameNormalized(), blocked, rating,
-                hiddenCount);
+                hiddenCount, note.getUpdatedAt());
     }
 
     private CompanyNoteResponse toResponse(CompanyNote note, String display, String normalized,
-                                           boolean blocked, CompanyRating rating, Long hiddenCount) {
+                                           boolean blocked, CompanyRating rating, Long hiddenCount,
+                                           LocalDateTime updatedAt) {
         return new CompanyNoteResponse(
                 note != null ? note.getId() : null,
                 display,
@@ -434,7 +440,7 @@ public class CompanyNoteService {
                 rating != null ? rating.getJobplanetScore() : null,
                 rating != null ? rating.getJobkoreaScore() : null,
                 rating != null ? rating.getSaraminScore() : null,
-                note != null ? note.getUpdatedAt() : null,
+                updatedAt,
                 hiddenCount);
     }
 

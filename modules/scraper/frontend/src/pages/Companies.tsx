@@ -21,10 +21,12 @@ export default function Companies() {
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [page, setPage] = useState(0);
-  const [sortKey, setSortKey] = useState<CompanySort>("updated");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  // 북마크 토글 등으로 updatedAt이 바뀌어도 순서가 튀지 않게 기본 정렬은 회사명
+  const [sortKey, setSortKey] = useState<CompanySort>("display");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [createName, setCreateName] = useState<string | null>(null);
+  const [createNormalized, setCreateNormalized] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addName, setAddName] = useState("");
   const [debouncedAdd, setDebouncedAdd] = useState("");
@@ -47,13 +49,23 @@ export default function Companies() {
     }
   };
 
-  const unblockByNormalized = async (normalized: string) => {
+  /** 북마크 아이콘 클릭: 별점 없으면 슬라이드를 열어 별점 지정을 유도, 있으면 즉시 토글. */
+  const onBookmarkClick = (item: { id: number | null; companyNameDisplay: string; companyNameNormalized: string; bookmarked: boolean; myStars: number | null }) => {
+    if (!item.bookmarked && item.myStars == null) {
+      openRow(item.id, item.companyNameDisplay, item.companyNameNormalized);
+      return;
+    }
+    if (item.id != null) void toggleBookmark(item.id, item.bookmarked);
+  };
+
+  const unblockByNormalized = async (normalized: string, display: string) => {
     const list = blacklistQuery.data ?? (await fetchBlacklist().catch(() => []));
     const entry = list.find((b) => b.companyNameNormalized === normalized);
     if (!entry) {
       alert("차단 항목을 찾을 수 없습니다. 새로고침 후 다시 시도하세요.");
       return;
     }
+    if (!confirm(`'${display}' 차단을 해제할까요? 숨김 처리된 공고가 다시 표시됩니다.`)) return;
     try {
       await removeBlacklist(entry.id);
       invalidateLists();
@@ -112,13 +124,15 @@ export default function Companies() {
   const total = listQuery.data?.totalElements ?? 0;
   const totalPages = listQuery.data?.totalPages ?? 0;
 
-  const openRow = (id: number | null, name: string) => {
+  const openRow = (id: number | null, name: string, normalized?: string) => {
     if (id != null) {
       setSelectedId(id);
       setCreateName(null);
+      setCreateNormalized(null);
     } else {
       setSelectedId(null);
       setCreateName(name);
+      setCreateNormalized(normalized ?? null);
     }
   };
 
@@ -129,6 +143,7 @@ export default function Companies() {
     setAddName("");
     setSelectedId(null);
     setCreateName(name);
+    setCreateNormalized(null);
   };
 
   return (
@@ -206,12 +221,12 @@ export default function Companies() {
                 <tr
                   key={`${c.id ?? "b"}-${c.companyNameDisplay}`}
                   className={`cursor-pointer transition-colors hover:bg-blue-50/50 ${c.blocked ? "bg-red-50/50" : c.bookmarked ? "bg-amber-50/40" : ""}`}
-                  onClick={() => openRow(c.id, c.companyNameDisplay)}
+                  onClick={() => openRow(c.id, c.companyNameDisplay, c.companyNameNormalized)}
                 >
                   <td className="px-1 py-1 text-center" onClick={(e) => e.stopPropagation()}>
                     {c.blocked ? (
                       <button
-                        onClick={() => void unblockByNormalized(c.companyNameNormalized)}
+                        onClick={() => void unblockByNormalized(c.companyNameNormalized, c.companyNameDisplay)}
                         title={`차단 해제 (키워드: ${c.companyNameNormalized}${c.hiddenCount != null ? `, ${c.hiddenCount}건 숨김` : ""})`}
                         className="text-red-500 transition-colors hover:text-red-700"
                       >
@@ -228,14 +243,14 @@ export default function Companies() {
                     )}
                   </td>
                   <td className="px-1 py-1 text-center" onClick={(e) => e.stopPropagation()}>
-                    {c.blocked || c.id == null ? (
+                    {c.blocked || (c.id == null && !c.bookmarked) ? (
                       <span className="inline-block text-slate-200" title="차단된 회사는 북마크 불가">
                         <Bookmark size={15} />
                       </span>
                     ) : (
                       <button
-                        onClick={() => void toggleBookmark(c.id as number, c.bookmarked)}
-                        title={c.bookmarked ? "북마크 해제 (별도 함께 삭제)" : "북마크"}
+                        onClick={() => onBookmarkClick(c)}
+                        title={c.bookmarked ? "북마크 해제 (별도 함께 삭제)" : c.myStars == null ? "북마크 + 별점 지정" : "북마크"}
                         className={`transition-transform hover:scale-125 ${c.bookmarked ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
                       >
                         {c.bookmarked ? <BookmarkCheck size={15} className="fill-amber-400 text-amber-400" /> : <Bookmark size={15} />}
@@ -317,7 +332,7 @@ export default function Companies() {
                       onClick={() => {
                         setAddOpen(false);
                         setAddName("");
-                        openRow(s.id, s.companyNameDisplay);
+                        openRow(s.id, s.companyNameDisplay, s.companyNameNormalized);
                       }}
                     >
                       <span className="flex-1 truncate font-medium text-slate-800">{s.companyNameDisplay}</span>
@@ -353,13 +368,16 @@ export default function Companies() {
         <CompanySlideOver
           id={selectedId}
           companyName={createName ?? undefined}
+          companyNormalized={createNormalized ?? undefined}
           onClose={() => {
             setSelectedId(null);
             setCreateName(null);
+            setCreateNormalized(null);
           }}
           onSaved={(newId) => {
             setSelectedId(newId);
             setCreateName(null);
+            setCreateNormalized(null);
           }}
         />
       )}

@@ -297,7 +297,8 @@ class CompanyNoteServiceTest {
         @DisplayName("blocked 탭은 블랙리스트 기준으로 메모·평점·숨김수를 조인한다")
         void 차단탭() {
             CompanyBlacklist blocked = CompanyBlacklist.builder()
-                    .id(11L).accountId(ACCOUNT).companyNameNormalized("악덕기업").reason("야근").build();
+                    .id(11L).accountId(ACCOUNT).companyNameNormalized("악덕기업").reason("야근")
+                    .createdAt(java.time.LocalDateTime.of(2026, 9, 10, 12, 0)).build();
             given(blacklistRepository.findByAccountIdOrderByCreatedAtDesc(ACCOUNT))
                     .willReturn(List.of(blocked));
             given(noteRepository.findByAccountIdAndCompanyNameNormalizedIn(ACCOUNT, List.of("악덕기업")))
@@ -313,6 +314,7 @@ class CompanyNoteServiceTest {
             assertNull(page.getContent().get(0).id());
             assertEquals("악덕기업", page.getContent().get(0).companyNameNormalized());
             assertEquals(3L, page.getContent().get(0).hiddenCount());
+            assertEquals(java.time.LocalDateTime.of(2026, 9, 10, 12, 0), page.getContent().get(0).updatedAt());
         }
 
         @Test
