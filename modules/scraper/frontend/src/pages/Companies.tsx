@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Building2, Bookmark, Ban, FileText, Plus, X } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2, Bookmark, BookmarkCheck, Ban, FileText, Plus, X } from "lucide-react";
+import { BlockConfirmDialog } from "@sh-platform/ui";
 import { companyNoteApi, type CompanyTab, type CompanySort, type SortDir } from "../api/companies";
+import { fetchBlacklist, addBlacklist, removeBlacklist } from "../api/scraper";
 import CompanySlideOver from "../components/CompanySlideOver";
 import Stars from "../components/Stars";
 
@@ -14,6 +16,7 @@ const TABS: { key: CompanyTab; label: string }[] = [
 const PAGE_SIZE = 20;
 
 export default function Companies() {
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<CompanyTab>("all");
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -25,6 +28,48 @@ export default function Companies() {
   const [addOpen, setAddOpen] = useState(false);
   const [addName, setAddName] = useState("");
   const [debouncedAdd, setDebouncedAdd] = useState("");
+  const [blockTarget, setBlockTarget] = useState<string | null>(null);
+
+  const blacklistQuery = useQuery({ queryKey: ["blacklist"], queryFn: fetchBlacklist });
+
+  const invalidateLists = () => {
+    queryClient.invalidateQueries({ queryKey: ["company-notes"] });
+    queryClient.invalidateQueries({ queryKey: ["blacklist"] });
+  };
+
+  const toggleBookmark = async (id: number, current: boolean) => {
+    try {
+      // 해제 시 별도 함께 삭제됨 (서버 불변식)
+      await companyNoteApi.update(id, { isBookmarked: !current });
+      invalidateLists();
+    } catch {
+      alert("북마크 변경 실패.");
+    }
+  };
+
+  const unblockByNormalized = async (normalized: string) => {
+    const list = blacklistQuery.data ?? (await fetchBlacklist().catch(() => []));
+    const entry = list.find((b) => b.companyNameNormalized === normalized);
+    if (!entry) {
+      alert("차단 항목을 찾을 수 없습니다. 새로고침 후 다시 시도하세요.");
+      return;
+    }
+    try {
+      await removeBlacklist(entry.id);
+      invalidateLists();
+    } catch {
+      alert("차단 해제 실패.");
+    }
+  };
+
+  const confirmBlock = async (keyword: string, reason: string, reasonIds: number[], categoryNames: string[]) => {
+    try {
+      await addBlacklist(keyword, reasonIds, reason || undefined, categoryNames);
+      invalidateLists();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "차단 실패.");
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedAdd(addName.trim()), 300);
@@ -132,22 +177,22 @@ export default function Companies() {
 
       {items.length > 0 && (
         <div className="flex-1 overflow-auto rounded border border-slate-200">
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="w-full min-w-[880px] text-sm">
             <thead className="sticky top-0 bg-slate-50">
               <tr className="text-left text-xs text-slate-500">
+                <th className="w-[36px] px-1 py-1 text-center">차단</th>
+                <th className="w-[36px] px-1 py-1 text-center">북마크</th>
                 <th className="px-2 py-1">
                   <button className="hover:text-slate-800" onClick={() => toggleSort("display")}>
                     회사명{sortMark("display")}
                   </button>
                 </th>
-                <th className="px-2 py-1">크롤링 평균</th>
+                <th className="px-2 py-1">키워드</th>
                 <th className="px-2 py-1">
                   <button className="hover:text-slate-800" onClick={() => toggleSort("stars")}>
                     내 별점{sortMark("stars")}
                   </button>
                 </th>
-                <th className="px-2 py-1">북마크</th>
-                <th className="px-2 py-1">차단</th>
                 <th className="px-2 py-1">메모</th>
                 <th className="px-2 py-1">
                   <button className="hover:text-slate-800" onClick={() => toggleSort("updated")}>
@@ -160,37 +205,52 @@ export default function Companies() {
               {items.map((c) => (
                 <tr
                   key={`${c.id ?? "b"}-${c.companyNameDisplay}`}
-                  className="cursor-pointer transition-colors hover:bg-blue-50/50"
+                  className={`cursor-pointer transition-colors hover:bg-blue-50/50 ${c.blocked ? "bg-red-50/50" : c.bookmarked ? "bg-amber-50/40" : ""}`}
                   onClick={() => openRow(c.id, c.companyNameDisplay)}
                 >
-                  <td className="px-2 py-1 font-medium text-slate-800">{c.companyNameDisplay}</td>
-                  <td className="px-2 py-1 text-slate-600">{c.averageScore ?? <span className="text-slate-300">-</span>}</td>
-                  <td className="px-2 py-1">
-                    <Stars value={c.myStars} />
-                  </td>
-                  <td className="px-2 py-1">
+                  <td className="px-1 py-1 text-center" onClick={(e) => e.stopPropagation()}>
                     {c.blocked ? (
-                      <span className="text-slate-300" title="차단된 회사는 북마크 불가">-</span>
-                    ) : c.bookmarked ? (
-                      <Bookmark size={15} className="fill-amber-400 text-amber-400" />
+                      <button
+                        onClick={() => void unblockByNormalized(c.companyNameNormalized)}
+                        title={`차단 해제 (키워드: ${c.companyNameNormalized}${c.hiddenCount != null ? `, ${c.hiddenCount}건 숨김` : ""})`}
+                        className="text-red-500 transition-colors hover:text-red-700"
+                      >
+                        <Ban size={15} />
+                      </button>
                     ) : (
-                      <span className="text-slate-300">-</span>
+                      <button
+                        onClick={() => setBlockTarget(c.companyNameDisplay)}
+                        title="차단하기"
+                        className="text-slate-300 transition-colors hover:text-red-500"
+                      >
+                        <Ban size={15} />
+                      </button>
                     )}
                   </td>
-                  <td className="px-2 py-1">
-                    {c.blocked ? (
-                      <span className="inline-flex flex-col" title={`차단 키워드: ${c.companyNameNormalized}`}>
-                        <span className="inline-flex items-center gap-1 font-semibold text-red-600">
-                          <Ban size={15} /> 차단
-                        </span>
-                        <span className="text-[11px] text-slate-500">
-                          {c.companyNameNormalized}
-                          {c.hiddenCount != null && ` · ${c.hiddenCount}건 숨김`}
-                        </span>
+                  <td className="px-1 py-1 text-center" onClick={(e) => e.stopPropagation()}>
+                    {c.blocked || c.id == null ? (
+                      <span className="inline-block text-slate-200" title="차단된 회사는 북마크 불가">
+                        <Bookmark size={15} />
                       </span>
                     ) : (
-                      <span className="text-slate-300">-</span>
+                      <button
+                        onClick={() => void toggleBookmark(c.id as number, c.bookmarked)}
+                        title={c.bookmarked ? "북마크 해제 (별도 함께 삭제)" : "북마크"}
+                        className={`transition-transform hover:scale-125 ${c.bookmarked ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
+                      >
+                        {c.bookmarked ? <BookmarkCheck size={15} className="fill-amber-400 text-amber-400" /> : <Bookmark size={15} />}
+                      </button>
                     )}
+                  </td>
+                  <td className="px-2 py-1 font-medium text-slate-800">{c.companyNameDisplay}</td>
+                  <td className="px-2 py-1 font-mono text-xs text-slate-500" title="차단 매칭 키워드(정규화명)">
+                    {c.companyNameNormalized}
+                    {c.blocked && c.hiddenCount != null && (
+                      <span className="ml-1 text-[11px] text-red-500">{c.hiddenCount}건 숨김</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-1">
+                    <Stars value={c.myStars} />
                   </td>
                   <td className="px-2 py-1">
                     {c.hasNote ? <FileText size={15} className="text-blue-500" /> : <span className="text-slate-300">-</span>}
@@ -303,6 +363,19 @@ export default function Companies() {
           }}
         />
       )}
+      <BlockConfirmDialog
+        open={blockTarget != null}
+        company={blockTarget ?? ""}
+        title="회사 차단"
+        confirmLabel="차단"
+        editableCompany
+        onCancel={() => setBlockTarget(null)}
+        onConfirm={(reason, reasonIds, categoryNames, keyword) => {
+          const t = blockTarget;
+          setBlockTarget(null);
+          if (t && keyword) void confirmBlock(keyword, reason, reasonIds, categoryNames);
+        }}
+      />
     </div>
   );
 }

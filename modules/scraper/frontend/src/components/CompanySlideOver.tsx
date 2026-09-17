@@ -47,6 +47,7 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
   const [md, setMd] = useState("");
   const [bookmarked, setBookmarked] = useState(false);
   const [blockEditOpen, setBlockEditOpen] = useState(false);
+  const [blockCreateOpen, setBlockCreateOpen] = useState(false);
   // 노션식 등장 애니메이션: 마운트 직후 visible ON, 닫을 때 OFF 후 onClose 지연 호출
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -117,25 +118,19 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
 
   const blockMutation = useMutation({
     mutationFn: async (): Promise<boolean> => {
+      // 차단 해체 전용 (차단하기는 확인 다이얼로그 경유)
       const list = blacklistQuery.data ?? (await fetchBlacklist());
       const normalized = detail?.companyNameNormalized;
       const existing = normalized ? list.find((b) => b.companyNameNormalized === normalized) : undefined;
-      if (existing) {
-        await removeBlacklist(existing.id);
-        return false;
-      }
-      await addBlacklist(detail?.companyNameDisplay ?? companyName ?? "");
-      return true;
+      if (!existing) throw new Error("차단 항목을 찾을 수 없습니다.");
+      await removeBlacklist(existing.id);
+      return false;
     },
-    onSuccess: async (nowBlocked) => {
-      // 차단+북마크 상호배타: 차단 시 북마크 자동 해제
-      if (nowBlocked && id != null && detail?.bookmarked) {
-        await companyNoteApi.update(id, { isBookmarked: false }).catch(() => undefined);
-      }
+    onSuccess: async () => {
       invalidate();
       detailQuery.refetch();
     },
-    onError: () => alert("차단 변경 실패."),
+    onError: (e) => alert(e instanceof Error ? e.message : "차단 해제 실패."),
   });
 
   const removeMutation = useMutation({
@@ -164,10 +159,27 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
   };
 
   const onBlockToggle = () => {
-    if (!blocked && (detail?.bookmarked || detail?.myStars != null)) {
-      if (!confirm("차단하면 북마크·별점이 해제됩니다. 차단할까요?")) return;
+    if (blocked) {
+      blockMutation.mutate();
+      return;
     }
-    blockMutation.mutate();
+    // 차단 시 확인 다이얼로그 + 키워드 저장 (차단하면 북마크·별점 해제됨)
+    setBlockCreateOpen(true);
+  };
+
+  const confirmBlockCreate = async (reason: string, reasonIds: number[], categoryNames: string[], keyword: string) => {
+    if (!keyword) return;
+    try {
+      await addBlacklist(keyword, reasonIds, reason || undefined, categoryNames);
+      setBlockCreateOpen(false);
+      if (id != null && (detail?.bookmarked || detail?.myStars != null)) {
+        await companyNoteApi.update(id, { isBookmarked: false }).catch(() => undefined);
+      }
+      invalidate();
+      detailQuery.refetch();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "차단 실패.");
+    }
   };
 
   const exportMd = async () => {
@@ -253,30 +265,44 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
 
           {(detail || isCreate) && tab === "view" && detail && (
             <>
-              <section className="mb-3 rounded-lg bg-gray-50 p-3 text-sm">
-                <div className="mb-1 flex items-center gap-1">
-                  <span className="text-gray-500">내 별점</span>
-                  {detail.myStars == null ? (
-                    <span className="text-xs text-gray-400">미지정</span>
-                  ) : (
-                    <span className="inline-flex items-center gap-0.5">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <Star key={i} size={14} className={i <= (detail.myStars ?? 0) ? "fill-amber-400 text-amber-400" : "text-gray-300"} />
-                      ))}
+              {detail.averageScore != null && (
+                <section className="mb-3 rounded-lg bg-gray-50 p-3 text-sm">
+                  <div className="mb-1 flex items-center gap-1">
+                    <span className="text-gray-500">내 별점</span>
+                    {detail.myStars == null ? (
+                      <span className="text-xs text-gray-400">미지정</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Star key={i} size={14} className={i <= (detail.myStars ?? 0) ? "fill-amber-400 text-amber-400" : "text-gray-300"} />
+                        ))}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    <span className="text-xs text-gray-600">
+                      크롤링 평균 <b className="text-sm text-gray-900">{detail.averageScore}</b>
                     </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-x-3 gap-y-1">
-                  <span className="text-xs text-gray-600">
-                    크롤링 평균 <b className="text-sm text-gray-900">{detail.averageScore ?? "-"}</b>
+                    {scoreText("잡플래닛", detail.jobplanetScore)}
+                    {scoreText("잡코리아", detail.jobkoreaScore)}
+                    {scoreText("사람인", detail.saraminScore)}
+                  </div>
+                </section>
+              )}
+              {detail.myStars != null && detail.averageScore == null && (
+                <section className="mb-3 rounded-lg bg-gray-50 p-3 text-sm">
+                  <span className="text-gray-500">내 별점</span>{" "}
+                  <span className="inline-flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Star key={i} size={14} className={i <= (detail.myStars ?? 0) ? "fill-amber-400 text-amber-400" : "text-gray-300"} />
+                    ))}
                   </span>
-                  {scoreText("잡플래닛", detail.jobplanetScore)}
-                  {scoreText("잡코리아", detail.jobkoreaScore)}
-                  {scoreText("사람인", detail.saraminScore)}
-                </div>
-                {blocked && (
-                  <div className="mt-1 flex items-center gap-2">
-                    <p className="text-xs font-semibold text-red-600">⛔ 차단된 회사</p>
+                </section>
+              )}
+              {blocked && (
+                <section className="mb-3 rounded-lg bg-red-50 p-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <p className="flex-1 text-xs font-semibold text-red-600">⛔ 차단된 회사</p>
                     <button
                       className="inline-flex items-center gap-0.5 text-xs text-slate-500 underline hover:text-slate-700"
                       onClick={() => setBlockEditOpen(true)}
@@ -285,19 +311,31 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
                       <Pencil size={11} /> 차단 편집
                     </button>
                   </div>
-                )}
-              </section>
+                  <p className="mt-1 font-mono text-xs text-slate-600" title="차단 매칭 키워드">
+                    키워드: {detail.companyNameNormalized}
+                  </p>
+                </section>
+              )}
               <article className="md-view">
                 {detail.noteMd?.trim() ? <ReactMarkdown>{detail.noteMd}</ReactMarkdown> : <p className="text-sm text-gray-400">작성된 분석 메모가 없습니다. 편집 탭에서 작성하세요.</p>}
               </article>
               <section className="mt-3">
                 <p className="mb-1 text-xs font-semibold text-gray-500">관련 공고 (최근 저장분)</p>
-                {postingsQuery.isLoading && <p className="text-sm text-gray-400">불러오는 중…</p>}
+                {postingsQuery.isLoading && (
+                  <div className="space-y-1.5" aria-label="관련 공고 불러오는 중">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="animate-pulse rounded border border-slate-200 px-2.5 py-2">
+                        <div className="mb-1 h-3.5 w-3/4 rounded bg-slate-200" />
+                        <div className="h-3 w-1/3 rounded bg-slate-100" />
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {!postingsQuery.isLoading && (postingsQuery.data?.length ?? 0) === 0 && (
                   <p className="text-sm text-gray-400">저장된 관련 공고가 없습니다.</p>
                 )}
                 {(postingsQuery.data?.length ?? 0) > 0 && (
-                  <ul className="divide-y divide-slate-100 rounded border border-slate-200">
+                  <ul className="max-h-64 divide-y divide-slate-100 overflow-y-auto rounded border border-slate-200">
                     {postingsQuery.data!.map((p, i) => (
                       <li key={`${p.url}-${i}`} className="px-2.5 py-1.5 text-sm">
                         <a
@@ -376,6 +414,17 @@ export default function CompanySlideOver({ id, companyName, onClose, onSaved }: 
         onCancel={() => setBlockEditOpen(false)}
         onConfirm={(reason, reasonIds, categoryNames, keyword) => {
           void confirmBlockEdit(reason, reasonIds, categoryNames, keyword);
+        }}
+      />
+      <BlockConfirmDialog
+        open={blockCreateOpen}
+        company={detail?.companyNameDisplay ?? companyName ?? ""}
+        title="회사 차단"
+        confirmLabel="차단"
+        editableCompany
+        onCancel={() => setBlockCreateOpen(false)}
+        onConfirm={(reason, reasonIds, categoryNames, keyword) => {
+          void confirmBlockCreate(reason, reasonIds, categoryNames, keyword);
         }}
       />
     </div>
