@@ -1,15 +1,16 @@
 # 009-260914-MySQL 백업 가이드
 
 ## 개요
-- **목적**: MariaDB 전체 DB(4종)를 매일 덤프하여 장애·실수 삭제 시 시점 복구(PITR) 기반을 마련한다.
+- **목적**: MariaDB 전체 DB(3종)를 매일 덤프하여 장애·실수 삭제 시 시점 복구(PITR) 기반을 마련한다.
 - **배경**: binlog는 2026-09-13 19:28부터만 기록되어 그 이전 시점은 복구 원천이 없다. mysqldump 주기 백업으로 "스냅샷 + binlog 로그" 복구 체계를 구성.
-- **대상 DB**: `sh_pass`(auth), `scraper_platform`, `resume_platform`, `portfolio_platform`
-- **작성일**: 2026-09-14
+- **대상 DB**: `sh_pass`(auth), `scraper_platform`, `resume_platform`
+  (`portfolio_platform`는 2026-08-21 인프라 정리에서 DROP됨 — 9/14에 Grants 잔재를 보고 착각해 대상에 넣었다가 9/17 제외)
+- **작성일**: 2026-09-14 (대상 수정: 2026-09-17)
 
 ## 1. 구성 요소
 | 파일 | 위치 | 역할 |
 |------|------|------|
-| `scripts/backup-mysql.sh` | 리포지토리 | 4개 DB 덤프 + gzip + 보존기간 정리 |
+| `scripts/backup-mysql.sh` | 리포지토리 | 3개 DB 덤프 + gzip + 보존기간 정리 |
 | `infra/cron.d/sh-platform-mysql-backup` | 리포지토리 | 매일 03:30(KST) 실행 정의 |
 | `/home/ubuntu/backups/mysql/` | 서버 | 백업 산출물(일자 디렉터리 + backup.log) |
 
@@ -119,7 +120,7 @@ FLUSH PRIVILEGES;
 매일 03:30(DB)·03:35(파일) KST 크론 실행 후 확인할 항목:
 
 ```bash
-# 1) DB 덤프 4종 + binlog 좌표 + 로그 — 오늘 일자 디렉터리
+# 1) DB 덤프 3종 + binlog 좌표 + 로그 — 오늘 일자 디렉터리
 ls -l /home/ubuntu/backups/mysql/$(date +%Y%m%d)/
 cat /home/ubuntu/backups/mysql/$(date +%Y%m%d)/binlog-status.txt   # [coordinate OK] 실좌표
 tail -n 20 /home/ubuntu/backups/mysql/backup-$(date +%Y%m%d).log
@@ -134,7 +135,7 @@ cat /etc/cron.d/sh-platform-mysql-backup   # 03:30 DB / 03:35 files 2라인
 
 | 항목 | 기대값 | 이상 시 |
 |------|--------|---------|
-| DB 덤프 4종 `.sql.gz` | `sh_pass`·`scraper_platform`·`resume_platform`·`portfolio_platform` 존재 | 로그 확인 → 수동 실행 `sudo .../scripts/backup-mysql.sh` |
+| DB 덤프 3종 `.sql.gz` | `sh_pass`·`scraper_platform`·`resume_platform` 존재 | 로그 확인 → 수동 실행 `sudo .../scripts/backup-mysql.sh` |
 | `binlog-status.txt` | `binlog_file`/`binlog_pos` 실값 | 백업 로그에서 coordinate 경고 확인 |
 | 파일 백업 2종 `.tar.gz` | `data_*`·`uploads_*` 존재 | 로그 확인 → 수동 실행 `sudo .../scripts/backup-files.sh` |
 | 보존 정리 | 7일 초과 산출물 자동 삭제 | `KEEP_DAYS` 확인 |
