@@ -60,31 +60,34 @@ mysqlbinlog \
 
 > **PITR 성공 조건**: binlog 파일이 스냅샷 좌표부터 **아직 서버에 남아 있어야** 함(아래 6 참고).
 > binlog 좌표 기준 파일이 이미 지워졌으면 그 이전 스냅샷으로 재시도해야 함.
-> 2026-09-14 현재 binlog는 9/13 19:28부터 기록 → **그 이전 시점 복구는 불가** (주기 덤프가 최소 수단).
+> 2026-09-17 현재 binlog는 당일 10:10경 첫 활성화 → **그 이전 시점 복구는 불가** (주기 덤프가 최소 수단).
 
 ## 5. binlog 보존 설정 (PITR 기간 확보 — 서버 적용 필요)
 스냅샷+binlog PITR이 성립하려면 **binlog 보존 기간 ≥ 스냅샷 보존 기간(7일)** 여야 한다.
-덤프 보존(7일) + 이후 변경분을 재생할 여유(7일)를 고려해 **14일 이상** 권장.
+덤프 보존(7일) + 이후 변경분을 재생할 여유(7일)를 고려해 **14일** 권장.
 
 ```sql
 -- 현재 값 확인 (MariaDB 10.6+)
 SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';
--- 즉시 적용 (서버에서 실행)
+SHOW VARIABLES LIKE 'log_bin';   -- ON 이어야 기록됨 (기본값 OFF, 명시 필요)
+-- 즉시 적용 (서버에서 실행, 재시작 전까지만 유효)
 SET GLOBAL binlog_expire_logs_seconds = 1209600;  -- 14일
 ```
-영속화: binlog 설정 파일 `99-binlog.cnf`의 `[mysqld]` 섹션에 값을 추가 후 재시작하면 재시작해도 유지된다.
+영속화: DB 서버의 `99-binlog.cnf`에 아래 3줄을 두고 재시작하면 유지된다.
 ```bash
-# DB 서버(oci-db)에서 실행
-sudo nano /etc/mysql/mariadb.conf.d/99-binlog.cnf
-#   [mysqld]
-#   log_bin
-#   binlog_format=ROW
-#   binlog_expire_logs_seconds=1209600     ← 10일(864000)이면 14일로 교체
-sudo systemctl restart mariadb
-SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';   -- 재시작 후에도 1209600 유지 확인
+# DB 서버(161.33.138.23)에서 실행 — 웹 서버가 아님에 주의
+sudo tee /etc/mysql/mariadb.conf.d/99-binlog.cnf > /dev/null <<'EOF'
+[mariadb]
+log_bin = mysql-bin
+server_id = 1
+binlog_expire_logs_seconds = 1209600
+EOF
+sudo systemctl restart mariadb   # 전체 앱 약 1분 DB 단절, 트래픽 적은 시간에
+sudo mysql -e "SHOW VARIABLES LIKE 'log_bin'; SHOW MASTER STATUS;"  # ON + 실좌표 확인
 ```
-> **⚠️ 2026-09-15 현재 상태**: 99-binlog.cnf는 10일(864000) 고정, 런타임 값은 14일(SET GLOBAL).
-> → **DB 서버 재시작 시 10일로 되돌아감.** 재시작 전 반드시 위 파일을 14일로 교체할 것.
+> **⚠️ 2026-09-17 확정 상태**: `log_bin`이 설정 파일에 없어 **binlog가 한 번도 켜진 적이 없었음**
+> (기존 binlog 파일 없음으로 확인. `[coordinate OK]`는 빈 출력에도 exit 0이라 false positive였음 — 워크플로우 진단 수정済).
+> 위 파일로 9/17 10:10 첫 활성화 + 재시작 후에도 `1209600` 유지 확인. PITR 체인은 이 시점부터 시작.
 > **일괄 적용 스크립트**: `scripts/db-admin-setup.sql`(BINLOG MONITOR + 보존 14일 + 확인 쿼리) — 관리자로 1회 실행.
 > CI 자동 적용: GitHub secret `MYSQL_ADMIN_PASS` 설정 시 다음 배포에서 자동 적용됨(멱등).
 
@@ -112,9 +115,10 @@ DB 외 웹 서버에만 존재하는 런타임 파일(코드/설정은 git이 �
 ## 8. binlog 모니터링 권한 (선택)
 운영 계정으로 `SHOW BINARY LOGS` 확인이 필요한 경우:
 ```sql
-GRANT BINLOG MONITOR ON *.* TO 'sh_user'@'%';
+GRANT BINLOG MONITOR ON *.* TO 'sh_user'@'10.0.0.%';
 FLUSH PRIVILEGES;
 ```
+(9/14 적용済. `'%'`가 아니라 `'10.0.0.%'`로 등록됨 — 처음 `'%'`로 GRANT 시 "Can't find any matching row" 발생했기 때문)
 
 ## 9. 정기 실행 확인 체크리스트 (백업 다음 날 1회)
 매일 03:30(DB)·03:35(파일) KST 크론 실행 후 확인할 항목:
@@ -140,5 +144,32 @@ cat /etc/cron.d/sh-platform-mysql-backup   # 03:30 DB / 03:35 files 2라인
 | 파일 백업 2종 `.tar.gz` | `data_*`·`uploads_*` 존재 | 로그 확인 → 수동 실행 `sudo .../scripts/backup-files.sh` |
 | 보존 정리 | 7일 초과 산출물 자동 삭제 | `KEEP_DAYS` 확인 |
 
+## 10. 설정 근거 (왜 이렇게 했는가)
+나중에 "왜 03:30이지?", "왜 7일이지?" 같은 질문이 나오면 여기를 본다.
+
+| 설정 | 값 | 이유 |
+|------|-----|------|
+| 실행 시각 03:30/03:35 KST | 새벽 최소 트래픽 시간대 | 크롤·사용자 쿼리와 겹치지 않게. DB(03:30) → 파일(03:35) 5분 간격으로 mysqldump I/O와 tar I/O가 겹치지 않게 분산 |
+| 덤프 보존 7일 | `KEEP_DAYS=7` | A1.Flex 디스크 한정 + 주 1회 확인 주기. 7일치면 "언제부터 잘못됐는지" 모를 때도 복구起点 확보 가능 |
+| binlog 보존 14일 | `1209600` | 덤프 보존(7일) + 재생 여유(7일). 가장 오래된 덤프(7일 전) 기준으로도 그 이후 변경분 7일치가 있어야 PITR 성립 |
+| 대상 DB 3종 | sh_pass·scraper·resume | `portfolio_platform`은 8/21 인프라 정리에서 DROP됨. 9/14 Grants 잔재 오인으로 잠시 4종이었다가 9/17 제외 |
+| `--single-transaction` | 무잠금 일관 스냅샷 | InnoDB 한정. `LOCK TABLES` 없이 트랜잭션 시작 시점으로 일관된 덤프 → 서비스 무중단 백업 |
+| `--routines --triggers --events` | 루틴·트리거·이벤트 포함 | 빼먹으면 복원 후 앱이 조용히 오동작 (프로시저·스케줄 유실) |
+| `cron.d` 파일 방식 | git 버전관리 + CI 멱등 설치 | `crontab -e`는 서버 로컬이라 유실·이관 시 사라짐. cron.d는 배포마다 자동 설치되어 서버를 갈아엎어도 복원됨 |
+| binlog 좌표 기록 | PITR 시작점 | 스냅샷 "시점"을 알아야 그 이후 binlog만 재생. 좌표 없으면 전체 binlog를 뒤져야 함 |
+| `gzip -9` | 최대 압축 | 텍스트 덤프는 압축률이 좋아(scraper 2.2M 등) 디스크 절약. 새벽이라 CPU 여유 있음 |
+| `MYSQL_PWD` 환경변수 | 비밀번호 노출 회피 | `-p'...'`는 `ps` 출력에 그대로 보임. 환경변수도 완벽하진 않지만 프로세스 목록 노출은 피함. `.env` → 기본값 순서로 주입 |
+| 일자 디렉터리 | 날짜별 격리 | `find -mtime` 보존 정리와 육안 확인이 단순. 로그도 일자별(`backup-YYYYMMDD.log`)로 분리해 cron 실행 여부 추적 가능 |
+| `log_bin`+`server_id` 명시 | MariaDB 기본 OFF | 명시 없이는 binlog가 절대 안 켜짐(9/17 확정). `server_id`는 복제 없어도 binlog 필수값이라 함께 지정 |
+| 진단의 빈 출력 판정 | false positive 방지 | `SHOW MASTER STATUS` 빈 출력도 exit 0이라 `[coordinate OK]`가 찍혔던 사고(9/17) → `-N` + 비어있음 검사로 수정 |
+
+## 11. 변경 이력
+| 날짜 | 내용 |
+|------|------|
+| 2026-09-14 | 초판 (4종 대상 — portfolio 오인 포함) |
+| 2026-09-15 | 99-binlog.cnf 경로·체크리스트 보강 |
+| 2026-09-16 | 4개→"4개 DB" 표기 정정 (§9) |
+| 2026-09-17 | portfolio 제외(3종) + binlog 최초 활성화 확정 + 배경·§4·§5·§8 정정 + §10 설정 근거·§11 이력 신설. cron 미설치(OCI minimal) + `[coordinate OK]` false positive 기록 |
+
 ---
-*작성일: 2026-09-14, 갱신: 2026-09-15*
+*작성일: 2026-09-14, 갱신: 2026-09-17*
