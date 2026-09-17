@@ -177,7 +177,8 @@ jobs:
             # MySQL/백업 진단 (맨 아래 cat 은 mysqlbinlog 예제와 무관한 실제 파일 확인)
             echo "===== MYSQL DIAGNOSTICS ====="
             mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' -e "SHOW VARIABLES LIKE 'log_bin'; SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';" 2>&1 || true
-            mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' -e "SHOW MASTER STATUS;" 2>&1 && echo "[coordinate OK]" || echo "(SHOW MASTER STATUS 접근권한 없음 — BINLOG MONITOR 필요)"
+            # 빈 출력도 exit 0이므로 -N(헤더 제거) + 비어있음 판정으로 false positive 방지 (2026-09-17 교훈)
+            MASTER_OUT=$(mysql -h 10.0.0.39 -u sh_user -p'SHpass1234!' -N -e "SHOW MASTER STATUS;" 2>&1) && { if [ -n "$MASTER_OUT" ]; then echo "$MASTER_OUT" && echo "[coordinate OK]"; else echo "(binlog 미활성 — DB 서버 log_bin 설정 확인)"; fi; } || echo "(SHOW MASTER STATUS 접근권한 없음 — BINLOG MONITOR 필요)"
             # DB admin 접속 정보가 GitHub secret(MYSQL_ADMIN_PASS)으로 주어지면 1회 자동 적용 (멱등)
             # 수동 적용 시: scripts/db-admin-setup.sql 참고
             if [ -n "${{ secrets.MYSQL_ADMIN_PASS }}" ] && [ ! -f /home/ubuntu/backups/mysql/.grant-tried ]; then
