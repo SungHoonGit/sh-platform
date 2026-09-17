@@ -51,7 +51,8 @@ public class CrawlExecutionService {
 
     @Scheduled(fixedDelay = 60_000)
     public void checkAndExecuteScheduledCrawls() {
-        LocalDateTime now = LocalDateTime.now();
+        // UI 시간/요일은 KST 기준이므로 스케줄 판정도 KST로 고정한다 (서버 TZ와 무관).
+        LocalDateTime now = LocalDateTime.now(KST);
         List<CrawlConfig> activeConfigs = crawlConfigRepository.findByIsActiveTrue();
 
         for (CrawlConfig config : activeConfigs) {
@@ -83,22 +84,43 @@ public class CrawlExecutionService {
         return false;
     }
 
-    private boolean evaluateCron(String cron5Field, LocalDateTime now, Long configId) {
+    /**
+     * 단일 5필드 cron 라인이 주어진 시각에 발화해야 하는지 판정한다 (순수 함수, 상태 변경 없음).
+     * 같은 발화 시각에 대한 중복 호출은 마지막 실행 시각으로 걸러낸다.
+     *
+     * @param cron5Field 5필드 cron (분 시 일 월 요일)
+     * @param now 현재 시각 (KST)
+     * @param lastRun 마지막 실행 시각 (없으면 null)
+     * @return 발화해야 하면 true
+     */
+    static boolean isDue(String cron5Field, LocalDateTime now, LocalDateTime lastRun) {
         try {
             String cron6 = "0 " + cron5Field;
             CronExpression expr = CronExpression.parse(cron6);
-            LocalDateTime lastRun = lastScheduledRun.get(configId);
             LocalDateTime nextRun = expr.next(lastRun != null ? lastRun : now.minusMinutes(2));
             if (nextRun == null) return false;
-            boolean should = !now.isBefore(nextRun) && (lastRun == null || nextRun.isAfter(lastRun));
-            if (should) {
-                lastScheduledRun.put(configId, now);
-            }
-            return should;
+            return !now.isBefore(nextRun) && (lastRun == null || nextRun.isAfter(lastRun));
         } catch (Exception e) {
-            log.warn("Invalid cron expression '{}' for config id {}: {}", cron5Field, configId, e.getMessage());
+            log.warn("Invalid cron expression '{}': {}", cron5Field, e.getMessage());
             return false;
         }
+    }
+
+    private boolean evaluateCron(String cron5Field, LocalDateTime now, Long configId) {
+        LocalDateTime lastRun = lastScheduledRun.get(configId);
+        if (lastRun == null) {
+            // 재시작 시 인메모리 기록이 사라지므로 최근 실행 로그로 시드한다 (중복 실행 방지).
+            lastRun = crawlLogRepository.findFirstByConfigIdOrderByStartedAtDesc(configId)
+                    .map(CrawlLog::getStartedAt)
+                    .orElse(null);
+        }
+        boolean should = isDue(cron5Field, now, lastRun);
+        if (should) {
+            lastScheduledRun.put(configId, now);
+        } else if (lastRun != null) {
+            lastScheduledRun.put(configId, lastRun);
+        }
+        return should;
     }
 
     /**
@@ -120,7 +142,7 @@ public class CrawlExecutionService {
         StringBuilder combinedMd = new StringBuilder();
 
         // DB 기반 중복 체크: 최근 N일간의 dedup_key 수집 (전역 — dedup_key는 config와 무관한 전역 유니크)
-        LocalDate dedupSince = LocalDate.now().minusDays(DEDUP_LOOKBACK_DAYS);
+        LocalDate dedupSince = LocalDate.now(KST).minusDays(DEDUP_LOOKBACK_DAYS);
         Set<String> existingDedupKeys = jobPostingRepository.findDedupKeysSince(dedupSince);
         log.info("Dedup: found {} existing dedup keys since {}", existingDedupKeys.size(), dedupSince);
 
@@ -183,17 +205,17 @@ public class CrawlExecutionService {
 
         // 일별 통합 MD 파일 저장 (부가 출력)
         try {
-            String fileName = LocalDate.now() + ".md";
+            String fileName = LocalDate.now(KST) + ".md";
             String dirPath = config.getLocalPath();
             String filePath = String.format("%s/%s", dirPath, fileName);
-            String timeStr = java.time.LocalTime.now().withNano(0).toString().substring(0, 5);
+            String timeStr = java.time.LocalTime.now(KST).withNano(0).toString().substring(0, 5);
             String header;
             if (dupJobs > 0) {
                 header = String.format("# %s %s 채용공고\n\n> 총 %d건 (%s 기준) | 신규 %d건, 중복 %d건 제외\n\n",
-                        LocalDate.now(), keyword, newJobs, timeStr, newJobs, dupJobs);
+                        LocalDate.now(KST), keyword, newJobs, timeStr, newJobs, dupJobs);
             } else {
                 header = String.format("# %s %s 채용공고\n\n> 총 %d건 (%s 기준)\n\n",
-                        LocalDate.now(), keyword, newJobs, timeStr);
+                        LocalDate.now(KST), keyword, newJobs, timeStr);
             }
             saveFile(dirPath, filePath, header + combinedMd);
         } catch (IOException e) {
@@ -206,9 +228,9 @@ public class CrawlExecutionService {
         if (success > 0 && Boolean.TRUE.equals(config.getEmailNotification())) {
             log.info("[EMAIL] Sending notification for config: {}, recipientEmail: {}", config.getName(), config.getRecipientEmail());
             // 최근 수집된 공고 조회 (최대 10건)
-            LocalDateTime crawlStartTime = LocalDateTime.now().minusMinutes(30);
+            LocalDateTime crawlStartTime = LocalDateTime.now(KST).minusMinutes(30);
             Page<JobPosting> recentJobsPage = jobPostingRepository.findByConfigIdAndCreatedAtBetween(
-                    config.getId(), crawlStartTime, LocalDateTime.now(),
+                    config.getId(), crawlStartTime, LocalDateTime.now(KST),
                     PageRequest.of(0, 10, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")));
             List<JobPosting> recentJobs = recentJobsPage.getContent();
 
@@ -291,7 +313,7 @@ public class CrawlExecutionService {
                     .deadline(job.getOrDefault("deadline", ""))
                     .dedupKey(dedupKey)
                     .crawlLogId(crawlLogId)
-                    .crawledAt(LocalDate.now())
+                    .crawledAt(LocalDate.now(KST))
                     .build();
 
             try {

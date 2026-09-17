@@ -11,11 +11,17 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CrawlLogRepository extends JpaRepository<CrawlLog, Long> {
     Page<CrawlLog> findByConfigIdOrderByStartedAtDesc(Long configId, Pageable pageable);
     List<CrawlLog> findTop10ByConfigIdOrderByStartedAtDesc(Long configId);
+
+    /**
+     * 재시작 시 스케줄 중복 실행 방지를 위해 마지막 실행 시각을 시드하는 용도.
+     */
+    Optional<CrawlLog> findFirstByConfigIdOrderByStartedAtDesc(Long configId);
     Page<CrawlLog> findByStatusOrderByStartedAtDesc(CrawlLog.CrawlStatus status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"siteDefinition"})
