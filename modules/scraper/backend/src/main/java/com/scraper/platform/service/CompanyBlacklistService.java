@@ -3,7 +3,6 @@ package com.scraper.platform.service;
 import com.scraper.platform.model.BlockReason;
 import com.scraper.platform.model.CompanyBlacklist;
 import com.scraper.platform.model.CompanyNote;
-import com.scraper.platform.repository.BlockReasonRepository;
 import com.scraper.platform.repository.CompanyBlacklistRepository;
 import com.scraper.platform.repository.CompanyNoteRepository;
 import com.shplatform.common.exception.BusinessException;
@@ -24,7 +23,6 @@ import java.util.Set;
 public class CompanyBlacklistService {
 
     private final CompanyBlacklistRepository repository;
-    private final BlockReasonRepository blockReasonRepository;
     private final BlockReasonService blockReasonService;
     private final CompanyNoteRepository noteRepository;
 
@@ -57,21 +55,7 @@ public class CompanyBlacklistService {
 
     /** 선택 id + 사용자 신규 입력 카테고리를 합쳐 정렬순 BlockReason 목록으로 변환한다. */
     private List<BlockReason> resolveCategories(List<Long> reasonIds, List<String> categoryNames) {
-        var result = new java.util.ArrayList<BlockReason>();
-        if (reasonIds != null) {
-            result.addAll(blockReasonRepository.findAllById(reasonIds));
-        }
-        if (categoryNames != null) {
-            for (String name : categoryNames) {
-                if (name != null && !name.isBlank()) {
-                    result.add(blockReasonService.ensureCategory(name));
-                }
-            }
-        }
-        return new java.util.ArrayList<>(result.stream()
-                .distinct()
-                .sorted((a, b) -> Integer.compare(a.getSortOrder(), b.getSortOrder()))
-                .toList());
+        return blockReasonService.resolveCategories(reasonIds, categoryNames);
     }
 
     /** 기존 차단 항목의 카테고리를 교체한다(자유 메모는 보존). 본인 항목이 아니면 무시한다. */

@@ -6,6 +6,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 계정별 회사 메모. 내 별점(1~5), 북마크, 마크다운 분석 메모를 회사당 1행으로 저장한다.
@@ -46,6 +48,15 @@ public class CompanyNote {
     /** 분석 마크다운 원문. */
     @Column(name = "note_md", columnDefinition = "MEDIUMTEXT")
     private String noteMd;
+
+    /** 분석 메모용 카테고리/태그 — block_reasons 마스터 공유 (북마크 회사에도 부여 가능). */
+    @ManyToMany
+    @JoinTable(name = "company_note_reason",
+            joinColumns = @JoinColumn(name = "note_id"),
+            inverseJoinColumns = @JoinColumn(name = "block_reason_id"))
+    @OrderBy("sortOrder ASC")
+    @Builder.Default
+    private List<BlockReason> noteReasons = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

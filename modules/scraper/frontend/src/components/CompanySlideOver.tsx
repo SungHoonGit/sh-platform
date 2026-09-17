@@ -3,8 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import { X, Star, Bookmark, BookmarkCheck, Ban, Download, Save, Trash2, Pencil } from "lucide-react";
 import { BlockConfirmDialog } from "@sh-platform/ui";
+import TagInput, { type TagItem } from "./TagInput";
 import { companyNoteApi, type CompanyNoteDetail } from "../api/companies";
-import { fetchBlacklist, addBlacklist, removeBlacklist, updateBlacklist } from "../api/scraper";
+import { fetchBlacklist, addBlacklist, removeBlacklist, updateBlacklist, searchBlockCategories } from "../api/scraper";
 
 interface Props {
   /** 메모 ID (있으면 상세 조회, 없으면 companyName으로 신규 작성) */
@@ -48,6 +49,7 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
   const [stars, setStars] = useState<number | null>(null);
   const [md, setMd] = useState("");
   const [bookmarked, setBookmarked] = useState(false);
+  const [noteTags, setNoteTags] = useState<TagItem[]>([]);
   const [blockEditOpen, setBlockEditOpen] = useState(false);
   const [blockCreateOpen, setBlockCreateOpen] = useState(false);
   // 노션식 등장 애니메이션: 마운트 직후 visible ON, 닫을 때 OFF 후 onClose 지연 호출
@@ -66,12 +68,14 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
       setStars(detail.myStars);
       setMd(detail.noteMd ?? "");
       setBookmarked(detail.bookmarked);
+      setNoteTags((detail.categories ?? []).map((c) => ({ id: c.id, name: c.name })));
       // 기존 메모는 항상 보기 탭부터 (메모 없어도 평점·차단·공고 확인 가능)
       setTab("view");
     } else if (isCreate) {
       setStars(null);
       setMd("");
       setBookmarked(false);
+      setNoteTags([]);
       setTab("edit");
     }
   }, [detail?.id, isCreate, companyName]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -89,14 +93,19 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
   };
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      isCreate
-        ? companyNoteApi.upsert({ companyName, myStars: stars, isBookmarked: bookmarked, noteMd: md })
-        : companyNoteApi.update(id as number, { myStars: stars, isBookmarked: bookmarked, noteMd: md }),
+    mutationFn: () => {
+      const reasonIds = noteTags.filter((t) => t.id != null).map((t) => t.id as number);
+      const categoryNames = noteTags.filter((t) => t.id == null).map((t) => t.name);
+      const tagFields = { reasonIds, categoryNames };
+      return isCreate
+        ? companyNoteApi.upsert({ companyName, myStars: stars, isBookmarked: bookmarked, noteMd: md, ...tagFields })
+        : companyNoteApi.update(id as number, { myStars: stars, isBookmarked: bookmarked, noteMd: md, ...tagFields });
+    },
     onSuccess: (saved) => {
       // 별 설정 시 북마크 자동 ON 등 서버 불변식을 화면에 반영
       setBookmarked(saved.bookmarked);
       setStars(saved.myStars ?? null);
+      setNoteTags((saved.categories ?? []).map((c) => ({ id: c.id, name: c.name })));
       invalidate();
       setTab("view");
       onSaved?.(saved.id);
@@ -214,9 +223,24 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
     try {
       await updateBlacklist(blockedEntry.id, remaining, []);
       invalidate();
-      detailQuery.refetch();
+      await blacklistQuery.refetch();
     } catch {
       alert("카테고리 삭제 실패.");
+    }
+  };
+
+  const addBlockCategory = async (tag: TagItem) => {
+    if (blockedEntry == null) return;
+    const ids = (blockedEntry.blockReasons ?? [])
+      .map((r) => r.id)
+      .filter((v): v is number => v != null);
+    if (tag.id != null && !ids.includes(tag.id)) ids.push(tag.id);
+    try {
+      await updateBlacklist(blockedEntry.id, ids, tag.id == null ? [tag.name] : []);
+      invalidate();
+      await blacklistQuery.refetch();
+    } catch {
+      alert("카테고리 추가 실패.");
     }
   };
 
@@ -315,20 +339,23 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
               )}
               {blocked && (
                 <section className="mb-3 rounded-lg bg-red-50 p-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <p className="flex-1 text-xs font-semibold text-red-600">⛔ 차단된 회사</p>
-                    <button
-                      className="inline-flex items-center gap-0.5 text-xs text-slate-500 underline hover:text-slate-700"
-                      onClick={() => setBlockEditOpen(true)}
-                      title="차단 키워드·카테고리 수정"
-                    >
-                      <Pencil size={11} /> 차단 편집
-                    </button>
-                  </div>
+                  <p className="text-xs font-semibold text-red-600">⛔ 차단된 회사</p>
                   <p className="mt-1 font-mono text-xs text-slate-600" title="차단 매칭 키워드">
                     키워드: {detail?.companyNameNormalized ?? blockedEntry?.companyNameNormalized ?? companyNormalized ?? "-"}
                   </p>
+                  {(detail?.noteMd == null || !detail.noteMd.trim()) && (detail?.myStars == null) && (
+                    <p className="mt-1 text-[11px] text-slate-400">메모·별점이 없습니다. 편집 탭에서 작성하세요.</p>
+                  )}
                 </section>
+              )}
+              {(detail?.categories?.length ?? 0) > 0 && (
+                <div className="mb-3 flex flex-wrap gap-1">
+                  {(detail?.categories ?? []).map((c) => (
+                    <span key={c.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                      {c.name}
+                    </span>
+                  ))}
+                </div>
               )}
               <article className="md-view">
                 {detail?.noteMd?.trim() ? <ReactMarkdown>{detail.noteMd}</ReactMarkdown> : <p className="text-sm text-gray-400">작성된 분석 메모가 없습니다. 편집 탭에서 작성하세요.</p>}
@@ -388,26 +415,36 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
                     >
                       <X size={12} /> 해제
                     </button>
+                    <button
+                      className="inline-flex items-center gap-0.5 text-xs text-slate-500 underline hover:text-slate-700"
+                      onClick={() => setBlockEditOpen(true)}
+                      title="차단 키워드 변경"
+                    >
+                      <Pencil size={11} /> 차단 편집
+                    </button>
                   </div>
-                  {(blockedEntry.blockReasons?.length ?? 0) > 0 && (
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {(blockedEntry.blockReasons ?? []).map((r) => (
-                        <span key={r.id ?? r.name} className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-xs text-slate-600 ring-1 ring-slate-200">
-                          {r.name}
-                          <button
-                            className="text-slate-400 hover:text-red-600"
-                            title={`${r.name} 카테고리 제거`}
-                            onClick={() => void removeCategory(r.id, r.name)}
-                          >
-                            <X size={11} />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <p className="mt-1 text-[11px] text-slate-400">키워드 변경·카테고리 추가는 보기 탭의 [차단 편집]에서</p>
+                  <div className="mt-2">
+                    <p className="mb-1 text-[11px] font-semibold text-slate-500">차단 카테고리</p>
+                    <TagInput
+                      tags={(blockedEntry.blockReasons ?? []).map((r) => ({ id: r.id, name: r.name }))}
+                      onAdd={(t) => void addBlockCategory(t)}
+                      onRemove={(t) => void removeCategory(t.id, t.name)}
+                      searchFn={searchBlockCategories}
+                      placeholder="카테고리 추가 (입력 후 Enter)"
+                    />
+                  </div>
                 </div>
               )}
+              <div className="mb-3">
+                <p className="mb-1 text-xs font-semibold text-gray-500">메모 태그 (북마크 포함 모든 메모에 부여 가능)</p>
+                <TagInput
+                  tags={noteTags}
+                  onAdd={(t) => setNoteTags((prev) => (prev.some((p) => p.name === t.name) ? prev : [...prev, t]))}
+                  onRemove={(t) => setNoteTags((prev) => prev.filter((p) => p.name !== t.name))}
+                  searchFn={searchBlockCategories}
+                  placeholder="태그 추가 (입력 후 Enter, 저장 버튼으로 확정)"
+                />
+              </div>
               <div className="mb-3 flex items-center gap-1">
                 <span className="mr-1 text-sm text-gray-600">내 별점</span>
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -457,7 +494,7 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
       </aside>
       <BlockConfirmDialog
         open={blockEditOpen}
-        company={detail?.companyNameDisplay ?? ""}
+        company={detail?.companyNameDisplay ?? companyName ?? ""}
         title="차단 편집"
         confirmLabel="저장"
         editableCompany

@@ -49,6 +49,34 @@ public class BlockReasonService {
      * @param rawName 사용자 입력 카테고리명 (trim)
      * @return 존재 시 기존, 없으면 신규 등록된 BlockReason
      */
+    /**
+     * Selects existing categories by id and promotes user-typed names to master,
+     * returning a deduplicated list ordered by sort order.
+     * Shared single source for blacklist and note tags.
+     *
+     * @param reasonIds existing category ids (nullable)
+     * @param categoryNames new user-typed category names (nullable)
+     * @return deduplicated, sort-ordered category list
+     */
+    @Transactional
+    public List<BlockReason> resolveCategories(List<Long> reasonIds, List<String> categoryNames) {
+        var result = new java.util.ArrayList<BlockReason>();
+        if (reasonIds != null) {
+            result.addAll(repository.findAllById(reasonIds));
+        }
+        if (categoryNames != null) {
+            for (String name : categoryNames) {
+                if (name != null && !name.isBlank()) {
+                    result.add(ensureCategory(name));
+                }
+            }
+        }
+        return new java.util.ArrayList<>(result.stream()
+                .distinct()
+                .sorted((a, b) -> Integer.compare(a.getSortOrder(), b.getSortOrder()))
+                .toList());
+    }
+
     @Transactional
     public BlockReason ensureCategory(String rawName) {
         String name = rawName == null ? "" : rawName.trim();

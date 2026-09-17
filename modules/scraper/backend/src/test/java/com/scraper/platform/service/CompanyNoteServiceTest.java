@@ -48,6 +48,9 @@ class CompanyNoteServiceTest {
     @Mock
     private JobPostingRepository jobPostingRepository;
 
+    @Mock
+    private BlockReasonService blockReasonService;
+
     @InjectMocks
     private CompanyNoteService noteService;
 
@@ -98,7 +101,7 @@ class CompanyNoteServiceTest {
             stubEmptyJoins();
 
             CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
-                    new CompanyNoteRequest("(주)삼성전자 ", 4, true, "## 총평"));
+                    new CompanyNoteRequest("(주)삼성전자 ", 4, true, "## 총평", null, null));
 
             assertEquals(99L, result.id());
             assertEquals("(주)삼성전자", result.companyNameDisplay());
@@ -117,7 +120,7 @@ class CompanyNoteServiceTest {
             stubEmptyJoins();
 
             CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
-                    new CompanyNoteRequest("카카오", 5, true, null));
+                    new CompanyNoteRequest("카카오", 5, true, null, null, null));
 
             assertEquals(5L, result.id());
             assertEquals(5, result.myStars());
@@ -128,7 +131,7 @@ class CompanyNoteServiceTest {
         @DisplayName("회사명 누락이면 INVALID_INPUT 예외를 던진다")
         void 회사명누락_예외() {
             BusinessException ex = assertThrows(BusinessException.class, () ->
-                    noteService.upsert(ACCOUNT, new CompanyNoteRequest("  ", 3, null, null)));
+                    noteService.upsert(ACCOUNT, new CompanyNoteRequest("  ", 3, null, null, null, null)));
             assertEquals(ErrorCode.INVALID_INPUT, ex.getErrorCode());
         }
 
@@ -136,9 +139,9 @@ class CompanyNoteServiceTest {
         @DisplayName("별점 범위(1~5) 밖이면 INVALID_INPUT 예외를 던진다")
         void 별점범위_예외() {
             assertEquals(ErrorCode.INVALID_INPUT, assertThrows(BusinessException.class, () ->
-                    noteService.upsert(ACCOUNT, new CompanyNoteRequest("네이버", 0, null, null))).getErrorCode());
+                    noteService.upsert(ACCOUNT, new CompanyNoteRequest("네이버", 0, null, null, null, null))).getErrorCode());
             assertEquals(ErrorCode.INVALID_INPUT, assertThrows(BusinessException.class, () ->
-                    noteService.upsert(ACCOUNT, new CompanyNoteRequest("네이버", 6, null, null))).getErrorCode());
+                    noteService.upsert(ACCOUNT, new CompanyNoteRequest("네이버", 6, null, null, null, null))).getErrorCode());
         }
 
         @Test
@@ -152,7 +155,7 @@ class CompanyNoteServiceTest {
             stubEmptyJoins();
 
             CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
-                    new CompanyNoteRequest("악덕기업", 1, true, null));
+                    new CompanyNoteRequest("악덕기업", 1, true, null, null, null));
 
             assertFalse(result.bookmarked());
         }
@@ -166,7 +169,7 @@ class CompanyNoteServiceTest {
             stubEmptyJoins();
 
             CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
-                    new CompanyNoteRequest("카카오", 4, null, null));
+                    new CompanyNoteRequest("카카오", 4, null, null, null, null));
 
             assertEquals(4, result.myStars());
             assertTrue(result.bookmarked());
@@ -183,10 +186,30 @@ class CompanyNoteServiceTest {
             stubEmptyJoins();
 
             CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
-                    new CompanyNoteRequest("악덕기업", 5, null, null));
+                    new CompanyNoteRequest("악덕기업", 5, null, null, null, null));
 
             assertNull(result.myStars());
             assertFalse(result.bookmarked());
+        }
+
+        @Test
+        @DisplayName("태그 지정 시 공유 resolve로 저장된다")
+        void 태그_저장() {
+            var tag = com.scraper.platform.model.BlockReason.of("관심기업", "user", 20, true);
+            given(noteRepository.findByAccountIdAndCompanyNameNormalized(ACCOUNT, "카카오"))
+                    .willReturn(Optional.empty());
+            given(noteRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+            given(blockReasonService.resolveCategories(List.of(9L), List.of("관심기업")))
+                    .willReturn(List.of(tag));
+            stubEmptyJoins();
+
+            CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
+                    new CompanyNoteRequest("카카오", null, null, null, List.of(9L), List.of("관심기업")));
+
+            assertEquals(1, result.categories().size());
+            assertEquals("관심기업", result.categories().get(0).name());
+            verify(noteRepository).save(org.mockito.ArgumentMatchers.argThat(
+                    n -> n.getNoteReasons().size() == 1));
         }
     }
 
@@ -203,7 +226,7 @@ class CompanyNoteServiceTest {
             stubEmptyJoins();
 
             CompanyNoteDetailResponse result = noteService.update(ACCOUNT, 5L,
-                    new CompanyNoteRequest("다른이름", 5, true, "새메모"));
+                    new CompanyNoteRequest("다른이름", 5, true, "새메모", null, null));
 
             assertEquals("카카오", result.companyNameDisplay());
             assertEquals(5, result.myStars());
@@ -219,7 +242,7 @@ class CompanyNoteServiceTest {
 
             assertEquals(ErrorCode.NOT_FOUND, assertThrows(BusinessException.class, () ->
                     noteService.update(ACCOUNT, 5L,
-                            new CompanyNoteRequest(null, 5, null, null))).getErrorCode());
+                            new CompanyNoteRequest(null, 5, null, null, null, null))).getErrorCode());
         }
 
         @Test
@@ -253,7 +276,7 @@ class CompanyNoteServiceTest {
             stubEmptyJoins();
 
             CompanyNoteDetailResponse result = noteService.update(ACCOUNT, 5L,
-                    new CompanyNoteRequest(null, null, true, null));
+                    new CompanyNoteRequest(null, null, true, null, null, null));
 
             assertFalse(result.bookmarked());
         }
@@ -267,7 +290,7 @@ class CompanyNoteServiceTest {
             stubEmptyJoins();
 
             CompanyNoteDetailResponse result = noteService.update(ACCOUNT, 5L,
-                    new CompanyNoteRequest(null, null, false, null));
+                    new CompanyNoteRequest(null, null, false, null, null, null));
 
             assertFalse(result.bookmarked());
             assertNull(result.myStars());

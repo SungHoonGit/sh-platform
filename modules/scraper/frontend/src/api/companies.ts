@@ -22,6 +22,11 @@ async function companyNoteReq<T>(path: string, options?: RequestInit): Promise<T
   return (json.data ?? json) as T;
 }
 
+export interface NoteCategory {
+  id: number;
+  name: string;
+}
+
 export interface CompanyNoteItem {
   id: number | null;
   companyNameDisplay: string;
@@ -42,6 +47,7 @@ export interface CompanyNoteDetail extends Omit<CompanyNoteItem, "id" | "hasNote
   id: number;
   companyNameNormalized: string;
   noteMd: string | null;
+  categories: NoteCategory[];
 }
 
 export interface CompanyNotePage {
@@ -59,6 +65,8 @@ export interface CompanyNoteInput {
   myStars?: number | null;
   isBookmarked?: boolean | null;
   noteMd?: string | null;
+  reasonIds?: number[] | null;
+  categoryNames?: string[] | null;
 }
 
 export type CompanySort = "updated" | "display" | "stars";

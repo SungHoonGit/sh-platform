@@ -2,6 +2,8 @@ package com.scraper.platform.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.util.List;
+
 @Schema(description = "회사 메모 생성/수정 요청")
 public record CompanyNoteRequest(
         @Schema(description = "회사명 (원문, 정규화해 멱등 저장)", example = "삼성전자")
@@ -14,6 +16,12 @@ public record CompanyNoteRequest(
         Boolean isBookmarked,
 
         @Schema(description = "분석 마크다운 원문", example = "## 총평\n- 복지 좋음")
-        String noteMd
+        String noteMd,
+
+        @Schema(description = "태그 카테고리 id 목록 (null이면 유지, 빈 목록이면 전체 해제)", example = "[1, 2]")
+        List<Long> reasonIds,
+
+        @Schema(description = "신규 입력 태그명 목록 (마스터 자동 승격)", example = "[\"관심기업\"]")
+        List<String> categoryNames
 ) {
 }

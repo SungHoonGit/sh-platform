@@ -4,6 +4,7 @@ import com.scraper.platform.api.dto.CompanyNoteDetailResponse;
 import com.scraper.platform.api.dto.CompanyNoteRequest;
 import com.scraper.platform.api.dto.CompanyNoteResponse;
 import com.scraper.platform.api.dto.CompanyPostingItem;
+import com.scraper.platform.api.dto.NoteCategoryResponse;
 import com.scraper.platform.model.CompanyBlacklist;
 import com.scraper.platform.model.CompanyNote;
 import com.scraper.platform.model.CompanyRating;
@@ -45,6 +46,7 @@ public class CompanyNoteService {
     private final CompanyBlacklistRepository blacklistRepository;
     private final CompanyRatingRepository ratingRepository;
     private final JobPostingRepository jobPostingRepository;
+    private final BlockReasonService blockReasonService;
 
     /**
      * (질의형) 내 회사 목록을 탭별로 조회한다.
@@ -256,6 +258,11 @@ public class CompanyNoteService {
         if (request.noteMd() != null) {
             note.setNoteMd(request.noteMd().isBlank() ? null : request.noteMd());
         }
+        // 태그는 null이면 유지, 비어 있으면 전체 해제 (차단 카테고리와 동일 규칙)
+        if (request.reasonIds() != null || request.categoryNames() != null) {
+            note.setNoteReasons(blockReasonService.resolveCategories(
+                    request.reasonIds(), request.categoryNames()));
+        }
     }
 
     /**
@@ -441,12 +448,17 @@ public class CompanyNoteService {
                 rating != null ? rating.getJobkoreaScore() : null,
                 rating != null ? rating.getSaraminScore() : null,
                 updatedAt,
-                hiddenCount);
+                hiddenCount,
+                // 목록은 N+1 회피를 위해 태그 미포함 (상세 조회에서 제공)
+                List.of());
     }
 
     private CompanyNoteDetailResponse toDetail(CompanyNote note, Map<String, Boolean> blocked,
                                               Map<String, CompanyRating> ratings) {
         CompanyRating rating = ratings.get(note.getCompanyNameNormalized());
+        List<NoteCategoryResponse> categories = note.getNoteReasons().stream()
+                .map(r -> new NoteCategoryResponse(r.getId(), r.getName()))
+                .toList();
         return new CompanyNoteDetailResponse(
                 note.getId(),
                 note.getCompanyNameDisplay(),
@@ -455,6 +467,7 @@ public class CompanyNoteService {
                 Boolean.TRUE.equals(note.getIsBookmarked()),
                 blocked.getOrDefault(note.getCompanyNameNormalized(), false),
                 note.getNoteMd(),
+                categories,
                 rating != null ? rating.getAverageScore() : null,
                 rating != null ? rating.getJobplanetScore() : null,
                 rating != null ? rating.getJobkoreaScore() : null,

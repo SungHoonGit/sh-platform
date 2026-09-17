@@ -3,7 +3,6 @@ package com.scraper.platform.service;
 import com.scraper.platform.model.BlockReason;
 import com.scraper.platform.model.CompanyBlacklist;
 import com.scraper.platform.model.CompanyNote;
-import com.scraper.platform.repository.BlockReasonRepository;
 import com.scraper.platform.repository.CompanyBlacklistRepository;
 import com.scraper.platform.repository.CompanyNoteRepository;
 import com.shplatform.common.exception.BusinessException;
@@ -31,9 +30,6 @@ class CompanyBlacklistServiceTest {
     private CompanyBlacklistRepository repository;
 
     @Mock
-    private BlockReasonRepository blockReasonRepository;
-
-    @Mock
     private BlockReasonService blockReasonService;
 
     @Mock
@@ -53,7 +49,8 @@ class CompanyBlacklistServiceTest {
             var start = BlockReason.of("스타트업 X", "company_type", 1, true);
             var reason = BlockReason.of("연봉·복지 협상 불가", "reason", 10, true);
             given(repository.findByAccountIdOrderByCreatedAtDesc(1L)).willReturn(List.of());
-            given(blockReasonRepository.findAllById(List.of(1L, 2L))).willReturn(List.of(start, reason));
+            given(blockReasonService.resolveCategories(List.of(1L, 2L), null))
+                    .willReturn(List.of(start, reason));
             given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
@@ -78,7 +75,7 @@ class CompanyBlacklistServiceTest {
                     .build();
             var category = BlockReason.of("대기업", "company_type", 3, true);
             given(repository.findByAccountIdOrderByCreatedAtDesc(1L)).willReturn(List.of(existing));
-            given(blockReasonRepository.findAllById(List.of(3L))).willReturn(List.of(category));
+            given(blockReasonService.resolveCategories(List.of(3L), null)).willReturn(List.of(category));
             given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
@@ -96,6 +93,7 @@ class CompanyBlacklistServiceTest {
         void add_shouldKeepEmptyCategories() {
             // given
             given(repository.findByAccountIdOrderByCreatedAtDesc(1L)).willReturn(List.of());
+            given(blockReasonService.resolveCategories(null, null)).willReturn(List.of());
             given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
@@ -112,8 +110,8 @@ class CompanyBlacklistServiceTest {
             // given
             var promoted = BlockReason.of("스타트업", "user", 20, true);
             given(repository.findByAccountIdOrderByCreatedAtDesc(1L)).willReturn(List.of());
-            given(blockReasonService.ensureCategory("스타트업")).willReturn(promoted);
-            given(blockReasonRepository.findAllById(List.<Long>of())).willReturn(List.of());
+            given(blockReasonService.resolveCategories(List.of(), List.of("스타트업")))
+                    .willReturn(List.of(promoted));
             given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
@@ -122,7 +120,6 @@ class CompanyBlacklistServiceTest {
             // then
             assertEquals(1, result.getBlockReasons().size());
             assertEquals("스타트업", result.getBlockReasons().get(0).getName());
-            verify(blockReasonService).ensureCategory("스타트업");
         }
     }
 
@@ -141,7 +138,7 @@ class CompanyBlacklistServiceTest {
                     .build();
             var category = BlockReason.of("외국계", "company_type", 4, true);
             given(repository.findById(9L)).willReturn(java.util.Optional.of(existing));
-            given(blockReasonRepository.findAllById(List.of(4L))).willReturn(List.of(category));
+            given(blockReasonService.resolveCategories(List.of(4L), null)).willReturn(List.of(category));
             given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
@@ -186,11 +183,11 @@ class CompanyBlacklistServiceTest {
                     .build();
             given(repository.findById(9L)).willReturn(java.util.Optional.of(existing));
             given(repository.findByAccountIdOrderByCreatedAtDesc(1L)).willReturn(List.of(existing));
+            given(blockReasonService.resolveCategories(List.of(), null)).willReturn(List.of());
             given(noteRepository.findByAccountIdAndCompanyNameNormalized(1L, "신회사"))
                     .willReturn(java.util.Optional.empty());
             given(noteRepository.findByAccountIdAndCompanyNameNormalized(1L, "구회사"))
                     .willReturn(java.util.Optional.of(note));
-            given(blockReasonRepository.findAllById(List.of())).willReturn(List.of());
             given(repository.save(any(CompanyBlacklist.class))).willAnswer(inv -> inv.getArgument(0));
             given(noteRepository.save(any(CompanyNote.class))).willAnswer(inv -> inv.getArgument(0));
 
@@ -218,6 +215,7 @@ class CompanyBlacklistServiceTest {
                     .build();
             given(repository.findById(9L)).willReturn(java.util.Optional.of(existing));
             given(repository.findByAccountIdOrderByCreatedAtDesc(1L)).willReturn(List.of(existing, other));
+            given(blockReasonService.resolveCategories(null, null)).willReturn(List.of());
 
             // when / then
             var ex = assertThrows(BusinessException.class, () ->

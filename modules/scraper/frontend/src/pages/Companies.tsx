@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Bookmark, BookmarkCheck, Ban, FileText, Plus, X } from "lucide-react";
+import { Building2, Bookmark, BookmarkCheck, Ban, FileText, Plus, X, Trash2 } from "lucide-react";
 import { BlockConfirmDialog } from "@sh-platform/ui";
 import { companyNoteApi, type CompanyTab, type CompanySort, type SortDir } from "../api/companies";
 import { fetchBlacklist, addBlacklist, removeBlacklist } from "../api/scraper";
@@ -80,6 +80,16 @@ export default function Companies() {
       invalidateLists();
     } catch (e) {
       alert(e instanceof Error ? e.message : "차단 실패.");
+    }
+  };
+
+  const removeNote = async (id: number, display: string) => {
+    if (!confirm(`'${display}' 메모를 삭제할까요? (차단·평점은 유지됩니다)`)) return;
+    try {
+      await companyNoteApi.remove(id);
+      invalidateLists();
+    } catch {
+      alert("삭제 실패.");
     }
   };
 
@@ -192,7 +202,7 @@ export default function Companies() {
 
       {items.length > 0 && (
         <div className="flex-1 overflow-auto rounded border border-slate-200">
-          <table className="w-full min-w-[880px] text-sm">
+          <table className="w-full min-w-[960px] text-sm">
             <thead className="sticky top-0 bg-slate-50">
               <tr className="text-left text-xs text-slate-500">
                 <th className="w-[36px] px-1 py-1 text-center">차단</th>
@@ -209,11 +219,13 @@ export default function Companies() {
                   </button>
                 </th>
                 <th className="px-2 py-1">메모</th>
+                <th className="px-2 py-1">비고</th>
                 <th className="px-2 py-1">
                   <button className="hover:text-slate-800" onClick={() => toggleSort("updated")}>
                     업데이트{sortMark("updated")}
                   </button>
                 </th>
+                <th className="w-[36px] px-1 py-1 text-center">삭제</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -260,9 +272,6 @@ export default function Companies() {
                   <td className="px-2 py-1 font-medium text-slate-800">{c.companyNameDisplay}</td>
                   <td className="px-2 py-1 font-mono text-xs text-slate-500" title="차단 매칭 키워드(정규화명)">
                     {c.companyNameNormalized}
-                    {c.blocked && c.hiddenCount != null && (
-                      <span className="ml-1 text-[11px] text-red-500">{c.hiddenCount}건 숨김</span>
-                    )}
                   </td>
                   <td className="px-2 py-1">
                     <Stars value={c.myStars} />
@@ -271,7 +280,23 @@ export default function Companies() {
                     {c.hasNote ? <FileText size={15} className="text-blue-500" /> : <span className="text-slate-300">-</span>}
                   </td>
                   <td className="px-2 py-1 text-xs text-slate-500">
+                    {c.blocked && c.hiddenCount != null ? `${c.hiddenCount}건 숨김` : <span className="text-slate-300">-</span>}
+                  </td>
+                  <td className="px-2 py-1 text-xs text-slate-500">
                     {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : "-"}
+                  </td>
+                  <td className="px-1 py-1 text-center" onClick={(e) => e.stopPropagation()}>
+                    {c.id != null ? (
+                      <button
+                        onClick={() => void removeNote(c.id as number, c.companyNameDisplay)}
+                        title="메모 삭제 (차단·평점은 유지)"
+                        className="text-slate-300 transition-colors hover:text-red-500"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    ) : (
+                      <span className="text-slate-200">-</span>
+                    )}
                   </td>
                 </tr>
               ))}

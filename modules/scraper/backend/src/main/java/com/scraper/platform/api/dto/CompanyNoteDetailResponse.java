@@ -3,6 +3,7 @@ package com.scraper.platform.api.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Schema(description = "회사 메모 상세 (note_md 포함)")
 public record CompanyNoteDetailResponse(
@@ -26,6 +27,9 @@ public record CompanyNoteDetailResponse(
 
         @Schema(description = "분석 마크다운 원문")
         String noteMd,
+
+        @Schema(description = "메모 태그 목록")
+        List<NoteCategoryResponse> categories,
 
         @Schema(description = "크롤링 평균 평점 (없으면 null)")
         Double averageScore,

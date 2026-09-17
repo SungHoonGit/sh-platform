@@ -3,6 +3,7 @@ package com.scraper.platform.api.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Schema(description = "회사 메모 목록 항목 (note_md 제외, 차단·평점 조인)")
 public record CompanyNoteResponse(
@@ -41,6 +42,9 @@ public record CompanyNoteResponse(
         LocalDateTime updatedAt,
 
         @Schema(description = "이 차단 키워드로 숨겨지는 저장 공고 수 (차단 행만, 그 외 null)")
-        Long hiddenCount
+        Long hiddenCount,
+
+        @Schema(description = "메모 태그 목록 (메모 없으면 빈 목록)")
+        List<NoteCategoryResponse> categories
 ) {
 }

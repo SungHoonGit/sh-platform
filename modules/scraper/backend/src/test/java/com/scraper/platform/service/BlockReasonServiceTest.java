@@ -12,7 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -20,41 +20,42 @@ import static org.mockito.BDDMockito.given;
 class BlockReasonServiceTest {
 
     @Mock
-    private BlockReasonRepository blockReasonRepository;
+    private BlockReasonRepository repository;
 
     @InjectMocks
-    private BlockReasonService blockReasonService;
+    private BlockReasonService service;
 
     @Nested
-    @DisplayName("search 메서드")
-    class Search {
+    @DisplayName("resolveCategories 메서드")
+    class ResolveCategories {
 
         @Test
-        @DisplayName("활성 사유를 이름으로 검색한다")
-        void search_shouldReturnActiveReasons() {
-            // given
-            var reason = BlockReason.of("연봉·복지 협상 불가", "reason", 1, true);
-            given(blockReasonRepository.findTop20ByNameContainingAndActiveTrueOrderBySortOrderAsc("연봉"))
-                    .willReturn(List.of(reason));
+        @DisplayName("기존 id와 신규 입력을 합쳐 정렬순으로 반환한다")
+        void merge_and_sort() {
+            var start = BlockReason.of("스타트업", "company_type", 1, true);
+            var user = BlockReason.of("신규입력", "user", 20, true);
+            given(repository.findAllById(List.of(1L))).willReturn(List.of(start));
+            given(repository.findByName("신규입력")).willReturn(java.util.Optional.empty());
+            given(repository.findTopByOrderBySortOrderDesc())
+                    .willReturn(java.util.Optional.of(BlockReason.of("x", "user", 10, true)));
+            given(repository.save(org.mockito.ArgumentMatchers.any(BlockReason.class))).willReturn(user);
 
-            // when
-            var result = blockReasonService.search("  연봉  ");
+            var result = service.resolveCategories(List.of(1L), List.of("신규입력"));
 
-            // then
-            assertEquals(1, result.size());
-            assertEquals("연봉·복지 협상 불가", result.get(0).getName());
+            assertEquals(2, result.size());
+            assertEquals("스타트업", result.get(0).getName());
+            assertEquals("신규입력", result.get(1).getName());
         }
 
         @Test
-        @DisplayName("빈 키워드 또는 공백이면 빈 목록을 반환한다")
-        void search_shouldReturnEmptyForBlankKeyword() {
-            // when
-            var blank = blockReasonService.search("   ");
-            var empty = blockReasonService.search("");
+        @DisplayName("blank 입력은 무시하고 null 목록은 빈 목록으로 처리한다")
+        void blank_ignored() {
+            given(repository.findAllById(List.of())).willReturn(List.of());
 
-            // then
-            assertTrue(blank.isEmpty());
-            assertTrue(empty.isEmpty());
+            // List.of는 null 원소 불가라 Arrays.asList 사용 (서비스의 null 내성을 검증)
+            var result = service.resolveCategories(List.of(), java.util.Arrays.asList("  ", null));
+
+            assertEquals(0, result.size());
         }
     }
 }

@@ -441,6 +441,8 @@ async function blacklistReq(path: string, options?: RequestInit) {
 
 export const fetchBlacklist = () => blacklistReq("") as Promise<BlacklistItem[]>;
 export const fetchBlockCategories = () => blacklistReq("/reasons") as Promise<BlockCategory[]>;
+export const searchBlockCategories = (q: string) =>
+  blacklistReq(`/reasons/search?q=${encodeURIComponent(q)}`) as Promise<BlockCategory[]>;
 export const addBlacklist = (companyName: string, reasonIds?: number[], reason?: string, categoryNames?: string[]) =>
   blacklistReq("", {
     method: "POST",
