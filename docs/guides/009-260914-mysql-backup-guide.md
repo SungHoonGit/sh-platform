@@ -2,7 +2,7 @@
 
 ## 개요
 - **목적**: MariaDB 전체 DB(3종)를 매일 덤프하여 장애·실수 삭제 시 시점 복구(PITR) 기반을 마련한다.
-- **배경**: binlog는 2026-09-13 19:28부터만 기록되어 그 이전 시점은 복구 원천이 없다. mysqldump 주기 백업으로 "스냅샷 + binlog 로그" 복구 체계를 구성.
+- **배경**: binlog는 2026-09-17 10:10경 첫 활성화 — 그 이전 시점은 복구 원천이 없다(9/13 기록설은 `[coordinate OK]` false positive로 인한 오인, 9/17에 기존 binlog 파일 없음으로 확정). mysqldump 주기 백업으로 "스냅샷 + binlog 로그" 복구 체계를 구성.
 - **대상 DB**: `sh_pass`(auth), `scraper_platform`, `resume_platform`
   (`portfolio_platform`는 2026-08-21 인프라 정리에서 DROP됨 — 9/14에 Grants 잔재를 보고 착각해 대상에 넣었다가 9/17 제외)
 - **작성일**: 2026-09-14 (대상 수정: 2026-09-17)
