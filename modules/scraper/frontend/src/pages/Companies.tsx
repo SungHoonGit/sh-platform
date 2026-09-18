@@ -290,7 +290,13 @@ export default function Companies() {
                     {c.hasNote ? <FileText size={15} className="text-blue-500" /> : <span className="text-slate-300">-</span>}
                   </td>
                   <td className="px-2 py-1 text-xs text-slate-500">
-                    {c.blocked && c.hiddenCount != null ? `${c.hiddenCount}건 숨김` : <span className="text-slate-300">-</span>}
+                    {c.blocked && c.hiddenCount != null ? (
+                      <span className="font-semibold text-red-600">{c.hiddenCount}건 숨김</span>
+                    ) : c.hiddenCount != null && c.hiddenCount > 0 ? (
+                      <span>{c.hiddenCount}건 수집</span>
+                    ) : (
+                      <span className="text-slate-300">-</span>
+                    )}
                   </td>
                   <td className="px-2 py-1 text-xs text-slate-500">
                     {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : "-"}

@@ -353,6 +353,8 @@ class CompanyNoteServiceTest {
             given(noteRepository.findByAccountIdAndCompanyNameNormalizedIn(ACCOUNT, List.of("악덕기업")))
                     .willReturn(List.of());
             given(ratingRepository.findByCompanyNameIn(any())).willReturn(List.of());
+            given(jobPostingRepository.countByNormalizedCompanyIn(List.of("카카오")))
+                    .willReturn(java.util.Collections.singletonList(new Object[]{"카카오", 12L}));
             given(jobPostingRepository.countByNormalizedCompanyIn(List.of("악덕기업")))
                     .willReturn(java.util.Collections.singletonList(new Object[]{"악덕기업", 7L}));
 
@@ -360,6 +362,7 @@ class CompanyNoteServiceTest {
 
             assertEquals(2, page.getTotalElements());
             assertEquals("카카오", page.getContent().get(0).companyNameDisplay());
+            assertEquals(12L, page.getContent().get(0).hiddenCount());
             assertTrue(page.getContent().get(1).blocked());
             assertEquals(7L, page.getContent().get(1).hiddenCount());
         }

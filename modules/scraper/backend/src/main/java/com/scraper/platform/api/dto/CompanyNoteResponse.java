@@ -41,7 +41,7 @@ public record CompanyNoteResponse(
         @Schema(description = "메모 수정 일시 (메모 없으면 null)")
         LocalDateTime updatedAt,
 
-        @Schema(description = "이 차단 키워드로 숨겨지는 저장 공고 수 (차단 행만, 그 외 null)")
+        @Schema(description = "관련 저장 공고 수 (차단행은 숨김 수로 표시)")
         Long hiddenCount,
 
         @Schema(description = "메모 태그 목록 (메모 없으면 빈 목록)")

@@ -327,9 +327,13 @@ public class CompanyNoteService {
                                               boolean includeBlockedOnly) {
         Map<String, CompanyRating> ratings = ratingsByNormalized(displayNames(notes.getContent()));
         Map<String, Boolean> blocked = blockedNames(accountId);
+        // 메모 회사들의 관련 저장 공고 수도 한 번의 GROUP BY로 함께 집계한다 (비고 열 표시용).
+        Map<String, Long> postingCounts = hiddenCounts(notes.getContent().stream()
+                .map(CompanyNote::getCompanyNameNormalized).toList());
         List<CompanyNoteResponse> items = notes.getContent().stream()
                 .map(n -> toResponse(n, blocked.getOrDefault(n.getCompanyNameNormalized(), false),
-                        ratings.get(n.getCompanyNameNormalized()), null))
+                        ratings.get(n.getCompanyNameNormalized()),
+                        postingCounts.get(n.getCompanyNameNormalized())))
                 .collect(java.util.ArrayList::new, java.util.ArrayList::add, java.util.ArrayList::addAll);
         long total = notes.getTotalElements();
         // 전체 탭: 메모가 없는 차단 회사도 차단 뱃지와 함께 추가한다 (차단이 바로 보이도록).

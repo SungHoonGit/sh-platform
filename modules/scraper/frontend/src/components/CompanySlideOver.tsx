@@ -303,6 +303,9 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
 
           {(detail || isCreate) && tab === "view" && (
             <>
+              <p className="mb-2 font-mono text-xs text-slate-500" title="차단 매칭 키워드(정규화명)">
+                키워드: {detail?.companyNameNormalized ?? blockedEntry?.companyNameNormalized ?? companyNormalized ?? "-"}
+              </p>
               {detail?.averageScore != null && (
                 <section className="mb-3 rounded-lg bg-gray-50 p-3 text-sm">
                   <div className="mb-1 flex items-center gap-1">
