@@ -4,6 +4,7 @@ import com.scraper.platform.api.dto.CompanyNoteDetailResponse;
 import com.scraper.platform.api.dto.CompanyNoteRequest;
 import com.scraper.platform.api.dto.CompanyNoteResponse;
 import com.scraper.platform.api.dto.CompanyPostingItem;
+import com.scraper.platform.api.dto.CompanySuggestItem;
 import com.scraper.platform.api.dto.NoteCategoryResponse;
 import com.scraper.platform.model.CompanyBlacklist;
 import com.scraper.platform.model.CompanyNote;
@@ -224,6 +225,44 @@ public class CompanyNoteService {
                 .stream()
                 .map(j -> new CompanyPostingItem(
                         j.getPosition(), j.getSiteName(), j.getCompany(), j.getCrawledAt(), j.getUrl()))
+                .toList();
+    }
+
+    /**
+     * (질의형) 수집된 회사명 자동완성. 회사 추가 모달에서 뷰어 수집 회사를 검색한다.
+     * DISTINCT + LIMIT 8 + 300ms 디바운스 호출 — 수천 건 규모에서 부담 없다.
+     * 내 메모·차단 여부를 함께 표시해 중복 생성을 방지한다.
+     *
+     * @param accountId 소유 계정
+     * @param q 부분 검색어 (blank이면 빈 목록)
+     * @return 회사명 후보 (최대 8건)
+     */
+    public List<CompanySuggestItem> suggestCompanies(Long accountId, String q) {
+        if (q == null || q.isBlank()) {
+            return List.of();
+        }
+        List<String> names = jobPostingRepository.findDistinctCompanyByCompanyContainingIgnoreCase(
+                q.trim(), PageRequest.of(0, 8));
+        if (names.isEmpty()) {
+            return List.of();
+        }
+        Map<String, CompanyNote> noteMap = new HashMap<>();
+        for (CompanyNote n : noteRepository.findByAccountIdAndCompanyNameNormalizedIn(
+                accountId, names.stream().map(CompanyBlacklistService::normalize).toList())) {
+            noteMap.put(n.getCompanyNameNormalized(), n);
+        }
+        Map<String, Boolean> blocked = blockedNames(accountId);
+        return names.stream()
+                .map(name -> {
+                    String normalized = CompanyBlacklistService.normalize(name);
+                    CompanyNote n = noteMap.get(normalized);
+                    return new CompanySuggestItem(
+                            name,
+                            normalized,
+                            n != null,
+                            n != null ? n.getId() : null,
+                            blocked.getOrDefault(normalized, false));
+                })
                 .toList();
     }
 

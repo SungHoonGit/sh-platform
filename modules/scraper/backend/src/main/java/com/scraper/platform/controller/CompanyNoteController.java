@@ -4,6 +4,7 @@ import com.scraper.platform.api.dto.CompanyNoteDetailResponse;
 import com.scraper.platform.api.dto.CompanyNoteRequest;
 import com.scraper.platform.api.dto.CompanyNoteResponse;
 import com.scraper.platform.api.dto.CompanyPostingItem;
+import com.scraper.platform.api.dto.CompanySuggestItem;
 import com.scraper.platform.service.CompanyNoteService;
 import com.shplatform.common.dto.ApiResponse;
 import com.shplatform.common.security.SecurityUtils;
@@ -97,5 +98,13 @@ public class CompanyNoteController {
             @RequestParam(value = "size", defaultValue = "10") int size) {
         return ResponseEntity.ok(ApiResponse.success(
                 noteService.recentPostings(SecurityUtils.currentAccountId(), id, size)));
+    }
+
+    @GetMapping("/company-suggest")
+    @Operation(summary = "수집 회사 자동완성", description = "뷰어에 수집된 회사명을 부분 검색한다 (회사 추가 모달용, 최대 8건)")
+    public ResponseEntity<ApiResponse<List<CompanySuggestItem>>> suggest(
+            @RequestParam(value = "q", required = false) String q) {
+        return ResponseEntity.ok(ApiResponse.success(
+                noteService.suggestCompanies(SecurityUtils.currentAccountId(), q)));
     }
 }

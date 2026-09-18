@@ -442,4 +442,45 @@ class CompanyNoteServiceTest {
                     noteService.recentPostings(ACCOUNT, 1L, 10)).getErrorCode());
         }
     }
+
+    @Nested
+    @DisplayName("suggestCompanies 메서드")
+    class Suggest {
+
+        @Test
+        @DisplayName("수집 회사명을 내 메모·차단 표시와 함께 반환한다")
+        void 수집회사_제안() {
+            CompanyNote n = note(1L, "삼성전자", "삼성전자(주)", 4, true, null);
+            given(jobPostingRepository.findDistinctCompanyByCompanyContainingIgnoreCase(
+                    eq("삼성"), any(Pageable.class)))
+                    .willReturn(List.of("삼성전자(주)", "삼성SDS"));
+            given(noteRepository.findByAccountIdAndCompanyNameNormalizedIn(
+                    eq(ACCOUNT), any()))
+                    .willReturn(List.of(n));
+            given(blacklistRepository.findByAccountIdOrderByCreatedAtDesc(ACCOUNT))
+                    .willReturn(List.of());
+
+            var result = noteService.suggestCompanies(ACCOUNT, "삼성");
+
+            assertEquals(2, result.size());
+            assertEquals("삼성전자(주)", result.get(0).companyName());
+            assertTrue(result.get(0).hasNote());
+            assertEquals(1L, result.get(0).noteId());
+            assertFalse(result.get(0).blocked());
+            assertEquals("삼성SDS", result.get(1).companyName());
+            assertFalse(result.get(1).hasNote());
+            assertNull(result.get(1).noteId());
+        }
+
+        @Test
+        @DisplayName("빈 검색어는 빈 목록을 반환한다 (DB 조회 없음)")
+        void 빈검색어() {
+            var result = noteService.suggestCompanies(ACCOUNT, "  ");
+
+            assertTrue(result.isEmpty());
+            verify(jobPostingRepository, org.mockito.Mockito.never())
+                    .findDistinctCompanyByCompanyContainingIgnoreCase(
+                            org.mockito.ArgumentMatchers.anyString(), any(Pageable.class));
+        }
+    }
 }

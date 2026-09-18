@@ -131,7 +131,7 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
      * 수천 건 규모에서 수십ms — 슬라이드 열 때 1회만 실행된다.
      *
      * @param normalized 정규화 회사명
-     * @param pageable 0페이지 + size上限 (crawled_at 내림차순 권장)
+     * @param pageable 0페이지 + size 상한 (crawled_at 내림차순 권장)
      * @return 최근 공고 (최대 size건)
      */
     @Query(value = """
@@ -140,4 +140,16 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
             ORDER BY crawled_at DESC
             """, nativeQuery = true)
     List<JobPosting> findRecentByNormalizedCompany(@Param("normalized") String normalized, Pageable pageable);
+
+    /**
+     * 수집된 회사명 자동완성. 회사 추가 모달에서 뷰어 수집 회사 검색용.
+     * DISTINCT + LIMIT 8 — 수천 건 규모에서 수십ms (디바운스 호출).
+     * 규모 증가 시 company 컬럼 인덱스 추가 고려.
+     *
+     * @param q 부분 검색어
+     * @param pageable 0페이지 + size 상한
+     * @return 중복 제거된 회사명 (원문)
+     */
+    @Query("SELECT DISTINCT j.company FROM JobPosting j WHERE LOWER(j.company) LIKE LOWER(CONCAT('%', :q, '%'))")
+    List<String> findDistinctCompanyByCompanyContainingIgnoreCase(@Param("q") String q, Pageable pageable);
 }

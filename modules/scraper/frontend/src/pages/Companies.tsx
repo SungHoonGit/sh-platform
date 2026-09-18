@@ -105,6 +105,16 @@ export default function Companies() {
   });
   const suggestions = suggestQuery.data?.content ?? [];
 
+  const crawlSuggestQuery = useQuery({
+    queryKey: ["company-suggest", debouncedAdd],
+    queryFn: () => companyNoteApi.suggest(debouncedAdd),
+    enabled: addOpen && debouncedAdd.length > 0,
+  });
+  // 내 기록에 이미 있는 회사는 수집 섹션에서 제외 (중복 방지)
+  const crawlSuggestions = (crawlSuggestQuery.data ?? []).filter(
+    (s) => !suggestions.some((m) => m.companyNameDisplay === s.companyName)
+  );
+
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedQ(q.trim());
@@ -349,26 +359,52 @@ export default function Companies() {
               onKeyDown={(e) => e.key === "Enter" && confirmAdd()}
             />
             {debouncedAdd.length > 0 && suggestions.length > 0 && (
-              <ul className="mb-2 max-h-44 overflow-auto rounded border border-slate-200">
-                {suggestions.map((s) => (
-                  <li key={`${s.id ?? "b"}-${s.companyNameDisplay}`}>
-                    <button
-                      className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-sm hover:bg-blue-50"
-                      onClick={() => {
-                        setAddOpen(false);
-                        setAddName("");
-                        openRow(s.id, s.companyNameDisplay, s.companyNameNormalized);
-                      }}
-                    >
-                      <span className="flex-1 truncate font-medium text-slate-800">{s.companyNameDisplay}</span>
-                      {s.myStars != null && <span className="text-xs text-amber-500">★{s.myStars}</span>}
-                      {s.bookmarked && <Bookmark size={13} className="fill-amber-400 text-amber-400" />}
-                      {s.blocked && <Ban size={13} className="text-red-500" />}
-                      {s.hasNote && <FileText size={13} className="text-blue-500" />}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <p className="mb-1 text-[11px] font-semibold text-slate-500">내 기록</p>
+                <ul className="mb-2 max-h-36 overflow-auto rounded border border-slate-200">
+                  {suggestions.map((s) => (
+                    <li key={`${s.id ?? "b"}-${s.companyNameDisplay}`}>
+                      <button
+                        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-sm hover:bg-blue-50"
+                        onClick={() => {
+                          setAddOpen(false);
+                          setAddName("");
+                          openRow(s.id, s.companyNameDisplay, s.companyNameNormalized);
+                        }}
+                      >
+                        <span className="flex-1 truncate font-medium text-slate-800">{s.companyNameDisplay}</span>
+                        {s.myStars != null && <span className="text-xs text-amber-500">★{s.myStars}</span>}
+                        {s.bookmarked && <Bookmark size={13} className="fill-amber-400 text-amber-400" />}
+                        {s.blocked && <Ban size={13} className="text-red-500" />}
+                        {s.hasNote && <FileText size={13} className="text-blue-500" />}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {debouncedAdd.length > 0 && crawlSuggestions.length > 0 && (
+              <>
+                <p className="mb-1 text-[11px] font-semibold text-slate-500">수집된 회사 (뷰어 데이터)</p>
+                <ul className="mb-2 max-h-36 overflow-auto rounded border border-slate-200">
+                  {crawlSuggestions.map((s) => (
+                    <li key={`crawl-${s.normalized}`}>
+                      <button
+                        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-sm hover:bg-blue-50"
+                        onClick={() => {
+                          setAddOpen(false);
+                          setAddName("");
+                          openRow(s.noteId, s.companyName, s.normalized);
+                        }}
+                      >
+                        <span className="flex-1 truncate font-medium text-slate-800">{s.companyName}</span>
+                        {s.hasNote && <FileText size={13} className="text-blue-500" />}
+                        {s.blocked && <Ban size={13} className="text-red-500" />}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
             <div className="flex justify-end gap-1.5">
               <button

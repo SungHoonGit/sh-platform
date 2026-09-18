@@ -80,6 +80,14 @@ export interface CompanyPosting {
   url: string;
 }
 
+export interface CompanySuggest {
+  companyName: string;
+  normalized: string;
+  hasNote: boolean;
+  noteId: number | null;
+  blocked: boolean;
+}
+
 export const companyNoteApi = {
   list: (tab: CompanyTab, q?: string, page = 0, size = 50, sort: CompanySort = "updated", dir: SortDir = "desc") => {
     const params = new URLSearchParams({ tab, page: String(page), size: String(size), sort, dir });
@@ -95,5 +103,7 @@ export const companyNoteApi = {
     companyNoteReq<void>(`/${id}`, { method: "DELETE" }),
   postings: (id: number, size = 10) =>
     companyNoteReq<CompanyPosting[]>(`/${id}/postings?size=${size}`),
+  suggest: (q: string) =>
+    companyNoteReq<CompanySuggest[]>(`/company-suggest?q=${encodeURIComponent(q)}`),
   exportUrl: (id: number) => `${BASE}/${id}/export`,
 };
