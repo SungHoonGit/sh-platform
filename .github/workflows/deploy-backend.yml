@@ -193,8 +193,16 @@ jobs:
             fi
             echo "===== BACKUP DIR ====="
             ls -laR /home/ubuntu/backups/mysql 2>/dev/null | head -80 || echo "(백업 디렉터리 없음)"
+            echo "===== FILE BACKUP DIR ====="
+            ls -laR /home/ubuntu/backups/files 2>/dev/null | head -60 || echo "(파일 백업 디렉터리 없음)"
             echo "===== CRON INSTALLED ====="
             cat /etc/cron.d/sh-platform-mysql-backup 2>/dev/null || echo "(cron.d 미설치)"
+            echo "===== CRON DAEMON ====="
+            sudo systemctl is-active cron 2>/dev/null || echo "(cron 데몬 없음/비활성)"
+            sudo journalctl -u cron --no-pager -n 60 2>/dev/null || echo "(cron 로그 없음)"
+            echo "===== BACKUP LOG TAILS ====="
+            for f in $(ls -t /home/ubuntu/backups/mysql/backup-*.log 2>/dev/null | head -3); do echo "--- $f ---"; tail -n 12 "$f"; done || echo "(mysql 주기 백업 로그 없음)"
+            for f in $(ls -t /home/ubuntu/backups/files/backup-*.log 2>/dev/null | head -3); do echo "--- $f ---"; tail -n 12 "$f"; done || echo "(파일 주기 백업 로그 없음)"
             echo "===== END MYSQL DIAGNOSTICS ====="
 
             echo "Deploy complete!"
