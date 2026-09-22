@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { apiDelete, apiDownload, apiGet, apiPost, apiPut, apiUpload, fileDownloadPath } from "../api/client";
+import TagInput, { type TagItem } from "./TagInput";
+import DateRangePicker from "./DateRangePicker";
+import MarkdownText from "./MarkdownText";
 
 export interface FieldDef {
   key: string;
@@ -13,7 +16,9 @@ export interface FieldDef {
     | "check"
     | "school"
     | "major"
-    | "skill";
+    | "skill"
+    | "dateRange"
+    | "markdown";
   options?: string[];
   accept?: string;
   required?: boolean;
@@ -23,6 +28,10 @@ export interface FieldDef {
   disablesOnCheck?: string[];
   /** file 타입이 이미지(jpg/png)면 업로드 후 미리보기를 표시 */
   image?: boolean;
+  /** dateRange 타입: 종료일이 저장될 key (예: "endDate") */
+  endKey?: string;
+  /** text/textarea/markdown 등 문자열 필드의 최대 길이 (저장 전 검증) */
+  maxLength?: number;
 }
 
 type Item = Record<string, unknown>;
@@ -81,6 +90,7 @@ export default function CrudSection({
   dragHandle,
   importOptions = null,
   renderRowExtra,
+  renderRowDetail,
   rowToggle,
   documentId,
   onChanged,
@@ -110,6 +120,8 @@ export default function CrudSection({
   } | null;
   /** 각 행 아래 추가 UI를 그린다 (예: 경력의 기간별 상세 항목 편집기) */
   renderRowExtra?: (it: Item) => React.ReactNode;
+  /** 행 펼침(목록 미리보기) 상세 콘텐츠. 지정하면 행 클릭으로 토글된다 */
+  renderRowDetail?: (it: Item) => React.ReactNode;
   /** 항목별 보임/숨김 토글 (이력서 문서 설정). true면 이 이력서에서 표시됨. */
   rowToggle?: {
     visible: (it: Item) => boolean;
@@ -135,6 +147,8 @@ export default function CrudSection({
   const suggestField = useRef<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [importVal, setImportVal] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [skillTags, setSkillTags] = useState<Record<string, TagItem[]>>({});
 
   useEffect(() => {
     return () => {
@@ -183,9 +197,23 @@ export default function CrudSection({
       60,
     );
 
+  const initFormFromItem = (get: (key: string) => unknown): FormState => {
+    const next: FormState = {};
+    for (const f of fields) {
+      const v = get(f.key);
+      next[f.key] = v == null ? "" : String(v);
+      if (f.type === "dateRange" && f.endKey) {
+        const ev = get(f.endKey);
+        next[f.endKey] = ev == null ? "" : String(ev);
+      }
+    }
+    return next;
+  };
+
   const openNew = () => {
-    setForm(Object.fromEntries(fields.map((f) => [f.key, ""])));
+    setForm(initFormFromItem(() => ""));
     setFileNames({});
+    setSkillTags({});
     setEditing("new");
     setImportVal("");
     setError(null);
@@ -193,9 +221,22 @@ export default function CrudSection({
   };
 
   const openEdit = (it: Item) => {
-    setForm(
+    setForm(initFormFromItem((key) => it[key]));
+    setSkillTags(
       Object.fromEntries(
-        fields.map((f) => [f.key, it[f.key] == null ? "" : String(it[f.key])]),
+        fields
+          .filter((f) => f.type === "skill")
+          .map((f) => {
+            const raw = it[f.key];
+            const tags = raw == null || String(raw) === ""
+              ? []
+              : String(raw)
+                  .split(",")
+                  .map((p) => p.trim())
+                  .filter((p) => p !== "")
+                  .map((name) => ({ name }));
+            return [f.key, tags];
+          }),
       ),
     );
     setFileNames(
@@ -241,6 +282,27 @@ export default function CrudSection({
       setError(`${missing.label}은(는) 필수입니다.`);
       return;
     }
+    // maxLength 검증
+    for (const f of fields) {
+      if (f.maxLength && (form[f.key]?.length ?? 0) > f.maxLength) {
+        setError(`${f.label}은(는) ${f.maxLength}자 이하여야 합니다.`);
+        return;
+      }
+      if (f.type === "dateRange" && f.endKey && (form[f.endKey]?.length ?? 0) > 10) {
+        setError(`${f.label} 종료일 형식이 올바르지 않습니다.`);
+        return;
+      }
+    }
+    // dateRange: 시작일 ≤ 종료일 검증
+    for (const f of fields) {
+      if (f.type !== "dateRange" || !f.endKey) continue;
+      const s = form[f.key]?.trim() ?? "";
+      const e = form[f.endKey]?.trim() ?? "";
+      if (s && e && s > e) {
+        setError(`${f.label}의 종료일은 시작일보다 이전일 수 없습니다.`);
+        return;
+      }
+    }
     setBusy(true);
     setError(null);
     try {
@@ -250,6 +312,17 @@ export default function CrudSection({
           if (form[f.key] === "true") {
             f.disablesOnCheck?.forEach((k) => (payload[k] = null));
           }
+          continue;
+        }
+        if (f.type === "dateRange") {
+          const s = form[f.key]?.trim() === "" ? null : form[f.key];
+          payload[f.key] = s;
+          if (f.endKey) payload[f.endKey] = form[f.endKey]?.trim() === "" ? null : form[f.endKey];
+          continue;
+        }
+        if (f.type === "skill") {
+          const tags = skillTags[f.key] ?? [];
+          payload[f.key] = tags.length === 0 ? null : tags.map((t) => t.name).join(", ");
           continue;
         }
         if (!visible(f)) {
@@ -384,7 +457,11 @@ export default function CrudSection({
         {fields.filter(visible).map((f) => (
           <div
             key={f.key}
-            className={f.type === "textarea" || f.type === "file" || f.type === "school" || f.type === "major" || f.type === "skill" ? "md:col-span-2" : ""}
+            className={
+              f.type === "textarea" || f.type === "file" || f.type === "school" || f.type === "major" || f.type === "skill" || f.type === "dateRange" || f.type === "markdown"
+                ? "md:col-span-2"
+                : ""
+            }
           >
             {f.type !== "check" && (
               <label className="block text-xs font-medium text-slate-600 mb-1">
@@ -460,7 +537,62 @@ export default function CrudSection({
                   </div>
                 )}
               </div>
-            ) : f.type === "school" || f.type === "major" || f.type === "skill" ? (
+            ) : f.type === "dateRange" ? (
+              <DateRangePicker
+                start={form[f.key] ?? ""}
+                end={f.endKey ? form[f.endKey] ?? "" : ""}
+                onChange={(s, e) => {
+                  setForm((prev) => {
+                    const next = { ...prev, [f.key]: s };
+                    if (f.endKey) next[f.endKey] = e;
+                    return next;
+                  });
+                }}
+                disabled={!enabled(f)}
+              />
+            ) : f.type === "markdown" ? (
+              <div className="space-y-2">
+                <textarea
+                  value={form[f.key] ?? ""}
+                  onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                  placeholder={f.placeholder}
+                  rows={5}
+                  disabled={!enabled(f)}
+                  className={`${inputCls} ${!enabled(f) ? "bg-gray-100" : ""}`}
+                />
+                {form[f.key]?.trim() && (
+                  <div className="rounded border border-gray-200 bg-white p-3">
+                    <p className="mb-1 text-[11px] font-medium text-slate-400">미리보기</p>
+                    <MarkdownText>{form[f.key] ?? ""}</MarkdownText>
+                  </div>
+                )}
+              </div>
+            ) : f.type === "skill" ? (
+              <TagInput
+                tags={skillTags[f.key] ?? []}
+                onAdd={(tag) =>
+                  setSkillTags((prev) => ({
+                    ...prev,
+                    [f.key]: [...(prev[f.key] ?? []), tag],
+                  }))
+                }
+                onRemove={(tag) =>
+                  setSkillTags((prev) => ({
+                    ...prev,
+                    [f.key]: (prev[f.key] ?? []).filter((t) => t.name !== tag.name),
+                  }))
+                }
+                searchFn={async (q) => {
+                  try {
+                    const res = await apiGet<Sug[]>(`/reference/skills/search?q=${encodeURIComponent(q)}`);
+                    return Array.isArray(res) ? res : [];
+                  } catch {
+                    return [];
+                  }
+                }}
+                placeholder={f.placeholder ?? "기술명 입력 후 Enter"}
+              />
+            ) : f.type === "school" || f.type === "major" ? (
               <div className="relative">
                 <input
                   type="text"
@@ -480,11 +612,7 @@ export default function CrudSection({
                     suggestField.current = f.key;
                     fetchSuggestions(
                       v,
-                      f.type === "school"
-                        ? form.schoolType || undefined
-                        : f.type === "skill"
-                          ? "skill"
-                          : undefined,
+                      f.type === "school" ? form.schoolType || undefined : undefined,
                     );
                     setSchoolOpen(true);
                   }}
@@ -495,42 +623,7 @@ export default function CrudSection({
                   onBlur={() => setTimeout(() => setSchoolOpen(false), 150)}
                   className={inputCls}
                 />
-                {schoolOpen && suggestField.current === f.key && f.type === "skill" && (
-                  <ul className="absolute z-20 mt-1 w-full max-h-48 overflow-auto bg-white border border-gray-200 rounded shadow-lg">
-                    {suggestions.map((s) => (
-                      <li key={s.name}>
-                        <button
-                          type="button"
-                          className="w-full px-2.5 py-1.5 text-sm text-left hover:bg-gray-50 flex justify-between items-center"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            const cur = (form[f.key] ?? "").trim();
-                            const parts = cur
-                              .split(",")
-                              .map((p) => p.trim())
-                              .filter((p) => p !== "");
-                            parts[parts.length - 1] = s.name;
-                            setForm((prev) => ({ ...prev, [f.key]: parts.join(", ") }));
-                            setSchoolQuery("");
-                            setSuggestions([]);
-                            setSchoolOpen(false);
-                          }}
-                        >
-                          <span>{s.name}</span>
-                          {s.type && (
-                            <span className="text-xs text-gray-400 shrink-0">{s.type}</span>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                    {suggestions.length === 0 && (
-                      <li className="px-2.5 py-1.5 text-xs text-gray-400">
-                        "{schoolQuery}" 를 직접 입력해 저장할 수 있습니다
-                      </li>
-                    )}
-                  </ul>
-                )}
-                {schoolOpen && suggestField.current === f.key && f.type !== "skill" && (
+                {schoolOpen && suggestField.current === f.key && (
                   <ul className="absolute z-20 mt-1 w-full max-h-48 overflow-auto bg-white border border-gray-200 rounded shadow-lg">
                     {suggestions.map((s) => (
                       <li key={s.name}>
@@ -680,13 +773,28 @@ export default function CrudSection({
       <p className="font-semibold text-sm text-slate-800 truncate">
         {String(it[titleKey] ?? "")}
       </p>
-      {subtitleKeys.map((k) =>
-        it[k] != null && String(it[k]) !== "" && !fileKeys.has(k) ? (
-          <p key={k} className="text-xs text-slate-500 truncate">
-            {String(it[k])}
-          </p>
-        ) : null,
-      )}
+        {subtitleKeys.map((k) => {
+          const f = fields.find((fd) => fd.key === k);
+          if (f?.type === "dateRange" && f.endKey) {
+            const s = it[k] != null && String(it[k]) !== "" ? String(it[k]) : "";
+            const e = it[f.endKey] != null && String(it[f.endKey]) !== "" ? String(it[f.endKey]) : "";
+            if (!s && !e) return null;
+            const label = s ? `${s} ~ ${e || "진행 중"}` : `~ ${e}`;
+            return (
+              <p key={k} className="text-xs text-slate-500 truncate">
+                {label}
+              </p>
+            );
+          }
+          if (it[k] != null && String(it[k]) !== "" && !fileKeys.has(k)) {
+            return (
+              <p key={k} className="text-xs text-slate-500 truncate">
+                {String(it[k])}
+              </p>
+            );
+          }
+          return null;
+        })}
       {fileFields
         .filter((f) => !f.image)
         .map((f) => {
@@ -709,6 +817,16 @@ export default function CrudSection({
     </div>
   );
 
+  const toggleExpand = (it: Item) => {
+    if (!renderRowDetail) return;
+    setExpandedId((prev) => (prev === String(it.id) ? null : String(it.id)));
+  };
+
+  const expandedDetail = (it: Item) =>
+    renderRowDetail && expandedId === String(it.id) ? (
+      <div className="border-t border-gray-100 px-1 pt-2 pb-1">{renderRowDetail(it)}</div>
+    ) : null;
+
   const itemList = (
     <div className="space-y-2">
       {inline && editing === "new" && renderForm()}
@@ -722,20 +840,29 @@ export default function CrudSection({
               : "rounded-lg border border-gray-100"
           }
         >
-          <div className="py-2.5 px-1 flex justify-between items-start gap-2">
+          <div
+            className={`py-2.5 px-1 flex justify-between items-start gap-2 ${renderRowDetail ? "cursor-pointer" : ""}`}
+            onClick={() => renderRowDetail && editing !== String(it.id) && toggleExpand(it)}
+          >
             {orderControls(it, i)}
             {renderRowInfo(it)}
             {editing !== String(it.id) && (
               <div className="shrink-0 flex gap-1.5">
                 {toggleButton(it)}
                 <button
-                  onClick={() => openEdit(it)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEdit(it);
+                  }}
                   className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
                 >
                   수정
                 </button>
                 <button
-                  onClick={() => remove(Number(it.id))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    remove(Number(it.id));
+                  }}
                   disabled={busy}
                   className="px-2 py-1 text-xs border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-50"
                 >
@@ -744,6 +871,7 @@ export default function CrudSection({
               </div>
             )}
           </div>
+          {expandedDetail(it)}
           {renderRowExtra?.(it)}
           {inline && editing === String(it.id) && renderForm()}
         </div>
@@ -803,20 +931,29 @@ export default function CrudSection({
                     overId === String(it.id) ? isOverRow(it) : ""
                   }`}
                 >
-                  <div className="flex justify-between items-start gap-2">
+                  <div
+                    className="flex justify-between items-start gap-2"
+                    onClick={() => renderRowDetail && editing !== String(it.id) && toggleExpand(it)}
+                  >
                     {orderControls(it, i)}
                     {renderRowInfo(it)}
                     {editing !== String(it.id) && (
                       <div className="shrink-0 flex gap-1.5">
                         {toggleButton(it)}
                         <button
-                          onClick={() => openEdit(it)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEdit(it);
+                          }}
                           className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
                         >
                           수정
                         </button>
                         <button
-                          onClick={() => remove(Number(it.id))}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            remove(Number(it.id));
+                          }}
                           disabled={busy}
                           className="px-2 py-1 text-xs border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-50"
                         >
@@ -825,6 +962,7 @@ export default function CrudSection({
                       </div>
                     )}
                   </div>
+                  {expandedDetail(it)}
                   {renderRowExtra?.(it)}
                 </li>
               ))}

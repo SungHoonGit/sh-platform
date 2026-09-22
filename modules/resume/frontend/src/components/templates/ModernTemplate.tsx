@@ -1,5 +1,6 @@
 import type { ResumeView } from "../../types/resume";
 import { FileThumb, period, PortfolioCard, ProfilePhoto, projectLinks, ymd } from "./shared";
+import MarkdownText from "../MarkdownText";
 
 function SideSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -94,7 +95,7 @@ export default function ModernTemplate({
                 </p>
               )}
               {pr.description && (
-                <p className="mt-1 whitespace-pre-wrap text-sm leading-normal text-gray-600">{pr.description}</p>
+                <MarkdownText className="mt-1 text-sm leading-normal text-gray-600">{pr.description}</MarkdownText>
               )}
               {projectLinks(pr).length > 0 && (
                 <p className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5">

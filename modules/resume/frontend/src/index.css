@@ -1,2 +1,46 @@
 @import "tailwindcss";
 @source "../../../../packages/ui-shared/src";
+
+/* 마크다운 렌더 (react-markdown 출력용) — 편집 미리보기·템플릿·목록 상세 공용 */
+.md-view {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #1f2937;
+  word-break: break-word;
+}
+.md-view h1, .md-view h2, .md-view h3 {
+  font-weight: 700;
+  margin: 0.6em 0 0.3em;
+}
+.md-view h1 { font-size: 1.15rem; }
+.md-view h2 { font-size: 1.05rem; }
+.md-view h3 { font-size: 0.95rem; }
+.md-view p { margin: 0.4em 0; }
+.md-view ul, .md-view ol { margin: 0.4em 0; padding-left: 1.4em; }
+.md-view ul { list-style: disc; }
+.md-view ol { list-style: decimal; }
+.md-view code {
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+}
+.md-view pre {
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 6px;
+  padding: 0.6em 0.8em;
+  overflow-x: auto;
+}
+.md-view pre code { background: transparent; padding: 0; }
+.md-view table { border-collapse: collapse; margin: 0.5em 0; }
+.md-view th, .md-view td { border: 1px solid #d1d5db; padding: 0.3em 0.6em; }
+.md-view th { background: #f3f4f6; }
+.md-view a { color: #2563eb; text-decoration: underline; }
+.md-view blockquote {
+  border-left: 3px solid #d1d5db;
+  margin: 0.4em 0;
+  padding-left: 0.7em;
+  color: #4b5563;
+}

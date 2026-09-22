@@ -6,6 +6,7 @@ import type { ResumeDocument, SectionItem } from "../types/document";
 import CrudSection, { type FieldDef } from "../components/CrudSection";
 import CareerItemsEditor from "../components/CareerItemsEditor";
 import ProfileEditor from "../components/ProfileEditor";
+import MarkdownText from "../components/MarkdownText";
 import { PORTFOLIO_ENDPOINT, PORTFOLIO_FIELDS, PORTFOLIO_LIST_KEY } from "../config/portfolioConfig";
 import {
   DEFAULT_ORDER,
@@ -54,9 +55,8 @@ const SECTIONS: SectionConfig[] = [
     fields: [
       { key: "name", label: "프로젝트명", required: true },
       { key: "role", label: "맡은 역할" },
-      { key: "startDate", label: "시작일", type: "date" },
-      { key: "endDate", label: "종료일", type: "date", placeholder: "진행 중이면 비움" },
-      { key: "techStack", label: "기술 스택", type: "skill", placeholder: "기술명 입력 후 선택 (쉼표로 여러 개): Java, Spring, MySQL" },
+      { key: "startDate", label: "기간", type: "dateRange", endKey: "endDate" },
+      { key: "techStack", label: "기술 스택", type: "skill", maxLength: 300, placeholder: "기술명 입력 후 Enter (예: Java, Spring, MySQL)" },
       {
         key: "thumbnailPath",
         label: "썸네일 이미지 (jpg/png, 5MB 이하)",
@@ -68,7 +68,7 @@ const SECTIONS: SectionConfig[] = [
       { key: "demoUrl", label: "데모/배포 링크", placeholder: "https://your-demo.example.com" },
       { key: "videoUrl", label: "시연 영상 링크", placeholder: "https://youtube.com/watch?v=..." },
       { key: "linkUrl", label: "관련 링크 (기타)" },
-      { key: "description", label: "프로젝트 설명", type: "textarea" },
+      { key: "description", label: "프로젝트 설명 (마크다운)", type: "markdown" },
     ],
   },
   {
@@ -526,6 +526,35 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                               }}
                             />
                           )
+                        : undefined
+                    }
+                    renderRowDetail={
+                      cfg.key === "projects"
+                        ? (pr) => {
+                            const desc = pr.description != null ? String(pr.description) : "";
+                            const tags =
+                              pr.techStack != null && String(pr.techStack) !== ""
+                                ? String(pr.techStack)
+                                    .split(",")
+                                    .map((t) => t.trim())
+                                    .filter((t) => t !== "")
+                                : [];
+                            if (!desc && tags.length === 0) return null;
+                            return (
+                              <div className="space-y-2 text-sm">
+                                {tags.length > 0 && (
+                                  <p className="flex flex-wrap gap-1">
+                                    {tags.map((t) => (
+                                      <span key={t} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                                        {t}
+                                      </span>
+                                    ))}
+                                  </p>
+                                )}
+                                {desc && <MarkdownText className="text-sm text-slate-700">{desc}</MarkdownText>}
+                              </div>
+                            );
+                          }
                         : undefined
                     }
                     rowToggle={

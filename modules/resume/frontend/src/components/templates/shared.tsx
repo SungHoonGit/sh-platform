@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiDownload, apiDownloadShare, fileDownloadPath } from "../../api/client";
 import type { PortfolioItem } from "../../types/resume";
+import MarkdownText from "../MarkdownText";
 
 export function period(start: string, end: string | null): string {
   return `${start ?? ""} ~ ${end ?? "현재"}`;
@@ -163,7 +164,7 @@ export function PortfolioCard({
       <div className="p-3">
         <p className="font-semibold text-sm text-gray-800">{item.title}</p>
         {item.description && (
-          <p className="mt-0.5 text-xs text-gray-600 whitespace-pre-wrap">{item.description}</p>
+          <MarkdownText className="mt-0.5 text-xs text-gray-600">{item.description}</MarkdownText>
         )}
         {links.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5">
