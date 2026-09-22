@@ -3,14 +3,13 @@
 이 파일은 AI 코딩 에이전트(opencode, cursor, copilot 등)가 프로젝트 규칙을 자동 인식하도록 합니다.
 이 파일을 수정하면 AI 모델이 다음 세션부터 변경된 규칙을 따릅니다.
 
-> **⚠️ 진행 중인 작업**: 실사용 검증(문서별 독립성·불러오기 복제) — 문서 단위 분리는 구현·배포·복구 완료.
-> **세션 시작 시 반드시 `docs/daily/2026-09-14-work-log.md`를 먼저 읽고 이어서 작업할 것.**
+> **⚠️ 진행 중인 작업**: 설계 031 회사 관리 피드백 6차까지 완료. 잔여: (사용자) 실사용 검증(/companies + viewer + 통합검색), **내일 03:30/03:35 KST 첫 자동 발화 확인**(`gh workflow run diag-ssh.yml`).
 > **세션 시작 시 반드시 `git pull origin master`로 원격과 동기화 + 오늘 날짜의 작업 일지(`docs/daily/YYYY-MM-DD-work-log.md`)를 먼저 읽고 이어서 작업할 것.**
-> 최근 완료: 이력서 아이템 문서 단위 분리(documentId, DDL v13) + 403 자동 토큰 갱신 + 제목 인라인 수정 + displayOrder 보존 + **/resume 404 복구(배포 jar에 프론트 dist 누락 → 재배포)** + **MySQL 주기 전체 백업 실동작 검증(매일 03:30 KST mysqldump, 7일 보존, cron.d — 4개 DB 덤프 정상, binlog 좌표 기록 활성) + 웹/WAS 파일 백업(03:35 KST data·uploads tar.gz, 7일 보존)**.
-> 다음: 실사용 검증(문서별 독립성, 불러오기 복제) + 백업 2회차(내일 03:30/03:35) 산출물 확인.
+> 최근 완료: **2026-09-22 백업 cron 치명 버그 수정** — cron.d 파일 마지막 개행 누락으로 Debian cron이 파일 전체를 무시(`Missing newline before EOF`), 9/17~9/21 주기 백업 전부 미실행. 개행 복구 + 배포 워크플로우 개행 가드 + `diag-ssh.yml`(SSH 전용 경량 진단, `gh workflow run diag-ssh.yml`) 신설 + 오류 문서 015. 수동 실행으로 9/22분 3DB·파일 백업 확보. binlog는 9/17 최초 활성화·영속화 완료. 031 회사 관리: DDL v10~v12, 피드백 1~6차(비고 수집/숨김 구분·보기 키워드란·수집회사 suggest) 배포 완료.
+> 다음: (사용자) 실사용 검증 + 내일 아침 첫 자동 백업 발화 확인.
 >
-> **2026-09-16: 설계 031 회사 관리 페이지 완료.** `docs/plans/031-260916-company-manage-design.md` → Phase 1(company_notes CRUD + DDL v10/v11, 테스트 20건) → Phase 2(`/companies` + 슬라이드오버) → Phase 3(viewer 연동) → 피드백 2회(차단 키워드+숨김수·별/북마크 불변식·키워드 편집·애니메이션·정렬·관련공고·자동완성). 교훈: DDL↔엔티티 타입 대조 필수(Integer→INT), SPA 폴백 라우트 추가 시 SecurityConfig permitAll 함께. 잔여: (사용자) 실사용 검증, (SSH) cron 미동작+portfolio 덤프 누락 확인, (수동) `99-binlog.cnf` 14일 영속화.
-> **세션 시작 시 반드시 `docs/daily/2026-09-16-work-log.md`를 먼저 읽고 이어서 작업할 것.**
+> **2026-09-16: 설계 031 회사 관리 페이지 완료.** `docs/plans/031-260916-company-manage-design.md` → Phase 1(company_notes CRUD + DDL v10/v11, 테스트 20건) → Phase 2(`/companies` + 슬라이드오버) → Phase 3(viewer 연동) → 피드백 6회까지. 교훈: DDL↔엔티티 타입 대조 필수(Integer→INT), SPA 폴백 라우트 추가 시 SecurityConfig permitAll 함께, **cron.d 파일은 마지막 개행 필수**(아니면 파일 전체 무시 — errors/015).
+> **세션 시작 시 반드시 `docs/daily/2026-09-22-work-log.md`를 먼저 읽고 이어서 작업할 것.**
 >
 > **⚠️ 배포 시 주의**: resume/scraper jar는 `frontend/dist`를 포함해야 정상 서빙됨(`copyFrontendDist`). 프론트 빌드 없이 백엔드만 빌드해 배포하면 `/resume` 404. 반드시 CI 워크플로우(프론트 빌드→백엔드 빌드 순서)로 배포할 것.
 
@@ -252,6 +251,9 @@ public class AdminController {
 ```bash
 # 서버 접속
 ssh oci-web
+
+# 서버 전용 빠른 진단 (빌드 없이 ~10초, SSH 키 없이 CI로 실행 — 백업/cron/시간대 등)
+gh workflow run diag-ssh.yml && gh run watch $(gh run list --workflow "Diagnose SSH (server only, no build)" --limit 1 --json databaseId -q ".[0].databaseId") --exit-status
 
 # 전체 서비스 상태
 sudo systemctl status sh-platform-*
