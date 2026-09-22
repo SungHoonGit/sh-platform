@@ -321,6 +321,8 @@ class CompanyNoteServiceTest {
         void 차단탭() {
             CompanyBlacklist blocked = CompanyBlacklist.builder()
                     .id(11L).accountId(ACCOUNT).companyNameNormalized("악덕기업").reason("야근")
+                    .blockReasons(new java.util.ArrayList<>(List.of(
+                            com.scraper.platform.model.BlockReason.of("스타트업", "company_type", 10, true))))
                     .createdAt(java.time.LocalDateTime.of(2026, 9, 10, 12, 0)).build();
             given(blacklistRepository.findByAccountIdOrderByCreatedAtDesc(ACCOUNT))
                     .willReturn(List.of(blocked));
@@ -338,6 +340,10 @@ class CompanyNoteServiceTest {
             assertEquals("악덕기업", page.getContent().get(0).companyNameNormalized());
             assertEquals(3L, page.getContent().get(0).hiddenCount());
             assertEquals(java.time.LocalDateTime.of(2026, 9, 10, 12, 0), page.getContent().get(0).updatedAt());
+            // 차단행 키워드 열 = 차단 카테고리
+            assertEquals(1, page.getContent().get(0).blockReasons().size());
+            assertEquals("스타트업", page.getContent().get(0).blockReasons().get(0).name());
+            assertTrue(page.getContent().get(0).categories().isEmpty());
         }
 
         @Test

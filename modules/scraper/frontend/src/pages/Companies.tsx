@@ -222,7 +222,7 @@ export default function Companies() {
                     회사명{sortMark("display")}
                   </button>
                 </th>
-                <th className="px-2 py-1" title="차단=차단 키워드, 그외=메모 태그">키워드</th>
+                <th className="px-2 py-1" title="차단=차단 카테고리, 메모=태그">키워드</th>
                 <th className="px-2 py-1">
                   <button className="hover:text-slate-800" onClick={() => toggleSort("stars")}>
                     내 별점{sortMark("stars")}
@@ -281,21 +281,29 @@ export default function Companies() {
                   </td>
                   <td className="px-2 py-1 font-medium text-slate-800">{c.companyNameDisplay}</td>
                   <td className="px-2 py-1">
-                    {c.blocked ? (
-                      <span className="font-mono text-xs text-red-600" title="차단 매칭 키워드(정규화명)">
-                        {c.companyNameNormalized}
-                      </span>
-                    ) : (c.categories?.length ?? 0) > 0 ? (
-                      <span className="inline-flex flex-wrap gap-1">
-                        {c.categories.map((t) => (
-                          <span key={t.id} className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">
-                            {t.name}
-                          </span>
-                        ))}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300">-</span>
-                    )}
+                    {c.blocked
+                      ? (c.blockReasons?.length ?? 0) > 0 ? (
+                        <span className="inline-flex flex-wrap gap-1">
+                          {c.blockReasons.map((t) => (
+                            <span key={t.id} className="rounded-full bg-red-100 px-1.5 py-0.5 text-[11px] text-red-700">
+                              {t.name}
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">-</span>
+                      )
+                      : (c.categories?.length ?? 0) > 0 ? (
+                        <span className="inline-flex flex-wrap gap-1">
+                          {c.categories.map((t) => (
+                            <span key={t.id} className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">
+                              {t.name}
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">-</span>
+                      )}
                   </td>
                   <td className="px-2 py-1">
                     <Stars value={c.myStars} />

@@ -45,6 +45,9 @@ public record CompanyNoteResponse(
         Long hiddenCount,
 
         @Schema(description = "메모 태그 목록 (메모 없으면 빈 목록)")
-        List<NoteCategoryResponse> categories
+        List<NoteCategoryResponse> categories,
+
+        @Schema(description = "차단 카테고리 (차단행 키워드 열용, 비차단이면 빈 목록)")
+        List<NoteCategoryResponse> blockReasons
 ) {
 }

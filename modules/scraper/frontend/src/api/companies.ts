@@ -43,6 +43,8 @@ export interface CompanyNoteItem {
   hiddenCount: number | null;
   /** 메모 태그 (키워드 열 chips, 차단행은 빈 배열) */
   categories: NoteCategory[];
+  /** 차단 카테고리 (차단행 키워드 열 chips, 비차단은 빈 배열) */
+  blockReasons: NoteCategory[];
 }
 
 export interface CompanyNoteDetail extends Omit<CompanyNoteItem, "id" | "hasNote"> {

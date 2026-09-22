@@ -326,7 +326,13 @@ public class CompanyNoteService {
     private Page<CompanyNoteResponse> enrich(Page<CompanyNote> notes, Long accountId, String keyword,
                                               boolean includeBlockedOnly) {
         Map<String, CompanyRating> ratings = ratingsByNormalized(displayNames(notes.getContent()));
-        Map<String, Boolean> blocked = blockedNames(accountId);
+        List<CompanyBlacklist> blacklist = blacklistRepository.findByAccountIdOrderByCreatedAtDesc(accountId);
+        Map<String, Boolean> blocked = new HashMap<>();
+        Map<String, List<NoteCategoryResponse>> blockReasons = new HashMap<>();
+        for (CompanyBlacklist b : blacklist) {
+            blocked.put(b.getCompanyNameNormalized(), true);
+            blockReasons.put(b.getCompanyNameNormalized(), toNoteCategories(b));
+        }
         // 메모 회사들의 관련 저장 공고 수도 한 번의 GROUP BY로 함께 집계한다 (비고 열 표시용).
         Map<String, Long> postingCounts = hiddenCounts(notes.getContent().stream()
                 .map(CompanyNote::getCompanyNameNormalized).toList());
@@ -335,7 +341,8 @@ public class CompanyNoteService {
                 .map(n -> toResponse(n, blocked.getOrDefault(n.getCompanyNameNormalized(), false),
                         ratings.get(n.getCompanyNameNormalized()),
                         postingCounts.get(n.getCompanyNameNormalized()),
-                        tags.getOrDefault(n.getId(), List.of())))
+                        tags.getOrDefault(n.getId(), List.of()),
+                        blockReasons.getOrDefault(n.getCompanyNameNormalized(), List.of())))
                 .collect(java.util.ArrayList::new, java.util.ArrayList::add, java.util.ArrayList::addAll);
         long total = notes.getTotalElements();
         // 전체 탭: 메모가 없는 차단 회사도 차단 뱃지와 함께 추가한다 (차단이 바로 보이도록).
@@ -349,7 +356,7 @@ public class CompanyNoteService {
                 items.add(toResponse(null, b.getCompanyNameNormalized(), b.getCompanyNameNormalized(), true,
                         join.ratings().get(b.getCompanyNameNormalized()),
                         join.hiddenCounts().get(b.getCompanyNameNormalized()),
-                        b.getCreatedAt(), List.of()));
+                        b.getCreatedAt(), List.of(), toNoteCategories(b)));
                 total++;
             }
         }
@@ -366,11 +373,10 @@ public class CompanyNoteService {
                     String normalized = (n != null) ? n.getCompanyNameNormalized() : b.getCompanyNameNormalized();
                     // 메모가 없으면 업데이트 일시 대신 차단 일시 표시 (같은 테이블처럼 보이도록)
                     LocalDateTime updatedAt = (n != null) ? n.getUpdatedAt() : b.getCreatedAt();
-                    // 차단 행은 키워드 열에 차단 키워드를 표시하므로 태그 미조회 (메모 태그는 all/bookmarked 탭에서 제공)
                     return toResponse(n, display, normalized, true,
                             join.ratings().get(b.getCompanyNameNormalized()),
                             join.hiddenCounts().get(b.getCompanyNameNormalized()),
-                            updatedAt, List.of());
+                            updatedAt, List.of(), toNoteCategories(b));
                 })
                 .collect(java.util.ArrayList::new, java.util.ArrayList::add, java.util.ArrayList::addAll);
         sortBlocked(items, sort, dir);
@@ -473,14 +479,16 @@ public class CompanyNoteService {
     }
 
     private CompanyNoteResponse toResponse(CompanyNote note, boolean blocked, CompanyRating rating,
-                                           Long hiddenCount, List<NoteCategoryResponse> categories) {
+                                           Long hiddenCount, List<NoteCategoryResponse> categories,
+                                           List<NoteCategoryResponse> blockReasons) {
         return toResponse(note, note.getCompanyNameDisplay(), note.getCompanyNameNormalized(), blocked, rating,
-                hiddenCount, note.getUpdatedAt(), categories);
+                hiddenCount, note.getUpdatedAt(), categories, blockReasons);
     }
 
     private CompanyNoteResponse toResponse(CompanyNote note, String display, String normalized,
                                            boolean blocked, CompanyRating rating, Long hiddenCount,
-                                           LocalDateTime updatedAt, List<NoteCategoryResponse> categories) {
+                                           LocalDateTime updatedAt, List<NoteCategoryResponse> categories,
+                                           List<NoteCategoryResponse> blockReasons) {
         return new CompanyNoteResponse(
                 note != null ? note.getId() : null,
                 display,
@@ -496,7 +504,16 @@ public class CompanyNoteService {
                 updatedAt,
                 hiddenCount,
                 // 목록 메모 태그 (키워드 열 chips 표시용, N+1 회피 배치 조회)
-                categories == null ? List.of() : categories);
+                categories == null ? List.of() : categories,
+                // 차단 카테고리 (차단행 키워드 열용, blacklist FETCH JOIN으로 N+1 없음)
+                blockReasons == null ? List.of() : blockReasons);
+    }
+
+    /** 블랙리스트 항목의 차단 카테고리 → 응답 DTO 목록. */
+    private List<NoteCategoryResponse> toNoteCategories(CompanyBlacklist entry) {
+        return entry.getBlockReasons().stream()
+                .map(r -> new NoteCategoryResponse(r.getId(), r.getName()))
+                .toList();
     }
 
     /** 페이지 메모들의 태그를 한 번의 배치 쿼리로 조회한다 (목록 키워드 열 chips용). */
