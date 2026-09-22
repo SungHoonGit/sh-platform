@@ -368,6 +368,24 @@ class CompanyNoteServiceTest {
         }
 
         @Test
+        @DisplayName("목록 항목에 메모 태그를 배치 조회로 포함한다 (키워드 열 chips용)")
+        void 목록_메모태그() {
+            CompanyNote n = note(1L, "카카오", "카카오", 5, true, "메모");
+            given(noteRepository.findByAccountIdAndIsBookmarkedTrue(eq(ACCOUNT), any(Pageable.class)))
+                    .willReturn(new PageImpl<>(List.of(n)));
+            stubEmptyJoins();
+            given(noteRepository.findTagRowsByNoteIds(List.of(1L)))
+                    .willReturn(List.<Object[]>of(new Object[]{1L, 9L, "관심기업"}));
+
+            Page<CompanyNoteResponse> page = noteService.list(ACCOUNT, "bookmarked", null, 0, 50, "updated", "desc");
+
+            var categories = page.getContent().get(0).categories();
+            assertEquals(1, categories.size());
+            assertEquals(9L, categories.get(0).id());
+            assertEquals("관심기업", categories.get(0).name());
+        }
+
+        @Test
         @DisplayName("상세 조회는 평점·차단여부를 포함한다")
         void 상세조회() {
             CompanyNote n = note(1L, "삼성전자", "삼성전자(주)", 4, true, "## 총평");

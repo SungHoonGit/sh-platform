@@ -41,13 +41,14 @@ export interface CompanyNoteItem {
   saraminScore: number | null;
   updatedAt: string | null;
   hiddenCount: number | null;
+  /** 메모 태그 (키워드 열 chips, 차단행은 빈 배열) */
+  categories: NoteCategory[];
 }
 
 export interface CompanyNoteDetail extends Omit<CompanyNoteItem, "id" | "hasNote"> {
   id: number;
   companyNameNormalized: string;
   noteMd: string | null;
-  categories: NoteCategory[];
 }
 
 export interface CompanyNotePage {

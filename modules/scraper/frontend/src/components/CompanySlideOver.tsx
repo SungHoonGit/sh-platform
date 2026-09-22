@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
-import { X, Star, Bookmark, BookmarkCheck, Ban, Download, Save, Trash2, Pencil } from "lucide-react";
+import { X, Star, Bookmark, BookmarkCheck, Ban, Download, Save, Trash2 } from "lucide-react";
 import { BlockConfirmDialog } from "@sh-platform/ui";
 import TagInput, { type TagItem } from "./TagInput";
 import { companyNoteApi, type CompanyNoteDetail } from "../api/companies";
@@ -50,7 +50,6 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
   const [md, setMd] = useState("");
   const [bookmarked, setBookmarked] = useState(false);
   const [noteTags, setNoteTags] = useState<TagItem[]>([]);
-  const [blockEditOpen, setBlockEditOpen] = useState(false);
   const [blockCreateOpen, setBlockCreateOpen] = useState(false);
   // 노션식 등장 애니메이션: 마운트 직후 visible ON, 닫을 때 OFF 후 onClose 지연 호출
   const [visible, setVisible] = useState(false);
@@ -96,7 +95,9 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
     mutationFn: () => {
       const reasonIds = noteTags.filter((t) => t.id != null).map((t) => t.id as number);
       const categoryNames = noteTags.filter((t) => t.id == null).map((t) => t.name);
-      const tagFields = { reasonIds, categoryNames };
+      // 차단 행은 차단 카테고리가 인라인 즉시저장되므로 메모 태그 필드 미전송 (기존 노트 태그 보존)
+      const isBlocked = detail?.blocked === true || blockedEntry != null;
+      const tagFields = isBlocked ? {} : { reasonIds, categoryNames };
       return isCreate
         ? companyNoteApi.upsert({ companyName, myStars: stars, isBookmarked: bookmarked, noteMd: md, ...tagFields })
         : companyNoteApi.update(id as number, { myStars: stars, isBookmarked: bookmarked, noteMd: md, ...tagFields });
@@ -143,18 +144,6 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
 
   /** 생성 모드(차단 전용 행)에서 넘어온 경우에도 차단 정보를 표시한다. */
   const createBlocked = isCreate && companyNormalized != null && blockedEntry != null;
-
-  const confirmBlockEdit = async (reason: string, reasonIds: number[], categoryNames: string[], keyword: string) => {
-    if (blockedEntry == null) return;
-    try {
-      await updateBlacklist(blockedEntry.id, reasonIds, categoryNames, keyword, reason || undefined);
-      setBlockEditOpen(false);
-      invalidate();
-      detailQuery.refetch();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "차단 수정 실패.");
-    }
-  };
 
   const onBlockToggle = () => {
     if (blocked) {
@@ -303,9 +292,6 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
 
           {(detail || isCreate) && tab === "view" && (
             <>
-              <p className="mb-2 font-mono text-xs text-slate-500" title="차단 매칭 키워드(정규화명)">
-                키워드: {detail?.companyNameNormalized ?? blockedEntry?.companyNameNormalized ?? companyNormalized ?? "-"}
-              </p>
               {detail?.averageScore != null && (
                 <section className="mb-3 rounded-lg bg-gray-50 p-3 text-sm">
                   <div className="mb-1 flex items-center gap-1">
@@ -343,15 +329,24 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
               {blocked && (
                 <section className="mb-3 rounded-lg bg-red-50 p-3 text-sm">
                   <p className="text-xs font-semibold text-red-600">⛔ 차단된 회사</p>
-                  <p className="mt-1 font-mono text-xs text-slate-600" title="차단 매칭 키워드">
-                    키워드: {detail?.companyNameNormalized ?? blockedEntry?.companyNameNormalized ?? companyNormalized ?? "-"}
+                  <p className="mt-1 font-mono text-xs text-slate-600" title="차단 매칭 키워드(정규화명)">
+                    차단 키워드: {detail?.companyNameNormalized ?? blockedEntry?.companyNameNormalized ?? companyNormalized ?? "-"}
                   </p>
+                  {(blockedEntry?.blockReasons?.length ?? 0) > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {blockedEntry!.blockReasons!.map((r) => (
+                        <span key={r.id} className="rounded-full bg-red-100 px-1.5 py-0.5 text-[11px] text-red-700">
+                          {r.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {(detail?.noteMd == null || !detail.noteMd.trim()) && (detail?.myStars == null) && (
                     <p className="mt-1 text-[11px] text-slate-400">메모·별점이 없습니다. 편집 탭에서 작성하세요.</p>
                   )}
                 </section>
               )}
-              {(detail?.categories?.length ?? 0) > 0 && (
+              {!blocked && (detail?.categories?.length ?? 0) > 0 && (
                 <div className="mb-3 flex flex-wrap gap-1">
                   {(detail?.categories ?? []).map((c) => (
                     <span key={c.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
@@ -410,21 +405,9 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
                 <div className="mb-3 rounded-lg bg-red-50 p-3 text-sm">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-semibold text-red-600">⛔ 차단됨</span>
-                    <span className="font-mono text-xs text-slate-600">{blockedEntry.companyNameNormalized}</span>
-                    <button
-                      className="ml-auto inline-flex items-center gap-0.5 rounded border border-red-200 px-1.5 py-0.5 text-xs text-red-600 hover:bg-red-100"
-                      title="차단 해제"
-                      onClick={() => void doUnblock()}
-                    >
-                      <X size={12} /> 해제
-                    </button>
-                    <button
-                      className="inline-flex items-center gap-0.5 text-xs text-slate-500 underline hover:text-slate-700"
-                      onClick={() => setBlockEditOpen(true)}
-                      title="차단 키워드 변경"
-                    >
-                      <Pencil size={11} /> 차단 편집
-                    </button>
+                    <span className="font-mono text-xs text-slate-600" title="차단 매칭 키워드(정규화명)">
+                      차단 키워드: {blockedEntry.companyNameNormalized}
+                    </span>
                   </div>
                   <div className="mt-2">
                     <p className="mb-1 text-[11px] font-semibold text-slate-500">차단 카테고리</p>
@@ -438,16 +421,18 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
                   </div>
                 </div>
               )}
-              <div className="mb-3">
-                <p className="mb-1 text-xs font-semibold text-gray-500">메모 태그 (북마크 포함 모든 메모에 부여 가능)</p>
-                <TagInput
-                  tags={noteTags}
-                  onAdd={(t) => setNoteTags((prev) => (prev.some((p) => p.name === t.name) ? prev : [...prev, t]))}
-                  onRemove={(t) => setNoteTags((prev) => prev.filter((p) => p.name !== t.name))}
-                  searchFn={searchBlockCategories}
-                  placeholder="태그 추가 (입력 후 Enter, 저장 버튼으로 확정)"
-                />
-              </div>
+              {!blockedEntry && (
+                <div className="mb-3">
+                  <p className="mb-1 text-xs font-semibold text-gray-500">메모 태그 (북마크 포함 모든 메모에 부여 가능)</p>
+                  <TagInput
+                    tags={noteTags}
+                    onAdd={(t) => setNoteTags((prev) => (prev.some((p) => p.name === t.name) ? prev : [...prev, t]))}
+                    onRemove={(t) => setNoteTags((prev) => prev.filter((p) => p.name !== t.name))}
+                    searchFn={searchBlockCategories}
+                    placeholder="태그 추가 (입력 후 Enter, 저장 버튼으로 확정)"
+                  />
+                </div>
+              )}
               <div className="mb-3 flex items-center gap-1">
                 <span className="mr-1 text-sm text-gray-600">내 별점</span>
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -495,18 +480,6 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
           )}
         </div>
       </aside>
-      <BlockConfirmDialog
-        open={blockEditOpen}
-        company={detail?.companyNameDisplay ?? companyName ?? ""}
-        title="차단 편집"
-        confirmLabel="저장"
-        editableCompany
-        initialTags={(blockedEntry?.blockReasons ?? []).map((r) => ({ id: r.id, name: r.name }))}
-        onCancel={() => setBlockEditOpen(false)}
-        onConfirm={(reason, reasonIds, categoryNames, keyword) => {
-          void confirmBlockEdit(reason, reasonIds, categoryNames, keyword);
-        }}
-      />
       <BlockConfirmDialog
         open={blockCreateOpen}
         company={detail?.companyNameDisplay ?? companyName ?? ""}

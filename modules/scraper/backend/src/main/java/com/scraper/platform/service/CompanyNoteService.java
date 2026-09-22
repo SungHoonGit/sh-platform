@@ -330,10 +330,12 @@ public class CompanyNoteService {
         // 메모 회사들의 관련 저장 공고 수도 한 번의 GROUP BY로 함께 집계한다 (비고 열 표시용).
         Map<String, Long> postingCounts = hiddenCounts(notes.getContent().stream()
                 .map(CompanyNote::getCompanyNameNormalized).toList());
+        Map<Long, List<NoteCategoryResponse>> tags = tagsByNoteId(notes.getContent());
         List<CompanyNoteResponse> items = notes.getContent().stream()
                 .map(n -> toResponse(n, blocked.getOrDefault(n.getCompanyNameNormalized(), false),
                         ratings.get(n.getCompanyNameNormalized()),
-                        postingCounts.get(n.getCompanyNameNormalized())))
+                        postingCounts.get(n.getCompanyNameNormalized()),
+                        tags.getOrDefault(n.getId(), List.of())))
                 .collect(java.util.ArrayList::new, java.util.ArrayList::add, java.util.ArrayList::addAll);
         long total = notes.getTotalElements();
         // 전체 탭: 메모가 없는 차단 회사도 차단 뱃지와 함께 추가한다 (차단이 바로 보이도록).
@@ -347,7 +349,7 @@ public class CompanyNoteService {
                 items.add(toResponse(null, b.getCompanyNameNormalized(), b.getCompanyNameNormalized(), true,
                         join.ratings().get(b.getCompanyNameNormalized()),
                         join.hiddenCounts().get(b.getCompanyNameNormalized()),
-                        b.getCreatedAt()));
+                        b.getCreatedAt(), List.of()));
                 total++;
             }
         }
@@ -364,10 +366,11 @@ public class CompanyNoteService {
                     String normalized = (n != null) ? n.getCompanyNameNormalized() : b.getCompanyNameNormalized();
                     // 메모가 없으면 업데이트 일시 대신 차단 일시 표시 (같은 테이블처럼 보이도록)
                     LocalDateTime updatedAt = (n != null) ? n.getUpdatedAt() : b.getCreatedAt();
+                    // 차단 행은 키워드 열에 차단 키워드를 표시하므로 태그 미조회 (메모 태그는 all/bookmarked 탭에서 제공)
                     return toResponse(n, display, normalized, true,
                             join.ratings().get(b.getCompanyNameNormalized()),
                             join.hiddenCounts().get(b.getCompanyNameNormalized()),
-                            updatedAt);
+                            updatedAt, List.of());
                 })
                 .collect(java.util.ArrayList::new, java.util.ArrayList::add, java.util.ArrayList::addAll);
         sortBlocked(items, sort, dir);
@@ -470,14 +473,14 @@ public class CompanyNoteService {
     }
 
     private CompanyNoteResponse toResponse(CompanyNote note, boolean blocked, CompanyRating rating,
-                                           Long hiddenCount) {
+                                           Long hiddenCount, List<NoteCategoryResponse> categories) {
         return toResponse(note, note.getCompanyNameDisplay(), note.getCompanyNameNormalized(), blocked, rating,
-                hiddenCount, note.getUpdatedAt());
+                hiddenCount, note.getUpdatedAt(), categories);
     }
 
     private CompanyNoteResponse toResponse(CompanyNote note, String display, String normalized,
                                            boolean blocked, CompanyRating rating, Long hiddenCount,
-                                           LocalDateTime updatedAt) {
+                                           LocalDateTime updatedAt, List<NoteCategoryResponse> categories) {
         return new CompanyNoteResponse(
                 note != null ? note.getId() : null,
                 display,
@@ -492,8 +495,25 @@ public class CompanyNoteService {
                 rating != null ? rating.getSaraminScore() : null,
                 updatedAt,
                 hiddenCount,
-                // 목록은 N+1 회피를 위해 태그 미포함 (상세 조회에서 제공)
-                List.of());
+                // 목록 메모 태그 (키워드 열 chips 표시용, N+1 회피 배치 조회)
+                categories == null ? List.of() : categories);
+    }
+
+    /** 페이지 메모들의 태그를 한 번의 배치 쿼리로 조회한다 (목록 키워드 열 chips용). */
+    private Map<Long, List<NoteCategoryResponse>> tagsByNoteId(List<CompanyNote> notes) {
+        Map<Long, List<NoteCategoryResponse>> map = new HashMap<>();
+        List<Long> ids = notes.stream()
+                .map(CompanyNote::getId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (ids.isEmpty()) {
+            return map;
+        }
+        for (Object[] row : noteRepository.findTagRowsByNoteIds(ids)) {
+            map.computeIfAbsent((Long) row[0], k -> new java.util.ArrayList<>())
+                    .add(new NoteCategoryResponse((Long) row[1], (String) row[2]));
+        }
+        return map;
     }
 
     private CompanyNoteDetailResponse toDetail(CompanyNote note, Map<String, Boolean> blocked,
