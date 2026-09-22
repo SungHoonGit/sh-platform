@@ -44,6 +44,13 @@ jobs:
             sudo /home/ubuntu/sh-platform/scripts/backup-mysql.sh 2>&1 | tail -25
             echo "exit=$?"
 
+            echo "===== MANUAL TEST: backup-files.sh ====="
+            sudo /home/ubuntu/sh-platform/scripts/backup-files.sh 2>&1 | tail -15
+            echo "exit=$?"
+
+            echo "===== CRON PARSE VERIFY (RELOAD without ERROR) ====="
+            sleep 65
+            sudo journalctl -u cron --since "-3 minutes" --no-pager 2>/dev/null | grep -a "sh-platform-mysql-backup" | tail -10 || echo "(최근 3분 재로드 기록 없음 — mtime 변화 대기)"
             echo "===== BACKUP DIRS AFTER TEST ====="
             ls -la /home/ubuntu/backups/mysql/ 2>/dev/null
             ls -la /home/ubuntu/backups/mysql/$(date +%Y%m%d) 2>/dev/null || true

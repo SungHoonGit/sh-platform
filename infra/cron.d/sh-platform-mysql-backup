@@ -1,7 +1,9 @@
-# sh-platform 백업 스케줄 (cron.d, CI 배포 시 복사 — 멱등)
+# sh-platform 주기 백업 스케줄 (cron.d, CI 배포 시 복사 — 멱등)
 # a) MySQL 주기 전체 백업 (스크립트: scripts/backup-mysql.sh, 로그: backup-YYYYMMDD.log)
 # b) 웹/WAS 파일 데이터 백업 (스크립트: scripts/backup-files.sh, 로그: backup-YYYYMMDD.log)
 # - 상세: docs/guides/009-260914-mysql-backup-guide.md
+# - 주의: 마지막 줄은 반드시 개행(\n)으로 끝나야 함 — 없으면 Debian cron이 파일 전체 무시
+#   (2026-09-22 교훈: "Missing newline before EOF, this crontab file will be ignored")
 CRON_TZ=Asia/Seoul
 30 3 * * * root /home/ubuntu/sh-platform/scripts/backup-mysql.sh >> /home/ubuntu/backups/mysql/backup-$(date +\%Y\%m\%d).log 2>&1
 35 3 * * * root /home/ubuntu/sh-platform/scripts/backup-files.sh >> /home/ubuntu/backups/files/backup-$(date +\%Y\%m\%d).log 2>&1

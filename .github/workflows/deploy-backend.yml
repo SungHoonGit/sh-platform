@@ -159,6 +159,8 @@ jobs:
             sudo chmod 700 scripts/backup-mysql.sh
             sudo cp infra/cron.d/sh-platform-mysql-backup /etc/cron.d/sh-platform-mysql-backup
             sudo chmod 644 /etc/cron.d/sh-platform-mysql-backup
+            # 마지막 개행 가드: 없으면 Debian cron이 파일 전체를 무시함 (2026-09-22 교훈)
+            sudo sh -c 'test "$(tail -c1 /etc/cron.d/sh-platform-mysql-backup)" || echo >> /etc/cron.d/sh-platform-mysql-backup'
             sudo mkdir -p /home/ubuntu/backups/mysql /home/ubuntu/backups/files
             sudo touch /home/ubuntu/backups/mysql/backup.log || true
 

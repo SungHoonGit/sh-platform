@@ -97,6 +97,7 @@ sudo mysql -e "SHOW VARIABLES LIKE 'log_bin'; SHOW MASTER STATUS;"  # ON + 실�
 | 덤프 실패("Access denied") | DB_PASS 미설정/오변경 | `scripts/backup-mysql.sh`의 DB_PASS 설정 확인(.env 우선) |
 | "column statistics" 경고 | MariaDB mysqldump 10.5+ 알려진 무해 경고 | 무시 (스크립트가 실제 오류와 구분) |
 | 백업이 안 보임 | 보존기간 초과 삭제 또는 cron 미기동 | `/home/ubuntu/backups/mysql/backup-$(date +%Y%m%d).log` 확인, `systemctl status cron` |
+| cron 데몬 active인데 스케줄 무반응 | **cron.d 파일 마지막 줄 개행(\n) 누락 → Debian cron이 파일 전체 무시** | `journalctl -u cron \| grep sh-platform`에 `Missing newline before EOF` 확인. `cat -A 파일` 마지막 줄에 `$` 없는지 점검. 배포 워크플로우에 개행 가드 있음(멱등) — 자세한 것: `docs/errors/015-260922-cron-d-missing-newline-error.md` |
 | PITR 불가(지정 시각 이전 binlog 없음) | binlog 보존기간 < 복구 대상 시점 | 최근 덤프 중 스냅샷이 좌표 이전인 것 사용, binlog 보존 확대(§5) |
 
 ## 7. 웹/WAS 파일 데이터 백업
