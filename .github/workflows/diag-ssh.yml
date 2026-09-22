@@ -1,0 +1,52 @@
+name: Diagnose SSH (server only, no build)
+
+# 서버 전용 진단 — 빌드/배포 없이 SSH로만 실행 (반복 확인용)
+# 사용: gh workflow run diag-ssh.yml
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Diagnose via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.OCI_WEB_HOST }}
+          username: ${{ secrets.OCI_SSH_USER }}
+          password: ${{ secrets.OCI_SSH_PW }}
+          script: |
+            set +e
+            echo "===== TIME / TZ ====="
+            date
+            timedatectl 2>/dev/null | head -6
+
+            echo "===== /etc/cron.d LIST ====="
+            ls -la /etc/cron.d/
+
+            echo "===== OUR FILE BYTES (cat -A: \$=EOL, ^M=CR) ====="
+            cat -A /etc/cron.d/sh-platform-mysql-backup 2>/dev/null || echo "(file missing)"
+
+            echo "===== CRON MAN CRON_TZ SUPPORT ====="
+            zgrep -i -A1 "CRON_TZ" /usr/share/man/man5/crontab.5.gz 2>/dev/null | head -10 || echo "(man에 CRON_TZ 없음 — 미지원 가능성)"
+
+            echo "===== SYSLOG: our jobs / errors (since install) ====="
+            sudo grep -a "backup-mysql\|backup-files\|sh-platform-mysql-backup" /var/log/syslog 2>/dev/null | tail -40 || echo "(syslog에 백업 관련 기록 없음)"
+            sudo grep -a "(CRON)" /var/log/syslog 2>/dev/null | grep -aiE "error|illegal|syntax|warning|ignoring" | tail -40 || echo "(CRON error 기록 없음)"
+
+            echo "===== JOURNAL: backup CMD since 09-17 ====="
+            sudo journalctl -u cron --since "2026-09-17" --no-pager 2>/dev/null | grep -a "backup" | tail -40 || echo "(journal에 백업 실행 기록 없음)"
+
+            echo "===== CRON PROCESS ====="
+            ps aux | grep -E "[c]ron" || true
+
+            echo "===== MANUAL TEST: backup-mysql.sh ====="
+            sudo /home/ubuntu/sh-platform/scripts/backup-mysql.sh 2>&1 | tail -25
+            echo "exit=$?"
+
+            echo "===== BACKUP DIRS AFTER TEST ====="
+            ls -la /home/ubuntu/backups/mysql/ 2>/dev/null
+            ls -la /home/ubuntu/backups/mysql/$(date +%Y%m%d) 2>/dev/null || true
+            echo "===== FILE BACKUP DIR ====="
+            ls -la /home/ubuntu/backups/files/ 2>/dev/null
+            echo "===== DIAG DONE ====="
