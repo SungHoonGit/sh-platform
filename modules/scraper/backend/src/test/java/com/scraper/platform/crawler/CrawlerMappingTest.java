@@ -5,6 +5,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -120,6 +122,50 @@ class CrawlerMappingTest {
                 assertEquals("", crawler.resolveLocationCode(""));
             }
         }
+
+        @Nested
+        @DisplayName("resolveCareerParams 메서드 (DB compound 우선)")
+        class ResolveCareerParams {
+
+            @Test
+            @DisplayName("DB compound 매핑이 있으면 DB 값을 사용한다")
+            void DB_compound_우선() {
+                when(mockMapper.mapCompoundParams("saramin", "career", "1~3년"))
+                        .thenReturn(java.util.Map.of("exp_cd", "2", "exp_min", "1", "exp_max", "3"));
+                java.util.Map<String, String> result = crawler.resolveCareerParams("1~3년");
+                assertEquals("2", result.get("exp_cd"));
+                assertEquals("1", result.get("exp_min"));
+                assertEquals("3", result.get("exp_max"));
+            }
+
+            @Test
+            @DisplayName("DB 매핑이 없으면 하드코딩 fallback을 사용한다")
+            void DB_없음_fallback() {
+                when(mockMapper.mapCompoundParams("saramin", "career", "1~3년"))
+                        .thenReturn(java.util.Map.of());
+                java.util.Map<String, String> result = crawler.resolveCareerParams("1~3년");
+                assertEquals("2", result.get("exp_cd"));
+                assertEquals("1", result.get("exp_min"));
+                assertEquals("3", result.get("exp_max"));
+            }
+
+            @Test
+            @DisplayName("신입 fallback은 exp_cd=1만 반환한다")
+            void 신입_fallback() {
+                when(mockMapper.mapCompoundParams("saramin", "career", "신입"))
+                        .thenReturn(java.util.Map.of());
+                java.util.Map<String, String> result = crawler.resolveCareerParams("신입");
+                assertEquals(Map.of("exp_cd", "1"), result);
+            }
+
+            @Test
+            @DisplayName("알 수 없는 경력은 빈 Map을 반환한다")
+            void 알수없는경력_빈맵() {
+                when(mockMapper.mapCompoundParams("saramin", "career", "알수없음"))
+                        .thenReturn(java.util.Map.of());
+                assertTrue(crawler.resolveCareerParams("알수없음").isEmpty());
+            }
+        }
     }
 
     @Nested
@@ -172,6 +218,51 @@ class CrawlerMappingTest {
             @DisplayName("알 수 없는 값은 빈 문자열을 반환한다")
             void 알수없는값_빈문자열() {
                 assertEquals("", crawler.mapCareerType("알수없음"));
+            }
+        }
+
+        @Nested
+        @DisplayName("resolveCareerParams 메서드 (DB compound 우선)")
+        class ResolveCareerParams {
+
+            @Test
+            @DisplayName("DB compound 매핑이 있으면 DB 값을 사용한다")
+            void DB_compound_우선() {
+                when(mockMapper.mapCompoundParams("jobkorea", "career", "1~3년"))
+                        .thenReturn(java.util.Map.of("careerList", "2", "careerMin", "1", "careerMax", "3"));
+                java.util.Map<String, String> result = crawler.resolveCareerParams("1~3년");
+                assertEquals("2", result.get("careerList"));
+                assertEquals("1", result.get("careerMin"));
+                assertEquals("3", result.get("careerMax"));
+            }
+
+            @Test
+            @DisplayName("DB 매핑이 없으면 하드코딩 fallback을 사용한다")
+            void DB_없음_fallback() {
+                when(mockMapper.mapCompoundParams("jobkorea", "career", "1~3년"))
+                        .thenReturn(java.util.Map.of());
+                java.util.Map<String, String> result = crawler.resolveCareerParams("1~3년");
+                assertEquals("2", result.get("careerList"));
+                assertEquals("1", result.get("careerMin"));
+                assertEquals("3", result.get("careerMax"));
+            }
+
+            @Test
+            @DisplayName("신입 fallback은 careerList만 반환한다")
+            void 신입_fallback() {
+                when(mockMapper.mapCompoundParams("jobkorea", "career", "신입"))
+                        .thenReturn(java.util.Map.of());
+                java.util.Map<String, String> result = crawler.resolveCareerParams("신입");
+                assertEquals("1", result.get("careerList"));
+                assertFalse(result.containsKey("careerMin"));
+            }
+
+            @Test
+            @DisplayName("알 수 없는 경력은 빈 Map을 반환한다")
+            void 알수없는경력_빈맵() {
+                when(mockMapper.mapCompoundParams("jobkorea", "career", "알수없음"))
+                        .thenReturn(java.util.Map.of());
+                assertTrue(crawler.resolveCareerParams("알수없음").isEmpty());
             }
         }
 

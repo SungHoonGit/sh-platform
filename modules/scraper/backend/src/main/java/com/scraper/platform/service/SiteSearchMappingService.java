@@ -139,8 +139,8 @@ public class SiteSearchMappingService {
     }
 
     /**
-     * value_type별 value_mapping 검증: mapped/range는 온전한 JSON 객체 필수,
-     * direct는 null이어야 한다. 실패 시 INVALID_INPUT.
+     * value_type별 value_mapping 검증: mapped/range/compound는 온전한 JSON 객체 필수
+     * (compound는 값이 중첩 객체여야 한다), direct는 null이어야 한다. 실패 시 INVALID_INPUT.
      */
     private void validateMapping(SiteSearchMapping.ValueType valueType, String valueMapping) {
         if (valueType == null) {
@@ -156,6 +156,14 @@ public class SiteSearchMappingService {
             JsonNode node = objectMapper.readTree(valueMapping);
             if (!node.isObject() || node.isEmpty()) {
                 throw new BusinessException(ErrorCode.INVALID_INPUT);
+            }
+            if (valueType == SiteSearchMapping.ValueType.compound) {
+                for (var it = node.fields(); it.hasNext(); ) {
+                    JsonNode entry = it.next().getValue();
+                    if (!entry.isObject() || entry.isEmpty()) {
+                        throw new BusinessException(ErrorCode.INVALID_INPUT);
+                    }
+                }
             }
         } catch (BusinessException e) {
             throw e;

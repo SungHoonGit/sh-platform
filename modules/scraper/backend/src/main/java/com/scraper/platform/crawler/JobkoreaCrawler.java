@@ -159,12 +159,37 @@ public class JobkoreaCrawler implements SiteCrawler {
             body.put("careerMax", "");
             return;
         }
-        String type = mapCareerType(career);
+        // site_search_mapping compound 우선, 없으면 하드코딩 fallback (설계 032)
+        Map<String, String> careerParams = resolveCareerParams(career);
+        String type = careerParams.getOrDefault("careerList", "");
         body.put("careerList", type.isEmpty() ? List.of() : List.of(type));
+        body.put("careerMin", careerParams.getOrDefault("careerMin", ""));
+        body.put("careerMax", careerParams.getOrDefault("careerMax", ""));
+    }
 
+    /**
+     * 경력 표준값을 잡코리아 careerList/careerMin/careerMax 파라미터로 변환한다.
+     * DB compound 매핑이 있으면 그 값을, 없으면 하드코딩 switch를 사용한다.
+     */
+    Map<String, String> resolveCareerParams(String career) {
+        Map<String, String> fromDb = siteSearchMapper.mapCompoundParams(getSiteName(), "career", career);
+        if (!fromDb.isEmpty()) {
+            return fromDb;
+        }
+        String type = mapCareerType(career);
+        if (type.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> result = new LinkedHashMap<>();
+        result.put("careerList", type);
         int[] range = careerRange(career);
-        body.put("careerMin", range[0] < 0 ? "" : String.valueOf(range[0]));
-        body.put("careerMax", range[1] < 0 ? "" : String.valueOf(range[1]));
+        if (range[0] >= 0) {
+            result.put("careerMin", String.valueOf(range[0]));
+        }
+        if (range[1] >= 0) {
+            result.put("careerMax", String.valueOf(range[1]));
+        }
+        return result;
     }
 
     private boolean isCareerFilterActive(String career, Integer careerMin, Integer careerMax) {

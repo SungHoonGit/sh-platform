@@ -76,6 +76,12 @@ public class SiteSearchMapping {
         /** value_mapping JSON으로 코드 변환 (예: "3~5년" → career_level=5) */
         mapped,
         /** 범위 파라미터로 변환 (예: "3~5년" → years=3) */
-        range
+        range,
+        /**
+         * 복합 파라미터 매핑 — 표준값 하나가 여러 URL 파라미터로 확장된다.
+         * value_mapping 구조: {@code {"1~3년":{"exp_cd":"2","exp_min":"1","exp_max":"3"}}}
+         * (설계 032: 사람인 exp_cd, 잡코리아 careerList 등 코드+수치 구간)
+         */
+        compound
     }
 }

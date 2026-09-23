@@ -69,7 +69,7 @@ export const regionApi = {
 
 // ── 검색 매핑 (site_search_mapping) ──────────────────────────────
 
-export type ValueType = "direct" | "mapped" | "range";
+export type ValueType = "direct" | "mapped" | "range" | "compound";
 
 export interface SearchMapping {
   id: number;

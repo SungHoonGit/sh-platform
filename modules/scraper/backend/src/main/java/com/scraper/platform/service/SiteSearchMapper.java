@@ -116,12 +116,56 @@ public class SiteSearchMapper {
     }
 
     /**
+     * 표준 키의 compound 매핑에서 값을 사이트별 파라미터 Map으로 확장한다.
+     * <p>
+     * 예: saramin/career/"1~3년" → {@code {exp_cd=2, exp_min=1, exp_max=3}}
+     * <p>
+     * 행 부재·비활성·value_type이 compound가 아님·JSON 파싱 실패·표준값 미포함은
+     * 모두 빈 Map을 반환한다 — 호출부(크롤러)에서 하드코딩 fallback을 쓰도록 (설계 032).
+     *
+     * @param siteName    사이트 영문명 (saramin, jobkorea)
+     * @param standardKey 표준 키 (career 등)
+     * @param value       표준값 (예: "1~3년")
+     * @return 사이트 URL 파라미터 Map, 사용 불가 시 빈 Map
+     */
+    public Map<String, String> mapCompoundParams(String siteName, String standardKey, String value) {
+        if (siteName == null || standardKey == null || value == null || value.isEmpty()) {
+            return Map.of();
+        }
+        Optional<SiteSearchMapping> mapping = mappingRepository
+                .findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue(siteName, standardKey);
+        if (mapping.isEmpty() || mapping.get().getValueType() != SiteSearchMapping.ValueType.compound) {
+            return Map.of();
+        }
+        String valueMappingJson = mapping.get().getValueMapping();
+        if (valueMappingJson == null || valueMappingJson.isBlank()) {
+            return Map.of();
+        }
+        try {
+            JsonNode root = objectMapper.readTree(valueMappingJson);
+            JsonNode entry = root.get(value);
+            if (entry == null || !entry.isObject()) {
+                return Map.of();
+            }
+            Map<String, String> params = new LinkedHashMap<>();
+            entry.fields().forEachRemaining(e -> params.put(e.getKey(), e.getValue().asText()));
+            return params;
+        } catch (Exception e) {
+            log.warn("Failed to parse compound value_mapping for {}/{}: {}", siteName, standardKey, valueMappingJson, e);
+            return Map.of();
+        }
+    }
+
+    /**
      * 값을 매핑 규칙에 따라 변환한다.
+     * compound는 복수 파라미터이므로 단일 문자열 변환 경로에서는 스킵한다
+     * (크롤러는 {@link #mapCompoundParams}로 직접 조회).
      */
     private String convertValue(String value, SiteSearchMapping mapping) {
         return switch (mapping.getValueType()) {
             case direct -> value;
             case mapped, range -> mapValue(value, mapping.getValueMapping());
+            case compound -> null;
         };
     }
 

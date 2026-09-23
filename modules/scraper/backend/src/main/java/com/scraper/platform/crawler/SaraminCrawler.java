@@ -173,14 +173,29 @@ public class SaraminCrawler implements SiteCrawler {
         if (career.isEmpty() || career.equals("전체") || career.equals("경력무관")) {
             return;
         }
-        switch (career) {
-            case "신입" -> sb.append("&exp_cd=1");
-            case "경력" -> sb.append("&exp_cd=2");
-            case "1~3년" -> sb.append("&exp_cd=2&exp_min=1&exp_max=3");
-            case "3~5년" -> sb.append("&exp_cd=2&exp_min=3&exp_max=5");
-            case "5~10년" -> sb.append("&exp_cd=2&exp_min=5&exp_max=10");
-            case "10년이상" -> sb.append("&exp_cd=2&exp_min=10");
+        // site_search_mapping compound 우선, 없으면 하드코딩 fallback (설계 032)
+        Map<String, String> careerParams = resolveCareerParams(career);
+        careerParams.forEach((k, v) -> sb.append("&").append(k).append("=").append(v));
+    }
+
+    /**
+     * 경력 표준값을 사람인 exp_cd/exp_min/exp_max 파라미터로 변환한다.
+     * DB compound 매핑이 있으면 그 값을, 없으면 하드코딩 switch를 사용한다.
+     */
+    Map<String, String> resolveCareerParams(String career) {
+        Map<String, String> fromDb = siteSearchMapper.mapCompoundParams(getSiteName(), "career", career);
+        if (!fromDb.isEmpty()) {
+            return fromDb;
         }
+        return switch (career) {
+            case "신입" -> Map.of("exp_cd", "1");
+            case "경력" -> Map.of("exp_cd", "2");
+            case "1~3년" -> Map.of("exp_cd", "2", "exp_min", "1", "exp_max", "3");
+            case "3~5년" -> Map.of("exp_cd", "2", "exp_min", "3", "exp_max", "5");
+            case "5~10년" -> Map.of("exp_cd", "2", "exp_min", "5", "exp_max", "10");
+            case "10년이상" -> Map.of("exp_cd", "2", "exp_min", "10");
+            default -> Map.of();
+        };
     }
 
     private boolean isCareerFilterActive(Map<String, String> params) {

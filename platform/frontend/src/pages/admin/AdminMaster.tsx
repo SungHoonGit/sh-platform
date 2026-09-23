@@ -355,11 +355,12 @@ function MappingsTab() {
           <option value="direct">direct</option>
           <option value="mapped">mapped</option>
           <option value="range">range</option>
+          <option value="compound">compound</option>
         </select>
       </div>
       <div>
         <label className="block text-xs text-slate-500 mb-1">value_mapping (JSON {`{`}값:코드{`}`})</label>
-        <input value={mapping} onChange={(e) => setMapping(e.target.value)} placeholder={type === "direct" ? "direct는 불필요" : '{"서울":"101000"}'} disabled={type === "direct"}
+        <input value={mapping} onChange={(e) => setMapping(e.target.value)} placeholder={type === "direct" ? "direct는 불필요" : type === "compound" ? '{"1~3년":{"exp_cd":"2","exp_min":"1","exp_max":"3"}}' : '{"서울":"101000"}'} disabled={type === "direct"}
           className="w-72 px-3 py-2 border border-slate-300 rounded-lg text-sm disabled:bg-slate-100" />
       </div>
       <div>
@@ -431,6 +432,7 @@ function MappingsTab() {
                         <option value="direct">direct</option>
                         <option value="mapped">mapped</option>
                         <option value="range">range</option>
+                        <option value="compound">compound</option>
                       </select>
                     </td>
                     <td className="px-4 py-3">

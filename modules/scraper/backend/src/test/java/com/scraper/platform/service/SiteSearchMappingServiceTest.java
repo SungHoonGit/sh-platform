@@ -190,6 +190,40 @@ class SiteSearchMappingServiceTest {
             assertEquals(21L, result.id());
             assertNull(result.valueMapping());
         }
+
+        @Test
+        @DisplayName("compound 타입은 중첩 객체 JSON으로 생성된다")
+        void compound_생성() {
+            SearchMappingRequest request = new SearchMappingRequest(
+                    1L, "career", "exp_cd", SiteSearchMapping.ValueType.compound,
+                    "{\"1~3년\":{\"exp_cd\":\"2\",\"exp_min\":\"1\",\"exp_max\":\"3\"}}", true, 2);
+            given(siteDefinitionRepository.findById(1L)).willReturn(Optional.of(saraminSite));
+            given(mappingRepository.existsBySiteDefinitionIdAndStandardKey(1L, "career")).willReturn(false);
+            given(mappingRepository.save(org.mockito.ArgumentMatchers.any())).willAnswer(inv -> {
+                SiteSearchMapping m = inv.getArgument(0);
+                m.setId(22L);
+                return m;
+            });
+
+            SearchMappingResponse result = searchMappingService.create(request);
+
+            assertEquals(SiteSearchMapping.ValueType.compound, result.valueType());
+            assertEquals("{\"1~3년\":{\"exp_cd\":\"2\",\"exp_min\":\"1\",\"exp_max\":\"3\"}}", result.valueMapping());
+        }
+
+        @Test
+        @DisplayName("compound인데 값이 중첩 객체가 아니면 INVALID_INPUT")
+        void compound_잘못된구조_예외() {
+            SearchMappingRequest request = new SearchMappingRequest(
+                    1L, "career", "exp_cd", SiteSearchMapping.ValueType.compound,
+                    "{\"1~3년\":\"2\"}", true, 2);
+            given(siteDefinitionRepository.findById(1L)).willReturn(Optional.of(saraminSite));
+            given(mappingRepository.existsBySiteDefinitionIdAndStandardKey(1L, "career")).willReturn(false);
+
+            BusinessException ex = assertThrows(BusinessException.class,
+                    () -> searchMappingService.create(request));
+            assertEquals(ErrorCode.INVALID_INPUT, ex.getErrorCode());
+        }
     }
 
     @Nested

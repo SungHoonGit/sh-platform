@@ -349,6 +349,94 @@ class SiteSearchMapperTest {
         }
     }
 
+    @Nested
+    @DisplayName("mapCompoundParams (compound 파라미터 확장)")
+    class MapCompoundParams {
+
+        private static final String COMPOUND = """
+                {"신입":{"exp_cd":"1"},"1~3년":{"exp_cd":"2","exp_min":"1","exp_max":"3"},"경력":{"exp_cd":"2"}}""";
+
+        @Test
+        @DisplayName("compound 매핑에서 표준값을 여러 파라미터로 확장한다")
+        void compound_확장() {
+            given(mappingRepository.findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue("saramin", "career"))
+                    .willReturn(Optional.of(mapping("career", "exp_cd", SiteSearchMapping.ValueType.compound, COMPOUND)));
+
+            Map<String, String> result = siteSearchMapper.mapCompoundParams("saramin", "career", "1~3년");
+
+            assertEquals("2", result.get("exp_cd"));
+            assertEquals("1", result.get("exp_min"));
+            assertEquals("3", result.get("exp_max"));
+            assertEquals(3, result.size());
+        }
+
+        @Test
+        @DisplayName("단일 파라미터 compound도 Map으로 반환한다")
+        void 단일파라미터_compound() {
+            given(mappingRepository.findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue("saramin", "career"))
+                    .willReturn(Optional.of(mapping("career", "exp_cd", SiteSearchMapping.ValueType.compound, COMPOUND)));
+
+            Map<String, String> result = siteSearchMapper.mapCompoundParams("saramin", "career", "신입");
+
+            assertEquals(Map.of("exp_cd", "1"), result);
+        }
+
+        @Test
+        @DisplayName("value_type이 compound가 아니면 빈 Map을 반환한다")
+        void 비compound_빈맵() {
+            given(mappingRepository.findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue("saramin", "career"))
+                    .willReturn(Optional.of(mapping("career", "career_level", SiteSearchMapping.ValueType.mapped,
+                            "{\"신입\":\"1\"}")));
+
+            assertTrue(siteSearchMapper.mapCompoundParams("saramin", "career", "신입").isEmpty());
+        }
+
+        @Test
+        @DisplayName("매핑 행이 없으면 빈 Map을 반환한다")
+        void 행없음_빈맵() {
+            given(mappingRepository.findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue("saramin", "career"))
+                    .willReturn(Optional.empty());
+
+            assertTrue(siteSearchMapper.mapCompoundParams("saramin", "career", "신입").isEmpty());
+        }
+
+        @Test
+        @DisplayName("value_mapping에 없는 표준값이면 빈 Map을 반환한다")
+        void 미매핑_빈맵() {
+            given(mappingRepository.findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue("saramin", "career"))
+                    .willReturn(Optional.of(mapping("career", "exp_cd", SiteSearchMapping.ValueType.compound, COMPOUND)));
+
+            assertTrue(siteSearchMapper.mapCompoundParams("saramin", "career", "알수없음").isEmpty());
+        }
+
+        @Test
+        @DisplayName("잘못된 JSON이면 빈 Map을 반환한다")
+        void 잘못된JSON_빈맵() {
+            given(mappingRepository.findBySiteDefinition_SiteNameAndStandardKeyAndIsEnabledTrue("saramin", "career"))
+                    .willReturn(Optional.of(mapping("career", "exp_cd", SiteSearchMapping.ValueType.compound, "{broken")));
+
+            assertTrue(siteSearchMapper.mapCompoundParams("saramin", "career", "신입").isEmpty());
+        }
+
+        @Test
+        @DisplayName("빈 인자는 저장소를 조회하지 않고 빈 Map을 반환한다")
+        void 빈인자_빈맵() {
+            assertTrue(siteSearchMapper.mapCompoundParams("saramin", "career", "").isEmpty());
+            assertTrue(siteSearchMapper.mapCompoundParams(null, "career", "신입").isEmpty());
+        }
+
+        @Test
+        @DisplayName("toSiteParams는 compound 행을 스킵한다")
+        void toSiteParams_compound_스킵() {
+            given(mappingRepository.findBySiteDefinition_SiteNameAndIsEnabledTrueOrderByDisplayOrder("saramin"))
+                    .willReturn(List.of(mapping("career", "exp_cd", SiteSearchMapping.ValueType.compound, COMPOUND)));
+
+            Map<String, String> result = siteSearchMapper.toSiteParams("saramin", "{\"career\":\"1~3년\"}");
+
+            assertTrue(result.isEmpty());
+        }
+    }
+
     private SiteSearchMapping mapping(String standardKey, String urlParamName,
                                        SiteSearchMapping.ValueType valueType, String valueMapping) {
         return SiteSearchMapping.builder()
