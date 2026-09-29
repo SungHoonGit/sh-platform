@@ -91,6 +91,7 @@ export default function CrudSection({
   importOptions = null,
   renderRowExtra,
   renderRowDetail,
+  alwaysDetail = false,
   rowToggle,
   documentId,
   onChanged,
@@ -122,6 +123,8 @@ export default function CrudSection({
   renderRowExtra?: (it: Item) => React.ReactNode;
   /** 행 펼침(목록 미리보기) 상세 콘텐츠. 지정하면 행 클릭으로 토글된다 */
   renderRowDetail?: (it: Item) => React.ReactNode;
+  /** true면 펼침 토글과 무관하게 상세를 항상 표시 (editing 중인 행은 제외). 자기소개 등 */
+  alwaysDetail?: boolean;
   /** 항목별 보임/숨김 토글 (이력서 문서 설정). true면 이 이력서에서 표시됨. */
   rowToggle?: {
     visible: (it: Item) => boolean;
@@ -822,10 +825,14 @@ export default function CrudSection({
     setExpandedId((prev) => (prev === String(it.id) ? null : String(it.id)));
   };
 
-  const expandedDetail = (it: Item) =>
-    renderRowDetail && expandedId === String(it.id) ? (
+  const expandedDetail = (it: Item) => {
+    if (!renderRowDetail) return null;
+    const show = alwaysDetail ? editing !== String(it.id) : expandedId === String(it.id);
+    if (!show) return null;
+    return (
       <div className="border-t border-gray-100 px-1 pt-2 pb-1">{renderRowDetail(it)}</div>
-    ) : null;
+    );
+  };
 
   const itemList = (
     <div className="space-y-2">
@@ -841,8 +848,12 @@ export default function CrudSection({
           }
         >
           <div
-            className={`py-2.5 px-1 flex justify-between items-start gap-2 ${renderRowDetail ? "cursor-pointer" : ""}`}
-            onClick={() => renderRowDetail && editing !== String(it.id) && toggleExpand(it)}
+            className={`py-2.5 px-1 flex justify-between items-start gap-2 ${
+              renderRowDetail && !alwaysDetail ? "cursor-pointer" : ""
+            }`}
+            onClick={() =>
+              renderRowDetail && !alwaysDetail && editing !== String(it.id) && toggleExpand(it)
+            }
           >
             {orderControls(it, i)}
             {renderRowInfo(it)}

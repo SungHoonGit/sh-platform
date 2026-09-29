@@ -555,8 +555,19 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                               </div>
                             );
                           }
-                        : undefined
+                        : cfg.key === "introductions"
+                          ? (it) => {
+                              const content = it.content != null ? String(it.content) : "";
+                              if (!content) return null;
+                              return (
+                                <p className="whitespace-pre-wrap px-1 py-0.5 text-sm leading-relaxed text-slate-700">
+                                  {content}
+                                </p>
+                              );
+                            }
+                          : undefined
                     }
+                    alwaysDetail={cfg.key === "introductions"}
                     rowToggle={
                       cfg.key === "certificates"
                         ? {
