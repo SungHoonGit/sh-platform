@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { apiGet, apiPut, logout } from "../api/client";
+import { apiGet, apiPut } from "../api/client";
 import type { ResumeView } from "../types/resume";
 import type { PortfolioItem } from "../types/resume";
 import type { ResumeDocument, SectionItem } from "../types/document";
@@ -421,12 +421,6 @@ export default function EditPage({ documentId }: { documentId?: number }) {
             >
               미리보기
             </a>
-            <button
-              onClick={logout}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50"
-            >
-              로그아웃
-            </button>
           </div>
         </div>
 
@@ -567,7 +561,7 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                             }
                           : undefined
                     }
-                    alwaysDetail={cfg.key === "introductions"}
+                    alwaysDetail={cfg.key === "introductions" || cfg.key === "projects"}
                     rowToggle={
                       cfg.key === "certificates"
                         ? {
