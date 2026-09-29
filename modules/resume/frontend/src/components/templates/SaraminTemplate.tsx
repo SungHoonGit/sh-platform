@@ -3,9 +3,17 @@ import type { ResumeView } from "../../types/resume";
 import { FileThumb, period, PortfolioCard, ProfilePhoto, projectLinks, ymd } from "./shared";
 import MarkdownText from "../MarkdownText";
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  id,
+  title,
+  children,
+}: {
+  id?: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="mb-4 break-inside-avoid border border-gray-300 rounded-sm">
+    <section id={id} className="mb-4 break-inside-avoid border border-gray-300 rounded-sm">
       <h2 className="bg-slate-100 px-4 py-2 text-sm font-bold text-slate-800 border-b border-gray-300">
         ■ {title}
       </h2>
@@ -34,7 +42,7 @@ export default function SaraminTemplate({
   const nodes: Record<string, React.ReactNode> = {
     careers:
       view.careers.length > 0 ? (
-        <Section title="경력">
+        <Section id="section-careers" title="경력">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-gray-500 text-left">
@@ -81,7 +89,7 @@ export default function SaraminTemplate({
       ) : null,
     projects:
       view.projects.length > 0 ? (
-        <Section title="프로젝트">
+        <Section id="section-projects" title="프로젝트">
           {view.projects.map((pr) => (
             <article key={pr.id} className="mb-3 last:mb-0 pb-3 border-b border-dashed border-gray-200 last:border-0">
               {pr.thumbnailPath && (
@@ -115,7 +123,7 @@ export default function SaraminTemplate({
       ) : null,
     educations:
       view.educations.length > 0 ? (
-        <Section title="학력">
+        <Section id="section-educations" title="학력">
           <table className="w-full text-sm">
             <tbody>
               {view.educations.map((ed) => (
@@ -139,7 +147,7 @@ export default function SaraminTemplate({
       ) : null,
     skills:
       view.skills.length > 0 ? (
-        <Section title="보유 스킬">
+        <Section id="section-skills" title="보유 스킬">
           <table className="w-full text-sm">
             <tbody>
               {view.skills.map((s) => (
@@ -156,7 +164,7 @@ export default function SaraminTemplate({
       ) : null,
     certificates:
       view.certificates.length > 0 ? (
-        <Section title="자격증">
+        <Section id="section-certificates" title="자격증">
           <ul className="space-y-1 text-sm">
             {view.certificates.map((c) => (
               <li key={c.id} className="flex justify-between">
@@ -172,7 +180,7 @@ export default function SaraminTemplate({
       ) : null,
     introductions:
       view.introductions.length > 0 ? (
-        <Section title="자기소개">
+        <Section id="section-introductions" title="자기소개">
           {view.introductions.map((it) => (
             <article key={it.id} className="mb-3 last:mb-0 pb-3 border-b border-dashed border-gray-200 last:border-0 last:pb-0">
               <h3 className="font-semibold text-sm mb-1">{it.title}</h3>
@@ -183,7 +191,7 @@ export default function SaraminTemplate({
       ) : null,
     portfolioItems:
       view.portfolioItems.length > 0 ? (
-        <Section title="포트폴리오">
+        <Section id="section-portfolioItems" title="포트폴리오">
           {view.portfolioItems.map((pi) => (
             <PortfolioCard key={pi.id} item={pi} shareToken={shareToken} />
           ))}

@@ -6,6 +6,7 @@ import ClassicTemplate from "../components/templates/ClassicTemplate";
 import ModernTemplate from "../components/templates/ModernTemplate";
 import SaraminTemplate from "../components/templates/SaraminTemplate";
 import { DEFAULT_ORDER } from "../components/templates/shared";
+import TocNav from "../components/TocNav";
 
 interface ShareViewData {
   documentId: number;
@@ -72,28 +73,34 @@ export default function ShareViewPage({ token }: { token: string }) {
     <div className="min-h-screen bg-gray-100 py-6 print:bg-white print:py-0">
       <style>{`@media print { @page { margin: 15mm; } }`}</style>
 
-      <div className="max-w-3xl mx-auto mb-4 flex justify-end items-center gap-2 print:hidden">
-        <span className="mr-auto text-sm text-slate-500">{data.title}</span>
-        <button
-          onClick={() =>
-            apiDownloadShare(`/${token}/pdf`, `${data.title}.pdf`).catch((e) =>
-              alert(`PDF 다운로드 실패: ${e.message}`),
-            )
-          }
-          className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded hover:bg-gray-700"
-        >
-          PDF 다운로드
-        </button>
-      </div>
+      <div className="max-w-5xl mx-auto px-4 flex gap-6 print:block print:max-w-none print:px-0">
+        <div className="flex-1 min-w-0">
+          <div className="max-w-3xl mx-auto mb-4 flex justify-end items-center gap-2 print:hidden">
+            <span className="mr-auto text-sm text-slate-500">{data.title}</span>
+            <button
+              onClick={() =>
+                apiDownloadShare(`/${token}/pdf`, `${data.title}.pdf`).catch((e) =>
+                  alert(`PDF 다운로드 실패: ${e.message}`),
+                )
+              }
+              className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded hover:bg-gray-700"
+            >
+              PDF 다운로드
+            </button>
+          </div>
 
-      <div className="max-w-3xl mx-auto bg-white shadow-sm px-10 py-8 print:shadow-none print:px-0 print:max-w-none">
-        {templateCode === "MODERN" ? (
-          <ModernTemplate view={filteredView} order={order} shareToken={token} />
-        ) : templateCode === "SARAMIN" ? (
-          <SaraminTemplate view={filteredView} order={order} shareToken={token} />
-        ) : (
-          <ClassicTemplate view={filteredView} order={order} shareToken={token} />
-        )}
+          <div className="max-w-3xl mx-auto bg-white shadow-sm px-10 py-8 print:shadow-none print:px-0 print:max-w-none">
+            {templateCode === "MODERN" ? (
+              <ModernTemplate view={filteredView} order={order} shareToken={token} />
+            ) : templateCode === "SARAMIN" ? (
+              <SaraminTemplate view={filteredView} order={order} shareToken={token} />
+            ) : (
+              <ClassicTemplate view={filteredView} order={order} shareToken={token} />
+            )}
+          </div>
+        </div>
+
+        <TocNav view={filteredView} order={order} />
       </div>
     </div>
   );

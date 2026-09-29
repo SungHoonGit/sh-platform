@@ -2,9 +2,17 @@ import type { ResumeView } from "../../types/resume";
 import { FileThumb, period, PortfolioCard, ProfilePhoto, projectLinks, ymd } from "./shared";
 import MarkdownText from "../MarkdownText";
 
-function SideSection({ title, children }: { title: string; children: React.ReactNode }) {
+function SideSection({
+  id,
+  title,
+  children,
+}: {
+  id?: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="mb-5 break-inside-avoid">
+    <div id={id} className="mb-5 break-inside-avoid">
       <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-600 pb-1 mb-2.5">
         {title}
       </h2>
@@ -13,9 +21,17 @@ function SideSection({ title, children }: { title: string; children: React.React
   );
 }
 
-function MainSection({ title, children }: { title: string; children: React.ReactNode }) {
+function MainSection({
+  id,
+  title,
+  children,
+}: {
+  id?: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="mb-4 break-inside-avoid">
+    <section id={id} className="mb-4 break-inside-avoid">
       <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3 print:text-sm">
         <span className="w-1 h-4 bg-teal-600 rounded print:h-3" />
         {title}
@@ -42,7 +58,7 @@ export default function ModernTemplate({
   const mainNodes: Record<string, React.ReactNode> = {
     careers:
       view.careers.length > 0 ? (
-        <MainSection title="경력">
+        <MainSection id="section-careers" title="경력">
           {view.careers.map((c) => (
             <article key={c.id} className="mb-4 last:mb-0 pl-3 border-l-2 border-gray-200">
               <div className="flex justify-between items-baseline gap-2">
@@ -74,7 +90,7 @@ export default function ModernTemplate({
       ) : null,
     projects:
       view.projects.length > 0 ? (
-        <MainSection title="프로젝트">
+        <MainSection id="section-projects" title="프로젝트">
           {view.projects.map((pr) => (
             <article key={pr.id} className="mb-4 last:mb-0 pl-3 border-l-2 border-gray-200">
               {pr.thumbnailPath && (
@@ -112,7 +128,7 @@ export default function ModernTemplate({
       ) : null,
     introductions:
       view.introductions.length > 0 ? (
-        <MainSection title="자기소개">
+        <MainSection id="section-introductions" title="자기소개">
           {view.introductions.map((it) => (
             <article key={it.id} className="mb-3 last:mb-0">
               <h3 className="font-semibold text-sm text-slate-800 mb-0.5">{it.title}</h3>
@@ -123,7 +139,7 @@ export default function ModernTemplate({
       ) : null,
     portfolioItems:
       view.portfolioItems.length > 0 ? (
-        <MainSection title="포트폴리오">
+        <MainSection id="section-portfolioItems" title="포트폴리오">
           {view.portfolioItems.map((pi) => (
             <PortfolioCard key={pi.id} item={pi} shareToken={shareToken} />
           ))}
@@ -134,7 +150,7 @@ export default function ModernTemplate({
   const sideNodes: Record<string, React.ReactNode> = {
     educations:
       view.educations.length > 0 ? (
-        <SideSection title="학력">
+        <SideSection id="section-educations" title="학력">
           {view.educations.map((ed) => (
             <div key={ed.id} className="mb-2 last:mb-0 text-xs">
               <p className="font-semibold text-white">{ed.school}</p>
@@ -152,7 +168,7 @@ export default function ModernTemplate({
       ) : null,
     skills:
       view.skills.length > 0 ? (
-        <SideSection title="스킬">
+        <SideSection id="section-skills" title="스킬">
           <div className="flex flex-wrap gap-1.5">
             {view.skills.map((s) => (
               <span
@@ -167,7 +183,7 @@ export default function ModernTemplate({
       ) : null,
     certificates:
       view.certificates.length > 0 ? (
-        <SideSection title="자격증">
+        <SideSection id="section-certificates" title="자격증">
           <ul className="space-y-1.5">
             {view.certificates.map((c) => (
               <li key={c.id} className="text-xs">

@@ -6,6 +6,7 @@ import ClassicTemplate from "../components/templates/ClassicTemplate";
 import ModernTemplate from "../components/templates/ModernTemplate";
 import SaraminTemplate from "../components/templates/SaraminTemplate";
 import { DEFAULT_ORDER, TEMPLATE_LABELS } from "../components/templates/shared";
+import TocNav from "../components/TocNav";
 
 export default function ResumeViewPage({ documentId }: { documentId?: number }) {
   const [view, setView] = useState<ResumeView | null>(null);
@@ -76,45 +77,51 @@ export default function ResumeViewPage({ documentId }: { documentId?: number }) 
     <div className="min-h-screen bg-gray-100 py-6 print:bg-white print:py-0">
       <style>{`@media print { @page { margin: 15mm; } }`}</style>
 
-      <div className="max-w-3xl mx-auto mb-4 flex justify-end items-center gap-2 print:hidden">
-        {documentId && (
-          <span className="mr-auto text-sm text-slate-500">
-            테마: <b className="text-slate-700">{TEMPLATE_LABELS[templateCode] ?? templateCode}</b>
-          </span>
-        )}
-        <a
-          href="#/resumes"
-          className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
-        >
-          목록
-        </a>
-        <a
-          href={documentId ? `#/r/${documentId}/edit` : "#/resumes"}
-          className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
-        >
-          편집
-        </a>
-        <button
-          onClick={() => {
-            const url = documentId ? `/view/pdf?documentId=${documentId}` : "/view/pdf";
-            apiDownload(url, "resume.pdf").catch((e) => {
-              if (e.message !== "UNAUTHORIZED") alert(`PDF 다운로드 실패: ${e.message}`);
-            });
-          }}
-          className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded hover:bg-gray-700"
-        >
-          PDF 다운로드
-        </button>
-      </div>
+      <div className="max-w-5xl mx-auto px-4 flex gap-6 print:block print:max-w-none print:px-0">
+        <div className="flex-1 min-w-0">
+          <div className="max-w-3xl mx-auto mb-4 flex justify-end items-center gap-2 print:hidden">
+            {documentId && (
+              <span className="mr-auto text-sm text-slate-500">
+                테마: <b className="text-slate-700">{TEMPLATE_LABELS[templateCode] ?? templateCode}</b>
+              </span>
+            )}
+            <a
+              href="#/resumes"
+              className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+              목록
+            </a>
+            <a
+              href={documentId ? `#/r/${documentId}/edit` : "#/resumes"}
+              className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+              편집
+            </a>
+            <button
+              onClick={() => {
+                const url = documentId ? `/view/pdf?documentId=${documentId}` : "/view/pdf";
+                apiDownload(url, "resume.pdf").catch((e) => {
+                  if (e.message !== "UNAUTHORIZED") alert(`PDF 다운로드 실패: ${e.message}`);
+                });
+              }}
+              className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded hover:bg-gray-700"
+            >
+              PDF 다운로드
+            </button>
+          </div>
 
-      <div className="max-w-3xl mx-auto bg-white shadow-sm px-10 py-8 print:shadow-none print:px-0 print:max-w-none">
-        {templateCode === "MODERN" ? (
-          <ModernTemplate view={filteredView!} order={order} />
-        ) : templateCode === "SARAMIN" ? (
-          <SaraminTemplate view={filteredView!} order={order} />
-        ) : (
-          <ClassicTemplate view={filteredView!} order={order} />
-        )}
+          <div className="max-w-3xl mx-auto bg-white shadow-sm px-10 py-8 print:shadow-none print:px-0 print:max-w-none">
+            {templateCode === "MODERN" ? (
+              <ModernTemplate view={filteredView!} order={order} />
+            ) : templateCode === "SARAMIN" ? (
+              <SaraminTemplate view={filteredView!} order={order} />
+            ) : (
+              <ClassicTemplate view={filteredView!} order={order} />
+            )}
+          </div>
+        </div>
+
+        <TocNav view={filteredView!} order={order} />
       </div>
     </div>
   );

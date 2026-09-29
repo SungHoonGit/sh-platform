@@ -2,9 +2,17 @@ import type { ResumeView } from "../../types/resume";
 import { FileThumb, period, PortfolioCard, ProfilePhoto, projectLinks, ymd } from "./shared";
 import MarkdownText from "../MarkdownText";
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  id,
+  title,
+  children,
+}: {
+  id?: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="mb-5 break-inside-avoid">
+    <section id={id} className="mb-5 break-inside-avoid">
       <h2 className="text-lg font-bold border-b border-gray-900 pb-0.5 mb-2.5 inline-block">{title}</h2>
       {children}
     </section>
@@ -24,7 +32,7 @@ export default function ClassicTemplate({
   const nodes: Record<string, React.ReactNode> = {
     careers:
       view.careers.length > 0 ? (
-        <Section title="경력">
+        <Section id="section-careers" title="경력">
           {view.careers.map((c) => (
               <article key={c.id} className="mb-3 last:mb-0">
               <div className="flex justify-between items-baseline">
@@ -56,7 +64,7 @@ export default function ClassicTemplate({
       ) : null,
     projects:
       view.projects.length > 0 ? (
-        <Section title="프로젝트">
+        <Section id="section-projects" title="프로젝트">
           {view.projects.map((pr) => (
               <article key={pr.id} className="mb-3 last:mb-0">
               {pr.thumbnailPath && (
@@ -94,7 +102,7 @@ export default function ClassicTemplate({
       ) : null,
     educations:
       view.educations.length > 0 ? (
-        <Section title="학력">
+        <Section id="section-educations" title="학력">
           {view.educations.map((ed) => (
               <article key={ed.id} className="mb-2 last:mb-0 flex justify-between items-baseline">
               <div>
@@ -123,7 +131,7 @@ export default function ClassicTemplate({
       ) : null,
     skills:
       view.skills.length > 0 ? (
-        <Section title="스킬">
+        <Section id="section-skills" title="스킬">
           <div className="flex flex-wrap gap-2">
             {view.skills.map((s) => (
               <span key={s.id} className="px-2.5 py-1 bg-gray-100 rounded-full text-sm">
@@ -136,7 +144,7 @@ export default function ClassicTemplate({
       ) : null,
     certificates:
       view.certificates.length > 0 ? (
-        <Section title="자격증">
+        <Section id="section-certificates" title="자격증">
           <ul className="space-y-1.5">
             {view.certificates.map((c) => (
               <li key={c.id} className="flex justify-between items-baseline">
@@ -152,7 +160,7 @@ export default function ClassicTemplate({
       ) : null,
     introductions:
       view.introductions.length > 0 ? (
-        <Section title="자기소개">
+        <Section id="section-introductions" title="자기소개">
           {view.introductions.map((it) => (
               <article key={it.id} className="mb-3 last:mb-0">
               <h3 className="font-semibold mb-0.5">{it.title}</h3>
@@ -163,7 +171,7 @@ export default function ClassicTemplate({
       ) : null,
     portfolioItems:
       view.portfolioItems.length > 0 ? (
-        <Section title="포트폴리오">
+        <Section id="section-portfolioItems" title="포트폴리오">
           {view.portfolioItems.map((pi) => (
             <PortfolioCard key={pi.id} item={pi} shareToken={shareToken} />
           ))}
