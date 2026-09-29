@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { loginUrlHere } from "@sh-platform/core";
 import PlatformLayout from "./layouts/PlatformLayout";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -29,7 +30,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         {!token ? (
-          <RedirectTo to="/" />
+          <RedirectTo to={loginUrlHere()} />
         ) : (
           <Routes>
             <Route element={<PlatformLayout />}>

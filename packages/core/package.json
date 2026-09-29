@@ -1,0 +1,10 @@
+{
+  "name": "@sh-platform/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "sh-platform MSA 프론트 공통 코어 (인증 redirect, 이후 토큰/api client)",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiDownload, apiGet } from "../api/client";
+import { loginUrlHere } from "@sh-platform/core";
 import type { ResumeView } from "../types/resume";
 import type { SectionItem } from "../types/document";
 import ClassicTemplate from "../components/templates/ClassicTemplate";
@@ -58,7 +59,7 @@ export default function ResumeViewPage({ documentId }: { documentId?: number }) 
       <div className="p-10 text-center">
         <p className="mb-4">로그인이 필요합니다.</p>
         <a
-          href={`/?redirect=${encodeURIComponent("/resume/")}`}
+          href={loginUrlHere(true)}
           className="px-4 py-2 bg-gray-900 text-white rounded hover:bg-gray-700"
         >
           로그인하러 가기

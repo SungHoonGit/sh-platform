@@ -1,3 +1,5 @@
+import { loginUrl, redirectToLogin } from "@sh-platform/core";
+
 const API_BASE = "/resume/api/v1";
 const SHARE_BASE = "/resume/share";
 
@@ -220,8 +222,21 @@ export async function apiDownloadShare(path: string, fallbackName = "download"):
   URL.revokeObjectURL(url);
 }
 
-export function logout(): void {
+function clearTokens(): void {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
-  window.location.href = "/";
+}
+
+export function logout(): void {
+  clearTokens();
+  window.location.href = loginUrl("/resume/");
+}
+
+/**
+ * 세션 만료(401) 처리. 토큰을 지우고 현재 화면(hash 포함)을 보존한 채
+ * 로그인 페이지로 이동한다 — 로그인 후 이전 화면으로 복귀 (설계 034).
+ */
+export function expireSession(): void {
+  clearTokens();
+  redirectToLogin(true);
 }

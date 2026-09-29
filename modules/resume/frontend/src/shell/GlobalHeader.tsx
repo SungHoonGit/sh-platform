@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Menu, Bell } from "lucide-react";
+import { loginUrlHere } from "@sh-platform/core";
 import { APP_HREFS, APP_LABELS, T, type ShellApp } from "./tokens";
 
 /**
@@ -144,7 +145,7 @@ export default function GlobalHeader({
           </div>
         ) : (
           <a
-            href={`/?redirect=${encodeURIComponent(window.location.pathname)}`}
+            href={loginUrlHere(true)}
             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-sm font-medium rounded-lg transition-colors"
           >
             로그인

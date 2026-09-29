@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { loginUrl } from "@sh-platform/core";
 
 export interface UserProfile {
   id: number;
@@ -50,7 +51,7 @@ export function useAuth(): AuthState {
     }
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
-    window.location.replace("/");
+    window.location.replace(loginUrl("/platform"));
   }, []);
 
   return { user, loading, logout };

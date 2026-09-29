@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { redirectToLogin } from "@sh-platform/core";
 
 interface MeResponse {
   id: number;
@@ -44,7 +45,7 @@ export default function AccountSettings() {
         const data = await res.json();
         setMe(data.data);
       } else if (res.status === 401) {
-        window.location.replace("/");
+        redirectToLogin();
       }
     } catch {
       setError("계정 정보를 불러오는데 실패했습니다");

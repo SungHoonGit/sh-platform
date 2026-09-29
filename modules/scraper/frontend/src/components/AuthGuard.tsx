@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { redirectToLogin } from "@sh-platform/core";
 import { useAuth } from "../hooks/useAuth";
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
@@ -7,7 +8,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      window.location.replace("/?redirect=" + encodeURIComponent("/scraper/"));
+      redirectToLogin();
     }
   }, [loading, isAuthenticated]);
 

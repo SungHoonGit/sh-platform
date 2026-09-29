@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { apiDelete, apiGet, apiPost, apiPut, logout } from "../api/client";
+import { apiDelete, apiGet, apiPost, apiPut, expireSession } from "../api/client";
 
 interface Application {
   id: number;
@@ -75,8 +75,8 @@ async function fetchScraper<T>(path: string): Promise<T> {
     headers: { Authorization: `Bearer ${token ?? ""}` },
   });
   if (res.status === 401) {
-    logout();
-    throw new Error("인증 만료");
+    expireSession();
+    throw new Error("로그인 만료");
   }
   if (!res.ok) throw new Error(await res.text());
   return res.json();

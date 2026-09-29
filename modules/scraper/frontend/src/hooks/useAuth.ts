@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { loginUrl } from "@sh-platform/core";
 import { fetchProfile, logout as logoutApi, type UserProfile } from "../api/auth";
 
 export interface AuthState {
@@ -33,7 +34,7 @@ export function useAuth(): AuthState {
   const logout = useCallback(() => {
     logoutApi();
     setUser(null);
-    window.location.href = "/?redirect=" + encodeURIComponent("/scraper/");
+    window.location.href = loginUrl("/scraper/");
   }, []);
 
   return {

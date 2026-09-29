@@ -1,4 +1,5 @@
 import type { Crawler, JobsResponse } from "../types";
+import { redirectToLogin as redirectHere } from "@sh-platform/core";
 
 const BASE = "/scraper";
 
@@ -10,7 +11,7 @@ function authHeaders(): HeadersInit {
 export function redirectToLogin() {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
-  window.location.replace("/?redirect=" + encodeURIComponent("/scraper/"));
+  redirectHere();
 }
 
 export interface SearchRequest {

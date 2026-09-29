@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { sanitizeRedirect } from "@sh-platform/core";
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams();
@@ -8,7 +9,7 @@ export default function AuthCallback() {
     const accessToken = searchParams.get("accessToken");
     const refreshToken = searchParams.get("refreshToken");
     const provider = searchParams.get("provider");
-    const returnUrl = searchParams.get("returnUrl") || "/platform";
+    const returnUrl = sanitizeRedirect(searchParams.get("returnUrl"), "/platform");
 
     if (accessToken && refreshToken) {
       localStorage.setItem("accessToken", accessToken);

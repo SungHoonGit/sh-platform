@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { sanitizeRedirect } from "@sh-platform/core";
 
 const PROVIDER_UI: Record<string, { label: string; color: string; hover: string; textColor: string; icon: string }> = {
   kakao: { label: "카카오", color: "bg-[#FEE500]", hover: "hover:bg-[#FDD835]", textColor: "text-[#191919]", icon: "K" },
@@ -12,7 +13,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [searchParams] = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/platform";
+  const redirect = sanitizeRedirect(searchParams.get("redirect"), "/platform");
   const [providers, setProviders] = useState<string[]>([]);
 
   useEffect(() => {
