@@ -1,0 +1,10 @@
+{
+  "name": "@sh-platform/shell",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "sh-platform 통합 셸 공용 패키지 (인증 훅, 헤더/드로어/서브내비, 디자인 토큰)",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

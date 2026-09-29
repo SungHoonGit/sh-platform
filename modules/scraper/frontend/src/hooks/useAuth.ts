@@ -1,47 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
-import { getAccessToken, loginUrl } from "@sh-platform/core";
-import { fetchProfile, logout as logoutApi, type UserProfile } from "../api/auth";
+import { useAuth as useShellAuth, type AuthState, type UserProfile } from "@sh-platform/shell";
 
-export interface AuthState {
-  isAuthenticated: boolean;
-  user: UserProfile | null;
-  loading: boolean;
-  error: string | null;
-  logout: () => void;
-}
+export type { AuthState, UserProfile };
 
+/**
+ * 스크래퍼용 인증 훅. 공통 셸 useAuth에 앱 설정만 전달한다 (설계 035).
+ */
 export function useAuth(): AuthState {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const token = getAccessToken();
-
-  useEffect(() => {
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    fetchProfile()
-      .then(setUser)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [token]);
-
-  const logout = useCallback(() => {
-    logoutApi();
-    setUser(null);
-    window.location.href = loginUrl("/scraper/");
-  }, []);
-
-  return {
-    isAuthenticated: !!token && !!user,
-    user,
-    loading,
-    error,
-    logout,
-  };
+  return useShellAuth("scraper");
 }

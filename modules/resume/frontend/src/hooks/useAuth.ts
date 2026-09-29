@@ -1,57 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { apiFetch, clearTokens, getAccessToken, getRefreshToken, loginUrl } from "@sh-platform/core";
+import { useAuth as useShellAuth, type AuthState, type UserProfile } from "@sh-platform/shell";
 
-export interface UserProfile {
-  id: number;
-  email: string;
-  name: string;
-  role: string;
-}
-
-interface AuthState {
-  user: UserProfile | null;
-  loading: boolean;
-  logout: () => void;
-}
+export type { AuthState, UserProfile };
 
 /**
- * resume 앱용 인증 훅. /api/v1/auth/me 로 프로필 조회.
- * platform 앱의 useAuth와 동일 패턴 (복제-동기화).
+ * resume 앱용 인증 훅. 공통 셸 useAuth에 앱 설정만 전달한다 (설계 035).
  */
 export function useAuth(): AuthState {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const token = getAccessToken();
-
-  useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    apiFetch("/api/v1/auth/me", { redirectOn401: true, hashRoute: true })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-      .then((json) => setUser(json.data))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
-  }, [token]);
-
-  const logout = useCallback(() => {
-    const accessToken = getAccessToken();
-    const refreshToken = getRefreshToken();
-    if (accessToken) {
-      fetch("/api/v1/auth/logout", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ refreshToken }),
-      }).catch(() => {});
-    }
-    clearTokens();
-    window.location.href = loginUrl("/resume/");
-  }, []);
-
-  return { user, loading, logout };
+  return useShellAuth("resume");
 }
