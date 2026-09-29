@@ -3,13 +3,13 @@
 이 파일은 AI 코딩 에이전트(opencode, cursor, copilot 등)가 프로젝트 규칙을 자동 인식하도록 합니다.
 이 파일을 수정하면 AI 모델이 다음 세션부터 변경된 규칙을 따릅니다.
 
-> **⚠️ 진행 중인 작업**: 설계 031 회사 관리 피드백 7차b까지 완료·배포. **resume 프로젝트 섹션 개편 완료·배포**(`c6f7ab5`). **설계 032 사람인/잡코리아 경력 필터 compound 매핑 DB화 완료·배포**(`c630c39`, 실서버 api-docs compound enum 확인). 잔여: (사용자) 실사용 검증(/companies·resume·viewer·통합검색·관리 UI career compound), **내일 03:30/03:35 KST 첫 자동 발화 확인**(`gh workflow run diag-ssh.yml`).
+> **⚠️ 진행 중인 작업**: 설계 031~032 완료·배포, **9/23~9/29 자동 백업 매일 발화 성공 확인**(diag-ssh 36506369248, 9/22 cron 수정 이후 ERROR 없음 — 백업 잔여 항목 종료). **설계 033 이력서 뷰 목차(TOC) 사이드바 구현·배포**(`0d9cbfa`, 012 FR-204/021 FR-005, TocNav + 템플릿 3종 `section-{key}` 앵커, FE 전용). 잔여: (사용자) 실사용 검증(뷰 TOC·/companies 7차b·resume 프로젝트 개편·viewer·통합검색·관리 UI career compound).
 > **세션 시작 시 반드시 `git pull origin master`로 원격과 동기화 + 오늘 날짜의 작업 일지(`docs/daily/YYYY-MM-DD-work-log.md`)를 먼저 읽고 이어서 작업할 것.**
 > 최근 완료: **2026-09-22 백업 cron 치명 버그 수정** — cron.d 파일 마지막 개행 누락으로 Debian cron이 파일 전체를 무시(`Missing newline before EOF`), 9/17~9/21 주기 백업 전부 미실행. 개행 복구 + 배포 워크플로우 개행 가드 + `diag-ssh.yml`(SSH 전용 경량 진단, `gh workflow run diag-ssh.yml`) 신설 + 오류 문서 015. 수동 실행으로 9/22분 3DB·파일 백업 확보. binlog는 9/17 최초 활성화·영속화 완료. 031 회사 관리: DDL v10~v12, 피드백 1~7차b(비고 수집/숨김·보기 키워드·수집회사 suggest·차단 카테고리 chips) 배포 완료. **resume**: 프로젝트 섹션 기술스택 chips(TagInput+suggest)·기간 달력범위(DateRangePicker)·설명 markdown(MarkdownText, react-markdown 10)·목록 행 클릭 미리보기(`renderRowDetail`), 템플릿 3종 description 마크다운 렌더 — FE 전용, 실서버 번들 확인까지. **032**: `value_type` compound 추가, 사람인 `exp_cd`/잡코리아 `careerList` 경력 필터를 `site_search_mapping` DB 우선으로 전환(하드코딩 fallback 유지), DDL v13·관리 UI·테스트 완료.
-> 다음: (사용자) 실사용 검증 + 내일 아침 첫 자동 백업 발화 확인.
+> 다음: (사용자) 실사용 검증(뷰 TOC 포함 6종) → 이후 후보: 차단 키워드 부분일치 옵션.
 >
 > **2026-09-16: 설계 031 회사 관리 페이지 완료.** `docs/plans/031-260916-company-manage-design.md` → Phase 1(company_notes CRUD + DDL v10/v11, 테스트 20건) → Phase 2(`/companies` + 슬라이드오버) → Phase 3(viewer 연동) → 피드백 6회까지. 교훈: DDL↔엔티티 타입 대조 필수(Integer→INT), SPA 폴백 라우트 추가 시 SecurityConfig permitAll 함께, **cron.d 파일은 마지막 개행 필수**(아니면 파일 전체 무시 — errors/015).
-> **세션 시작 시 반드시 `docs/daily/2026-09-22-work-log.md`를 먼저 읽고 이어서 작업할 것.**
+> **세션 시작 시 반드시 `docs/daily/2026-09-29-work-log.md`를 먼저 읽고 이어서 작업할 것.**
 >
 > **⚠️ 배포 시 주의**: resume/scraper jar는 `frontend/dist`를 포함해야 정상 서빙됨(`copyFrontendDist`). 프론트 빌드 없이 백엔드만 빌드해 배포하면 `/resume` 404. 반드시 CI 워크플로우(프론트 빌드→백엔드 빌드 순서)로 배포할 것.
 
