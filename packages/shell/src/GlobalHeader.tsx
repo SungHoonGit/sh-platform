@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Menu, Bell } from "lucide-react";
 import { loginUrlHere } from "@sh-platform/core";
-import { APP_HREFS, APP_LABELS, T, type ShellApp } from "./tokens";
+import { APP_HASH_ROUTE, APP_HREFS, APP_LABELS, T, type ShellApp } from "./config";
 
 /**
  * 글로벌 헤더. 로고 + 앱 전환 주메뉴 + (선택) 알림 벨 + 아바타 드롭다운.
@@ -145,7 +145,7 @@ export default function GlobalHeader({
           </div>
         ) : (
           <a
-            href={loginUrlHere()}
+            href={loginUrlHere(APP_HASH_ROUTE[currentApp])}
             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-sm font-medium rounded-lg transition-colors"
           >
             로그인

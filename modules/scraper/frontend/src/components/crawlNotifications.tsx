@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
-import type { Props as GlobalHeaderProps } from "../shell/GlobalHeader";
+import type { GlobalHeaderProps } from "@sh-platform/shell";
 
 /**
  * 크롤 수집 진행 알림(SSE)을 셸의 notifications prop 형태로 변환한다.

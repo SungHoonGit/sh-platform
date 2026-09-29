@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, FileText, FolderOpen, Search } from "lucide-react";
 import { hasAccessToken } from "@sh-platform/core";
-import AppShell from "./shell/AppShell";
-import type { DrawerSection } from "./shell/SideDrawer";
+import { AppShell, type DrawerSection } from "@sh-platform/shell";
 import ResumesPage from "./pages/ResumesPage";
 import ResumeViewPage from "./pages/ResumeViewPage";
 import EditPage from "./pages/EditPage";

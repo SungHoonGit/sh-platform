@@ -1,7 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { Search, CalendarPlus, FileText, Building2 } from "lucide-react";
-import AppShell from "../shell/AppShell";
-import type { DrawerSection } from "../shell/SideDrawer";
+import { AppShell, type DrawerSection } from "@sh-platform/shell";
 import { useAuth } from "../hooks/useAuth";
 import { useCrawlNotifications } from "./crawlNotifications";
 

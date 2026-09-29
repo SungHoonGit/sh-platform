@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import GlobalHeader, { type Props as GlobalHeaderProps } from "./GlobalHeader";
 import SubNav from "./SubNav";
 import SideDrawer, { type DrawerSection } from "./SideDrawer";
-import type { ShellApp } from "./tokens";
+import type { ShellApp } from "./config";
 
 /**
  * 통합 앱 셸. 3개 앱의 Layout이 이 컴포넌트만 사용한다.

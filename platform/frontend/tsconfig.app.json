@@ -30,7 +30,8 @@
       "@sh-platform/core": ["../../packages/core/src/index.ts"],
       "@sh-platform/shell": ["../../packages/shell/src/index.ts"],
       "react": ["node_modules/@types/react"],
-      "react/*": ["node_modules/@types/react/*"]
+      "react/*": ["node_modules/@types/react/*"],
+      "lucide-react": ["node_modules/lucide-react"]
     }
   },
   "include": ["src", "../../packages/ui-shared/src", "../../packages/core/src", "../../packages/shell/src"]

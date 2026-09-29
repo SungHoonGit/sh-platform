@@ -1,6 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
-import AppShell from "../shell/AppShell";
-import type { DrawerSection } from "../shell/SideDrawer";
+import { AppShell, type DrawerSection } from "@sh-platform/shell";
 import { useAuth } from "../hooks/useAuth";
 
 export default function PlatformLayout() {

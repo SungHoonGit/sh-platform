@@ -1,5 +1,5 @@
 import { type LucideIcon } from "lucide-react";
-import { T } from "./tokens";
+import { T } from "./config";
 
 /**
  * 헤더 아래 2차 메뉴 바(컨텍스트 서브내비). 앱별로 items를 주입한다.

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
-import { T } from "./tokens";
+import { T } from "./config";
 
 /**
  * 계층형(2단계 아코디언) 사이드 드로어.
