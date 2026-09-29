@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { apiDelete, apiDownload, apiGet, apiPost, apiPut, apiUpload, fileDownloadPath } from "../api/client";
+import { apiFetch, getAccessToken } from "@sh-platform/core";
 import TagInput, { type TagItem } from "./TagInput";
 import DateRangePicker from "./DateRangePicker";
 import MarkdownText from "./MarkdownText";
@@ -51,12 +52,10 @@ function ImageThumb({
 
   useEffect(() => {
     if (!path) return;
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     if (!token) return;
     let url: string | null = null;
-    fetch(`/resume${fileDownloadPath(path)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    apiFetch(`/resume${fileDownloadPath(path)}`, { redirectOn401: true, hashRoute: true })
       .then((res) => (res.ok ? res.blob() : Promise.reject(new Error(String(res.status)))))
       .then((blob) => {
         url = URL.createObjectURL(blob);

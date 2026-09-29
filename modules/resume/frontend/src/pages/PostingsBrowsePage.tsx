@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BlockConfirmDialog, BlacklistManagerModal } from "@sh-platform/ui";
+import { apiFetch } from "@sh-platform/core";
 import { ArrowUp, ArrowDown, EyeOff } from "lucide-react";
-import { expireSession } from "../api/client";
 
 interface JobPostingSummary {
   id: number;
@@ -54,13 +54,12 @@ const SITE_BADGES: Record<string, string> = {
 type SortKey = "position" | "company" | "career" | "location" | "deadline";
 
 async function fetchScraper<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem("accessToken");
-  const res = await fetch(`/scraper${path}`, {
+  const res = await apiFetch(`/scraper${path}`, {
     ...options,
-    headers: { Authorization: `Bearer ${token ?? ""}` },
+    redirectOn401: true,
+    hashRoute: true,
   });
   if (res.status === 401) {
-    expireSession();
     throw new Error("로그인 만료");
   }
   if (!res.ok) throw new Error(await res.text());
@@ -83,13 +82,13 @@ function normCompany(s: string | null | undefined): string {
 }
 
 async function blacklistReq<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem("accessToken");
-  const res = await fetch(`/scraper/company-blacklist${path}`, {
+  const res = await apiFetch(`/scraper/company-blacklist${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
+    redirectOn401: true,
+    hashRoute: true,
+    headers: { "Content-Type": "application/json", ...options?.headers },
   });
   if (res.status === 401) {
-    expireSession();
     throw new Error("로그인 만료");
   }
   if (!res.ok) throw new Error(await res.text());

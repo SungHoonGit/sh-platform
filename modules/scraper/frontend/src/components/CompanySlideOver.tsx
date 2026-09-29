@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import { X, Star, Bookmark, BookmarkCheck, Ban, Download, Save, Trash2 } from "lucide-react";
 import { BlockConfirmDialog } from "@sh-platform/ui";
+import { apiFetch } from "@sh-platform/core";
 import TagInput, { type TagItem } from "./TagInput";
 import { companyNoteApi, type CompanyNoteDetail } from "../api/companies";
 import { fetchBlacklist, addBlacklist, removeBlacklist, updateBlacklist, searchBlockCategories } from "../api/scraper";
@@ -171,10 +172,7 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
 
   const exportMd = async () => {
     if (id == null) return;
-    const token = localStorage.getItem("accessToken") ?? "";
-    const res = await fetch(companyNoteApi.exportUrl(id), {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const res = await apiFetch(companyNoteApi.exportUrl(id), { redirectOn401: true });
     if (!res.ok) {
       alert("내보내기 실패.");
       return;

@@ -81,9 +81,40 @@ sanitizeRedirect(raw: string | null | undefined, fallback: string): string
 ## 4. 구현 계획
 | 단계 | 내용 | 비고 |
 |------|------|------|
-| Phase 1 (본 작업) | core 패키지 + 4앱 워링 + 인증 redirect 통일 + open-redirect 가드 + deploy paths | 즉시 |
-| Phase 2 (후보) | 토큰 저장/삭제(`accessToken`/`refreshToken` 키 공통), `apiFetch` 래퍼(401 자동 `expireSession`) | 각 앱 api 모듈 교체, 별도 설계 |
-| Phase 3 (후보) | 공통 `useProfile`( /me 조회), 앱 셸(헤더/드로어) 공통화 → `@sh-platform/shell` | MSA 셸 방향 |
+| Phase 1 | core 패키지 + 4앱 워링 + 인증 redirect 통일 + open-redirect 가드 + deploy paths | ✅ 완료 (336892a) |
+| Phase 2 | 토큰 저장/삭제 공통 + `apiFetch` 래퍼(401 자동 redirect) | ✅ 완료 (본 문서 4.1 참조) |
+| Phase 3 (후보) | 공통 `useProfile`( /me 조회), 앱 셸(헤더/드로어) 공통화 → `@sh-platform/shell` | MSA 셸 방향, 별도 설계 |
+
+### 4.1 Phase 2 — 토큰 저장 + `apiFetch` 래퍼 (2026-09-29 구현)
+
+**신규 (`packages/core/src/`)**
+- `tokens.ts`: `getAccessToken` / `getRefreshToken` / `setTokens` / `clearTokens` / `hasAccessToken`
+  — localStorage 키(`accessToken`/`refreshToken`)의 단일 소스. 4앱 + ui-shared에서 키 문자열 직접 사용 제거.
+- `apiFetch.ts`: `apiFetch(url, { auth?, redirectOn401?, hashRoute? })`
+  - `auth`(기본 true): `Authorization: Bearer` 자동 부여 (호출부가 지정한 Authorization은 유지)
+  - `redirectOn401`: 401 → `clearTokens()` + `redirectToLogin(hashRoute)` — **어떤 401 경로든 현재 화면 보존 복귀**
+  - 주의: 로그인/회원가입 등 "401이 정상인" 인증 엔드포인트에는 사용 금지
+
+**적용 표**
+
+| 앱 | 지점 | 변경 |
+|----|------|------|
+| platform | `api/admin`·`api/master`·`api/dashboard` request | `apiFetch(redirectOn401)` — **기존 401 미처리 공백 해소** (세션 만료 시 stale UI) |
+| platform | `useAuth` /me, `AccountSettings` 4곳 | `apiFetch(redirectOn401)` |
+| platform | `App.tsx` 미로그인 가드 | `hasAccessToken()` |
+| scraper | `api/scraper` request·export·blacklistReq | `apiFetch(redirectOn401)` (기존 명시 `redirectToLogin()` 호출부는 제거 — apiFetch가 위임) |
+| scraper | `api/companies`, `api/auth`, `Search` 스크랩, push subscribe/unsubscribe, `CompanySlideOver` export | `apiFetch(redirectOn401)` 또는 `getAccessToken()` |
+| scraper | `useAuth` /me·logout | `getAccessToken`/`clearTokens` |
+| resume | `client.ts` (request/upload/download/refresh) | **토큰 유틸만 적용** — refresh 갱신 흐름이 401을 선행 처리해야 하므로 `apiFetch` 미사용, throw 정책 유지 |
+| resume | `ApplicationsPage`·`PostingsBrowsePage` fetchScraper/blacklistReq | `apiFetch(redirectOn401, hashRoute)` — 기존 `expireSession()` 호출 제거 (동일 동작) |
+| resume | `useAuth` /me, 이미지 로더 3종(CrudSection 사진·shared 사진·FileThumb) | `apiFetch(redirectOn401, hashRoute)` |
+| resume | `App.tsx` 로그인 가드 | `hasAccessToken()` |
+| auth | `Login`·`AuthCallback` 토큰 저장 | `setTokens()` |
+| ui-shared | `BlockConfirmDialog` searchReasons | `getAccessToken()`만 (401 자동 redirect는 앱마다 hashRoute 정책이 달라 미적용) |
+
+**제거/미적용 (의도)**
+- 제거: resume `client.ts`의 `expireSession()` — Phase 1 신규 API였으나 `apiFetch({redirectOn401, hashRoute:true})`로 대체.
+- 미적용: resume `client.ts`의 인증 request 3종(refresh 흐름 선행 필요), auth 앱 인증 엔드포인트(401이 정상 응답), 공유(share) 공개 엔드포인트.
 
 ## 5. 참고 자료
 - `docs/guides/011-260828-ui-shared-guide.md` — 공용 패키지 워링 표준 절차

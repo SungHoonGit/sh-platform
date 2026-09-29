@@ -1,12 +1,13 @@
+import { apiFetch } from "@sh-platform/core";
+
 const API_BASE = "/api/v1/admin";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem("accessToken");
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await apiFetch(`${API_BASE}${path}`, {
     ...options,
+    redirectOn401: true,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
   });

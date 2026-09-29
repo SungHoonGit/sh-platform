@@ -2,18 +2,16 @@
  * 회사 메모 (company-notes) API 클라이언트.
  * ApiResponse 래핑이므로 data 필드를 언랩한다 (blacklistReq 패턴과 동일).
  */
+import { apiFetch } from "@sh-platform/core";
+
 const BASE = "/scraper/company-notes";
 
-function token(): string {
-  return localStorage.getItem("accessToken") ?? "";
-}
-
 async function companyNoteReq<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await apiFetch(`${BASE}${path}`, {
     ...options,
+    redirectOn401: true,
     headers: {
       "Content-Type": "application/json",
-      ...(token() ? { Authorization: `Bearer ${token()}` } : {}),
       ...options?.headers,
     },
   });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, FileText, FolderOpen, Search } from "lucide-react";
+import { hasAccessToken } from "@sh-platform/core";
 import AppShell from "./shell/AppShell";
 import type { DrawerSection } from "./shell/SideDrawer";
 import ResumesPage from "./pages/ResumesPage";
@@ -46,7 +47,7 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  const loggedIn = Boolean(localStorage.getItem("accessToken"));
+  const loggedIn = hasAccessToken();
 
   // 사이드바 동적 메뉴용 내 이력서 목록
   useEffect(() => {

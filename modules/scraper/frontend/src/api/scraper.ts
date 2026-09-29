@@ -1,16 +1,15 @@
 import type { Crawler, JobsResponse } from "../types";
-import { redirectToLogin as redirectHere } from "@sh-platform/core";
+import { apiFetch, clearTokens, getAccessToken, redirectToLogin as redirectHere } from "@sh-platform/core";
 
 const BASE = "/scraper";
 
 function authHeaders(): HeadersInit {
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export function redirectToLogin() {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
+  clearTokens();
   redirectHere();
 }
 
@@ -120,7 +119,7 @@ export function connectCrawlProgress(
     onError?: (error: Event) => void;
   }
 ): EventSource {
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessToken();
   const url = `/scraper/crawl-config/${configId}/progress?token=${token}`;
   const es = new EventSource(url);
 
@@ -222,9 +221,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...(typeof options.body === "string" ? { "Content-Type": "application/json" } : {}),
     ...options.headers,
   };
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  const res = await apiFetch(`${BASE}${path}`, { ...options, headers, redirectOn401: true });
   if (res.status === 401) {
-    redirectToLogin();
     throw new Error("인증이 만료되었습니다. 다시 로그인해 주세요");
   }
   if (!res.ok) throw new Error(await errorMessage(res));
@@ -382,12 +380,9 @@ export async function downloadJobPostingsExcel(
   if (options.siteName) params.set("siteName", options.siteName);
   if (options.crawledAt) params.set("crawledAt", options.crawledAt);
 
-  const token = localStorage.getItem("accessToken");
   const url = `/scraper/job-postings/export?${params}`;
 
-  const res = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await apiFetch(url, { redirectOn401: true });
 
   if (!res.ok) {
     throw new Error(`다운로드 실패 (${res.status})`);
@@ -430,10 +425,10 @@ export interface BlacklistItem {
 }
 
 async function blacklistReq(path: string, options?: RequestInit) {
-  const token = localStorage.getItem("accessToken") ?? "";
-  const res = await fetch(`/scraper/company-blacklist${path}`, {
+  const res = await apiFetch(`/scraper/company-blacklist${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...options?.headers },
+    redirectOn401: true,
+    headers: { "Content-Type": "application/json", ...options?.headers },
   });
   if (!res.ok) throw new Error(`BLACKLIST_${res.status}`);
   const json = await res.json();

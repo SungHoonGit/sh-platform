@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { sanitizeRedirect } from "@sh-platform/core";
+import { sanitizeRedirect, setTokens } from "@sh-platform/core";
 
 const PROVIDER_UI: Record<string, { label: string; color: string; hover: string; textColor: string; icon: string }> = {
   kakao: { label: "카카오", color: "bg-[#FEE500]", hover: "hover:bg-[#FDD835]", textColor: "text-[#191919]", icon: "K" },
@@ -33,8 +33,7 @@ export default function Login() {
       });
       if (res.ok) {
         const data = await res.json();
-        localStorage.setItem("accessToken", data.data?.accessToken);
-        localStorage.setItem("refreshToken", data.data?.refreshToken);
+        setTokens(data.data?.accessToken, data.data?.refreshToken);
         window.location.href = redirect;
       } else {
         const data = await res.json().catch(() => null);

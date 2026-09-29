@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { apiFetch } from "@sh-platform/core";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -65,11 +66,11 @@ export function usePushNotification() {
       const { endpoint } = subscription;
       const keys = subscription.toJSON().keys;
 
-      const res = await fetch("/scraper/api/v1/push/subscribe", {
+      const res = await apiFetch("/scraper/api/v1/push/subscribe", {
         method: "POST",
+        redirectOn401: true,
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("accessToken") || ""}`,
         },
         body: JSON.stringify({
           endpoint,
@@ -96,11 +97,9 @@ export function usePushNotification() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await fetch(`/scraper/api/v1/push/unsubscribe?endpoint=${encodeURIComponent(subscription.endpoint)}`, {
+        await apiFetch(`/scraper/api/v1/push/unsubscribe?endpoint=${encodeURIComponent(subscription.endpoint)}`, {
           method: "DELETE",
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem("accessToken") || ""}`,
-          },
+          redirectOn401: true,
         });
         await subscription.unsubscribe();
       }

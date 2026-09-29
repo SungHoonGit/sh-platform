@@ -1,4 +1,10 @@
-import { loginUrl, redirectToLogin } from "@sh-platform/core";
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  loginUrl,
+  setTokens,
+} from "@sh-platform/core";
 
 const API_BASE = "/resume/api/v1";
 const SHARE_BASE = "/resume/share";
@@ -10,7 +16,7 @@ interface ApiResponse<T> {
 }
 
 function authHeaders(): HeadersInit {
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessToken();
   if (!token) throw new Error("UNAUTHORIZED");
   return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 }
@@ -19,7 +25,7 @@ let refreshingPromise: Promise<boolean> | null = null;
 
 async function refreshAccessToken(): Promise<boolean> {
   if (refreshingPromise) return refreshingPromise;
-  const refreshToken = localStorage.getItem("refreshToken");
+  const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
   refreshingPromise = (async () => {
     try {
@@ -32,8 +38,7 @@ async function refreshAccessToken(): Promise<boolean> {
       const json: ApiResponse<{ accessToken: string; refreshToken: string }> = await res.json();
       const tokens = json.data;
       if (!tokens?.accessToken) return false;
-      localStorage.setItem("accessToken", tokens.accessToken);
-      if (tokens.refreshToken) localStorage.setItem("refreshToken", tokens.refreshToken);
+      setTokens(tokens.accessToken, tokens.refreshToken);
       return true;
     } catch {
       return false;
@@ -58,7 +63,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     throw new Error("NETWORK_ERROR");
   }
   if (res.status === 401 || res.status === 403) {
-    if (localStorage.getItem("refreshToken")) {
+    if (getRefreshToken()) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         try {
@@ -89,7 +94,7 @@ export function apiPost<T>(path: string, body: unknown, params?: Record<string, 
 }
 
 export async function apiUpload<T>(path: string, file: File, fieldName = "file"): Promise<T> {
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessToken();
   if (!token) throw new Error("UNAUTHORIZED");
   const fd = new FormData();
   fd.append(fieldName, file);
@@ -110,7 +115,7 @@ export async function apiUpload<T>(path: string, file: File, fieldName = "file")
 }
 
 export async function apiDownload(path: string, fallbackName = "download"): Promise<void> {
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessToken();
   if (!token) throw new Error("UNAUTHORIZED");
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -222,21 +227,7 @@ export async function apiDownloadShare(path: string, fallbackName = "download"):
   URL.revokeObjectURL(url);
 }
 
-function clearTokens(): void {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
-}
-
 export function logout(): void {
   clearTokens();
   window.location.href = loginUrl("/resume/");
-}
-
-/**
- * 세션 만료(401) 처리. 토큰을 지우고 현재 화면(hash 포함)을 보존한 채
- * 로그인 페이지로 이동한다 — 로그인 후 이전 화면으로 복귀 (설계 034).
- */
-export function expireSession(): void {
-  clearTokens();
-  redirectToLogin(true);
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiDownload, apiDownloadShare, fileDownloadPath } from "../../api/client";
+import { apiFetch, getAccessToken } from "@sh-platform/core";
 import type { PortfolioItem } from "../../types/resume";
 import MarkdownText from "../MarkdownText";
 
@@ -52,10 +53,10 @@ export function ProfilePhoto({
 
   useEffect(() => {
     if (!photoUrl) return;
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     if (!token) return;
     let url: string | null = null;
-    fetch(`/resume${photoUrl}`, { headers: { Authorization: `Bearer ${token}` } })
+    apiFetch(`/resume${photoUrl}`, { redirectOn401: true, hashRoute: true })
       .then((res) => (res.ok ? res.blob() : Promise.reject(new Error(String(res.status)))))
       .then((blob) => {
         url = URL.createObjectURL(blob);
@@ -100,15 +101,13 @@ export function FileThumb({
       setSrc(`/resume/share/${shareToken}/files/${fileId}`);
       return;
     }
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     if (!token) {
       setSrc(null);
       return;
     }
     let url: string | null = null;
-    fetch(`/resume${fileDownloadPath(path)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    apiFetch(`/resume${fileDownloadPath(path)}`, { redirectOn401: true, hashRoute: true })
       .then((res) => (res.ok ? res.blob() : Promise.reject(new Error(String(res.status)))))
       .then((blob) => {
         url = URL.createObjectURL(blob);

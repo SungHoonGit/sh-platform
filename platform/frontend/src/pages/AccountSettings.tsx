@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { redirectToLogin } from "@sh-platform/core";
+import { apiFetch, redirectToLogin } from "@sh-platform/core";
 
 interface MeResponse {
   id: number;
@@ -38,9 +38,7 @@ export default function AccountSettings() {
 
   const fetchMe = async () => {
     try {
-      const res = await fetch("/api/v1/auth/me", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-      });
+      const res = await apiFetch("/api/v1/auth/me", { redirectOn401: true });
       if (res.ok) {
         const data = await res.json();
         setMe(data.data);
@@ -83,19 +81,19 @@ export default function AccountSettings() {
     setSaving(true);
     try {
       const res = me?.passwordSet
-        ? await fetch("/api/v1/auth/password", {
+        ? await apiFetch("/api/v1/auth/password", {
             method: "PUT",
+            redirectOn401: true,
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
             body: JSON.stringify({ currentPassword, newPassword }),
           })
-        : await fetch("/api/v1/auth/me/password", {
+        : await apiFetch("/api/v1/auth/me/password", {
             method: "POST",
+            redirectOn401: true,
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
             body: JSON.stringify({ newPassword }),
           });
@@ -125,9 +123,9 @@ export default function AccountSettings() {
     setMessage("");
     setError("");
     try {
-      const res = await fetch(`/api/v1/auth/oauth2/providers/${provider}`, {
+      const res = await apiFetch(`/api/v1/auth/oauth2/providers/${provider}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        redirectOn401: true,
       });
       if (res.ok) {
         setMessage("연결이 해제되었습니다");

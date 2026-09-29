@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { apiDelete, apiGet, apiPost, apiPut, expireSession } from "../api/client";
+import { apiDelete, apiGet, apiPost, apiPut } from "../api/client";
+import { apiFetch } from "@sh-platform/core";
 
 interface Application {
   id: number;
@@ -70,12 +71,8 @@ const emptyForm = {
 };
 
 async function fetchScraper<T>(path: string): Promise<T> {
-  const token = localStorage.getItem("accessToken");
-  const res = await fetch(`/scraper${path}`, {
-    headers: { Authorization: `Bearer ${token ?? ""}` },
-  });
+  const res = await apiFetch(`/scraper${path}`, { redirectOn401: true, hashRoute: true });
   if (res.status === 401) {
-    expireSession();
     throw new Error("로그인 만료");
   }
   if (!res.ok) throw new Error(await res.text());

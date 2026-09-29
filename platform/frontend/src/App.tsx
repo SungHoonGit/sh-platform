@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { loginUrlHere } from "@sh-platform/core";
+import { loginUrlHere, hasAccessToken } from "@sh-platform/core";
 import PlatformLayout from "./layouts/PlatformLayout";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -24,12 +24,12 @@ function RedirectTo({ to }: { to: string }) {
 }
 
 function App() {
-  const token = localStorage.getItem("accessToken");
+  const loggedIn = hasAccessToken();
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        {!token ? (
+        {!loggedIn ? (
           <RedirectTo to={loginUrlHere()} />
         ) : (
           <Routes>

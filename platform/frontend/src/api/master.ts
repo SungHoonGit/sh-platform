@@ -2,14 +2,14 @@
  * 마스터 데이터 (scraper 도메인) 관리 API 클라이언트.
  * scraper 백엔드의 /sites, /regions, /search-mappings 원시 JSON 엔드포인트를 호출한다.
  */
-const token = () => localStorage.getItem("accessToken") ?? "";
+import { apiFetch } from "@sh-platform/core";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`/scraper${path}`, {
+  const res = await apiFetch(`/scraper${path}`, {
     ...options,
+    redirectOn401: true,
     headers: {
       "Content-Type": "application/json",
-      ...(token() ? { Authorization: `Bearer ${token()}` } : {}),
       ...options?.headers,
     },
   });

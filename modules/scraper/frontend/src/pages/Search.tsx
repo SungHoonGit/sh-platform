@@ -12,6 +12,7 @@ import {
 } from "../components/SearchFilters";
 import { useSites, useRegions, siteDisplayName, siteBadgeColor, DEFAULT_LOCATIONS_FALLBACK } from "../hooks/useMasterData";
 import { BlockConfirmDialog, BlacklistManagerModal } from "@sh-platform/ui";
+import { apiFetch, getAccessToken } from "@sh-platform/core";
 
 const PAGE_SIZE = 20;
 
@@ -148,11 +149,12 @@ export default function Search() {
     const key = `${job.site}|${job.url}`;
     if (starred.has(key)) return;
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
       if (!token) { alert("로그인이 필요합니다."); return; }
-      const res = await fetch("/scraper/api/v1/job-scrap/live", {
+      const res = await apiFetch("/scraper/api/v1/job-scrap/live", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        redirectOn401: true,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           siteName: job.site ?? "",
           url: job.url ?? "",

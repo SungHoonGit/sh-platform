@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { getAccessToken } from "@sh-platform/core";
 
 export interface BlockConfirmDialogProps {
   open: boolean;
@@ -48,9 +49,9 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm,
   const prevOpenRef = useRef(false);
 
   const searchReasons = async (q: string): Promise<Suggestion[]> => {
-    const token = localStorage.getItem("accessToken") ?? "";
+    const token = getAccessToken();
     const res = await fetch(`/scraper/company-blacklist/reasons/search?q=${encodeURIComponent(q)}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     if (!res.ok) return [];
     const json = await res.json();

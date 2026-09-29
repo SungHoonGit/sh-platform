@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { loginUrl } from "@sh-platform/core";
+import { apiFetch, clearTokens, getAccessToken, getRefreshToken, loginUrl } from "@sh-platform/core";
 
 export interface UserProfile {
   id: number;
@@ -22,14 +22,14 @@ export function useAuth(): AuthState {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessToken();
 
   useEffect(() => {
     if (!token) {
       setLoading(false);
       return;
     }
-    fetch("/api/v1/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+    apiFetch("/api/v1/auth/me", { redirectOn401: true })
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((json) => setUser(json.data))
       .catch(() => setUser(null))
@@ -37,8 +37,8 @@ export function useAuth(): AuthState {
   }, [token]);
 
   const logout = useCallback(() => {
-    const accessToken = localStorage.getItem("accessToken");
-    const refreshToken = localStorage.getItem("refreshToken");
+    const accessToken = getAccessToken();
+    const refreshToken = getRefreshToken();
     if (accessToken) {
       fetch("/api/v1/auth/logout", {
         method: "POST",
@@ -49,8 +49,7 @@ export function useAuth(): AuthState {
         body: JSON.stringify({ refreshToken }),
       }).catch(() => {});
     }
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    clearTokens();
     window.location.replace(loginUrl("/platform"));
   }, []);
 

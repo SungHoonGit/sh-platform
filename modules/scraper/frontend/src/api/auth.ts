@@ -1,3 +1,5 @@
+import { apiFetch, clearTokens, getAccessToken, getRefreshToken } from "@sh-platform/core";
+
 export interface UserProfile {
   id: number;
   email: string;
@@ -11,21 +13,18 @@ export interface UserProfile {
 }
 
 export async function fetchProfile(): Promise<UserProfile> {
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessToken();
   if (!token) throw new Error("Not authenticated");
-  const res = await fetch("/api/v1/auth/me", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await apiFetch("/api/v1/auth/me", { redirectOn401: true });
   if (!res.ok) throw new Error("Failed to fetch profile");
   const json = await res.json();
   return json.data;
 }
 
 export function logout() {
-  const accessToken = localStorage.getItem("accessToken");
-  const refreshToken = localStorage.getItem("refreshToken");
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
+  const accessToken = getAccessToken();
+  const refreshToken = getRefreshToken();
+  clearTokens();
   fetch("/api/v1/auth/logout", {
     method: "POST",
     headers: {

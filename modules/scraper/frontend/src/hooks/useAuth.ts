@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { loginUrl } from "@sh-platform/core";
+import { getAccessToken, loginUrl } from "@sh-platform/core";
 import { fetchProfile, logout as logoutApi, type UserProfile } from "../api/auth";
 
 export interface AuthState {
@@ -15,7 +15,7 @@ export function useAuth(): AuthState {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessToken();
 
   useEffect(() => {
     if (!token) {

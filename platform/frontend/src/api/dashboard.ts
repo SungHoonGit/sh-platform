@@ -1,10 +1,10 @@
 /**
  * 대시보드 데이터 소스. 기존 모듈 API를 조합한다 (신규 백엔드 없음).
  */
-const token = () => localStorage.getItem("accessToken") ?? "";
+import { apiFetch } from "@sh-platform/core";
 
 async function getRaw<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token()}` } });
+  const res = await apiFetch(url, { redirectOn401: true });
   if (!res.ok) throw new Error(`API_ERROR_${res.status}`);
   return res.json();
 }
