@@ -7,7 +7,7 @@ import { deadlineBadge, jobPlanetQuery, normCompany } from "../common/jobPlanet"
 
 import { useCrawlProgress } from "../contexts/CrawlProgressContext";
 import { useSites, siteBadgeColor, siteTabColor } from "../hooks/useMasterData";
-import { BlockConfirmDialog, BlacklistManagerModal } from "@sh-platform/ui";
+import { BlockConfirmDialog, BlacklistManagerModal, matchesBlocked, type MatchType } from "@sh-platform/ui";
 import CompanySlideOver from "../components/CompanySlideOver";
 import { companyNoteApi } from "../api/companies";
 
@@ -161,28 +161,26 @@ export default function Viewer() {
     );
   }, [jobs, searchKeyword]);
 
-  const [blacklisted, setBlacklisted] = useState<Set<string>>(new Set());
   const [showBl, setShowBl] = useState(false);
   const [blItems, setBlItems] = useState<BlacklistItem[]>([]);
   const [blockDialog, setBlockDialog] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<BlacklistItem | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const loadBl = () => {
-    fetchBlacklist().then((l) => { setBlItems(l); setBlacklisted(new Set(l.map((b) => b.companyNameNormalized))); }).catch(() => {});
+    fetchBlacklist().then(setBlItems).catch(() => {});
     setShowBl(true);
   };
   const unblock = async (item: BlacklistItem) => {
     try {
       await removeBlacklist(item.id);
       setBlItems((prev) => prev.filter((b) => b.id !== item.id));
-      setBlacklisted((prev) => { const n = new Set(prev); n.delete(item.companyNameNormalized); return n; });
     } catch { showNotice("해제 실패"); }
   };
-  const confirmEdit = async (item: BlacklistItem, reasonIds: number[], categoryNames: string[]) => {
+  const confirmEdit = async (item: BlacklistItem, reasonIds: number[], categoryNames: string[], matchType: MatchType) => {
     try {
-      const updated = await updateBlacklist(item.id, reasonIds, categoryNames);
+      const updated = await updateBlacklist(item.id, reasonIds, categoryNames, undefined, undefined, matchType);
       setBlItems((prev) => prev.map((b) => (b.id === item.id ? { ...b, ...updated, blockReasons: updated.blockReasons } : b)));
-      showNotice("차단 카테고리를 수정했습니다.");
+      showNotice("차단 항목을 수정했습니다.");
     } catch { showNotice("수정에 실패했습니다."); }
   };
   const showNotice = (msg: string) => {
@@ -205,21 +203,19 @@ export default function Viewer() {
       setCompanySlide({ id: null, name: company });
     }
   };
-  const confirmBlock = async (company: string, reason: string, reasonIds: number[], categoryNames: string[]) => {
+  const confirmBlock = async (company: string, reason: string, reasonIds: number[], categoryNames: string[], matchType: MatchType) => {
     try {
-      await addBlacklist(company, reasonIds, reason || undefined, categoryNames);
-      setBlacklisted((prev) => new Set(prev).add(normCompany(company)));
+      const created = await addBlacklist(company, reasonIds, reason || undefined, categoryNames, matchType);
+      setBlItems((prev) => [...prev, created]);
       showNotice("차단했습니다. 이 회사 공고는 더 이상 표시되지 않습니다.");
     } catch { showNotice("차단에 실패했습니다."); }
   };
 
   useEffect(() => {
-    fetchBlacklist()
-      .then((list) => setBlacklisted(new Set(list.map((b) => b.companyNameNormalized))))
-      .catch(() => {});
+    fetchBlacklist().then(setBlItems).catch(() => {});
   }, []);
 
-  const displayJobs = (searchKeyword.trim() ? filteredJobs : jobs).filter((j: JobPostingItem) => !blacklisted.has(normCompany(j.company)));
+  const displayJobs = (searchKeyword.trim() ? filteredJobs : jobs).filter((j: JobPostingItem) => !matchesBlocked(blItems, normCompany(j.company)));
   const displayTotal = searchKeyword.trim() ? filteredJobs.length : total;
   const displayTotalPages = searchKeyword.trim() ? Math.max(1, Math.ceil(filteredJobs.length / SIZE)) : totalPages;
 
@@ -670,15 +666,16 @@ export default function Viewer() {
         open={blockDialog !== null}
         company={blockDialog ?? ""}
         onCancel={() => setBlockDialog(null)}
-        onConfirm={(reason, reasonIds, categoryNames) => { const c = blockDialog; setBlockDialog(null); if (c) void confirmBlock(c, reason, reasonIds, categoryNames); }}
+        onConfirm={(reason, reasonIds, categoryNames, _keyword, matchType) => { const c = blockDialog; setBlockDialog(null); if (c) void confirmBlock(c, reason, reasonIds, categoryNames, matchType); }}
       />
       <BlockConfirmDialog
         open={editTarget !== null}
         company={editTarget?.companyNameNormalized ?? ""}
         confirmLabel="수정"
         initialTags={(editTarget?.blockReasons ?? []).map((r) => ({ id: r.id, name: r.name }))}
+        initialMatchType={editTarget?.matchType ?? null}
         onCancel={() => setEditTarget(null)}
-        onConfirm={(_reason, reasonIds, categoryNames) => { const t = editTarget; setEditTarget(null); if (t) void confirmEdit(t, reasonIds, categoryNames); }}
+        onConfirm={(_reason, reasonIds, categoryNames, _keyword, matchType) => { const t = editTarget; setEditTarget(null); if (t) void confirmEdit(t, reasonIds, categoryNames, matchType); }}
       />
       {companySlide && (
         <CompanySlideOver

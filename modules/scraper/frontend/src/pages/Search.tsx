@@ -11,7 +11,7 @@ import {
   LocationMultiSelect,
 } from "../components/SearchFilters";
 import { useSites, useRegions, siteDisplayName, siteBadgeColor, DEFAULT_LOCATIONS_FALLBACK } from "../hooks/useMasterData";
-import { BlockConfirmDialog, BlacklistManagerModal } from "@sh-platform/ui";
+import { BlockConfirmDialog, BlacklistManagerModal, matchesBlocked, type MatchType } from "@sh-platform/ui";
 import { apiFetch, getAccessToken } from "@sh-platform/core";
 
 const PAGE_SIZE = 20;
@@ -32,7 +32,6 @@ const COLUMNS: { key: SortKey; label: string; w: string }[] = [
 export default function Search() {
   const navigate = useNavigate();
   const [starred, setStarred] = useState<Set<string>>(new Set());
-  const [blacklisted, setBlacklisted] = useState<Set<string>>(new Set());
 
   const [showBl, setShowBl] = useState(false);
   const [blItems, setBlItems] = useState<BlacklistItem[]>([]);
@@ -40,7 +39,7 @@ export default function Search() {
   const [editTarget, setEditTarget] = useState<BlacklistItem | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const loadBl = () => {
-    fetchBlacklist().then((l) => { setBlItems(l); setBlacklisted(new Set(l.map((b) => b.companyNameNormalized))); }).catch(() => {});
+    fetchBlacklist().then(setBlItems).catch(() => {});
     setShowBl(true);
   };
   const showNotice = (msg: string) => {
@@ -51,20 +50,17 @@ export default function Search() {
     try {
       await removeBlacklist(item.id);
       setBlItems((prev) => prev.filter((b) => b.id !== item.id));
-      setBlacklisted((prev) => { const n = new Set(prev); n.delete(item.companyNameNormalized); return n; });
     } catch { showNotice("해제 실패"); }
   };
-  const confirmEdit = async (item: BlacklistItem, reasonIds: number[], categoryNames: string[]) => {
+  const confirmEdit = async (item: BlacklistItem, reasonIds: number[], categoryNames: string[], matchType: MatchType) => {
     try {
-      const updated = await updateBlacklist(item.id, reasonIds, categoryNames);
+      const updated = await updateBlacklist(item.id, reasonIds, categoryNames, undefined, undefined, matchType);
       setBlItems((prev) => prev.map((b) => (b.id === item.id ? { ...b, ...updated, blockReasons: updated.blockReasons } : b)));
-      showNotice("차단 카테고리를 수정했습니다.");
+      showNotice("차단 항목을 수정했습니다.");
     } catch { showNotice("수정에 실패했습니다."); }
   };
   useEffect(() => {
-    fetchBlacklist()
-      .then((list) => setBlacklisted(new Set(list.map((b) => b.companyNameNormalized))))
-      .catch(() => {});
+    fetchBlacklist().then(setBlItems).catch(() => {});
   }, []);
   const [keyword, setKeyword] = useState("");
   const [careerMin, setCareerMin] = useState(0);
@@ -94,8 +90,8 @@ export default function Search() {
 
   const allJobs = useMemo(() => {
     const jobs = data?.jobs ?? [];
-    if (ratingsMap.size === 0) return jobs;
-    const visible = jobs.filter((j) => !blacklisted.has(normCompany(j.company)));
+    const visible = jobs.filter((j) => !matchesBlocked(blItems, normCompany(j.company)));
+    if (ratingsMap.size === 0) return visible;
     return visible.map(j => {
       const rating = ratingsMap.get(j.company || "");
       if (rating && rating.averageScore != null) {
@@ -103,7 +99,7 @@ export default function Search() {
       }
       return j;
     });
-  }, [data, ratingsMap, blacklisted]);
+  }, [data, ratingsMap, blItems]);
 
   const filteredJobs = useMemo(() => {
     const base = activeSite === "all" ? allJobs : allJobs.filter((j) => j.site === activeSite);
@@ -127,7 +123,7 @@ export default function Search() {
       const cmp = getVal(a).localeCompare(getVal(b), "ko");
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [allJobs, activeSite, sortBy, sortDir, blacklisted]);
+  }, [allJobs, activeSite, sortBy, sortDir, blItems]);
 
 
 
@@ -135,10 +131,10 @@ export default function Search() {
     if (!company) return;
     setBlockDialog(company);
   };
-  const confirmBlock = async (company: string, reason: string, reasonIds: number[], categoryNames: string[]) => {
+  const confirmBlock = async (company: string, reason: string, reasonIds: number[], categoryNames: string[], matchType: MatchType) => {
     try {
-      await addBlacklist(company, reasonIds, reason || undefined, categoryNames);
-      setBlacklisted((prev) => new Set(prev).add(normCompany(company)));
+      const created = await addBlacklist(company, reasonIds, reason || undefined, categoryNames, matchType);
+      setBlItems((prev) => [...prev, created]);
       showNotice("차단했습니다. 이 회사 공고는 더 이상 표시되지 않습니다.");
     } catch {
       showNotice("차단에 실패했습니다.");
@@ -693,15 +689,16 @@ export default function Search() {
         open={blockDialog !== null}
         company={blockDialog ?? ""}
         onCancel={() => setBlockDialog(null)}
-        onConfirm={(reason, reasonIds, categoryNames) => { const c = blockDialog; setBlockDialog(null); if (c) void confirmBlock(c, reason, reasonIds, categoryNames); }}
+        onConfirm={(reason, reasonIds, categoryNames, _keyword, matchType) => { const c = blockDialog; setBlockDialog(null); if (c) void confirmBlock(c, reason, reasonIds, categoryNames, matchType); }}
       />
       <BlockConfirmDialog
         open={editTarget !== null}
         company={editTarget?.companyNameNormalized ?? ""}
         confirmLabel="수정"
         initialTags={(editTarget?.blockReasons ?? []).map((r) => ({ id: r.id, name: r.name }))}
+        initialMatchType={editTarget?.matchType ?? null}
         onCancel={() => setEditTarget(null)}
-        onConfirm={(_reason, reasonIds, categoryNames) => { const t = editTarget; setEditTarget(null); if (t) void confirmEdit(t, reasonIds, categoryNames); }}
+        onConfirm={(_reason, reasonIds, categoryNames, _keyword, matchType) => { const t = editTarget; setEditTarget(null); if (t) void confirmEdit(t, reasonIds, categoryNames, matchType); }}
       />
     </div>
   );

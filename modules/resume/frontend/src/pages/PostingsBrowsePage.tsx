@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BlockConfirmDialog, BlacklistManagerModal } from "@sh-platform/ui";
+import { BlockConfirmDialog, BlacklistManagerModal, matchesBlocked, type MatchType } from "@sh-platform/ui";
 import { apiFetch } from "@sh-platform/core";
 import { ArrowUp, ArrowDown, EyeOff } from "lucide-react";
 
@@ -71,6 +71,7 @@ interface BlacklistItem {
   accountId: number;
   companyNameNormalized: string;
   reason: string | null;
+  matchType: MatchType;
   blockReasons?: { id: number; name: string; category: string }[];
   createdAt: string;
 }
@@ -126,7 +127,6 @@ export default function PostingsBrowsePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scrappedIds, setScrappedIds] = useState<Set<number>>(new Set());
-  const [blacklisted, setBlacklisted] = useState<Set<string>>(new Set());
   const [showBl, setShowBl] = useState(false);
   const [blItems, setBlItems] = useState<BlacklistItem[]>([]);
   const [blockDialog, setBlockDialog] = useState<string | null>(null);
@@ -204,7 +204,7 @@ export default function PostingsBrowsePage() {
 
   const loadBl = () => {
     blacklistReq<BlacklistItem[]>("")
-      .then((l) => { setBlItems(l); setBlacklisted(new Set(l.map((b) => b.companyNameNormalized))); })
+      .then(setBlItems)
       .catch(() => {});
     setShowBl(true);
   };
@@ -212,31 +212,30 @@ export default function PostingsBrowsePage() {
     try {
       await blacklistReq(`/${item.id}`, { method: "DELETE" });
       setBlItems((prev) => prev.filter((b) => b.id !== item.id));
-      setBlacklisted((prev) => { const n = new Set(prev); n.delete(item.companyNameNormalized); return n; });
     } catch { showNotice("해제 실패"); }
   };
-  const confirmEdit = async (item: BlacklistItem, reasonIds: number[], categoryNames: string[]) => {
+  const confirmEdit = async (item: BlacklistItem, reasonIds: number[], categoryNames: string[], matchType: MatchType) => {
     try {
-      const updated = await blacklistReq<BlacklistItem>(`/${item.id}`, { method: "PUT", body: JSON.stringify({ reasonIds, categoryNames }) });
+      const updated = await blacklistReq<BlacklistItem>(`/${item.id}`, { method: "PUT", body: JSON.stringify({ reasonIds, categoryNames, matchType }) });
       setBlItems((prev) => prev.map((b) => (b.id === item.id ? { ...b, ...updated, blockReasons: updated.blockReasons } : b)));
-      showNotice("차단 카테고리를 수정했습니다.");
+      showNotice("차단 항목을 수정했습니다.");
     } catch { showNotice("수정에 실패했습니다."); }
   };
   const blockCompany = (company: string) => {
     if (!company) return;
     setBlockDialog(company);
   };
-  const confirmBlock = async (company: string, reason: string, reasonIds: number[], categoryNames: string[]) => {
+  const confirmBlock = async (company: string, reason: string, reasonIds: number[], categoryNames: string[], matchType: MatchType) => {
     try {
-      await blacklistReq<BlacklistItem>("", { method: "POST", body: JSON.stringify({ companyName: company, reason: reason || null, reasonIds, categoryNames }) });
-      setBlacklisted((prev) => new Set(prev).add(normCompany(company)));
+      const created = await blacklistReq<BlacklistItem>("", { method: "POST", body: JSON.stringify({ companyName: company, reason: reason || null, reasonIds, categoryNames, matchType }) });
+      setBlItems((prev) => [...prev, created]);
       showNotice("차단했습니다. 이 회사 공고는 더 이상 표시되지 않습니다.");
     } catch { showNotice("차단에 실패했습니다."); }
   };
 
   useEffect(() => {
     blacklistReq<BlacklistItem[]>("")
-      .then((list) => setBlacklisted(new Set(list.map((b) => b.companyNameNormalized))))
+      .then(setBlItems)
       .catch(() => undefined);
   }, []);
 
@@ -268,7 +267,7 @@ export default function PostingsBrowsePage() {
           }))
         : (data?.items ?? []).map((i) => ({ ...i, postingId: i.id }));
 
-    const visible = list.filter((r) => !blacklisted.has(normCompany(r.company)));
+    const visible = list.filter((r) => !matchesBlocked(blItems, normCompany(r.company)));
 
     if (!sortKey || !sortDir) {
       if (view === "scraps") return visible.sort((a, b) => (a.savedAt! < b.savedAt! ? 1 : -1));
@@ -287,7 +286,7 @@ export default function PostingsBrowsePage() {
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [view, scraps, data, sortKey, sortDir, blacklisted]);
+  }, [view, scraps, data, sortKey, sortDir, blItems]);
 
   const applyNow = (p: GridRow) => {
     sessionStorage.setItem(
@@ -520,15 +519,16 @@ export default function PostingsBrowsePage() {
         open={blockDialog !== null}
         company={blockDialog ?? ""}
         onCancel={() => setBlockDialog(null)}
-        onConfirm={(reason, reasonIds, categoryNames) => { const c = blockDialog; setBlockDialog(null); if (c) void confirmBlock(c, reason, reasonIds, categoryNames); }}
+        onConfirm={(reason, reasonIds, categoryNames, _keyword, matchType) => { const c = blockDialog; setBlockDialog(null); if (c) void confirmBlock(c, reason, reasonIds, categoryNames, matchType); }}
       />
       <BlockConfirmDialog
         open={editTarget !== null}
         company={editTarget?.companyNameNormalized ?? ""}
         confirmLabel="수정"
         initialTags={(editTarget?.blockReasons ?? []).map((r) => ({ id: r.id, name: r.name }))}
+        initialMatchType={editTarget?.matchType ?? null}
         onCancel={() => setEditTarget(null)}
-        onConfirm={(_reason, reasonIds, categoryNames) => { const t = editTarget; setEditTarget(null); if (t) void confirmEdit(t, reasonIds, categoryNames); }}
+        onConfirm={(_reason, reasonIds, categoryNames, _keyword, matchType) => { const t = editTarget; setEditTarget(null); if (t) void confirmEdit(t, reasonIds, categoryNames, matchType); }}
       />
     </div>
   );

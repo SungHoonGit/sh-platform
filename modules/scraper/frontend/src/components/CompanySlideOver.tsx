@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import { X, Star, Bookmark, BookmarkCheck, Ban, Download, Save, Trash2 } from "lucide-react";
-import { BlockConfirmDialog } from "@sh-platform/ui";
+import { BlockConfirmDialog, findBlockEntry, type MatchType } from "@sh-platform/ui";
 import { apiFetch } from "@sh-platform/core";
 import TagInput, { type TagItem } from "./TagInput";
 import { companyNoteApi, type CompanyNoteDetail } from "../api/companies";
@@ -139,8 +139,9 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
     onError: () => alert("삭제 실패."),
   });
 
-  const blockedEntry = blacklistQuery.data?.find(
-    (b) => b.companyNameNormalized === (detail?.companyNameNormalized ?? companyNormalized ?? "")
+  const blockedEntry = findBlockEntry(
+    blacklistQuery.data,
+    detail?.companyNameNormalized ?? companyNormalized ?? ""
   );
 
   /** 생성 모드(차단 전용 행)에서 넘어온 경우에도 차단 정보를 표시한다. */
@@ -155,10 +156,10 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
     setBlockCreateOpen(true);
   };
 
-  const confirmBlockCreate = async (reason: string, reasonIds: number[], categoryNames: string[], keyword: string) => {
+  const confirmBlockCreate = async (reason: string, reasonIds: number[], categoryNames: string[], keyword: string, matchType: MatchType) => {
     if (!keyword) return;
     try {
-      await addBlacklist(keyword, reasonIds, reason || undefined, categoryNames);
+      await addBlacklist(keyword, reasonIds, reason || undefined, categoryNames, matchType);
       setBlockCreateOpen(false);
       if (id != null && (detail?.bookmarked || detail?.myStars != null)) {
         await companyNoteApi.update(id, { isBookmarked: false }).catch(() => undefined);
@@ -485,8 +486,8 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
         confirmLabel="차단"
         editableCompany
         onCancel={() => setBlockCreateOpen(false)}
-        onConfirm={(reason, reasonIds, categoryNames, keyword) => {
-          void confirmBlockCreate(reason, reasonIds, categoryNames, keyword);
+        onConfirm={(reason, reasonIds, categoryNames, keyword, matchType) => {
+          void confirmBlockCreate(reason, reasonIds, categoryNames, keyword, matchType);
         }}
       />
     </div>

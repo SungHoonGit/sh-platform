@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { getAccessToken } from "@sh-platform/core";
+import type { MatchType } from "./matchesBlocked";
 
 export interface BlockConfirmDialogProps {
   open: boolean;
   company: string;
   onCancel: () => void;
-  onConfirm: (reason: string, reasonIds: number[], categoryNames: string[], companyName: string) => void;
+  onConfirm: (reason: string, reasonIds: number[], categoryNames: string[], companyName: string, matchType: MatchType) => void;
   initialTags?: { id: number; name: string }[];
   confirmLabel?: string;
   /** 차단 키워드(회사명) 직접 편집 허용 (차단 편집 모드) */
   editableCompany?: boolean;
   /** 다이얼로그 제목 (기본: 회사 차단) */
   title?: string;
+  /** 수정 모드에서 기존 매칭 방식 미리 채우기 (기본 exact) */
+  initialMatchType?: MatchType | null;
 }
 
 interface Suggestion {
@@ -35,12 +38,14 @@ interface Tag {
  * @param initialTags 수정 모드에서 기존 카테고리를 미리 채우는 태그 목록
  * @param confirmLabel 확인 버튼 라벨 (기본: 차단)
  * @param onCancel 취소 콜백
- * @param onConfirm 차단/수정 확정 콜백 (자유메모, 선택한 기존 카테고리 id 목록, 신규 입력 카테고리명 목록)
+ * @param onConfirm 차단/수정 확정 콜백 (자유메모, 선택한 기존 카테고리 id 목록, 신규 입력 카테고리명 목록, 키워드, 매칭 방식)
+ * @param initialMatchType 수정 모드에서 기존 매칭 방식 미리 채우기
  */
-export default function BlockConfirmDialog({ open, company, onCancel, onConfirm, initialTags, confirmLabel = "차단", editableCompany = false, title }: BlockConfirmDialogProps) {
+export default function BlockConfirmDialog({ open, company, onCancel, onConfirm, initialTags, confirmLabel = "차단", editableCompany = false, title, initialMatchType }: BlockConfirmDialogProps) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [input, setInput] = useState("");
   const [companyInput, setCompanyInput] = useState(company);
+  const [matchType, setMatchType] = useState<MatchType>("exact");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggest, setShowSuggest] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -63,11 +68,12 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm,
       setTags((initialTags ?? []).map((t) => ({ id: t.id, name: t.name })));
       setInput("");
       setCompanyInput(company);
+      setMatchType(initialMatchType ?? "exact");
       setSuggestions([]);
       setShowSuggest(false);
     }
     prevOpenRef.current = open;
-  }, [open, initialTags, company]);
+  }, [open, initialTags, company, initialMatchType]);
 
   useEffect(() => {
     const q = input.trim();
@@ -126,7 +132,7 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm,
     if (!keyword) return;
     const existingIds = tags.filter((t) => t.id != null).map((t) => t.id as number);
     const newNames = tags.filter((t) => t.id == null).map((t) => t.name);
-    onConfirm("", existingIds, newNames, keyword);
+    onConfirm("", existingIds, newNames, keyword, matchType);
     setTags([]);
     setInput("");
   };
@@ -164,6 +170,18 @@ export default function BlockConfirmDialog({ open, company, onCancel, onConfirm,
             </p>
           )}
           <p className="text-xs text-slate-400 mt-1 mb-3">카테고리를 입력하고 Enter. 이전에 쓴 항목이 추천으로 나옵니다.</p>
+
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-semibold text-slate-500">매칭 방식</label>
+            <select
+              value={matchType}
+              onChange={(e) => setMatchType(e.target.value === "contains" ? "contains" : "exact")}
+              className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="exact">정확히 일치 — 같은 회사만 차단</option>
+              <option value="contains">부분 일치 — 키워드가 포함된 회사 모두 차단</option>
+            </select>
+          </div>
 
           <div className="relative">
             <div className="flex flex-wrap items-center gap-1.5 border border-slate-300 rounded-lg px-2 py-1.5 focus-within:ring-2 focus-within:ring-blue-500">

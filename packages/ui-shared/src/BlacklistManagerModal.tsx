@@ -1,7 +1,10 @@
+import type { MatchType } from "./matchesBlocked";
+
 export interface BlacklistItemLike {
   id: number;
   companyNameNormalized: string;
   reason?: string | null;
+  matchType?: MatchType | null;
   blockReasons?: { id: number; name: string; category: string }[];
 }
 
@@ -56,6 +59,11 @@ export default function BlacklistManagerModal<T extends BlacklistItemLike>({ ope
                 <li key={b.id} className="flex items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
                     <span className="text-sm font-medium text-slate-700">{b.companyNameNormalized}</span>
+                    {b.matchType === "contains" && (
+                      <span className="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-medium align-middle">
+                        부분일치
+                      </span>
+                    )}
                     {b.blockReasons && b.blockReasons.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {b.blockReasons.map((r) => (

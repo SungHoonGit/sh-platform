@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Bookmark, BookmarkCheck, Ban, FileText, Plus, X, Trash2 } from "lucide-react";
-import { BlockConfirmDialog } from "@sh-platform/ui";
+import { BlockConfirmDialog, findBlockEntry, type MatchType } from "@sh-platform/ui";
 import { companyNoteApi, type CompanyTab, type CompanySort, type SortDir } from "../api/companies";
 import { fetchBlacklist, addBlacklist, removeBlacklist } from "../api/scraper";
 import CompanySlideOver from "../components/CompanySlideOver";
@@ -60,7 +60,7 @@ export default function Companies() {
 
   const unblockByNormalized = async (normalized: string, display: string) => {
     const list = blacklistQuery.data ?? (await fetchBlacklist().catch(() => []));
-    const entry = list.find((b) => b.companyNameNormalized === normalized);
+    const entry = findBlockEntry(list, normalized);
     if (!entry) {
       alert("차단 항목을 찾을 수 없습니다. 새로고침 후 다시 시도하세요.");
       return;
@@ -74,9 +74,9 @@ export default function Companies() {
     }
   };
 
-  const confirmBlock = async (keyword: string, reason: string, reasonIds: number[], categoryNames: string[]) => {
+  const confirmBlock = async (keyword: string, reason: string, reasonIds: number[], categoryNames: string[], matchType: MatchType) => {
     try {
-      await addBlacklist(keyword, reasonIds, reason || undefined, categoryNames);
+      await addBlacklist(keyword, reasonIds, reason || undefined, categoryNames, matchType);
       invalidateLists();
     } catch (e) {
       alert(e instanceof Error ? e.message : "차단 실패.");
@@ -477,10 +477,10 @@ export default function Companies() {
         confirmLabel="차단"
         editableCompany
         onCancel={() => setBlockTarget(null)}
-        onConfirm={(reason, reasonIds, categoryNames, keyword) => {
+        onConfirm={(reason, reasonIds, categoryNames, keyword, matchType) => {
           const t = blockTarget;
           setBlockTarget(null);
-          if (t && keyword) void confirmBlock(keyword, reason, reasonIds, categoryNames);
+          if (t && keyword) void confirmBlock(keyword, reason, reasonIds, categoryNames, matchType);
         }}
       />
     </div>

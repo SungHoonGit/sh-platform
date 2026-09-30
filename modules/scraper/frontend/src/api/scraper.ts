@@ -1,5 +1,6 @@
 import type { Crawler, JobsResponse } from "../types";
 import { apiFetch, clearTokens, getAccessToken, redirectToLogin as redirectHere } from "@sh-platform/core";
+import type { MatchType } from "@sh-platform/ui";
 
 const BASE = "/scraper";
 
@@ -420,6 +421,7 @@ export interface BlacklistItem {
   accountId: number;
   companyNameNormalized: string;
   reason: string | null;
+  matchType: MatchType;
   blockReasons?: BlockCategory[];
   createdAt: string;
 }
@@ -439,14 +441,14 @@ export const fetchBlacklist = () => blacklistReq("") as Promise<BlacklistItem[]>
 export const fetchBlockCategories = () => blacklistReq("/reasons") as Promise<BlockCategory[]>;
 export const searchBlockCategories = (q: string) =>
   blacklistReq(`/reasons/search?q=${encodeURIComponent(q)}`) as Promise<BlockCategory[]>;
-export const addBlacklist = (companyName: string, reasonIds?: number[], reason?: string, categoryNames?: string[]) =>
+export const addBlacklist = (companyName: string, reasonIds?: number[], reason?: string, categoryNames?: string[], matchType?: MatchType) =>
   blacklistReq("", {
     method: "POST",
-    body: JSON.stringify({ companyName, reasonIds: reasonIds ?? [], reason: reason || null, categoryNames: categoryNames ?? [] }),
+    body: JSON.stringify({ companyName, reasonIds: reasonIds ?? [], reason: reason || null, categoryNames: categoryNames ?? [], ...(matchType ? { matchType } : {}) }),
   }) as Promise<BlacklistItem>;
 export const removeBlacklist = (id: number) =>
   blacklistReq(`/${id}`, { method: "DELETE" }) as Promise<void>;
-export const updateBlacklist = (id: number, reasonIds?: number[], categoryNames?: string[], companyName?: string, reason?: string) =>
+export const updateBlacklist = (id: number, reasonIds?: number[], categoryNames?: string[], companyName?: string, reason?: string, matchType?: MatchType) =>
   blacklistReq(`/${id}`, {
     method: "PUT",
     body: JSON.stringify({
@@ -454,5 +456,6 @@ export const updateBlacklist = (id: number, reasonIds?: number[], categoryNames?
       categoryNames: categoryNames ?? [],
       ...(companyName !== undefined ? { companyName } : {}),
       ...(reason !== undefined ? { reason } : {}),
+      ...(matchType !== undefined ? { matchType } : {}),
     }),
   }) as Promise<BlacklistItem>;
