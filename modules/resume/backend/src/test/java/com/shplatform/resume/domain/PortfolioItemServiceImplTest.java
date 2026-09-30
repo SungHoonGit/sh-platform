@@ -6,6 +6,7 @@ import com.shplatform.resume.api.dto.PortfolioItemRequest;
 import com.shplatform.resume.infrastructure.entity.ResumePortfolioItemEntity;
 import com.shplatform.resume.infrastructure.repository.ResumePortfolioItemRepository;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -26,6 +27,9 @@ import static org.mockito.Mockito.times;
 @ExtendWith(MockitoExtension.class)
 class PortfolioItemServiceImplTest {
 
+    @BeforeEach
+    void linkImpl() { portfolioItemService = portfolioItemServiceImpl; }
+
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 999L;
     private static final Long ITEM_ID = 700L;
@@ -35,7 +39,9 @@ class PortfolioItemServiceImplTest {
     private ResumePortfolioItemRepository portfolioItemRepository;
 
     @InjectMocks
-    private PortfolioItemServiceImpl portfolioItemService;
+    private PortfolioItemServiceImpl portfolioItemServiceImpl;
+
+    private PortfolioItemService portfolioItemService;
 
     private PortfolioItemRequest linkRequest() {
         return new PortfolioItemRequest("포트폴리오 사이트", "LINK",
@@ -144,7 +150,7 @@ class PortfolioItemServiceImplTest {
         given(portfolioItemRepository.save(any(ResumePortfolioItemEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = portfolioItemService.updatePortfolioItem(USER_ID, DOCUMENT_ID, ITEM_ID, linkRequest());
+        var response = portfolioItemService.updatePortfolioItem(USER_ID, ITEM_ID, DOCUMENT_ID, linkRequest());
 
         then(portfolioItemRepository).should(times(1)).save(existing);
         assertThat(response.title()).isEqualTo("포트폴리오 사이트");
@@ -179,7 +185,7 @@ class PortfolioItemServiceImplTest {
         given(portfolioItemRepository.save(any(ResumePortfolioItemEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = portfolioItemService.updatePortfolioItem(USER_ID, DOCUMENT_ID, ITEM_ID, enhancedRequest());
+        var response = portfolioItemService.updatePortfolioItem(USER_ID, ITEM_ID, DOCUMENT_ID, enhancedRequest());
 
         assertThat(existing.getGithubUrl()).isEqualTo("https://github.com/owner/repo");
         assertThat(existing.getDemoUrl()).isEqualTo("https://demo.example.com");
@@ -192,7 +198,7 @@ class PortfolioItemServiceImplTest {
     void updatePortfolioItem_forbidden() {
         given(portfolioItemRepository.findById(ITEM_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> portfolioItemService.updatePortfolioItem(USER_ID, DOCUMENT_ID, ITEM_ID, linkRequest()))
+        assertThatThrownBy(() -> portfolioItemService.updatePortfolioItem(USER_ID, ITEM_ID, DOCUMENT_ID, linkRequest()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -204,7 +210,7 @@ class PortfolioItemServiceImplTest {
         var existing = entity(USER_ID);
         given(portfolioItemRepository.findById(ITEM_ID)).willReturn(Optional.of(existing));
 
-        portfolioItemService.deletePortfolioItem(USER_ID, DOCUMENT_ID, ITEM_ID);
+        portfolioItemService.deletePortfolioItem(USER_ID, ITEM_ID, DOCUMENT_ID);
 
         then(portfolioItemRepository).should(times(1)).delete(existing);
     }

@@ -38,7 +38,7 @@ public class SkillServiceImpl implements SkillService {
 
     @Override
     @Transactional
-    public SkillResponse updateSkill(Long userId, Long documentId, Long skillId, SkillRequest request) {
+    public SkillResponse updateSkill(Long userId, Long skillId, Long documentId, SkillRequest request) {
         var entity = getOwnedSkill(userId, documentId, skillId);
         applyRequest(entity, request);
         return toResponse(skillRepository.save(entity));
@@ -46,7 +46,7 @@ public class SkillServiceImpl implements SkillService {
 
     @Override
     @Transactional
-    public void deleteSkill(Long userId, Long documentId, Long skillId) {
+    public void deleteSkill(Long userId, Long skillId, Long documentId) {
         var entity = getOwnedSkill(userId, documentId, skillId);
         skillRepository.delete(entity);
     }

@@ -38,7 +38,7 @@ public class IntroductionServiceImpl implements IntroductionService {
 
     @Override
     @Transactional
-    public IntroductionResponse updateIntroduction(Long userId, Long documentId, Long introductionId, IntroductionRequest request) {
+    public IntroductionResponse updateIntroduction(Long userId, Long introductionId, Long documentId, IntroductionRequest request) {
         var entity = getOwnedIntroduction(userId, documentId, introductionId);
         applyRequest(entity, request);
         return toResponse(introductionRepository.save(entity));
@@ -46,7 +46,7 @@ public class IntroductionServiceImpl implements IntroductionService {
 
     @Override
     @Transactional
-    public void deleteIntroduction(Long userId, Long documentId, Long introductionId) {
+    public void deleteIntroduction(Long userId, Long introductionId, Long documentId) {
         var entity = getOwnedIntroduction(userId, documentId, introductionId);
         introductionRepository.delete(entity);
     }

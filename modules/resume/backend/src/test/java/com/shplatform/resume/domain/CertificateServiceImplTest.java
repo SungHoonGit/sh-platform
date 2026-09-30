@@ -6,6 +6,7 @@ import com.shplatform.resume.api.dto.CertificateRequest;
 import com.shplatform.resume.infrastructure.entity.ResumeCertificateEntity;
 import com.shplatform.resume.infrastructure.repository.ResumeCertificateRepository;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -26,6 +27,9 @@ import static org.mockito.Mockito.times;
 @ExtendWith(MockitoExtension.class)
 class CertificateServiceImplTest {
 
+    @BeforeEach
+    void linkImpl() { certificateService = certificateServiceImpl; }
+
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 999L;
     private static final Long CERTIFICATE_ID = 400L;
@@ -35,7 +39,9 @@ class CertificateServiceImplTest {
     private ResumeCertificateRepository certificateRepository;
 
     @InjectMocks
-    private CertificateServiceImpl certificateService;
+    private CertificateServiceImpl certificateServiceImpl;
+
+    private CertificateService certificateService;
 
     private CertificateRequest request() {
         return new CertificateRequest("정보처리기사", "한국산업인력공단", null, 1);
@@ -85,7 +91,7 @@ class CertificateServiceImplTest {
         given(certificateRepository.save(any(ResumeCertificateEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = certificateService.updateCertificate(USER_ID, DOCUMENT_ID, CERTIFICATE_ID, request());
+        var response = certificateService.updateCertificate(USER_ID, CERTIFICATE_ID, DOCUMENT_ID, request());
 
         then(certificateRepository).should(times(1)).save(existing);
         assertThat(response.name()).isEqualTo("정보처리기사");
@@ -96,7 +102,7 @@ class CertificateServiceImplTest {
     void updateCertificate_forbidden() {
         given(certificateRepository.findById(CERTIFICATE_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> certificateService.updateCertificate(USER_ID, DOCUMENT_ID, CERTIFICATE_ID, request()))
+        assertThatThrownBy(() -> certificateService.updateCertificate(USER_ID, CERTIFICATE_ID, DOCUMENT_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -108,7 +114,7 @@ class CertificateServiceImplTest {
         var existing = entity(USER_ID);
         given(certificateRepository.findById(CERTIFICATE_ID)).willReturn(Optional.of(existing));
 
-        certificateService.deleteCertificate(USER_ID, DOCUMENT_ID, CERTIFICATE_ID);
+        certificateService.deleteCertificate(USER_ID, CERTIFICATE_ID, DOCUMENT_ID);
 
         then(certificateRepository).should(times(1)).delete(existing);
     }

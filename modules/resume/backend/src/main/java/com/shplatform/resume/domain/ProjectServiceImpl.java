@@ -38,7 +38,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional
-    public ProjectResponse updateProject(Long userId, Long documentId, Long projectId, ProjectRequest request) {
+    public ProjectResponse updateProject(Long userId, Long projectId, Long documentId, ProjectRequest request) {
         var entity = getOwnedProject(userId, documentId, projectId);
         applyRequest(entity, request);
         return toResponse(projectRepository.save(entity));
@@ -46,7 +46,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional
-    public void deleteProject(Long userId, Long documentId, Long projectId) {
+    public void deleteProject(Long userId, Long projectId, Long documentId) {
         var entity = getOwnedProject(userId, documentId, projectId);
         projectRepository.delete(entity);
     }

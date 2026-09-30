@@ -39,7 +39,7 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
 
     @Override
     @Transactional
-    public PortfolioItemResponse updatePortfolioItem(Long userId, Long documentId, Long itemId, PortfolioItemRequest request) {
+    public PortfolioItemResponse updatePortfolioItem(Long userId, Long itemId, Long documentId, PortfolioItemRequest request) {
         validateTypePayload(request);
         var entity = getOwnedPortfolioItem(userId, documentId, itemId);
         applyRequest(entity, request);
@@ -48,7 +48,7 @@ public class PortfolioItemServiceImpl implements PortfolioItemService {
 
     @Override
     @Transactional
-    public void deletePortfolioItem(Long userId, Long documentId, Long itemId) {
+    public void deletePortfolioItem(Long userId, Long itemId, Long documentId) {
         var entity = getOwnedPortfolioItem(userId, documentId, itemId);
         portfolioItemRepository.delete(entity);
     }

@@ -38,7 +38,7 @@ public class CertificateServiceImpl implements CertificateService {
 
     @Override
     @Transactional
-    public CertificateResponse updateCertificate(Long userId, Long documentId, Long certificateId, CertificateRequest request) {
+    public CertificateResponse updateCertificate(Long userId, Long certificateId, Long documentId, CertificateRequest request) {
         var entity = getOwnedCertificate(userId, documentId, certificateId);
         applyRequest(entity, request);
         return toResponse(certificateRepository.save(entity));
@@ -46,7 +46,7 @@ public class CertificateServiceImpl implements CertificateService {
 
     @Override
     @Transactional
-    public void deleteCertificate(Long userId, Long documentId, Long certificateId) {
+    public void deleteCertificate(Long userId, Long certificateId, Long documentId) {
         var entity = getOwnedCertificate(userId, documentId, certificateId);
         certificateRepository.delete(entity);
     }

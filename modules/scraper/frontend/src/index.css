@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "../../../../packages/tokens/tokens.css";
 @source "../../../../packages/ui-shared/src";
+@source "../../../../packages/shell/src";
 
 body {
   margin: 0;

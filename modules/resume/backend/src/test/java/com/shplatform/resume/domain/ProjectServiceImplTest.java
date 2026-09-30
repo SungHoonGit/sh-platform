@@ -6,6 +6,7 @@ import com.shplatform.resume.api.dto.ProjectRequest;
 import com.shplatform.resume.infrastructure.entity.ResumeProjectEntity;
 import com.shplatform.resume.infrastructure.repository.ResumeProjectRepository;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -26,6 +27,9 @@ import static org.mockito.Mockito.times;
 @ExtendWith(MockitoExtension.class)
 class ProjectServiceImplTest {
 
+    @BeforeEach
+    void linkImpl() { projectService = projectServiceImpl; }
+
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 999L;
     private static final Long PROJECT_ID = 500L;
@@ -35,7 +39,9 @@ class ProjectServiceImplTest {
     private ResumeProjectRepository projectRepository;
 
     @InjectMocks
-    private ProjectServiceImpl projectService;
+    private ProjectServiceImpl projectServiceImpl;
+
+    private ProjectService projectService;
 
     private ProjectRequest request() {
         return new ProjectRequest("sh-platform", "개발자",
@@ -86,7 +92,7 @@ class ProjectServiceImplTest {
         given(projectRepository.save(any(ResumeProjectEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = projectService.updateProject(USER_ID, DOCUMENT_ID, PROJECT_ID, request());
+        var response = projectService.updateProject(USER_ID, PROJECT_ID, DOCUMENT_ID, request());
 
         then(projectRepository).should(times(1)).save(existing);
         assertThat(response.name()).isEqualTo("sh-platform");
@@ -97,7 +103,7 @@ class ProjectServiceImplTest {
     void updateProject_forbidden() {
         given(projectRepository.findById(PROJECT_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> projectService.updateProject(USER_ID, DOCUMENT_ID, PROJECT_ID, request()))
+        assertThatThrownBy(() -> projectService.updateProject(USER_ID, PROJECT_ID, DOCUMENT_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -109,7 +115,7 @@ class ProjectServiceImplTest {
         var existing = entity(USER_ID);
         given(projectRepository.findById(PROJECT_ID)).willReturn(Optional.of(existing));
 
-        projectService.deleteProject(USER_ID, DOCUMENT_ID, PROJECT_ID);
+        projectService.deleteProject(USER_ID, PROJECT_ID, DOCUMENT_ID);
 
         then(projectRepository).should(times(1)).delete(existing);
     }

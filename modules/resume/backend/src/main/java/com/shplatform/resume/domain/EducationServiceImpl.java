@@ -38,7 +38,7 @@ public class EducationServiceImpl implements EducationService {
 
     @Override
     @Transactional
-    public EducationResponse updateEducation(Long userId, Long documentId, Long educationId, EducationRequest request) {
+    public EducationResponse updateEducation(Long userId, Long educationId, Long documentId, EducationRequest request) {
         var entity = getOwnedEducation(userId, documentId, educationId);
         applyRequest(entity, request);
         return toResponse(educationRepository.save(entity));
@@ -46,7 +46,7 @@ public class EducationServiceImpl implements EducationService {
 
     @Override
     @Transactional
-    public void deleteEducation(Long userId, Long documentId, Long educationId) {
+    public void deleteEducation(Long userId, Long educationId, Long documentId) {
         var entity = getOwnedEducation(userId, documentId, educationId);
         educationRepository.delete(entity);
     }

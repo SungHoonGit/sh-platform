@@ -6,6 +6,7 @@ import com.shplatform.resume.api.dto.IntroductionRequest;
 import com.shplatform.resume.infrastructure.entity.ResumeIntroductionEntity;
 import com.shplatform.resume.infrastructure.repository.ResumeIntroductionRepository;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -26,6 +27,9 @@ import static org.mockito.Mockito.times;
 @ExtendWith(MockitoExtension.class)
 class IntroductionServiceImplTest {
 
+    @BeforeEach
+    void linkImpl() { introductionService = introductionServiceImpl; }
+
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 999L;
     private static final Long INTRODUCTION_ID = 600L;
@@ -35,7 +39,9 @@ class IntroductionServiceImplTest {
     private ResumeIntroductionRepository introductionRepository;
 
     @InjectMocks
-    private IntroductionServiceImpl introductionService;
+    private IntroductionServiceImpl introductionServiceImpl;
+
+    private IntroductionService introductionService;
 
     private IntroductionRequest request() {
         return new IntroductionRequest("지원동기", "백엔드 개발자로 성장하고 싶습니다.", 1);
@@ -86,7 +92,7 @@ class IntroductionServiceImplTest {
         given(introductionRepository.save(any(ResumeIntroductionEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = introductionService.updateIntroduction(USER_ID, DOCUMENT_ID, INTRODUCTION_ID, request());
+        var response = introductionService.updateIntroduction(USER_ID, INTRODUCTION_ID, DOCUMENT_ID, request());
 
         then(introductionRepository).should(times(1)).save(existing);
         assertThat(response.title()).isEqualTo("지원동기");
@@ -101,7 +107,7 @@ class IntroductionServiceImplTest {
         given(introductionRepository.save(any(ResumeIntroductionEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = introductionService.updateIntroduction(USER_ID, DOCUMENT_ID, INTRODUCTION_ID,
+        var response = introductionService.updateIntroduction(USER_ID, INTRODUCTION_ID, DOCUMENT_ID,
                 new IntroductionRequest("지원동기", "백엔드 개발자로 성장하고 싶습니다.", null));
 
         then(introductionRepository).should(times(1)).save(existing);
@@ -114,7 +120,7 @@ class IntroductionServiceImplTest {
     void updateIntroduction_forbidden() {
         given(introductionRepository.findById(INTRODUCTION_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> introductionService.updateIntroduction(USER_ID, DOCUMENT_ID, INTRODUCTION_ID, request()))
+        assertThatThrownBy(() -> introductionService.updateIntroduction(USER_ID, INTRODUCTION_ID, DOCUMENT_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -126,7 +132,7 @@ class IntroductionServiceImplTest {
         var existing = entity(USER_ID);
         given(introductionRepository.findById(INTRODUCTION_ID)).willReturn(Optional.of(existing));
 
-        introductionService.deleteIntroduction(USER_ID, DOCUMENT_ID, INTRODUCTION_ID);
+        introductionService.deleteIntroduction(USER_ID, INTRODUCTION_ID, DOCUMENT_ID);
 
         then(introductionRepository).should(times(1)).delete(existing);
     }

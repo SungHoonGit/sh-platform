@@ -6,6 +6,7 @@ import com.shplatform.resume.api.dto.EducationRequest;
 import com.shplatform.resume.infrastructure.entity.ResumeEducationEntity;
 import com.shplatform.resume.infrastructure.repository.ResumeEducationRepository;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -26,6 +27,9 @@ import static org.mockito.Mockito.times;
 @ExtendWith(MockitoExtension.class)
 class EducationServiceImplTest {
 
+    @BeforeEach
+    void linkImpl() { educationService = educationServiceImpl; }
+
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 999L;
     private static final Long EDUCATION_ID = 200L;
@@ -35,7 +39,9 @@ class EducationServiceImplTest {
     private ResumeEducationRepository educationRepository;
 
     @InjectMocks
-    private EducationServiceImpl educationService;
+    private EducationServiceImpl educationServiceImpl;
+
+    private EducationService educationService;
 
     private EducationRequest request() {
         return new EducationRequest("한국대학교", "대학교", "컴퓨터공학", "BACHELOR", "3.9 / 4.5",
@@ -86,7 +92,7 @@ class EducationServiceImplTest {
         given(educationRepository.save(any(ResumeEducationEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        var response = educationService.updateEducation(USER_ID, DOCUMENT_ID, EDUCATION_ID, request());
+        var response = educationService.updateEducation(USER_ID, EDUCATION_ID, DOCUMENT_ID, request());
 
         then(educationRepository).should(times(1)).save(existing);
         assertThat(response.school()).isEqualTo("한국대학교");
@@ -97,7 +103,7 @@ class EducationServiceImplTest {
     void updateEducation_notFound() {
         given(educationRepository.findById(EDUCATION_ID)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> educationService.updateEducation(USER_ID, DOCUMENT_ID, EDUCATION_ID, request()))
+        assertThatThrownBy(() -> educationService.updateEducation(USER_ID, EDUCATION_ID, DOCUMENT_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_FOUND);
@@ -108,7 +114,7 @@ class EducationServiceImplTest {
     void updateEducation_forbidden() {
         given(educationRepository.findById(EDUCATION_ID)).willReturn(Optional.of(entity(OTHER_USER_ID)));
 
-        assertThatThrownBy(() -> educationService.updateEducation(USER_ID, DOCUMENT_ID, EDUCATION_ID, request()))
+        assertThatThrownBy(() -> educationService.updateEducation(USER_ID, EDUCATION_ID, DOCUMENT_ID, request()))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
@@ -120,7 +126,7 @@ class EducationServiceImplTest {
         var existing = entity(USER_ID);
         given(educationRepository.findById(EDUCATION_ID)).willReturn(Optional.of(existing));
 
-        educationService.deleteEducation(USER_ID, DOCUMENT_ID, EDUCATION_ID);
+        educationService.deleteEducation(USER_ID, EDUCATION_ID, DOCUMENT_ID);
 
         then(educationRepository).should(times(1)).delete(existing);
     }
