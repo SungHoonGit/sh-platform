@@ -1,0 +1,10 @@
+{
+  "name": "@sh-platform/tokens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "sh-platform 디자인 토큰 — 시맨틱 @theme 레일 + 공용 CSS (md-view)",
+  "exports": {
+    ".": "./tokens.css"
+  }
+}
