@@ -7,5 +7,5 @@ USE scraper_platform;
 
 ALTER TABLE company_blacklist
     ADD COLUMN IF NOT EXISTS match_type ENUM('exact', 'contains') NOT NULL DEFAULT 'exact'
-    AFTER company_name_normalized
-    COMMENT '키워드 매칭 방식 (exact=정확일치, contains=부분일치)';
+    COMMENT '키워드 매칭 방식 (exact=정확일치, contains=부분일치)'
+    AFTER company_name_normalized;
