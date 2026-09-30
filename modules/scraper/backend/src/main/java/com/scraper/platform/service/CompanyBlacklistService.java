@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Set;
 
 /**
  * 개인 단위 회사 블랙리스트. 차단된 회사의 공고는 모든 목록에서 숨겨진다.
@@ -30,10 +29,11 @@ public class CompanyBlacklistService {
         return repository.findByAccountIdOrderByCreatedAtDesc(accountId);
     }
 
-    /** 회사명을 정규화해 등록한다. 중복이면 카테고리를 갱신한다(멱등). */
+    /** 회사명을 정규화해 등록한다. 중복이면 카테고리를 갱신한다(멱등). matchType null이면 유지/기본 exact. */
     @Transactional
     public CompanyBlacklist add(Long accountId, String companyNameRaw, String reason,
-                                List<Long> reasonIds, List<String> categoryNames) {
+                                List<Long> reasonIds, List<String> categoryNames,
+                                CompanyBlacklist.MatchType matchType) {
         String normalized = normalize(companyNameRaw);
         var categories = resolveCategories(reasonIds, categoryNames);
         var existing = repository.findByAccountIdOrderByCreatedAtDesc(accountId).stream()
@@ -43,12 +43,16 @@ public class CompanyBlacklistService {
             var b = existing.get();
             b.setReason(reason != null && !reason.isBlank() ? reason : null);
             b.setBlockReasons(new java.util.ArrayList<>(categories));
+            if (matchType != null) {
+                b.setMatchType(matchType);
+            }
             return repository.save(b);
         }
         return repository.save(CompanyBlacklist.builder()
                 .accountId(accountId)
                 .companyNameNormalized(normalized)
                 .reason(reason != null && !reason.isBlank() ? reason : null)
+                .matchType(matchType != null ? matchType : CompanyBlacklist.MatchType.exact)
                 .blockReasons(new java.util.ArrayList<>(categories))
                 .build());
     }
@@ -61,7 +65,7 @@ public class CompanyBlacklistService {
     /** 기존 차단 항목의 카테고리를 교체한다(자유 메모는 보존). 본인 항목이 아니면 무시한다. */
     @Transactional
     public CompanyBlacklist update(Long accountId, Long id, List<Long> reasonIds, List<String> categoryNames) {
-        return update(accountId, id, null, null, reasonIds, categoryNames);
+        return update(accountId, id, null, null, null, reasonIds, categoryNames);
     }
 
     /**
@@ -72,6 +76,7 @@ public class CompanyBlacklistService {
      * @param id 차단 항목 ID
      * @param companyName 새 회사명 (null/blank이면 키워드 유지)
      * @param reason 새 자유 메모 (null이면 유지, blank이면 삭제)
+     * @param matchType 새 매칭 방식 (null이면 유지 — 설계 036)
      * @param reasonIds 기존 카테고리 id 목록
      * @param categoryNames 신규 입력 카테고리명 목록
      * @return 수정된 항목, 본인 항목이 아니면 null
@@ -79,6 +84,7 @@ public class CompanyBlacklistService {
      */
     @Transactional
     public CompanyBlacklist update(Long accountId, Long id, String companyName, String reason,
+                                   CompanyBlacklist.MatchType matchType,
                                    List<Long> reasonIds, List<String> categoryNames) {
         var categories = resolveCategories(reasonIds, categoryNames);
         return repository.findById(id)
@@ -89,6 +95,9 @@ public class CompanyBlacklistService {
                     }
                     if (reason != null) {
                         b.setReason(reason.isBlank() ? null : reason);
+                    }
+                    if (matchType != null) {
+                        b.setMatchType(matchType);
                     }
                     b.setBlockReasons(new java.util.ArrayList<>(categories));
                     return repository.save(b);
@@ -129,10 +138,59 @@ public class CompanyBlacklistService {
                 .ifPresent(repository::delete);
     }
 
-    public Set<String> normalizedNames(Long accountId) {
-        return list(accountId).stream()
-                .map(CompanyBlacklist::getCompanyNameNormalized)
-                .collect(java.util.stream.Collectors.toSet());
+    /**
+     * (질의형) 내 블랙리스트의 차단 판정기를 만든다 (설계 036 — 판정 단일 소스).
+     * 모든 차단 판정은 이 matcher를 통과한다. 정규화 규칙은 {@link #normalize} 참고.
+     *
+     * @param accountId 사용자 PK
+     * @return 차단 판정기 (항목 등록 역순 = 최신 우선)
+     */
+    public BlockMatcher matcher(Long accountId) {
+        return BlockMatcher.of(list(accountId));
+    }
+
+    /**
+     * 차단 판정기 (설계 036). 정규화 회사명 대상 매칭 방식:
+     * exact = 정규화명 정확일치, contains = 정규화명 부분일치(포함).
+     * 백엔드 전 판정 지점과 프론트 ui-shared 헬퍼가 이와 동일한 규칙을 따른다.
+     *
+     * @param entries 내 차단 항목 (등록 역순 권장 — firstMatch 최신 우선)
+     */
+    public record BlockMatcher(List<CompanyBlacklist> entries) {
+
+        public static BlockMatcher of(List<CompanyBlacklist> entries) {
+            return new BlockMatcher(entries == null ? List.of() : entries);
+        }
+
+        /** 차단 항목이 하나도 없으면 true (빠른 경로 분기용). */
+        public boolean isEmpty() {
+            return entries.isEmpty();
+        }
+
+        /**
+         * (질의형) 정규화 회사명과 일치하는 첫 차단 항목을 반환한다.
+         * 등록 역순 순회로 최신 항목 우선 — 차단 카테고리 표시 등에 사용.
+         */
+        public CompanyBlacklist firstMatch(String normalized) {
+            if (normalized == null || normalized.isEmpty()) {
+                return null;
+            }
+            for (CompanyBlacklist b : entries) {
+                boolean hit = switch (b.getMatchType() == null ? CompanyBlacklist.MatchType.exact : b.getMatchType()) {
+                    case contains -> normalized.contains(b.getCompanyNameNormalized());
+                    case exact -> normalized.equals(b.getCompanyNameNormalized());
+                };
+                if (hit) {
+                    return b;
+                }
+            }
+            return null;
+        }
+
+        /** (질의형) 정규화 회사명이 차단되었는지 여부. */
+        public boolean isBlocked(String normalized) {
+            return firstMatch(normalized) != null;
+        }
     }
 
     /**

@@ -11,6 +11,5 @@ public interface CompanyBlacklistRepository extends JpaRepository<CompanyBlackli
     @Query("SELECT DISTINCT b FROM CompanyBlacklist b LEFT JOIN FETCH b.blockReasons " +
             "WHERE b.accountId = :accountId ORDER BY b.createdAt DESC")
     List<CompanyBlacklist> findByAccountIdOrderByCreatedAtDesc(@Param("accountId") Long accountId);
-    boolean existsByAccountIdAndCompanyNameNormalized(Long accountId, String name);
     Optional<CompanyBlacklist> findByAccountIdAndCompanyNameNormalized(Long accountId, String name);
 }

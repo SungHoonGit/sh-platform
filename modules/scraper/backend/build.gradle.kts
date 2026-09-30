@@ -39,4 +39,6 @@ dependencies {
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client")
     
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    // JPA 슬라이스 테스트용 인메모리 DB (설계 036 — searchRecent JPQL 파싱/동작 게이트)
+    testImplementation("com.h2database:h2")
 }

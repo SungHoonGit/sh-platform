@@ -107,9 +107,9 @@ public class SearchService {
             }
         }
 
-                java.util.Set<String> blocked = resolveBlockedCompanies();
+                var blockMatcher = resolveBlockMatcher();
         List<Map<String, String>> filtered = filterJobs(allJobs, careerMin, careerMax, locations).stream()
-                .filter(j -> !blocked.contains(CompanyBlacklistService.normalize(j.get("company"))))
+                .filter(j -> !blockMatcher.isBlocked(CompanyBlacklistService.normalize(j.get("company"))))
                 .collect(Collectors.toList());
         Map<String, Integer> filteredCounts = new LinkedHashMap<>();
         for (Map.Entry<String, Integer> entry : siteCounts.entrySet()) {
@@ -131,12 +131,12 @@ public class SearchService {
         return SearchResponse.of(filtered.size(), filtered, filteredCounts, searchTime, failedSites, companyNames);
     }
 
-    private java.util.Set<String> resolveBlockedCompanies() {
+    private CompanyBlacklistService.BlockMatcher resolveBlockMatcher() {
         try {
-            return companyBlacklistService.normalizedNames(
+            return companyBlacklistService.matcher(
                     com.shplatform.common.security.SecurityUtils.currentAccountId());
         } catch (Exception e) {
-            return java.util.Set.of();   // 비인증 컨텍스트(테스트 등) 호환
+            return CompanyBlacklistService.BlockMatcher.of(java.util.List.of());   // 비인증 컨텍스트(테스트 등) 호환
         }
     }
 

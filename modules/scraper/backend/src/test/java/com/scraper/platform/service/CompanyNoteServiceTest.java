@@ -150,9 +150,10 @@ class CompanyNoteServiceTest {
             given(noteRepository.findByAccountIdAndCompanyNameNormalized(ACCOUNT, "악덕기업"))
                     .willReturn(Optional.empty());
             given(noteRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
-            given(blacklistRepository.existsByAccountIdAndCompanyNameNormalized(ACCOUNT, "악덕기업"))
-                    .willReturn(true);
-            stubEmptyJoins();
+            given(ratingRepository.findByCompanyNameIn(any())).willReturn(List.of());
+            given(blacklistRepository.findByAccountIdOrderByCreatedAtDesc(ACCOUNT))
+                    .willReturn(List.of(CompanyBlacklist.builder()
+                            .accountId(ACCOUNT).companyNameNormalized("악덕기업").build()));
 
             CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
                     new CompanyNoteRequest("악덕기업", 1, true, null, null, null));
@@ -181,9 +182,10 @@ class CompanyNoteServiceTest {
             given(noteRepository.findByAccountIdAndCompanyNameNormalized(ACCOUNT, "악덕기업"))
                     .willReturn(Optional.empty());
             given(noteRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
-            given(blacklistRepository.existsByAccountIdAndCompanyNameNormalized(ACCOUNT, "악덕기업"))
-                    .willReturn(true);
-            stubEmptyJoins();
+            given(ratingRepository.findByCompanyNameIn(any())).willReturn(List.of());
+            given(blacklistRepository.findByAccountIdOrderByCreatedAtDesc(ACCOUNT))
+                    .willReturn(List.of(CompanyBlacklist.builder()
+                            .accountId(ACCOUNT).companyNameNormalized("악덕기업").build()));
 
             CompanyNoteDetailResponse result = noteService.upsert(ACCOUNT,
                     new CompanyNoteRequest("악덕기업", 5, null, null, null, null));
@@ -271,9 +273,10 @@ class CompanyNoteServiceTest {
             CompanyNote existing = note(5L, "악덕기업", "악덕기업", 2, true, null);
             given(noteRepository.findById(5L)).willReturn(Optional.of(existing));
             given(noteRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
-            given(blacklistRepository.existsByAccountIdAndCompanyNameNormalized(ACCOUNT, "악덕기업"))
-                    .willReturn(true);
-            stubEmptyJoins();
+            given(ratingRepository.findByCompanyNameIn(any())).willReturn(List.of());
+            given(blacklistRepository.findByAccountIdOrderByCreatedAtDesc(ACCOUNT))
+                    .willReturn(List.of(CompanyBlacklist.builder()
+                            .accountId(ACCOUNT).companyNameNormalized("악덕기업").build()));
 
             CompanyNoteDetailResponse result = noteService.update(ACCOUNT, 5L,
                     new CompanyNoteRequest(null, null, true, null, null, null));

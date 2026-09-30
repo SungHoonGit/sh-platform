@@ -61,6 +61,13 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
     @Query("SELECT MAX(j.crawledAt) FROM JobPosting j WHERE j.config.id = :configId")
     LocalDate findLastCrawledAt(@Param("configId") Long configId);
 
+    /**
+     * 최근 수집 공고 + 블랙리스트 제외 (설계 036).
+     * 차단 판정은 SQL에서 정규화 표현식 기준으로 수행한다 — 원문 회사명을 정규화명과 비교하던
+     * 기존 NOT IN 의 정합성 이슈도 함께 해결한다.
+     * exact = 정규화명 정확일치, contains = 정규화명 부분일치(LIKE).
+     * REPLACE 체인은 CompanyBlacklistService.normalize 의 SQL 근사 (탭 공백 등 희귀 케이스 근사 오차 가능).
+     */
     @Query("""
             SELECT j FROM JobPosting j LEFT JOIN j.config c
             WHERE ((c IS NOT NULL AND c.accountId = :accountId)
@@ -68,11 +75,22 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
               AND (:keyword IS NULL OR LOWER(j.company) LIKE LOWER(CONCAT('%', :keyword, '%'))
                    OR LOWER(j.position) LIKE LOWER(CONCAT('%', :keyword, '%')))
               AND (:siteName IS NULL OR j.siteName = :siteName)
-              AND j.company NOT IN (SELECT b.companyNameNormalized FROM com.scraper.platform.model.CompanyBlacklist b WHERE b.accountId = :accountId)
+              AND NOT EXISTS (
+                  SELECT b.id FROM com.scraper.platform.model.CompanyBlacklist b
+                  WHERE b.accountId = :accountId AND b.matchType = :exactType
+                    AND LOWER(REPLACE(REPLACE(REPLACE(REPLACE(j.company, ' ', ''), '(주)', ''), '㈜', ''), '주식회사', ''))
+                        = b.companyNameNormalized)
+              AND NOT EXISTS (
+                  SELECT b2.id FROM com.scraper.platform.model.CompanyBlacklist b2
+                  WHERE b2.accountId = :accountId AND b2.matchType = :containsType
+                    AND LOWER(REPLACE(REPLACE(REPLACE(REPLACE(j.company, ' ', ''), '(주)', ''), '㈜', ''), '주식회사', ''))
+                        LIKE CONCAT('%', b2.companyNameNormalized, '%'))
             """)
     Page<JobPosting> searchRecent(@Param("accountId") Long accountId,
                                   @Param("keyword") String keyword,
                                   @Param("siteName") String siteName,
+                                  @Param("exactType") com.scraper.platform.model.CompanyBlacklist.MatchType exactType,
+                                  @Param("containsType") com.scraper.platform.model.CompanyBlacklist.MatchType containsType,
                                   Pageable pageable);
 
     @Query("SELECT DISTINCT j.crawledAt FROM JobPosting j WHERE j.config.id = :configId ORDER BY j.crawledAt DESC")
@@ -125,6 +143,19 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
             GROUP BY norm
             """, nativeQuery = true)
     List<Object[]> countByNormalizedCompanyIn(@Param("keywords") List<String> keywords);
+
+    /**
+     * 정규화 회사명을 포함하는 저장 공고 수 (부분일치 차단 키워드의 숨김 공고 수, 설계 036).
+     * 정규화 근사·와일드카드(`%`/`_`) 희귀 오차는 countByNormalizedCompanyIn와 동일 규칙.
+     *
+     * @param keyword 정규화 키워드
+     * @return 매칭 공고 수
+     */
+    @Query(value = """
+            SELECT COUNT(*) FROM job_postings
+            WHERE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(company, ' ', ''), '(주)', ''), '㈜', ''), '주식회사', '')) LIKE CONCAT('%', :keyword, '%')
+            """, nativeQuery = true)
+    long countByNormalizedCompanyContaining(@Param("keyword") String keyword);
 
     /**
      * 정규화 회사명의 최근 저장 공고. 슬라이드 보기 탭의 관련 공고 섹션용 (LIMIT 필수).

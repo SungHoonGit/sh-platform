@@ -28,11 +28,27 @@ public class CompanyBlacklistController {
     private final BlockReasonService blockReasonService;
 
     public record AddRequest(@NotBlank String companyName, String reason, List<Long> reasonIds,
-                             List<String> categoryNames) {}
+                             List<String> categoryNames, String matchType) {}
 
-    /** 기존 차단 항목 카테고리 수정 요청 (자유 메모는 보존) */
+    /** 기존 차단 항목 카테고리 수정 요청 (자유 메모는 보존, matchType null이면 유지) */
     public record UpdateRequest(String companyName, String reason,
-                                List<Long> reasonIds, List<String> categoryNames) {}
+                                List<Long> reasonIds, List<String> categoryNames, String matchType) {}
+
+    /**
+     * 매칭 방식 문자열을 enum으로 파싱한다 (설계 036).
+     * null/blank → null (호출부가 유지/기본 처리), 잘못된 값 → INVALID_INPUT.
+     */
+    private static CompanyBlacklist.MatchType parseMatchType(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return CompanyBlacklist.MatchType.valueOf(raw.trim());
+        } catch (IllegalArgumentException e) {
+            throw new com.shplatform.common.exception.BusinessException(
+                    com.shplatform.common.exception.ErrorCode.INVALID_INPUT);
+        }
+    }
 
     /** 차단 사유 마스터 응답 */
     public record BlockReasonResponse(Long id, String name, String category) {}
@@ -70,19 +86,21 @@ public class CompanyBlacklistController {
     }
 
     @PostMapping
-    @Operation(summary = "회사 차단", description = "중복 등록이면 카테고리를 갱신한다(멱등). reasonIds=기존 카테고리, categoryNames=신규 입력(자동 마스터 승격), reason=자유 메모.")
+    @Operation(summary = "회사 차단", description = "중복 등록이면 카테고리를 갱신한다(멱등). reasonIds=기존 카테고리, categoryNames=신규 입력(자동 마스터 승격), reason=자유 메모, matchType=exact|contains(생략 시 exact).")
     public ResponseEntity<ApiResponse<CompanyBlacklist>> add(@RequestBody AddRequest request) {
         var saved = blacklistService.add(SecurityUtils.currentAccountId(),
-                request.companyName(), request.reason(), request.reasonIds(), request.categoryNames());
+                request.companyName(), request.reason(), request.reasonIds(), request.categoryNames(),
+                parseMatchType(request.matchType()));
         return ResponseEntity.ok(ApiResponse.success(saved));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "차단 항목 수정", description = "차단 키워드(companyName)·자유 메모(reason)·카테고리를 수정한다. 키워드 변경 시 연결된 회사 메모도 함께 이관된다. 생략된 필드는 유지된다.")
+    @Operation(summary = "차단 항목 수정", description = "차단 키워드(companyName)·자유 메모(reason)·카테고리·매칭 방식(matchType)을 수정한다. 키워드 변경 시 연결된 회사 메모도 함께 이관된다. 생략된 필드는 유지된다.")
     public ResponseEntity<ApiResponse<CompanyBlacklist>> update(@PathVariable Long id,
                                                                 @RequestBody UpdateRequest request) {
         var saved = blacklistService.update(SecurityUtils.currentAccountId(), id,
-                request.companyName(), request.reason(), request.reasonIds(), request.categoryNames());
+                request.companyName(), request.reason(), parseMatchType(request.matchType()),
+                request.reasonIds(), request.categoryNames());
         if (saved == null) {
             return ResponseEntity.notFound().build();
         }

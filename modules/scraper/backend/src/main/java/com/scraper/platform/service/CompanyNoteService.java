@@ -111,7 +111,7 @@ public class CompanyNoteService {
      */
     public CompanyNoteDetailResponse get(Long accountId, Long id) {
         CompanyNote note = ownedNote(accountId, id);
-        return toDetail(note, blockedNames(accountId), ratingsByNormalized(displayNames(List.of(note))));
+        return toDetail(note, blockMatcher(accountId), ratingsByNormalized(displayNames(List.of(note))));
     }
 
     /**
@@ -138,7 +138,7 @@ public class CompanyNoteService {
         applyFields(accountId, note, request);
         dropBookmarkIfBlocked(accountId, note);
         CompanyNote saved = noteRepository.save(note);
-        return toDetail(saved, blockedNames(accountId), ratingsByNormalized(displayNames(List.of(saved))));
+        return toDetail(saved, blockMatcher(accountId), ratingsByNormalized(displayNames(List.of(saved))));
     }
 
     /**
@@ -158,7 +158,7 @@ public class CompanyNoteService {
         applyFields(accountId, note, request);
         dropBookmarkIfBlocked(accountId, note);
         CompanyNote saved = noteRepository.save(note);
-        return toDetail(saved, blockedNames(accountId), ratingsByNormalized(displayNames(List.of(saved))));
+        return toDetail(saved, blockMatcher(accountId), ratingsByNormalized(displayNames(List.of(saved))));
     }
 
     /**
@@ -251,7 +251,7 @@ public class CompanyNoteService {
                 accountId, names.stream().map(CompanyBlacklistService::normalize).toList())) {
             noteMap.put(n.getCompanyNameNormalized(), n);
         }
-        Map<String, Boolean> blocked = blockedNames(accountId);
+        var blockMatcher = blockMatcher(accountId);
         return names.stream()
                 .map(name -> {
                     String normalized = CompanyBlacklistService.normalize(name);
@@ -261,7 +261,7 @@ public class CompanyNoteService {
                             normalized,
                             n != null,
                             n != null ? n.getId() : null,
-                            blocked.getOrDefault(normalized, false));
+                            blockMatcher.isBlocked(normalized));
                 })
                 .toList();
     }
@@ -310,8 +310,7 @@ public class CompanyNoteService {
      */
     private void dropBookmarkIfBlocked(Long accountId, CompanyNote note) {
         if ((Boolean.TRUE.equals(note.getIsBookmarked()) || note.getMyStars() != null)
-                && blacklistRepository.existsByAccountIdAndCompanyNameNormalized(
-                        accountId, note.getCompanyNameNormalized())) {
+                && blockMatcher(accountId).isBlocked(note.getCompanyNameNormalized())) {
             note.setIsBookmarked(false);
             note.setMyStars(null);
         }
@@ -327,11 +326,16 @@ public class CompanyNoteService {
                                               boolean includeBlockedOnly) {
         Map<String, CompanyRating> ratings = ratingsByNormalized(displayNames(notes.getContent()));
         List<CompanyBlacklist> blacklist = blacklistRepository.findByAccountIdOrderByCreatedAtDesc(accountId);
+        // 차단 뱃지·차단 카테고리는 매칭 방식(exact/contains)을 반영해 메모 회사별로 firstMatch 판정 (설계 036)
+        var matcher = CompanyBlacklistService.BlockMatcher.of(blacklist);
         Map<String, Boolean> blocked = new HashMap<>();
         Map<String, List<NoteCategoryResponse>> blockReasons = new HashMap<>();
-        for (CompanyBlacklist b : blacklist) {
-            blocked.put(b.getCompanyNameNormalized(), true);
-            blockReasons.put(b.getCompanyNameNormalized(), toNoteCategories(b));
+        for (CompanyNote n : notes.getContent()) {
+            CompanyBlacklist hit = matcher.firstMatch(n.getCompanyNameNormalized());
+            if (hit != null) {
+                blocked.put(n.getCompanyNameNormalized(), true);
+                blockReasons.put(n.getCompanyNameNormalized(), toNoteCategories(hit));
+            }
         }
         // 메모 회사들의 관련 저장 공고 수도 한 번의 GROUP BY로 함께 집계한다 (비고 열 표시용).
         Map<String, Long> postingCounts = hiddenCounts(notes.getContent().stream()
@@ -434,10 +438,10 @@ public class CompanyNoteService {
                 noteMap.put(n.getCompanyNameNormalized(), n);
             }
         }
-        return new BlockedData(entries, noteMap, ratingsByNormalized(normalized), hiddenCounts(normalized));
+        return new BlockedData(entries, noteMap, ratingsByNormalized(normalized), hiddenCountsForEntries(entries));
     }
 
-    /** 정규화 회사명별 저장 공고 수 (차단 키워드로 숨겨지는 공고 수). */
+    /** 정규화 회사명별 저장 공고 수 (차단 키워드로 숨겨지는 공고 수) — 메모 회사(정확명) 대상 배치 조회. */
     private Map<String, Long> hiddenCounts(List<String> normalized) {
         Map<String, Long> counts = new HashMap<>();
         if (normalized.isEmpty()) {
@@ -449,16 +453,42 @@ public class CompanyNoteService {
         return counts;
     }
 
+    /**
+     * 차단 항목별 숨김 공고 수 (설계 036 — 매칭 방식 반영).
+     * exact 항목은 배치 IN 쿼리 1회, contains 항목은 항목당 LIKE 카운트(소수 전제).
+     *
+     * @param entries 매칭 방식이 부여된 차단 항목
+     * @return 정규화 키워드 → 숨김 공고 수
+     */
+    private Map<String, Long> hiddenCountsForEntries(List<CompanyBlacklist> entries) {
+        Map<String, Long> counts = new HashMap<>();
+        if (entries.isEmpty()) {
+            return counts;
+        }
+        List<String> exactNames = entries.stream()
+                .filter(e -> e.getMatchType() == null || e.getMatchType() == CompanyBlacklist.MatchType.exact)
+                .map(CompanyBlacklist::getCompanyNameNormalized)
+                .toList();
+        if (!exactNames.isEmpty()) {
+            counts.putAll(hiddenCounts(exactNames));
+        }
+        for (CompanyBlacklist e : entries) {
+            if (e.getMatchType() == CompanyBlacklist.MatchType.contains) {
+                counts.put(e.getCompanyNameNormalized(),
+                        jobPostingRepository.countByNormalizedCompanyContaining(e.getCompanyNameNormalized()));
+            }
+        }
+        return counts;
+    }
+
     private List<String> displayNames(List<CompanyNote> notes) {
         return notes.stream().map(CompanyNote::getCompanyNameDisplay).toList();
     }
 
-    private Map<String, Boolean> blockedNames(Long accountId) {
-        Map<String, Boolean> blocked = new HashMap<>();
-        for (CompanyBlacklist b : blacklistRepository.findByAccountIdOrderByCreatedAtDesc(accountId)) {
-            blocked.put(b.getCompanyNameNormalized(), true);
-        }
-        return blocked;
+    /** 내 차단 목록 기반 판정기 (설계 036 — exact/contains 매칭 단일 소스). */
+    private CompanyBlacklistService.BlockMatcher blockMatcher(Long accountId) {
+        return CompanyBlacklistService.BlockMatcher.of(
+                blacklistRepository.findByAccountIdOrderByCreatedAtDesc(accountId));
     }
 
     /**
@@ -533,7 +563,7 @@ public class CompanyNoteService {
         return map;
     }
 
-    private CompanyNoteDetailResponse toDetail(CompanyNote note, Map<String, Boolean> blocked,
+    private CompanyNoteDetailResponse toDetail(CompanyNote note, CompanyBlacklistService.BlockMatcher matcher,
                                               Map<String, CompanyRating> ratings) {
         CompanyRating rating = ratings.get(note.getCompanyNameNormalized());
         List<NoteCategoryResponse> categories = note.getNoteReasons().stream()
@@ -545,7 +575,7 @@ public class CompanyNoteService {
                 note.getCompanyNameNormalized(),
                 note.getMyStars(),
                 Boolean.TRUE.equals(note.getIsBookmarked()),
-                blocked.getOrDefault(note.getCompanyNameNormalized(), false),
+                matcher.isBlocked(note.getCompanyNameNormalized()),
                 note.getNoteMd(),
                 categories,
                 rating != null ? rating.getAverageScore() : null,

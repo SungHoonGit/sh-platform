@@ -61,6 +61,8 @@ public class JobPostingController {
         String kw = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
         String site = (siteName != null && !siteName.isBlank()) ? siteName.trim() : null;
         Page<JobPosting> result = jobPostingRepository.searchRecent(accountId, kw, site,
+                com.scraper.platform.model.CompanyBlacklist.MatchType.exact,
+                com.scraper.platform.model.CompanyBlacklist.MatchType.contains,
                 PageRequest.of(page, Math.min(size, 100),
                         Sort.by(Sort.Direction.DESC, "crawledAt")
                                 .and(Sort.by(Sort.Direction.DESC, "createdAt"))));
@@ -105,9 +107,10 @@ public class JobPostingController {
         PageRequest pageRequest = PageRequest.of(page, size, sort);
 
         // 블랙리스트 회사 제외 (개인 설정). 페이지 단위 후처리 필터 — 대량 데이터 시 Specification 통합 개선 여지
-        java.util.Set<String> blockedCompanies = java.util.Set.of();
+        // 매칭 방식(exact/contains)은 BlockMatcher 단일 소스 (설계 036)
+        var blacklistMatcher = com.scraper.platform.service.CompanyBlacklistService.BlockMatcher.of(java.util.List.of());
         try {
-            blockedCompanies = companyBlacklistService.normalizedNames(
+            blacklistMatcher = companyBlacklistService.matcher(
                     com.shplatform.common.security.SecurityUtils.currentAccountId());
         } catch (Exception ignored) {
             // 비인증 컨텍스트 호환
@@ -134,12 +137,12 @@ public class JobPostingController {
         }
 
         Page<JobPosting> postings;
-        if (!blockedCompanies.isEmpty()) {
+        if (!blacklistMatcher.isEmpty()) {
             // 블랙 필터가 있으면 조건(날짜/run/사이트)에 맞는 전체를 조회한 뒤
             // 블랙 회사를 메모리 필터로 제거하고 페이지로 자른다.
             // (페이지 단위 후처리 — 대량 데이터 시 Specification 통합 개선 여지)
             final Sort effectiveSort = sort;
-            final java.util.Set<String> blocked = blockedCompanies;
+            final var blocked = blacklistMatcher;
             List<JobPosting> candidates;
             if (runIdList != null && !runIdList.isEmpty()) {
                 if (siteName != null && !siteName.isEmpty() && !"all".equals(siteName)) {
@@ -164,7 +167,7 @@ public class JobPostingController {
             }
             var filtered = candidates.stream()
                     .filter(j -> j.getCompany() == null
-                            || !blocked.contains(com.scraper.platform.service.CompanyBlacklistService.normalize(j.getCompany())))
+                            || !blocked.isBlocked(com.scraper.platform.service.CompanyBlacklistService.normalize(j.getCompany())))
                     .toList();
             int from = Math.min((int) pageRequest.getOffset(), filtered.size());
             int to = Math.min(from + pageRequest.getPageSize(), filtered.size());

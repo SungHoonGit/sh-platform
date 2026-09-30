@@ -40,7 +40,8 @@ class SearchServiceTest {
 
     @BeforeEach
     void setUp() {
-        org.mockito.Mockito.lenient().when(companyBlacklistService.normalizedNames(org.mockito.ArgumentMatchers.any())).thenReturn(java.util.Set.of());
+        org.mockito.Mockito.lenient().when(companyBlacklistService.matcher(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(CompanyBlacklistService.BlockMatcher.of(java.util.List.of()));
         mockCrawler = new SiteCrawler() {
             @Override
             public String getSiteName() {

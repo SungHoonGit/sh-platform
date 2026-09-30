@@ -26,6 +26,12 @@ public class CompanyBlacklist {
     @Column(name = "company_name_normalized", nullable = false, length = 200)
     private String companyNameNormalized;
 
+    /** 키워드 매칭 방식 (exact=정확일치, contains=부분일치) — 설계 036. 기본 exact = 기존 동작. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "match_type", nullable = false, length = 20)
+    @Builder.Default
+    private MatchType matchType = MatchType.exact;
+
     /** 자유 텍스트 메모(선택). 카테고리는 {@link #blockReasons} 다대다로 저장된다. */
     @Column(length = 200)
     private String reason;
@@ -42,4 +48,16 @@ public class CompanyBlacklist {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    /**
+     * 차단 키워드 매칭 방식 (설계 036).
+     * 상수는 소문자 — Jackson 직렬화가 프론트 소문자 유니언(`"exact"|"contains"`)과 일치한다
+     * (SiteSearchMapping.ValueType 패턴).
+     */
+    public enum MatchType {
+        /** 정규화명 정확일치 (기존 단일 방식) */
+        exact,
+        /** 정규화명 부분일치 — 키워드가 포함된 모든 회사 차단 */
+        contains
+    }
 }
