@@ -107,7 +107,7 @@ export function FileThumb({
       return;
     }
     let url: string | null = null;
-    apiFetch(`/resume${fileDownloadPath(path)}`, { redirectOn401: true, hashRoute: true })
+    apiFetch(`/resume${path}`, { redirectOn401: true, hashRoute: true })
       .then((res) => (res.ok ? res.blob() : Promise.reject(new Error(String(res.status)))))
       .then((blob) => {
         url = URL.createObjectURL(blob);
