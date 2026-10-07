@@ -383,9 +383,11 @@ export default function Schedule() {
     deleteMutation.mutate(c.id);
   };
 
+  const [showAdvanced, setShowAdvanced] = useState(() => !window.matchMedia("(max-width: 639px)").matches);
+
   return (
-    <div className="p-6 max-w-5xl mx-auto overflow-auto h-full">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto overflow-auto h-full">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 className="text-xl font-bold">📅 스케줄 관리</h1>
         {!showForm && (
           <button
@@ -410,7 +412,7 @@ export default function Schedule() {
             <button onClick={resetForm} className="text-slate-400 hover:text-slate-600">✕</button>
           </div>
           
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
                 <label className="block text-xs text-slate-500 mb-1">스케줄 이름</label>
@@ -434,6 +436,16 @@ export default function Schedule() {
                 />
               </div>
 
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="text-xs font-medium text-blue-600 hover:text-blue-800"
+              >
+                {showAdvanced ? "▲ 상세 조건 접기" : "▼ 상세 조건 펼치기"}
+              </button>
+
+              {showAdvanced && (
+              <>
               <div>
                 <label className="block text-xs text-slate-500 mb-1">아이콘</label>
                 <div className="flex gap-2">
@@ -504,7 +516,7 @@ export default function Schedule() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">경력</label>
                   <CareerRangeSlider
@@ -530,7 +542,7 @@ export default function Schedule() {
 
               <div>
                 <label className="block text-xs text-slate-500 mb-2">사이트</label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {enabledSites.map((site) => (
                     <label
                       key={site.siteName}
@@ -551,6 +563,8 @@ export default function Schedule() {
                   ))}
                 </div>
               </div>
+              </>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -567,7 +581,7 @@ export default function Schedule() {
 
                 <div className="space-y-2">
                   {timePairs.map((tp, index) => (
-                    <div key={index} className="flex items-center gap-2 bg-slate-50 rounded-lg p-2">
+                    <div key={index} className="flex flex-wrap items-center gap-2 bg-slate-50 rounded-lg p-2">
                       <select
                         value={tp.hour}
                         onChange={(e) => updateTimePair(index, "hour", Number(e.target.value))}
@@ -601,7 +615,7 @@ export default function Schedule() {
 
               <div>
                 <label className="block text-xs text-slate-500 mb-2">실행 요일</label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {DAYS.map((day) => (
                     <button
                       key={day.id}
@@ -656,8 +670,8 @@ export default function Schedule() {
                 key={c.id}
                 className="bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-300 transition-colors"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-wrap items-center gap-4">
                     <span className="text-3xl">{c.scheduleIcon || "🤖"}</span>
                     <div>
                       <div className="font-bold text-lg">{c.name}</div>
@@ -666,7 +680,7 @@ export default function Schedule() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => {
                         setRunningIds(prev => new Set(prev).add(c.id));
