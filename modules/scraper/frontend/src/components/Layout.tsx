@@ -24,7 +24,7 @@ export default function Layout() {
       authLoading={loading}
       isAdmin={user?.role === "ADMIN"}
       onLogout={logout}
-      mainClassName="flex-1 overflow-hidden"
+      mainClassName="flex-1 overflow-auto"
       basePath="/scraper"
     >
       <Outlet />
