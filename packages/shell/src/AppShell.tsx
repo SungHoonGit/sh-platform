@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import GlobalHeader, { type Props as GlobalHeaderProps } from "./GlobalHeader";
 import SubNav from "./SubNav";
 import SideDrawer, { type DrawerSection } from "./SideDrawer";
-import type { ShellApp } from "./config";
+import { APP_HREFS, APP_LABELS, type ShellApp } from "./config";
 
 /**
  * 통합 앱 셸. 3개 앱의 Layout이 이 컴포넌트만 사용한다.
@@ -43,6 +43,13 @@ export default function AppShell({
     ...s,
     items: s.items.map((i) => ({ ...i, href: withBase(i.href) })),
   }));
+  // 모바일에서 앱 전환 nav(hidden sm:flex)를 대체하는 드로어 상단 섹션
+  const appSwitch: DrawerSection = {
+    label: "앱 전환",
+    items: (Object.keys(APP_LABELS) as ShellApp[])
+      .filter((a) => a !== currentApp)
+      .map((a) => ({ label: APP_LABELS[a], href: APP_HREFS[a] })),
+  };
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
@@ -57,7 +64,7 @@ export default function AppShell({
       />
       <SubNav items={prefixedSubnav} />
       <main className={mainClassName}>{children}</main>
-      <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} sections={prefixedDrawer} />
+      <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} sections={[appSwitch, ...prefixedDrawer]} />
     </div>
   );
 }
