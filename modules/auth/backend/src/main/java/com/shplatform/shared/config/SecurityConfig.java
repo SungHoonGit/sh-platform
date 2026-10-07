@@ -186,6 +186,7 @@ public class SecurityConfig {
                     "/api/v1/auth/verify-code", "/api/v1/auth/oauth2/**",
                     "/login/oauth2/code/**",
                     "/api/health", "/actuator/health", "/actuator/prometheus", "/actuator/info", "/actuator/metrics", "/h2-console/**",
+                    "/api/v1/menus",
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**"
                 ).permitAll()
                 .anyRequest().authenticated()

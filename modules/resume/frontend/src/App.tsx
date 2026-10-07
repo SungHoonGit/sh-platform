@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { hasAccessToken } from "@sh-platform/core";
-import { AppShell, toSubnavItems, toDrawerSections, type DrawerSection } from "@sh-platform/shell";
+import { AppShell, toSubnavItems, toDrawerSections, useAppMenu, type DrawerSection } from "@sh-platform/shell";
 import { resumeMenu } from "./menus";
 import ResumesPage from "./pages/ResumesPage";
 import ResumeViewPage from "./pages/ResumeViewPage";
@@ -74,7 +74,8 @@ export default function App() {
             ? tab === "applications"
             : false;
 
-  const subnavItems = toSubnavItems(resumeMenu, user?.role === "ADMIN", navActive);
+  const menu = useAppMenu("resume", resumeMenu);
+  const subnavItems = toSubnavItems(menu, user?.role === "ADMIN", navActive);
   const drawerSections: DrawerSection[] = [
     {
       label: "내 이력서",
@@ -83,7 +84,7 @@ export default function App() {
           ? docs.slice(0, 8).map((d) => ({ label: d.title || `이력서 #${d.id}`, href: `#/r/${d.id}` }))
           : [{ label: "이력서를 만들어 주세요", href: "#/resumes" }],
     },
-    ...toDrawerSections(resumeMenu, user?.role === "ADMIN"),
+    ...toDrawerSections(menu, user?.role === "ADMIN"),
   ];
 
   let page;

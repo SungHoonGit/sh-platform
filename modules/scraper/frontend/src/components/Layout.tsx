@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
-import { AppShell, toSubnavItems, toDrawerSections } from "@sh-platform/shell";
+import { AppShell, toSubnavItems, toDrawerSections, useAppMenu } from "@sh-platform/shell";
 import { useAuth } from "../hooks/useAuth";
 import { useCrawlNotifications } from "./crawlNotifications";
 import { scraperMenu } from "../menus";
@@ -8,6 +8,7 @@ export default function Layout() {
   const location = useLocation();
   const { user, loading, logout } = useAuth();
   const notifications = useCrawlNotifications();
+  const menu = useAppMenu("scraper", scraperMenu);
 
   const isActive = (path?: string) =>
     path != null &&
@@ -16,8 +17,8 @@ export default function Layout() {
   return (
     <AppShell
       currentApp="scraper"
-      subnavItems={toSubnavItems(scraperMenu, user?.role === "ADMIN", isActive)}
-      drawerSections={toDrawerSections(scraperMenu, user?.role === "ADMIN")}
+      subnavItems={toSubnavItems(menu, user?.role === "ADMIN", isActive)}
+      drawerSections={toDrawerSections(menu, user?.role === "ADMIN")}
       notifications={notifications}
       user={user ? { name: user.name, email: user.email } : null}
       authLoading={loading}
