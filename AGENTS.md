@@ -115,15 +115,22 @@ DB명은 `scraper_platform` (sh_platform 아님).
 3. 인터페이스 정의 + Javadoc 작성
 4. 구현 (api/ → domain/ → infrastructure/ 순서)
 5. 단위 테스트 (JUnit 5)
-6. 빌드 검증 → ./gradlew :modules:auth:backend:test
+6. 검증 (아래 로컬 테스트 불가 규칙 참고)
 7. git commit → push
-8. GitHub Actions 자동 배포
+8. GitHub Actions 자동 배포 → **백엔드 검증은 배포 후 운영에서 수행**
 9. 산출물 자동 생성:
    ├── Swagger UI: https://sunghoonyk.duckdns.org/swagger-ui/
    ├── Javadoc:    https://sunghoonyk.duckdns.org/javadoc/
    ├── 테스트 리포트: https://sunghoonyk.duckdns.org/test-reports/
    └── DB 문서:     https://sunghoonyk.duckdns.org/schemaSpy/
 ```
+
+> # ⚠️ 로컬 테스트 실행 불가 규칙 (2026-10-07, 사용자 지정)
+> 이 프로젝트는 **로컬 개발 세팅이 안 되어 있어 `./gradlew test` 등 백엔드 로컬 테스트/빌드 실행이 불가**(실패).
+> 단, 프론트는 로컬 실행 가능: `npm run build`·`npm run lint` 게이트는 그대로 수행한다.
+> - **테스트 코드는 반드시 작성한다**(JUnit 5, 커버리지 규칙 유지) — 단 **실행 검증은 배포 워크플로우(CI) 또는 운영 배포 후**에 한다.
+> - **로컬에서 gradle test가 실패해도 원인을 파고들지 말 것** → 커밋 → push(CI 자동 배포) → **운영 검증**(Swagger UI·라이브 동작·`test-reports/`).
+> - 백엔드 컴파일/빌드 검증도 CI에서 수행됨(`./gradlew build -x test`).
 
 ## 코드 규칙
 
@@ -204,8 +211,9 @@ User signup(SignupRequest request);
 - 커버리지: Service public 메서드 100%
 
 ```bash
-./gradlew :modules:auth:backend:test
-./gradlew :modules:auth:backend:test --tests "*AuthServiceImplTest*"
+# ⚠️ 로컬 테스트 실행 불가 — 테스트는 작성하되 실행 검증은 CI/운영 (위 규칙)
+# ./gradlew :modules:auth:backend:test              # 로컬에서 실패함 — 원인 파고들지 말 것
+# ./gradlew :modules:auth:backend:test --tests "*AuthServiceImplTest*"
 ```
 
 ### 커밋 컨벤션
