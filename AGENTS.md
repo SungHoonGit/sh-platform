@@ -3,14 +3,9 @@
 이 파일은 AI 코딩 에이전트(opencode, cursor, copilot 등)가 프로젝트 규칙을 자동 인식하도록 합니다.
 이 파일을 수정하면 AI 모델이 다음 세션부터 변경된 규칙을 따릅니다.
 
-> **⚠️ 진행 중인 작업**: 설계 031~032 완료·배포, **9/23~9/29 자동 백업 매일 발화 성공 확인**(diag-ssh 36506369248, 9/22 cron 수정 이후 ERROR 없음 — 백업 잔여 항목 종료). **설계 033 이력서 뷰 목차(TOC) 사이드바**(`0d9cbfa`)·**자기소개 내용 상시 표시**(`09dbc27`)·**피드백 반영**(`5abb1ca` — 프로젝트도 alwaysDetail, EditPage 미리보기 옆 로그아웃 버튼 제거) 완료·배포. **설계 034 프론트 인증 redirect 공통화 `@sh-platform/core`**(`336892a`, `packages/core` 신규 — loginUrl/redirectToLogin(hashRoute)/sanitizeRedirect open-redirect 가드를 4앱에 적용, login URL의 `?redirect`로 이전 화면 복귀, 401/세션 만료 시에도 현재 경로(+resume hash) 보존; deploy paths에 `packages/**` 추가, 4앱 로컬 빌드 통과·배포·라이브 번들 검증 완료). **034 Phase 2 토큰+apiFetch 공통화**(`0bb50a4` — core `tokens.ts`로 키 단일 소스(4앱+ui-shared 키 문자열 직접 사용 제거), `apiFetch` Authorization 자동 부여+`redirectOn401` 401 자동 redirect( platform 401 미처리 공백 해소, resume은 hashRoute·client.ts refresh 흐름은 정책 유지), resume `expireSession()` 제거, 배포·라이브 번들 마커 검증 완료). **설계 035 셸·인증 훅 공통화 `@sh-platform/shell`(034 Phase 3)**: 3a(`d30c348` — `packages/shell` 신설, 공통 `useAuth(app)`(apiFetch 401 redirect+hashRoute는 APP_HASH_ROUTE, logout은 location.replace), 3앱 훅 1줄 어댑터화·scraper `api/auth.ts` 삭제) → 3b(`5bf11cd` — AppShell/GlobalHeader/SideDrawer/SubNav 4종을 shell로 이전, 3앱 `src/shell/` 15파일 삭제-874줄, resume 해시 차이는 `APP_HASH_ROUTE[currentApp]` 수렴, `lucide-react` paths+alias 워링 추가) — 2회 배포(36533329564/36535560805)·라이브 마커 회귀(redirectOn401 9/10/8 동일)까지 검증 완료. **설계 036 차단 키워드 부분일치 옵션**(`4dad570` Phase 1 BE: DDL v14 `match_type ENUM('exact','contains') DEFAULT 'exact'` + `CompanyBlacklistService.BlockMatcher`(firstMatch, null=exact) + `searchRecent` 2중 NOT EXISTS+REPLACE 체인 + H2 게이트 `JobPostingRepositoryDataJpaTest`/`RepositorySliceTestConfig`(test-scope @SpringBootConfiguration로 @DataJpaTest 스캔 분리)·`ddl-auto=none`+수동 DDL → `379b319` Phase 2 FE: ui-shared `matchesBlocked`/`findBlockEntry` 단일 소스, BlockConfirmDialog 매칭 방식 셀렉트+5번째 파라미터, `blacklisted Set` 상태 폐기, Companies/SlideOver find→findBlockEntry — 4앱 빌드+lint 통과 → `22c85c7` ddl-v14 1064 수정(COMMENT를 AFTER 앞으로) → deploy 36654362254 success → 라이브 마커·api-docs matchType·validate 증명까지 검증 완료, 오류 기록 errors/016). **034 Phase 4 `useProfile` 분리**(`8238497`, 설계 037 — `packages/shell/useProfile.ts` 신규: UserProfile 단일 소스 + 전역 스토어(useSyncExternalStore)로 같은 토큰 /me fetch 1회 공유 + refetch/invalidateProfileCache, 401 정책 유지; useAuth는 useProfile 조립로 AuthState API 완전 유지(3앱 어댑터·소비처 무변경), logout에서 invalidate 호출 — deploy 36659713613 success·라이브 마커 회귀 10/8/9까지 검증). **UI 디자인 토큰 패키지화 1단계**(`282fcf7`, 설계 038 — `packages/tokens/tokens.css` 신설: 시맨틱 @theme 레일(canvas/surface/line/ink/accent·radius·shadow) + react-markdown 공용 `.md-view` 통합(scraper·resume 동일 사본 2벌→1벌), 4앱 index.css 상대경로 import, **빌드 CSS 비교로 시각 회귀 0 증명**(scraper/resume 산출물 완전 동일·platform/auth는 미사용 .md-view +0.9KB만) — deploy 36666265181 success·라이브 CSS 4종 로컬 빌드 동일까지 검증). **사용자 보고 버그 2건 수정**(`866c30a`, deploy 36675035401): ① resume 서비스 인터페이스/구현 인자 역전(`(userId,itemId,documentId)` vs `(userId,documentId,itemId)`)으로 **6도메인 update·삭제 전부 NOT_FOUND/FORBIDDEN**(프로젝트 관리 등 수정 오류 원인) — 구현 12시그니처 교정 + 테스트를 인터페이스 타입 호출로 전환, errors/017 → ② 035 3b 때 4앱 `@source`에 `packages/shell/src` 누락으로 `T.headerBg/h-12/w-64` shell 토큰 클래스가 빌드 CSS에서 유실(platform 헤더 하얘·resume 헤더/드로어 사라짐) — @source 추가로 복구, errors/018. **교훈: "기존과 CSS 완전 동일" 검증은 기존이 이미 깨진 상태일 수 있음 — 핵심 클래스 마커를 라이브에서 직접 확인. 패키지 신규 시 4앱 alias+tsconfig+@source 3종 세트 누락 금지.** **사용자 보고 3번째 첨부 오류**(`839b141`, deploy 36802788979, errors/019): 첨부 미리보기 2곳이 `fileDownloadPath`(프리픽스 제거 헬퍼)를 `apiFetch(\`/resume${...}\`)` 자리에 오용 → `/resume/files/...` 404(다운로드는 정상이라 미리보기만 실패) — 제거 수정, resume 백엔드 **전체 142/142** 게이트·라이브 라우팅 검증까지. diag-ssh로 uploads 적재 확인(업로드 정상). 잔여: (사용자) 실사용 검증(뷰 TOC·자기소개/프로젝트 상시표시·로그아웃 제거·034 복귀·**036 부분일치**·/companies 7차b·resume 프로젝트 개편·viewer·통합검색·관리 UI career compound·**첨부 미리보기/수정(017) 재발 여부**).
+> **⚠️ 진행 중인 작업**: **9/30~10/1 세션 — 설계 036(차단키워드 부분일치)·037(useProfile)·038(디자인토큰 패키지) 완료·배포·라이브 검증, 사용자 보고 오류 3건 수정·배포**(017 resume 인자 역전→`866c30a`, 018 shell `@source` 누락→헤더/드로어 CSS 유실, 019 첨부 미리보기 404→`839b141`; 상세는 `docs/daily/2026-09-30-work-log.md`·`2026-10-01-work-log.md` + `docs/errors/016~019`, 실사용 검증 체크리스트는 `docs/daily/2026-10-01-todo.md`). **설계 039(4앱 메뉴구조 재정의+반응형+메뉴관리 DB화 대비) 문서만 완료**(`a70db6d`) — P1(메뉴 단일 소스화) 미착수. (이전 내역 031~035 등은 각 일지·설계 문서 참조)
 > **세션 시작 시 반드시 `git pull origin master`로 원격과 동기화 + 오늘 날짜의 작업 일지(`docs/daily/YYYY-MM-DD-work-log.md`)를 먼저 읽고 이어서 작업할 것.**
-> 최근 완료: **2026-09-22 백업 cron 치명 버그 수정** — cron.d 파일 마지막 개행 누락으로 Debian cron이 파일 전체를 무시(`Missing newline before EOF`), 9/17~9/21 주기 백업 전부 미실행. 개행 복구 + 배포 워크플로우 개행 가드 + `diag-ssh.yml`(SSH 전용 경량 진단, `gh workflow run diag-ssh.yml`) 신설 + 오류 문서 015. 수동 실행으로 9/22분 3DB·파일 백업 확보. binlog는 9/17 최초 활성화·영속화 완료. 031 회사 관리: DDL v10~v12, 피드백 1~7차b(비고 수집/숨김·보기 키워드·수집회사 suggest·차단 카테고리 chips) 배포 완료. **resume**: 프로젝트 섹션 기술스택 chips(TagInput+suggest)·기간 달력범위(DateRangePicker)·설명 markdown(MarkdownText, react-markdown 10)·목록 행 클릭 미리보기(`renderRowDetail`), 템플릿 3종 description 마크다운 렌더 — FE 전용, 실서버 번들 확인까지. **032**: `value_type` compound 추가, 사람인 `exp_cd`/잡코리아 `careerList` 경력 필터를 `site_search_mapping` DB 우선으로 전환(하드코딩 fallback 유지), DDL v13·관리 UI·테스트 완료.
-> 다음: (사용자) 실사용 검증(뷰 TOC·자기소개/프로젝트 상시표시·034 로그인 복귀/401 redirect·036 부분일치 포함 9종) — 개발 후보 모두 완료. 이후 후보: 시맨틱 토큰 기존 코드 마이그레이션(shell→4앱 점진)·앱별 테마, 037 useProfile refetch 실사용 확인.
->
-> **2026-09-16: 설계 031 회사 관리 페이지 완료.** `docs/plans/031-260916-company-manage-design.md` → Phase 1(company_notes CRUD + DDL v10/v11, 테스트 20건) → Phase 2(`/companies` + 슬라이드오버) → Phase 3(viewer 연동) → 피드백 6회까지. 교훈: DDL↔엔티티 타입 대조 필수(Integer→INT), SPA 폴백 라우트 추가 시 SecurityConfig permitAll 함께, **cron.d 파일은 마지막 개행 필수**(아니면 파일 전체 무시 — errors/015).
-> **세션 시작 시 반드시 `docs/daily/2026-09-30-work-log.md`를 먼저 읽고 이어서 작업할 것.**
->
+> **다음(사용자)**: 실사용 검증 10종(`docs/daily/2026-10-01-todo.md`) 확인 → 설계 039 P1 착수. 이후 후보: 시맨틱 토큰 마이그레이션, 메뉴관리 DB화(039 P4).
 > **⚠️ 배포 시 주의**: resume/scraper jar는 `frontend/dist`를 포함해야 정상 서빙됨(`copyFrontendDist`). 프론트 빌드 없이 백엔드만 빌드해 배포하면 `/resume` 404. 반드시 CI 워크플로우(프론트 빌드→백엔드 빌드 순서)로 배포할 것.
 
 ---
@@ -131,6 +126,18 @@ DB명은 `scraper_platform` (sh_platform 아님).
 ```
 
 ## 코드 규칙
+
+> # ✍️ 코드 작성 원칙 (요구받은 작업 전·후 항상 상기)
+> **1. 영향 범위 최소화**: 추가 지시가 없다면 **다른 코드에 영향이 가지 않도록** 작성한다.
+> - 변경 파일·함수·라인을 요구사항의 최소로 유지, 무관한 리팩토링·재포맷·스타일 손대지 말 것
+> - 기존 동작(라우팅·API 계약·DB 스키마·테스트)은 그대로 유지 — 필요한 변경은 해당 기능의 범위 내에서만
+> - 수정 후 `git diff`로 영향 파일 수를 확인하고, 무관 변경이 섞였으면 되돌릴 것
+>
+> **2. 간결성 우선 — 10만 줄을 1만 줄로 줄일 수 있다면 다시 한번 검토**: 긴 코드보다 최대한 간결한 코드로 작성한다.
+> - 같은 역할의 코드가 이미 있으면 **신규 작성 대신 재사용** (util·기존 컴포넌트·기존 API 우선 탐색)
+> - 중복 제거·단일 소스화(하드코딩 지양과 짝)·불필요한 추상화·오버엔지니어링 금지
+> - 구현 후 스스로 검토: "이 로직을 더 짧게 만들 방법이 있는가?" — 있으면 되돌려 재작성
+> - 주석·문서는 필요한 최소만 (설명이 길어질수록 코드가 짧아졌는지 의심)
 
 > # 🚫 하드코딩 지양 (최우선 원칙)
 > **어떤 기능·작업이든 시작 전/후에 반드시 이 원칙을 체크한다 (항상 적용).**

@@ -55,7 +55,7 @@ export interface MenuItem {
 export interface AppMenu { app: AppName; items: MenuItem[]; }
 ```
 - 4앱의 메뉴 정의를 **앱별 `src/menus.ts` 1파일**로 이동 (`AppMenu` 객체)
-- AppShell/SubNav/SideDrawer는 `items`를 받아 primary 필터·section 그룹핑·order 정렬 — **기존 props 구조 유지(호환) + menus 데이터 추가**
+- **shell API 무변경(AppShell 기존 props 그대로)**: 앱 레이아웃이 `menus.ts`를 읽어 기존 `subnavItems`·`drawerSections`로 변환해 전달 (앱측 헬퍼 1개) — shell은 데이터 소비만 유지. **다른 코드 영향 없음, 메뉴 데이터만 단일 소스로 이동**
 - 향후 DB화: `GET /menus` 응답이 `AppMenu`와 동일 → 로컬 `menus.ts`를 fetch fallback으로 교체만 하면 됨 (메뉴관리 CRUD UI는 별도 과제)
 
 ### 3.2 메뉴 구조 재정의안 (FR-003)
@@ -101,11 +101,11 @@ export interface AppMenu { app: AppName; items: MenuItem[]; }
 
 **R3 — 검증**: 뷰포트 360/768/1280 3종 체크 (브라우저 devtools), 실사용 10종과 병행
 
-### 3.4 아키텍처 (기존 유지)
+### 3.4 아키텍처 (shell 무변경)
 ```
-packages/shell: menuTypes.ts(신규) + SubNav/드로어(데이터 소비)
+packages/shell: menuTypes.ts(타입+변환 헬퍼 1개) — SubNav/드로어/AppShell은 현행 그대로
 4앱: src/menus.ts(신규, 단일 메뉴 소스) ← Layout/PlatformLayout/App 인라인 배열 이관
-AppShell: menu props + items 병행 (기존 소비처 무변경 점진 전환)
+     앱 레이아웃: menus.ts → subnavItems/drawerSections 생성(헬퍼) → AppShell(무변경)
 ```
 
 ## 4. 구현 계획
