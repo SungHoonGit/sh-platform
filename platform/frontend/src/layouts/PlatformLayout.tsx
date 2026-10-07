@@ -1,62 +1,18 @@
 import { Outlet, useLocation } from "react-router-dom";
-import { AppShell, type DrawerSection } from "@sh-platform/shell";
+import { AppShell, toSubnavItems, toDrawerSections } from "@sh-platform/shell";
 import { useAuth } from "../hooks/useAuth";
+import { platformMenu } from "../menus";
 
 export default function PlatformLayout() {
   const location = useLocation();
   const { user, loading, logout } = useAuth();
   const isAdmin = user?.role === "ADMIN";
 
-  const subnavItems = [
-    { label: "개요", href: "/platform", active: location.pathname === "/platform" },
-    ...(isAdmin
-      ? [{ label: "관리", href: "/platform/admin", active: location.pathname.startsWith("/platform/admin") }]
-      : []),
-  ];
-
-  const drawerSections: DrawerSection[] = [
-    {
-      label: "개인 서비스",
-      items: [
-        { label: "내 이력서", href: "/resume/" },
-        { label: "공고 탐색", href: "/resume/#/postings" },
-        { label: "지원 관리", href: "/resume/#/applications" },
-        { label: "계정 설정", href: "/platform/account" },
-      ],
-    },
-    ...(isAdmin
-      ? [
-            {
-              label: "관리",
-              items: [
-                { label: "권한 관리", href: "/platform/admin/roles" },
-                { label: "사용자 관리", href: "/platform/admin/users" },
-                { label: "테넌트 관리", href: "/platform/admin/tenants" },
-                { label: "감사 로그", href: "/platform/admin/audit" },
-                { label: "세션 관리", href: "/platform/admin/sessions" },
-                { label: "마스터 관리", href: "/platform/admin/master" },
-              ],
-            },
-        ]
-      : []),
-    {
-      label: "개발자 링크",
-      items: [
-        { label: "Swagger · Auth", href: "/swagger-ui/index.html", external: true },
-        { label: "Swagger · Scraper", href: "/scraper/swagger-ui/index.html", external: true },
-        { label: "Swagger · Resume", href: "/resume/swagger-ui/index.html", external: true },
-        { label: "Javadoc", href: "/javadoc/", external: true },
-        { label: "테스트 리포트", href: "/test-reports/", external: true },
-        { label: "SchemaSpy", href: "/schemaSpy/", external: true },
-      ],
-    },
-  ];
-
   return (
     <AppShell
       currentApp="platform"
-      subnavItems={subnavItems}
-      drawerSections={drawerSections}
+      subnavItems={toSubnavItems(platformMenu, isAdmin, (href) => href != null && location.pathname === href)}
+      drawerSections={toDrawerSections(platformMenu, isAdmin)}
       user={user ? { name: user.name, email: user.email } : null}
       authLoading={loading}
       isAdmin={isAdmin}

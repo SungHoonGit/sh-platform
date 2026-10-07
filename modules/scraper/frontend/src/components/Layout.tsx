@@ -1,44 +1,23 @@
 import { Outlet, useLocation } from "react-router-dom";
-import { Search, CalendarPlus, FileText, Building2 } from "lucide-react";
-import { AppShell, type DrawerSection } from "@sh-platform/shell";
+import { AppShell, toSubnavItems, toDrawerSections } from "@sh-platform/shell";
 import { useAuth } from "../hooks/useAuth";
 import { useCrawlNotifications } from "./crawlNotifications";
-
-const drawerSections: DrawerSection[] = [
-  {
-    label: "데이터",
-    items: [{ label: "통합검색", href: "/" }],
-  },
-  {
-    label: "수집",
-    items: [
-      { label: "스케줄 등록", href: "/schedule" },
-      { label: "공고 뷰어", href: "/viewer" },
-      { label: "회사 관리", href: "/companies" },
-    ],
-  },
-];
+import { scraperMenu } from "../menus";
 
 export default function Layout() {
   const location = useLocation();
   const { user, loading, logout } = useAuth();
   const notifications = useCrawlNotifications();
 
-  const isActive = (path: string) =>
-    location.pathname === path || (path === "/" && location.pathname === "/search");
-
-  const subnavItems = [
-    { label: "통합검색", href: "/", icon: Search, active: isActive("/") },
-    { label: "스케줄 등록", href: "/schedule", icon: CalendarPlus, active: isActive("/schedule") },
-    { label: "뷰어", href: "/viewer", icon: FileText, active: isActive("/viewer") },
-    { label: "회사 관리", href: "/companies", icon: Building2, active: isActive("/companies") },
-  ];
+  const isActive = (path?: string) =>
+    path != null &&
+    (location.pathname === path || (path === "/" && location.pathname === "/search"));
 
   return (
     <AppShell
       currentApp="scraper"
-      subnavItems={subnavItems}
-      drawerSections={drawerSections}
+      subnavItems={toSubnavItems(scraperMenu, user?.role === "ADMIN", isActive)}
+      drawerSections={toDrawerSections(scraperMenu, user?.role === "ADMIN")}
       notifications={notifications}
       user={user ? { name: user.name, email: user.email } : null}
       authLoading={loading}

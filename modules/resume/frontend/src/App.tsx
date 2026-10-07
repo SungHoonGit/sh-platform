@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, FileText, FolderOpen, Search } from "lucide-react";
 import { hasAccessToken } from "@sh-platform/core";
-import { AppShell, type DrawerSection } from "@sh-platform/shell";
+import { AppShell, toSubnavItems, toDrawerSections, type DrawerSection } from "@sh-platform/shell";
+import { resumeMenu } from "./menus";
 import ResumesPage from "./pages/ResumesPage";
 import ResumeViewPage from "./pages/ResumeViewPage";
 import EditPage from "./pages/EditPage";
@@ -63,38 +63,27 @@ export default function App() {
         ? "postings"
         : "resumes";
 
-  const subnavItems = [
-    {
-      label: "이력서 관리",
-      href: "#/resumes",
-      icon: FileText,
-      active: route.name === "resumes" || route.name === "view" || route.name === "edit",
-    },
-    { label: "프로젝트", href: "#/portfolio", icon: FolderOpen, active: route.name === "portfolio" },
-    { label: "공고 탐색", href: "#/postings", icon: Search, active: tab === "postings" },
-    { label: "지원 관리", href: "#/applications", icon: CalendarDays, active: tab === "applications" },
-  ];
+  const navActive = (href?: string) =>
+    href === "#/resumes"
+      ? route.name === "resumes" || route.name === "view" || route.name === "edit"
+      : href === "#/portfolio"
+        ? route.name === "portfolio"
+        : href === "#/postings"
+          ? tab === "postings"
+          : href === "#/applications"
+            ? tab === "applications"
+            : false;
 
+  const subnavItems = toSubnavItems(resumeMenu, user?.role === "ADMIN", navActive);
   const drawerSections: DrawerSection[] = [
     {
       label: "내 이력서",
       items:
         docs.length > 0
           ? docs.slice(0, 8).map((d) => ({ label: d.title || `이력서 #${d.id}`, href: `#/r/${d.id}` }))
-          : [{ label: "이력서 관리에서 생성", href: "#/resumes" }],
+          : [{ label: "이력서를 만들어 주세요", href: "#/resumes" }],
     },
-    {
-      label: "탐색·지원",
-      items: [
-        { label: "프로젝트 관리", href: "#/portfolio" },
-        { label: "공고 탐색", href: "#/postings" },
-        { label: "지원 관리", href: "#/applications" },
-      ],
-    },
-    {
-      label: "개발자 링크",
-      items: [{ label: "Swagger · Resume", href: "/resume/swagger-ui/index.html", external: true }],
-    },
+    ...toDrawerSections(resumeMenu, user?.role === "ADMIN"),
   ];
 
   let page;

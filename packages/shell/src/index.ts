@@ -16,3 +16,4 @@ export { default as AppShell } from "./AppShell";
 export { default as GlobalHeader, type Props as GlobalHeaderProps } from "./GlobalHeader";
 export { default as SideDrawer, type DrawerSection } from "./SideDrawer";
 export { default as SubNav } from "./SubNav";
+export { toSubnavItems, toDrawerSections, type AppMenu, type MenuItem, type AppName, type MenuRole } from "./menuTypes";
