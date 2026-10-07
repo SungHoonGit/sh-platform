@@ -240,12 +240,21 @@ export default function Viewer() {
     });
   };
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
-    <div className="flex h-full text-[13px]">
-      {/* 왼쪽 사이드바 */}
-      <div className="w-60 bg-white border-r border-slate-200 shrink-0 overflow-auto flex flex-col">
-        <div className="px-3 py-2.5 border-b border-slate-200">
+    <div className="relative flex h-full text-[13px]">
+      {/* 왼쪽 사이드바 (모바일: ☰ 토글 오버레이) */}
+      <div className={`w-60 bg-white border-r border-slate-200 shrink-0 overflow-auto flex-col absolute lg:relative inset-y-0 left-0 z-30 shadow-lg lg:shadow-none ${sidebarOpen ? "flex" : "hidden"} lg:flex`}>
+        <div className="px-3 py-2.5 border-b border-slate-200 flex items-center justify-between">
           <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide">스케줄</h3>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden px-1 text-slate-400 hover:text-slate-600"
+            aria-label="메뉴 닫기"
+          >
+            ✕
+          </button>
         </div>
         
         <div className="p-1.5">
@@ -258,6 +267,7 @@ export default function Viewer() {
                   setSelectedDate("");
                   setExpandedDates(new Set());
                   setPage(0);
+                  setSidebarOpen(false);
                 }}
                 className={`flex-1 text-left px-2.5 py-1.5 rounded text-[12px] transition-colors ${
                   selectedCrawlerId === c.id
@@ -303,6 +313,7 @@ export default function Viewer() {
                           setSelectedRunIds(null);
                           setCurrentSearchCriteria("");
                           setPage(0);
+                          setSidebarOpen(false);
                         }}
                         className={`flex-1 text-left px-1.5 py-0.5 rounded text-[12px] transition-colors flex items-center justify-between ${
                           selectedDate === group.date && !selectedRunIds
@@ -336,6 +347,7 @@ export default function Viewer() {
                                   setSelectedRunIds(run.logIds);
                                   setCurrentSearchCriteria(run.searchCriteria || "");
                                   setPage(0);
+                                  setSidebarOpen(false);
                                 }}
                                 className={`flex-1 text-left px-2 py-0.5 rounded text-[11px] transition-colors flex items-center justify-between ${
                                   isSelected
@@ -387,6 +399,13 @@ export default function Viewer() {
         <div className="bg-white border-b border-slate-200 px-4 py-1.5" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: "13px" }}>
           {/* 첫째 줄: 크롤러 + 날짜 */}
           <div className="flex items-center gap-2 mb-0.5">
+            <button
+              onClick={() => setSidebarOpen((v) => !v)}
+              className="lg:hidden px-1.5 -ml-1 text-slate-500 hover:text-slate-700"
+              aria-label="메뉴 열기/닫기"
+            >
+              ☰
+            </button>
             <span className="font-semibold text-slate-800">
               {selectedCrawler?.scheduleIcon || "🤖"} {selectedCrawler?.name || "전체"}
             </span>
@@ -421,7 +440,7 @@ export default function Viewer() {
           })()}
 
           {/* 둘째 줄: 사이트 탭 + 검색 + 건수 + Excel */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
             onClick={() => { setSelectedSite("all"); setPage(0); }}
             className={`px-2.5 py-1 rounded text-[12px] font-medium transition-colors ${
@@ -446,13 +465,13 @@ export default function Viewer() {
             </button>
           ))}
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex flex-wrap items-center gap-3">
             <input
               type="text"
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               placeholder="검색..."
-              className="px-2 py-1 rounded border border-slate-300 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500 w-40"
+              className="px-2 py-1 rounded border border-slate-300 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500 w-32 sm:w-40"
             />
             <span className="text-[12px] text-slate-500">{displayTotal}건</span>
             <button
@@ -504,7 +523,7 @@ export default function Viewer() {
               )}
             </div>
             <div className="p-3">
-              <table className="w-full text-[12px] table-fixed">
+              <table className="w-full min-w-[780px] text-[12px] table-fixed">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
                     <th className="px-1 py-1.5 text-left font-bold text-slate-600 w-[30px]"></th>
