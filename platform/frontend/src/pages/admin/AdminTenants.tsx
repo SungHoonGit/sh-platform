@@ -31,12 +31,12 @@ export default function AdminTenants() {
   });
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold text-slate-800 mb-1">테넌트 관리</h1>
       <p className="text-slate-500 mb-6">전체 테넌트를 관리합니다</p>
 
-      <div className="flex gap-3 mb-6">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -58,10 +58,10 @@ export default function AdminTenants() {
         </select>
       </div>
 
-      <div className="flex gap-6">
-        <div className={`${selectedId ? "w-1/2" : "w-full"} transition-all`}>
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <table className="w-full">
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className={`w-full ${selectedId ? "lg:w-1/2" : ""} transition-all`}>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+            <table className="w-full min-w-[760px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">ID</th>
@@ -136,13 +136,13 @@ export default function AdminTenants() {
         </div>
 
         {selectedId && detail && (
-          <div className="w-1/2">
+          <div className="w-full lg:w-1/2">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-slate-800">{detail.name}</h2>
                 <button onClick={() => setSelectedId(null)} className="text-slate-400 hover:text-slate-600 text-sm">닫기</button>
               </div>
-              <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-sm">
                 <div><span className="text-slate-500">슬러그:</span> <span className="font-medium">{detail.slug}</span></div>
                 <div><span className="text-slate-500">플랜:</span> <span className="font-medium">{detail.planType}</span></div>
                 <div><span className="text-slate-500">상태:</span> <span className="font-medium">{detail.status}</span></div>

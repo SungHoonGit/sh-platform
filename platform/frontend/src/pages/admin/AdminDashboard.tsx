@@ -22,7 +22,7 @@ export default function AdminDashboard() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700">
           ADMIN 권한이 필요합니다.
         </div>
@@ -31,7 +31,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold text-slate-800 mb-1">관리자 대시보드</h1>
       <p className="text-slate-500 mb-8">플랫폼 전체 현황</p>
 

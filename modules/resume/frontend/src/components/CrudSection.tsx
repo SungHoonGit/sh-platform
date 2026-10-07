@@ -847,7 +847,7 @@ export default function CrudSection({
           }
         >
           <div
-            className={`py-2.5 px-1 flex justify-between items-start gap-2 ${
+            className={`py-2.5 px-1 flex flex-wrap justify-between items-start gap-2 ${
               renderRowDetail && !alwaysDetail ? "cursor-pointer" : ""
             }`}
             onClick={() =>
@@ -857,7 +857,7 @@ export default function CrudSection({
             {orderControls(it, i)}
             {renderRowInfo(it)}
             {editing !== String(it.id) && (
-              <div className="shrink-0 flex gap-1.5">
+              <div className="shrink-0 flex gap-1.5 w-full justify-end sm:w-auto sm:ml-auto">
                 {toggleButton(it)}
                 <button
                   onClick={(e) => {
@@ -942,13 +942,13 @@ export default function CrudSection({
                   }`}
                 >
                   <div
-                    className="flex justify-between items-start gap-2"
+                    className="flex flex-wrap justify-between items-start gap-2"
                     onClick={() => renderRowDetail && editing !== String(it.id) && toggleExpand(it)}
                   >
                     {orderControls(it, i)}
                     {renderRowInfo(it)}
                     {editing !== String(it.id) && (
-                      <div className="shrink-0 flex gap-1.5">
+                      <div className="shrink-0 flex gap-1.5 w-full justify-end sm:w-auto sm:ml-auto">
                         {toggleButton(it)}
                         <button
                           onClick={(e) => {

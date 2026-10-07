@@ -31,12 +31,12 @@ export default function AdminUsers() {
   });
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold text-slate-800 mb-1">사용자 관리</h1>
       <p className="text-slate-500 mb-6">전체 사용자를 관리합니다</p>
 
-      <div className="flex gap-3 mb-6">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -58,8 +58,8 @@ export default function AdminUsers() {
         </select>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <table className="w-full">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+        <table className="w-full min-w-[900px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">ID</th>

@@ -128,8 +128,8 @@ export default function ProfileEditor({
         </div>
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-slate-600 mb-1">주소</label>
-          <div className="flex gap-2">
-            <input value={form.address} onChange={(e) => setVal("address", e.target.value)} className={inputCls} />
+          <div className="flex flex-wrap gap-2">
+            <input value={form.address} onChange={(e) => setVal("address", e.target.value)} className={`${inputCls} flex-1 min-w-[140px]`} />
             <button
               type="button"
               onClick={() => {
@@ -152,7 +152,7 @@ export default function ProfileEditor({
         </div>
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-slate-600 mb-1">프로필 사진 (jpg/png, 1MB 이하)</label>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {preview ? (
               <img src={preview} alt="미리보기" className="w-16 h-16 rounded-full object-cover border border-gray-200" />
             ) : (

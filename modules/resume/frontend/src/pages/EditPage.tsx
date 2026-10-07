@@ -367,8 +367,8 @@ export default function EditPage({ documentId }: { documentId?: number }) {
   return (
     <div className="min-h-screen bg-gray-100 py-6">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="flex justify-between items-center mb-5">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-5">
+          <div className="flex flex-wrap items-center gap-3">
             <a
               href="#/resumes"
               className="px-2.5 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
@@ -381,7 +381,7 @@ export default function EditPage({ documentId }: { documentId?: number }) {
                 onChange={(e) => {
                   window.location.hash = `#/r/${e.target.value}/edit`;
                 }}
-                className="border border-gray-300 rounded px-2 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-gray-500"
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm font-semibold text-slate-800 max-w-[240px] focus:outline-none focus:border-gray-500"
               >
                 {documents.map((d) => (
                   <option key={d.id} value={d.id}>

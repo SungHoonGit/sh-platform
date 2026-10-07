@@ -82,7 +82,7 @@ export function LocationMultiSelect({
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
         {regions.map((r) => (
           <label
             key={r.name}

@@ -358,7 +358,7 @@ export default function PostingsBrowsePage() {
             onChange={(e) => { setKeyword(e.target.value); setPage(0); }}
             onKeyDown={(e) => e.key === "Enter" && load()}
             placeholder="회사명 / 직무 검색"
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-48 focus:outline-none focus:border-gray-500"
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-full sm:w-48 focus:outline-none focus:border-gray-500"
           />
           <button
             onClick={load}

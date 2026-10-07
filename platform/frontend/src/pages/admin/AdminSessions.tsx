@@ -27,7 +27,7 @@ export default function AdminSessions() {
   });
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold text-slate-800 mb-1">세션 관리</h1>
       <p className="text-slate-500 mb-6">사용자별 활성 세션 조회 및 강제 로그아웃</p>
 
@@ -96,7 +96,7 @@ export default function AdminSessions() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-slate-500 border-b border-slate-200 bg-slate-50">
@@ -115,7 +115,7 @@ export default function AdminSessions() {
                   data.sessionIds.map((sid, i) => (
                     <tr key={sid} className="border-b border-slate-100 last:border-0">
                       <td className="px-4 py-3 text-slate-400">{i + 1}</td>
-                      <td className="px-4 py-3 font-mono text-xs">{sid}</td>
+                      <td className="px-4 py-3 font-mono text-xs break-all">{sid}</td>
                     </tr>
                   ))
                 )}

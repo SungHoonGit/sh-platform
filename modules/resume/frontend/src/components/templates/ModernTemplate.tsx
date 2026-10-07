@@ -202,9 +202,9 @@ export default function ModernTemplate({
   return (
     <>
       <style>{`@media print { @page { margin: 0; } .modern-shell { box-shadow:none; } }`}</style>
-      <div className="modern-shell flex bg-white shadow-sm max-w-3xl mx-auto print:max-w-none print:shadow-none">
+      <div className="modern-shell flex flex-col md:flex-row bg-white shadow-sm max-w-3xl mx-auto print:flex-row print:max-w-none print:shadow-none">
         {/* 사이드바 */}
-        <aside className="w-52 shrink-0 bg-slate-800 p-6 text-white print:w-44 print:p-4">
+        <aside className="w-full md:w-52 shrink-0 bg-slate-800 p-6 text-white print:w-44 print:p-4">
           {p?.photoUrl ? (
             <ProfilePhoto
               photoUrl={p.photoUrl}
@@ -233,7 +233,7 @@ export default function ModernTemplate({
         </aside>
 
         {/* 본문 */}
-        <main className="flex-1 p-8 print:p-6">
+        <main className="flex-1 p-5 sm:p-8 print:p-6">
           {mainOrder.map((key) => mainNodes[key] ?? null)}
         </main>
       </div>

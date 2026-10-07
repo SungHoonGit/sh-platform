@@ -37,11 +37,11 @@ export default function AdminAudit() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold text-slate-800 mb-1">감사 로그</h1>
       <p className="text-slate-500 mb-6">관리자 행위 이력 (권한 변경 · 사용자 삭제 · 강제 로그아웃)</p>
 
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-wrap gap-3 mb-6">
         <select
           value={action}
           onChange={(e) => { setAction(e.target.value); setPage(0); }}
@@ -57,7 +57,7 @@ export default function AdminAudit() {
           value={actorInput}
           onChange={(e) => setActorInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && applyActorFilter()}
-          className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-48"
+          className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-full sm:w-48"
         />
         <button
           onClick={applyActorFilter}
@@ -77,8 +77,8 @@ export default function AdminAudit() {
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="text-left text-slate-500 border-b border-slate-200 bg-slate-50">
                   <th className="px-4 py-3 font-medium">일시</th>

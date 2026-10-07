@@ -115,7 +115,7 @@ export default function DateRangePicker({ start, end, onChange, disabled }: Prop
       </button>
 
       {open && (
-        <div className="absolute z-30 mt-1 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-xl">
+        <div className="absolute z-30 mt-1 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white p-3 shadow-xl">
           <div className="mb-2 flex items-center justify-between">
             <button type="button" onClick={() => shiftMonth(-1)} className="rounded p-1 hover:bg-gray-100" title="이전 달">
               <ChevronLeft size={16} />

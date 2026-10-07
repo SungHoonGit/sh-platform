@@ -15,7 +15,7 @@ export default function AdminMaster() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold text-slate-800 mb-1">마스터 관리</h1>
       <p className="text-slate-500 mb-6">
         서비스에 노출되는 기준 데이터입니다. 스크래퍼 검색 매핑은 배포 없이 즉시 반영됩니다.
@@ -72,8 +72,8 @@ function SitesTab() {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <table className="w-full">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+      <table className="w-full min-w-[760px]">
         <thead>
           <tr className="bg-slate-50 border-b border-slate-200">
             <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">사이트</th>
@@ -209,7 +209,7 @@ function RegionsTab() {
 
   return (
     <div>
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4 flex items-end gap-3">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4 flex flex-wrap items-end gap-3">
         <div>
           <label className="block text-xs text-slate-500 mb-1">지역명</label>
           <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="예: 울릉도"
@@ -225,8 +225,8 @@ function RegionsTab() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <table className="w-full">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+        <table className="w-full min-w-[520px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">이름</th>
@@ -399,8 +399,8 @@ function MappingsTab() {
 
       {addForm}
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <table className="w-full">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+        <table className="w-full min-w-[900px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">키</th>

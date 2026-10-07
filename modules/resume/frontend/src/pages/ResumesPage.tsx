@@ -246,7 +246,7 @@ export default function ResumesPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center flex-wrap gap-2 mb-2">
         <h1 className="text-xl font-bold text-slate-800">이력서 관리</h1>
         <button
           onClick={() => setCreating((v) => !v)}

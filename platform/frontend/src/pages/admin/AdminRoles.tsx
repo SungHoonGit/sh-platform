@@ -40,7 +40,7 @@ export default function AdminRoles() {
   });
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold text-slate-800 mb-1">권한 관리</h1>
       <p className="text-slate-500 mb-8">역할 정책과 최근 권한 변경 이력</p>
 
@@ -82,8 +82,8 @@ export default function AdminRoles() {
           권한 변경 이력이 없습니다.
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="text-left text-slate-500 border-b border-slate-200 bg-slate-50">
                 <th className="px-4 py-3 font-medium">일시</th>

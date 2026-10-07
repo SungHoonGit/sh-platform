@@ -75,7 +75,7 @@ export default function ShareViewPage({ token }: { token: string }) {
 
       <div className="max-w-5xl mx-auto px-4 flex gap-6 print:block print:max-w-none print:px-0">
         <div className="flex-1 min-w-0">
-          <div className="max-w-3xl mx-auto mb-4 flex justify-end items-center gap-2 print:hidden">
+          <div className="max-w-3xl mx-auto mb-4 flex flex-wrap justify-end items-center gap-2 print:hidden">
             <span className="mr-auto text-sm text-slate-500">{data.title}</span>
             <button
               onClick={() =>
@@ -89,7 +89,7 @@ export default function ShareViewPage({ token }: { token: string }) {
             </button>
           </div>
 
-          <div className="max-w-3xl mx-auto bg-white shadow-sm px-10 py-8 print:shadow-none print:px-0 print:max-w-none">
+          <div className="max-w-3xl mx-auto bg-white shadow-sm px-4 py-6 sm:px-10 sm:py-8 print:shadow-none print:px-0 print:max-w-none">
             {templateCode === "MODERN" ? (
               <ModernTemplate view={filteredView} order={order} shareToken={token} />
             ) : templateCode === "SARAMIN" ? (

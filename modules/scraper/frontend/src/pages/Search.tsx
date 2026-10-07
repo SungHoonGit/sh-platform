@@ -261,9 +261,9 @@ export default function Search() {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col md:flex-row h-auto md:h-full">
       {/* 왼쪽: 필터 */}
-      <div className="w-64 bg-white border-r border-slate-200 p-4 shrink-0 overflow-auto">
+      <div className="w-full md:w-64 bg-white border-b md:border-b-0 md:border-r border-slate-200 p-4 shrink-0 overflow-auto">
         <h3 className="text-xs font-bold text-slate-800 mb-3 uppercase tracking-wide">검색 조건</h3>
 
         <div className="mb-4">
@@ -352,7 +352,7 @@ export default function Search() {
       </div>
 
       {/* 오른쪽: 검색 결과 */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         {!searched ? (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
             <div className="text-6xl mb-4">🔍</div>
@@ -395,7 +395,7 @@ export default function Search() {
             </div>
 
             {/* 툴바 */}
-            <div className="px-5 py-2 bg-white border-b border-slate-200 flex items-center justify-between text-xs shrink-0">
+            <div className="px-5 py-2 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
               <div className="text-slate-500">
                 총 <span className="font-semibold text-slate-800">{filteredJobs.length}</span>건
                 {keyword && <span className="ml-2">키워드: <span className="font-medium text-slate-700">{keyword}</span></span>}
@@ -524,7 +524,7 @@ export default function Search() {
                   <div className="text-sm">다른 키워드나 조건으로 다시 검색해 보세요</div>
                 </div>
               ) : (
-                <table className="w-full text-[12px] table-fixed">
+                <table className="w-full min-w-[760px] text-[12px] table-fixed">
                   <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                     <tr>
                       <th className="px-2 py-1.5 text-left font-bold text-slate-600 w-[48px]"></th>

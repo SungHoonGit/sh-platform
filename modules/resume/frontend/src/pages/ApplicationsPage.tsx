@@ -246,7 +246,7 @@ export default function ApplicationsPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
         <h1 className="text-lg font-bold text-slate-800">지원 관리</h1>
         <button
           onClick={openCreate}
@@ -282,7 +282,7 @@ export default function ApplicationsPage() {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-gray-200 text-left">
               <tr>
@@ -401,7 +401,7 @@ export default function ApplicationsPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>회사명 *</label>
                 <input className={`${field} mt-1`} value={form.companyName}
@@ -412,7 +412,7 @@ export default function ApplicationsPage() {
                 <input className={`${field} mt-1`} value={form.postingTitle}
                   onChange={(e) => setForm({ ...form, postingTitle: e.target.value })} />
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <label className={labelCls}>공고 URL</label>
                 <input className={`${field} mt-1`} value={form.postingUrl}
                   onChange={(e) => setForm({ ...form, postingUrl: e.target.value })} placeholder="https://" />
@@ -451,7 +451,7 @@ export default function ApplicationsPage() {
                   ))}
                 </select>
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <label className={labelCls}>메모</label>
                 <textarea rows={2} className={`${field} mt-1`} value={form.memo}
                   onChange={(e) => setForm({ ...form, memo: e.target.value })} />

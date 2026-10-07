@@ -202,14 +202,14 @@ export default function SaraminTemplate({
   return (
     <>
       {/* 상단 프로필 박스 */}
-      <header className="mb-4 border-2 border-slate-800 rounded-sm p-5 flex gap-5 print:p-4 print:mb-4">
+      <header className="mb-4 border-2 border-slate-800 rounded-sm p-5 flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-5 print:p-4 print:mb-4 print:flex-row print:items-start">
         {p?.photoUrl && (
           <ProfilePhoto
             photoUrl={p.photoUrl}
             className="w-[100px] h-[140px] border border-gray-300 object-cover shrink-0"
           />
         )}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 w-full sm:w-auto">
           <h1 className="text-2xl font-bold tracking-wide">{p?.name ?? "이름 미등록"}</h1>
           {p?.headline && <p className="text-sm text-slate-600 mt-0.5">{p.headline}</p>}
           <table className="mt-3 text-xs w-full max-w-md">
