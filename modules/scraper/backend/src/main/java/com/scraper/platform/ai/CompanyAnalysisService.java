@@ -54,7 +54,7 @@ public class CompanyAnalysisService {
 
     public CompanyAnalysisResult analyze(Long accountId, Long id) {
         if (!properties.configured()) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "LLM_NOT_CONFIGURED");
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR);
         }
         CompanyNote note = noteRepository.findById(id)
                 .filter(n -> n.getAccountId().equals(accountId))
@@ -73,7 +73,7 @@ public class CompanyAnalysisService {
         LlmClient client = clients.stream()
                 .filter(c -> c.supports(properties.provider()))
                 .findFirst()
-                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "LLM_PROVIDER_UNSUPPORTED"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
         String markdown = sanitizeMarkdown(client.generate(prompt, properties), note.getCompanyNameDisplay(), stats, citations);
         return new CompanyAnalysisResult(
                 note.getCompanyNameDisplay(),

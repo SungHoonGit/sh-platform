@@ -36,7 +36,7 @@ class CompanyAnalysisServiceTest {
     void throws_when_llm_not_configured() {
         CompanyAnalysisService service = service(new LlmProperties("", "", "", null, 30), List.of());
         BusinessException ex = assertThrows(BusinessException.class, () -> service.analyze(1L, 10L));
-        assertEquals(ErrorCode.INTERNAL_SERVER_ERROR, ex.getErrorCode());
+        assertEquals(ErrorCode.INTERNAL_ERROR, ex.getErrorCode());
     }
 
     @Test

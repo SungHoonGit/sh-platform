@@ -52,19 +52,19 @@ public class GeminiLlmClient implements LlmClient {
                     .send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 log.warn("Gemini API failed: status={}, body={}", response.statusCode(), truncate(response.body()));
-                throw new BusinessException(ErrorCode.EXTERNAL_API_ERROR);
+                throw new BusinessException(ErrorCode.INTERNAL_ERROR);
             }
             JsonNode root = MAPPER.readTree(response.body());
             String text = root.path("candidates").path(0).path("content").path("parts").path(0).path("text").asText("");
             if (text.isBlank()) {
-                throw new BusinessException(ErrorCode.EXTERNAL_API_ERROR);
+                throw new BusinessException(ErrorCode.INTERNAL_ERROR);
             }
             return text.trim();
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
             log.warn("Gemini API call error: {}", e.toString());
-            throw new BusinessException(ErrorCode.EXTERNAL_API_ERROR);
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR);
         }
     }
 
