@@ -1,5 +1,7 @@
 package com.scraper.platform.controller;
 
+import com.scraper.platform.ai.CompanyAnalysisResult;
+import com.scraper.platform.ai.CompanyAnalysisService;
 import com.scraper.platform.api.dto.CompanyNoteDetailResponse;
 import com.scraper.platform.api.dto.CompanyNoteRequest;
 import com.scraper.platform.api.dto.CompanyNoteResponse;
@@ -31,6 +33,7 @@ import java.util.List;
 public class CompanyNoteController {
 
     private final CompanyNoteService noteService;
+    private final CompanyAnalysisService analysisService;
 
     @GetMapping
     @Operation(summary = "내 회사 목록", description = "tab=all|bookmarked|blocked, q=회사명 부분 검색, sort=display|stars|updated, 평점·차단여부 조인")
@@ -98,6 +101,13 @@ public class CompanyNoteController {
             @RequestParam(value = "size", defaultValue = "10") int size) {
         return ResponseEntity.ok(ApiResponse.success(
                 noteService.recentPostings(SecurityUtils.currentAccountId(), id, size)));
+    }
+
+    @PostMapping("/{id}/analyze")
+    @Operation(summary = "AI 회사 분석", description = "DB 집계 사실과 최근 공고 표본을 근거로 LLM 분석 메모를 생성한다")
+    public ResponseEntity<ApiResponse<CompanyAnalysisResult>> analyze(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                analysisService.analyze(SecurityUtils.currentAccountId(), id)));
     }
 
     @GetMapping("/company-suggest")

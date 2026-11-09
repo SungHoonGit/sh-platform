@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
-import { X, Star, Bookmark, BookmarkCheck, Ban, Download, Save, Trash2 } from "lucide-react";
+import { X, Star, Bookmark, BookmarkCheck, Ban, Download, Save, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { BlockConfirmDialog, findBlockEntry, type MatchType } from "@sh-platform/ui";
 import { apiFetch } from "@sh-platform/core";
 import TagInput, { type TagItem } from "./TagInput";
-import { companyNoteApi, type CompanyNoteDetail } from "../api/companies";
+import { companyNoteApi, type CompanyNoteDetail, type CompanyAnalysisResult } from "../api/companies";
 import { fetchBlacklist, addBlacklist, removeBlacklist, updateBlacklist, searchBlockCategories } from "../api/scraper";
 
 interface Props {
@@ -52,6 +52,7 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
   const [bookmarked, setBookmarked] = useState(false);
   const [noteTags, setNoteTags] = useState<TagItem[]>([]);
   const [blockCreateOpen, setBlockCreateOpen] = useState(false);
+  const [analysis, setAnalysis] = useState<CompanyAnalysisResult | null>(null);
   // 노션식 등장 애니메이션: 마운트 직후 visible ON, 닫을 때 OFF 후 onClose 지연 호출
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -137,6 +138,16 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
       close();
     },
     onError: () => alert("삭제 실패."),
+  });
+
+  const analyzeMutation = useMutation({
+    mutationFn: () => companyNoteApi.analyze(id as number),
+    onSuccess: (result) => {
+      setAnalysis(result);
+      setMd(result.markdown);
+      setTab("edit");
+    },
+    onError: (e: unknown) => alert(e instanceof Error ? e.message : "AI 분석 실패. LLM 설정/연결을 확인하세요."),
   });
 
   const blockedEntry = findBlockEntry(
@@ -263,6 +274,16 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
           >
             <Ban size={18} />
           </button>
+          {!isCreate && (
+            <button
+              className="rounded p-1.5 text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+              title="AI 회사 분석 생성"
+              disabled={analyzeMutation.isPending}
+              onClick={() => analyzeMutation.mutate()}
+            >
+              {analyzeMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+            </button>
+          )}
           {!isCreate && (
             <button className="rounded p-1.5 text-gray-400 hover:bg-gray-100" title=".md 내보내기" onClick={exportMd}>
               <Download size={18} />
@@ -400,6 +421,18 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
 
           {tab === "edit" && (
             <>
+              {analysis && (
+                <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
+                  <p className="font-semibold text-blue-800">AI 분석 초안 생성됨</p>
+                  <p className="mt-1 text-xs text-blue-700">
+                    provider={analysis.provider} · model={analysis.model} · 생성={analysis.generatedAt}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    표본 공고 {analysis.stats.totalCount}건 · 최근 수집일 {analysis.stats.recentCrawledAt ?? "근거 없음"}
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-500">내용을 검토 후 저장하세요. DB 사실 외 내용은 근거 없음으로 표시됩니다.</p>
+                </div>
+              )}
               {blockedEntry && (
                 <div className="mb-3 rounded-lg bg-red-50 p-3 text-sm">
                   <div className="flex items-center gap-1.5">

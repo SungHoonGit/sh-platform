@@ -89,6 +89,29 @@ export interface CompanySuggest {
   blocked: boolean;
 }
 
+export interface CompanyAnalysisStats {
+  totalCount: number;
+  recentCrawledAt: string | null;
+  siteCounts: Record<string, number>;
+}
+
+export interface CompanyAnalysisCitation {
+  position: string;
+  siteName: string;
+  crawledAt: string;
+  url: string;
+}
+
+export interface CompanyAnalysisResult {
+  companyName: string;
+  markdown: string;
+  stats: CompanyAnalysisStats;
+  citations: CompanyAnalysisCitation[];
+  provider: string;
+  model: string;
+  generatedAt: string;
+}
+
 export const companyNoteApi = {
   list: (tab: CompanyTab, q?: string, page = 0, size = 50, sort: CompanySort = "updated", dir: SortDir = "desc") => {
     const params = new URLSearchParams({ tab, page: String(page), size: String(size), sort, dir });
@@ -107,4 +130,6 @@ export const companyNoteApi = {
   suggest: (q: string) =>
     companyNoteReq<CompanySuggest[]>(`/company-suggest?q=${encodeURIComponent(q)}`),
   exportUrl: (id: number) => `${BASE}/${id}/export`,
+  analyze: (id: number) =>
+    companyNoteReq<CompanyAnalysisResult>(`/${id}/analyze`, { method: "POST" }),
 };
