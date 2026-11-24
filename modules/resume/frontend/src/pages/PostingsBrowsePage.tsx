@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BlockConfirmDialog, BlacklistManagerModal, matchesBlocked, type MatchType } from "@sh-platform/ui";
 import { apiFetch } from "@sh-platform/core";
 import { ArrowUp, ArrowDown, EyeOff } from "lucide-react";
+import CompanySlideOver from "@sh-platform/scraper/components/CompanySlideOver";
+import { companyNoteApi } from "@sh-platform/scraper/api/companies";
+import { jobPlanetQuery, normCompany } from "@sh-platform/scraper/common/jobPlanet";
 
 interface JobPostingSummary {
   id: number;
@@ -76,12 +79,6 @@ interface BlacklistItem {
   createdAt: string;
 }
 
-/** 블랙리스트 키용 회사명 정규화 (백엔드 CompanyBlacklistService.normalize와 동일 규칙) */
-function normCompany(s: string | null | undefined): string {
-  if (!s) return "";
-  return s.trim().toLowerCase().replace(/\(주\)|㈜|주식회사/g, "").replace(/\s+/g, "");
-}
-
 async function blacklistReq<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await apiFetch(`/scraper/company-blacklist${path}`, {
     ...options,
@@ -131,6 +128,7 @@ export default function PostingsBrowsePage() {
   const [blItems, setBlItems] = useState<BlacklistItem[]>([]);
   const [blockDialog, setBlockDialog] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<BlacklistItem | null>(null);
+  const [companySlide, setCompanySlide] = useState<{ id: number | null; name: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const SIZE = 20;
@@ -224,6 +222,17 @@ export default function PostingsBrowsePage() {
   const blockCompany = (company: string) => {
     if (!company) return;
     setBlockDialog(company);
+  };
+  /** 회사명 클릭 → 기존 메모가 있으면 상세, 없으면 신규 작성 모드로 슬라이드 오픈 (공고뷰어와 동일) */
+  const openCompanySlide = async (company: string) => {
+    if (!company) return;
+    try {
+      const page = await companyNoteApi.list("all", company, 0, 10);
+      const hit = page.content.find((c) => normCompany(c.companyNameDisplay) === normCompany(company));
+      setCompanySlide(hit?.id != null ? { id: hit.id, name: company } : { id: null, name: company });
+    } catch {
+      setCompanySlide({ id: null, name: company });
+    }
   };
   const confirmBlock = async (company: string, reason: string, reasonIds: number[], categoryNames: string[], matchType: MatchType) => {
     try {
@@ -420,7 +429,7 @@ export default function PostingsBrowsePage() {
                       {view === "scraps" ? "저장일" : "마감"} <SortIcon state={sortState("deadline")} />
                     </button>
                   </th>
-                  <th className="px-2 py-2 font-semibold text-slate-600 w-[70px]">
+                  <th className="px-2 py-2 font-semibold text-slate-600 w-[110px]">
                     <button onClick={() => toggleSort("company")} className="inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors">
                       회사 <SortIcon state={sortState("company")} />
                     </button>
@@ -471,7 +480,26 @@ export default function PostingsBrowsePage() {
                         ? p.savedAt ? new Date(p.savedAt).toLocaleDateString("ko-KR") : "-"
                         : p.deadline || "-"}
                     </td>
-                    <td className="px-2 py-2 text-slate-700 text-xs truncate max-w-[80px]">{p.company}</td>
+                    <td className="px-2 py-2 text-slate-700 text-xs max-w-[110px]">
+                      <span className="flex items-center gap-1 group/comp">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); void openCompanySlide(p.company); }}
+                          className="truncate hover:text-blue-600 hover:underline"
+                          title="회사 정보 열기"
+                        >
+                          {p.company || "-"}
+                        </button>
+                        {p.company && (
+                          <a
+                            href={`https://www.jobplanet.co.kr/search?query=${encodeURIComponent(jobPlanetQuery(p.company))}`}
+                            target="_blank" rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="shrink-0 text-[9px] text-green-500 hover:text-green-700 opacity-0 group-hover/comp:opacity-100"
+                            title="잡플래닛에서 검색"
+                          >JP</a>
+                        )}
+                      </span>
+                    </td>
                     <td className="px-1 py-2 text-right">
                       <button
                         onClick={(e) => { e.stopPropagation(); applyNow(p); }}
@@ -530,6 +558,14 @@ export default function PostingsBrowsePage() {
         onCancel={() => setEditTarget(null)}
         onConfirm={(_reason, reasonIds, categoryNames, _keyword, matchType) => { const t = editTarget; setEditTarget(null); if (t) void confirmEdit(t, reasonIds, categoryNames, matchType); }}
       />
+      {companySlide && (
+        <CompanySlideOver
+          id={companySlide.id}
+          companyName={companySlide.name}
+          onClose={() => setCompanySlide(null)}
+          onSaved={(newId) => setCompanySlide({ id: newId, name: companySlide.name })}
+        />
+      )}
     </div>
   );
 }

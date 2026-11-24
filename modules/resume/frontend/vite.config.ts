@@ -11,6 +11,7 @@ export default defineConfig({
       { find: /^@sh-platform\/ui$/, replacement: fileURLToPath(new URL("../../../packages/ui-shared/src/index.ts", import.meta.url)) },
       { find: /^@sh-platform\/core$/, replacement: fileURLToPath(new URL("../../../packages/core/src/index.ts", import.meta.url)) },
       { find: /^@sh-platform\/shell$/, replacement: fileURLToPath(new URL("../../../packages/shell/src/index.ts", import.meta.url)) },
+      { find: /^@sh-platform\/scraper\//, replacement: fileURLToPath(new URL("../../../modules/scraper/frontend/src/", import.meta.url)) },
       { find: /^react\/jsx-runtime$/, replacement: fileURLToPath(new URL("node_modules/react/jsx-runtime.js", import.meta.url)) },
       { find: /^react$/, replacement: fileURLToPath(new URL("node_modules/react", import.meta.url)) },
       { find: /^lucide-react$/, replacement: fileURLToPath(new URL("node_modules/lucide-react", import.meta.url)) },

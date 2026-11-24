@@ -32,7 +32,7 @@ INSERT IGNORE INTO menus (app, item_id, label, href, icon, is_external, is_prima
 ('scraper', 'scraper.search',    '통합검색',    '/',          'Search',      0, 1, '검색', 10, NULL, 1),
 ('scraper', 'scraper.schedule',  '스케줄 등록', '/schedule',  'CalendarPlus',0, 1, '수집', 20, NULL, 1),
 ('scraper', 'scraper.viewer',    '공고 뷰어',   '/viewer',    'FileText',    0, 1, '수집', 30, NULL, 1),
-('scraper', 'scraper.companies', '회사 관리',   '/companies', 'Building2',   0, 0, '데이터', 40, NULL, 1);
+('scraper', 'scraper.companies', '회사 관리',   '/companies', 'Building2',   0, 1, '데이터', 40, NULL, 1);
 
 -- platform (18건)
 INSERT IGNORE INTO menus (app, item_id, label, href, icon, is_external, is_primary, section, item_order, roles, visible) VALUES
@@ -62,3 +62,6 @@ INSERT IGNORE INTO menus (app, item_id, label, href, icon, is_external, is_prima
 ('resume', 'resume.postings',    '채용 탐색',        '#/postings',                     NULL, 0, 1, '탐색 메뉴', 30, NULL,    1),
 ('resume', 'resume.applications','지원 현황',        '#/applications',                 NULL, 0, 1, '탐색 메뉴', 40, NULL,    1),
 ('resume', 'resume.tools.swagger','Swagger · Resume','/resume/swagger-ui/index.html',  NULL, 1, 0, '도구',     50, 'ADMIN',  1);
+
+-- 기존 배포분 보정: INSERT IGNORE는 기존 행을 갱신하지 않으므로 상단 노출만 별도 반영 (멱등)
+UPDATE menus SET is_primary = 1 WHERE app = 'scraper' AND item_id = 'scraper.companies';
