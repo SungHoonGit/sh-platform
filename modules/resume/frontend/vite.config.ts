@@ -14,6 +14,7 @@ export default defineConfig({
       { find: /^@sh-platform\/scraper\//, replacement: fileURLToPath(new URL("../../../modules/scraper/frontend/src/", import.meta.url)) },
       { find: /^react\/jsx-runtime$/, replacement: fileURLToPath(new URL("node_modules/react/jsx-runtime.js", import.meta.url)) },
       { find: /^react$/, replacement: fileURLToPath(new URL("node_modules/react", import.meta.url)) },
+      { find: /^@tanstack\/react-query$/, replacement: fileURLToPath(new URL("node_modules/@tanstack/react-query", import.meta.url)) },
       { find: /^lucide-react$/, replacement: fileURLToPath(new URL("node_modules/lucide-react", import.meta.url)) },
     ],
   },
