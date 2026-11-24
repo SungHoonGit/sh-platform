@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
-import { X, Star, Bookmark, BookmarkCheck, Ban, Download, Save, Trash2, Sparkles, Loader2 } from "lucide-react";
+import { X, Star, Bookmark, BookmarkCheck, Ban, Download, Save, Trash2, Sparkles, Loader2, Building2 } from "lucide-react";
 import { BlockConfirmDialog, findBlockEntry, type MatchType } from "@sh-platform/ui";
 import { apiFetch } from "@sh-platform/core";
+import { APP_HREFS, useAppMenu } from "@sh-platform/shell";
+import { scraperMenu } from "../menus";
 import TagInput, { type TagItem } from "./TagInput";
 import { companyNoteApi, type CompanyNoteDetail, type CompanyAnalysisResult } from "../api/companies";
 import { fetchBlacklist, addBlacklist, removeBlacklist, updateBlacklist, searchBlockCategories } from "../api/scraper";
@@ -28,6 +30,7 @@ function scoreText(label: string, v: number | null) {
 
 export default function CompanySlideOver({ id, companyName, companyNormalized, onClose, onSaved }: Props) {
   const queryClient = useQueryClient();
+  const companiesMenu = useAppMenu("scraper", scraperMenu);
   const isCreate = id == null;
   const [tab, setTab] = useState<"view" | "edit">(isCreate ? "edit" : "view");
 
@@ -199,6 +202,10 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
   };
 
   const title = detail?.companyNameDisplay ?? companyName ?? "";
+  const companiesItem = companiesMenu.items.find((i) => i.id === "scraper.companies");
+  const companiesHref = companiesItem?.href
+    ? `${APP_HREFS.scraper}${companiesItem.href.replace(/^\//, "")}${title ? `?q=${encodeURIComponent(title)}` : ""}`
+    : null;
   const blocked = (detail?.blocked ?? false) || createBlocked;
 
   const doUnblock = async () => {
@@ -288,6 +295,17 @@ export default function CompanySlideOver({ id, companyName, companyNormalized, o
             <button className="rounded p-1.5 text-gray-400 hover:bg-gray-100" title=".md 내보내기" onClick={exportMd}>
               <Download size={18} />
             </button>
+          )}
+          {companiesHref && (
+            <a
+              href={companiesHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded p-1.5 text-emerald-600 hover:bg-emerald-50"
+              title="회사 관리에서 열기"
+            >
+              <Building2 size={18} />
+            </a>
           )}
           <button className="rounded p-1.5 text-gray-500 hover:bg-gray-100" onClick={close} title="닫기(Esc)">
             <X size={18} />

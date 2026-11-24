@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Bookmark, BookmarkCheck, Ban, FileText, Plus, X, Trash2 } from "lucide-react";
 import { BlockConfirmDialog, findBlockEntry, type MatchType } from "@sh-platform/ui";
@@ -17,8 +18,9 @@ const PAGE_SIZE = 20;
 
 export default function Companies() {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<CompanyTab>("all");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(() => searchParams.get("q") ?? "");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [page, setPage] = useState(0);
   // 북마크 토글 등으로 updatedAt이 바뀌어도 순서가 튀지 않게 기본 정렬은 회사명
